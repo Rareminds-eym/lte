@@ -50,8 +50,6 @@ nginx.conf @rareminds-git @gokulrajr-r
 .editorconfig @rareminds-git @gokulrajr-r
 /.vscode/ @rareminds-git @gokulrajr-r
 
-# Documentation
-*.md @rareminds-git @gokulrajr-r
-/docs/ @rareminds-git @gokulrajr-r
+
 
 
