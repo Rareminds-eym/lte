@@ -1,0 +1,57 @@
+# Code Owners
+# These owners will be the default owners for everything in the repo
+# Unless a later match takes precedence, they will be requested for
+# review when someone opens a pull request.
+
+# Critical configuration files - require approval from tech leads
+# These files control code quality, architecture, and CI/CD
+eslint.config.js @rareminds-git @gokulrajr-r
+tsconfig.json @rareminds-git @gokulrajr-r
+tsconfig.node.json @rareminds-git @gokulrajr-r
+vite.config.ts @rareminds-git @gokulrajr-r
+package.json @rareminds-git @gokulrajr-r
+package-lock.json @rareminds-git @gokulrajr-r
+.prettierrc @rareminds-git @gokulrajr-r
+.stylelintrc.json @rareminds-git @gokulrajr-r
+commitlint.config.js @rareminds-git @gokulrajr-r
+.lintstagedrc.json @rareminds-git @gokulrajr-r
+codecov.yml @rareminds-git @gokulrajr-r
+
+# Ignore files - prevent excluding files from quality checks
+.gitignore @rareminds-git @gokulrajr-r
+.prettierignore @rareminds-git @gokulrajr-r
+.stylelintignore @rareminds-git @gokulrajr-r
+.secretlintignore @rareminds-git @gokulrajr-r
+.eslintignore @rareminds-git @gokulrajr-r
+
+# Security and secret scanning
+.secretlintrc.json @rareminds-git @gokulrajr-r
+
+# Package manager configs
+.npmrc @rareminds-git @gokulrajr-r
+.nvmrc @rareminds-git @gokulrajr-r
+
+# Docker and deployment configs
+Dockerfile @rareminds-git @gokulrajr-r
+docker-compose.yml @rareminds-git @gokulrajr-r
+nginx.conf @rareminds-git @gokulrajr-r
+
+# Git hooks - prevent bypassing quality checks
+/.husky/ @rareminds-git @gokulrajr-r
+
+# CI/CD workflows - ensure quality gates remain enforced
+/.github/workflows/ @rareminds-git @gokulrajr-r
+/.github/CODEOWNERS @rareminds-git @gokulrajr-r
+
+# Scripts that run in CI/CD or hooks
+/scripts/ @rareminds-git @gokulrajr-r
+
+# Editor configs that affect code formatting
+.editorconfig @rareminds-git @gokulrajr-r
+/.vscode/ @rareminds-git @gokulrajr-r
+
+# Documentation
+*.md @rareminds-git @gokulrajr-r
+/docs/ @rareminds-git @gokulrajr-r
+
+

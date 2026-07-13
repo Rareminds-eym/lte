@@ -1,0 +1,6 @@
+#!/bin/bash
+bash scripts/check-config-changes.sh
+npm run type-check
+npm run lint
+npm run build
+
