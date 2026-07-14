@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * Validates that only .ts and .tsx files exist in src directory
+ * Validates that only .ts and .tsx files exist in src and functions directories
  * Enforces strict TypeScript-only project structure
  */
 
-import { readdir, stat } from 'fs/promises';
+import { readdir } from 'fs/promises';
 import { join } from 'path';
 
-const ALLOWED_EXTENSIONS = ['.ts', '.tsx', '.json', '.md'];
+const ALLOWED_EXTENSIONS = ['.ts', '.tsx', '.json', '.md', '.wasm', '.css'];
 const EXCLUDED_DIRS = ['node_modules', '.git', 'dist', 'build', 'coverage'];
+const DIRECTORIES_TO_CHECK = ['src', 'functions'];
 
-async function validateFiles(dir = 'src') {
+async function validateDirectory(rootDir) {
   const violations = [];
 
   async function traverse(currentPath) {
@@ -33,7 +34,7 @@ async function validateFiles(dir = 'src') {
             violations.push({
               file: relativePath,
               extension: ext,
-              message: `File type not allowed: ${ext}. Only .ts, .tsx, .json, and .md files are permitted.`,
+              message: `File type not allowed: ${ext}. Only .ts, .tsx, .json, .md, .css, and .wasm files are permitted.`,
             });
           }
         }
@@ -43,22 +44,36 @@ async function validateFiles(dir = 'src') {
     }
   }
 
-  await traverse(dir);
+  await traverse(rootDir);
   return violations;
 }
 
 async function main() {
-  console.log('🔍 Validating file types (only .ts/.tsx allowed in src)...\n');
+  console.log('🔍 Validating file types (only .ts/.tsx allowed in src/ and functions/)...\n');
 
-  const violations = await validateFiles();
+  let allViolations = [];
 
-  if (violations.length === 0) {
-    console.log('✅ All files are correct type (.ts/.tsx)');
+  for (const dir of DIRECTORIES_TO_CHECK) {
+    try {
+      const violations = await validateDirectory(dir);
+      allViolations = allViolations.concat(violations);
+      console.log(`✓ Checked ${dir}/`);
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        console.error(`⚠️  Error checking ${dir}/: ${error.message}`);
+      }
+    }
+  }
+
+  console.log('');
+
+  if (allViolations.length === 0) {
+    console.log('✅ All files are correct type (.ts/.tsx) in src/ and functions/');
     process.exit(0);
   }
 
-  console.log(`❌ Found ${violations.length} file type violation(s):\n`);
-  violations.forEach((v) => {
+  console.log(`❌ Found ${allViolations.length} file type violation(s):\n`);
+  allViolations.forEach((v) => {
     console.log(`  📄 ${v.file}`);
     console.log(`     ${v.message}\n`);
   });

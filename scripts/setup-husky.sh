@@ -1,3 +1,10 @@
+#!/bin/bash
+
+# Initialize Husky
+npx husky install
+
+# Create pre-commit hook
+cat > .husky/pre-commit << 'EOF'
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
@@ -11,16 +18,9 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Check for console statements
-echo "✓ File types valid. Checking for console usage..."
-npm run lint:console
-if [ $? -ne 0 ]; then
-  echo "⚠️  Console statements found (review before commit)"
-fi
-
 # Run ESLint
-echo "✓ Running ESLint..."
-# npm run lint
+echo "✓ File types valid. Running ESLint..."
+npm run lint
 if [ $? -ne 0 ]; then
   echo "❌ ESLint check failed!"
   exit 1
@@ -28,10 +28,16 @@ fi
 
 # Type check
 echo "✓ ESLint passed. Running TypeScript type check..."
-# npm run typecheck
+npm run typecheck
 if [ $? -ne 0 ]; then
   echo "❌ Type check failed!"
   exit 1
 fi
 
 echo "✅ All pre-commit checks passed!"
+EOF
+
+chmod +x .husky/pre-commit
+
+echo "✅ Husky setup complete!"
+echo "Pre-commit hooks will now run: file validation → ESLint → type check"
