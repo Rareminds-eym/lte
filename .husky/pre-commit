@@ -18,8 +18,16 @@ if [ $? -ne 0 ]; then
   echo "⚠️  Console statements found (review before commit)"
 fi
 
+# Run Biome format and lint check
+echo "✓ Running Biome format and lint checks..."
+npx biome check --apply
+if [ $? -ne 0 ]; then
+  echo "❌ Biome checks failed!"
+  exit 1
+fi
+
 # Run ESLint
-echo "✓ Running ESLint..."
+echo "✓ Biome checks passed. Running ESLint..."
 npm run lint
 if [ $? -ne 0 ]; then
   echo "❌ ESLint check failed!"

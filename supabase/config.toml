@@ -1,0 +1,48 @@
+# Supabase Configuration for LTE (Learner Transformer Engine) Project
+
+[api]
+# Use different ports to avoid conflicts
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+# PostgreSQL port (different from API ports)
+port = 54322
+# Shadow database for migrations
+shadow_database_url = "postgresql://postgres:postgres@127.0.0.1:54322/postgres?schema=shadow"
+
+[studio]
+# Supabase Studio UI port
+port = 54323
+api_url = "http://127.0.0.1:54321"
+
+[inbucket]
+# Email testing service port
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[auth]
+# Session handling
+session_ttl = 3600
+max_enrolled_factors = 10
+
+[storage]
+# File storage configuration
+file_size_limit = 52428800
+
+[realtime]
+# WebSocket port for real-time features
+port = 54327
+
+[vector]
+# Vector database port
+port = 54328
+
+# Project metadata
+[project_metadata]
+project_id = "lte"
+project_name = "LTE - Learner Transformer Engine"
+version = "0.1.0"
