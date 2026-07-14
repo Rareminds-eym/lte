@@ -38,7 +38,8 @@
 		/* Testing */
 		"types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
 	},
-	"include": ["src"],
+	"include": ["src/**/*.ts", "src/**/*.tsx"],
+	"exclude": ["node_modules", "dist", "build", "**/*.js", "**/*.jsx"],
 	"references": [
 		{
 			"path": "./tsconfig.node.json"

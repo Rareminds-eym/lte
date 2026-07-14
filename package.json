@@ -26,6 +26,7 @@
 		"build": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
 		"build:dev": "node --max-old-space-size=12288 ./node_modules/vite/bin/vite.js build --mode development",
 		"lint": "eslint .",
+		"lint:files": "node scripts/validate-file-types.js",
 		"preview": "vite preview",
 		"test": "vitest",
 		"test:property": "vitest --run src/__tests__/property/",
