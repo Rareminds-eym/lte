@@ -1,9 +1,11 @@
 {
   "files": {
-    "ignoreUnknown": false
+    "ignoreUnknown": false,
+    "includes": ["src/**/*.js", "src/**/*.ts", "src/**/*.tsx", "test/**/*.js", "test/**/*.ts", "!**/*.min.js"]
   },
   "linter": {
     "enabled": true,
+    "includes": ["**", "!test/**"],
     "rules": {
       "a11y": {
         "useButtonType": "warn"
