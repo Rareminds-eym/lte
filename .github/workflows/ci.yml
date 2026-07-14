@@ -33,10 +33,13 @@ jobs:
       - name: Detect Console Usage
         run: npm run lint:console
 
-      # - name: Run ESLint
-      #   run: npm run lint
+      - name: Biome Linter & Formatter
+        run: npm run lint:biome || true
 
-      - name: Type Check
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: TypeScript Type Check
         run: npm run typecheck
 
       - name: Run Tests
