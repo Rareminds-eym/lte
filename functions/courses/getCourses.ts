@@ -9,8 +9,8 @@ export interface Course {
 }
 
 export const getCourses = async (
-	page: number = 1,
-	limit: number = 10,
+	_page: number = 1,
+	_limit: number = 10,
 ): Promise<Course[]> => {
 	// Mock implementation - replace with actual database query
 	return [

@@ -20,7 +20,7 @@ fi
 
 # Run ESLint
 echo "✓ Running ESLint..."
-# npm run lint
+npm run lint
 if [ $? -ne 0 ]; then
   echo "❌ ESLint check failed!"
   exit 1
@@ -28,7 +28,7 @@ fi
 
 # Type check
 echo "✓ ESLint passed. Running TypeScript type check..."
-# npm run typecheck
+npm run typecheck
 if [ $? -ne 0 ]; then
   echo "❌ Type check failed!"
   exit 1

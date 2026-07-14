@@ -32,7 +32,7 @@
 		"preview": "vite preview",
 		"test": "vitest",
 		"test:property": "vitest --run src/__tests__/property/",
-		"typecheck": "tsc --noEmit -p tsconfig.app.json",
+		"typecheck": "tsc --noEmit",
 		"prepare": "husky install",
 		"setup:husky": "node scripts/setup-husky-cross-platform.js",
 		"workers:dev": "concurrently -n \"email,pay,sso,realtime\" -c \"blue,yellow,magenta,cyan\" \"npm run workers:email\" \"npm run workers:payments\" \"npm run workers:sso\" \"npm run workers:realtime\"",
