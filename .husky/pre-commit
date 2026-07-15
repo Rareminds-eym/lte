@@ -1,45 +1,42 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+echo "Running pre-commit checks..."
 
-echo "🔍 Running pre-commit checks..."
-
-# Validate file types (TypeScript only)
-echo "📋 Validating file types..."
+# Validate file types
+echo "Validating file types..."
 npm run lint:files
 if [ $? -ne 0 ]; then
-  echo "❌ File type validation failed!"
+  echo "File type validation failed!"
   exit 1
 fi
 
 # Check for console statements
-echo "✓ File types valid. Checking for console usage..."
+echo "File types valid. Checking for console usage..."
 npm run lint:console
 if [ $? -ne 0 ]; then
-  echo "⚠️  Console statements found (review before commit)"
+  echo "Console statements found (review before commit)"
 fi
 
-# Run Biome format and lint check
-echo "✓ Running Biome format and lint checks..."
-npx biome check --apply
+# Run Biome linter and formatter
+echo "Running Biome linter and formatter checks..."
+npm run lint:biome
 if [ $? -ne 0 ]; then
-  echo "❌ Biome checks failed!"
+  echo "Biome check failed. Run npm run format:biome to apply safe fixes."
   exit 1
 fi
 
 # Run ESLint
-echo "✓ Biome checks passed. Running ESLint..."
+echo "Running ESLint..."
 npm run lint
 if [ $? -ne 0 ]; then
-  echo "❌ ESLint check failed!"
+  echo "ESLint check failed!"
   exit 1
 fi
 
 # Type check
-echo "✓ ESLint passed. Running TypeScript type check..."
+echo "ESLint passed. Running TypeScript type check..."
 npm run typecheck
 if [ $? -ne 0 ]; then
-  echo "❌ Type check failed!"
+  echo "Type check failed!"
   exit 1
 fi
 
-echo "✅ All pre-commit checks passed!"
+echo "All pre-commit checks passed!"

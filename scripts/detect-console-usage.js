@@ -16,8 +16,6 @@ const EXCLUDED_DIRS = [
 	"build",
 	"coverage",
 	"__tests__",
-	".test.ts",
-	".spec.ts",
 ];
 const CONSOLE_PATTERNS = [
 	{ pattern: /console\.log\s*\(/, method: "console.log" },
@@ -40,12 +38,8 @@ async function checkDirectory(rootDir) {
 				const relativePath = relative(process.cwd(), fullPath);
 
 				if (entry.isDirectory()) {
-					const isExcluded = EXCLUDED_DIRS.some(
-						(dir) =>
-							entry.name.includes(dir) ||
-							entry.name.startsWith(".") ||
-							entry.name === "__tests__",
-					);
+					const isExcluded =
+						entry.name.startsWith(".") || EXCLUDED_DIRS.includes(entry.name);
 
 					if (!isExcluded) {
 						await traverse(fullPath);
@@ -63,7 +57,8 @@ async function checkDirectory(rootDir) {
 							const lines = content.split("\n");
 
 							for (const { pattern, method } of CONSOLE_PATTERNS) {
-								lines.forEach((line, lineNum) => {
+								for (let lineNum = 0; lineNum < lines.length; lineNum += 1) {
+									const line = lines[lineNum];
 									if (pattern.test(line)) {
 										findings.push({
 											file: relativePath,
@@ -73,7 +68,7 @@ async function checkDirectory(rootDir) {
 											message: `Found ${method} statement in production code`,
 										});
 									}
-								});
+								}
 							}
 						} catch (error) {
 							console.error(`Error reading file ${fullPath}:`, error.message);

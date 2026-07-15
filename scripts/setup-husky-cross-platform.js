@@ -10,10 +10,7 @@ import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const hookContent = `#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
-echo "Running pre-commit checks..."
+const hookContent = `echo "Running pre-commit checks..."
 
 # Validate file types
 echo "Validating file types..."
@@ -31,11 +28,11 @@ if [ $? -ne 0 ]; then
 fi
 
 # Run Biome linter and formatter
-echo "Running Biome linter and formatter..."
-npx biome lint --write .
-npx biome format --write .
+echo "Running Biome linter and formatter checks..."
+npm run lint:biome
 if [ $? -ne 0 ]; then
-  echo "Biome formatting applied (review changes)"
+  echo "Biome check failed. Run npm run format:biome to apply safe fixes."
+  exit 1
 fi
 
 # Run ESLint
@@ -64,8 +61,11 @@ async function setupHusky() {
 		console.log("Installing Husky...");
 		try {
 			execSync("npx husky install", { stdio: "inherit" });
-		} catch {
-			console.log("Husky already installed");
+		} catch (error) {
+			if (!existsSync(path.join(".husky", "_"))) {
+				throw error;
+			}
+			console.log(`Husky install command failed, using existing hooks: ${error.message}`);
 		}
 
 		const huskyDir = ".husky";
@@ -82,8 +82,8 @@ async function setupHusky() {
 			try {
 				execSync(`chmod +x ${hookPath}`, { stdio: "inherit" });
 				console.log("Made hook executable");
-			} catch {
-				console.warn("Could not make hook executable (may not be needed)");
+			} catch (error) {
+				console.log(`Could not make hook executable: ${error.message}`);
 			}
 		}
 
@@ -91,7 +91,7 @@ async function setupHusky() {
 		console.log("Pre-commit hooks will now run:");
 		console.log("  1. File type validation");
 		console.log("  2. Console usage detection");
-		console.log("  3. Biome linting and formatting");
+		console.log("  3. Biome linting and formatting checks");
 		console.log("  4. ESLint checks");
 		console.log("  5. TypeScript type checking\n");
 		console.log("Next time you run: git commit");
