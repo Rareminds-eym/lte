@@ -28,7 +28,7 @@
 		"lint": "eslint .",
 		"lint:files": "node scripts/validate-file-types.js",
 		"lint:console": "node scripts/detect-console-usage.js",
-		"lint:biome": "biome lint --apply . && biome format --write .",
+		"lint:biome": "biome lint --write . && biome format --write .",
 		"preview": "vite preview",
 		"test": "vitest",
 		"test:property": "vitest --run src/__tests__/property/",
