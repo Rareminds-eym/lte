@@ -1,8 +1,6 @@
 # LTE - Learning Transform Engine
 
-[![CI](https://github.com/Rareminds-eym/rm-lms/workflows/CI/badge.svg)](https://github.com/Rareminds-eym/rm-lms/actions)
-[![codecov](https://codecov.io/gh/Rareminds-eym/rm-lms/branch/main/graph/badge.svg)](https://codecov.io/gh/Rareminds-eym/rm-lms)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 
 A modern Learning Transform Engine built with React, TypeScript, Vite, and a Feature-Sliced Design frontend structure. The repository also includes Cloudflare-style function modules for platform concerns such as authentication, users, courses, enrollments, uploads, and notifications.
 
@@ -71,7 +69,11 @@ Note: `workers:dev` references worker-specific scripts for email, payments, SSO,
 - `npm test` - Runs Vitest.
 - `npm run test:property` - Runs property tests under `src/__tests__/property/`.
 - `npm run lint` - Runs ESLint over the project.
+- `npm run lint:files` - **Validates that only .ts and .tsx files exist** in `src/` and `functions/` directories.
+- `npm run lint:console` - **Detects console statements** in production code (use proper logging instead).
+- `npm run lint:biome` - **Runs Biome linter and formatter** for code quality and style.
 - `npm run typecheck` - Runs TypeScript type checking with `tsconfig.app.json`.
+- `npm run setup:husky` - Sets up Husky git hooks for pre-commit validation.
 
 ## Environment Variables
 
@@ -277,6 +279,196 @@ This project includes configuration for:
 - Commitlint - Conventional commit validation.
 - CodeQL - GitHub security analysis.
 - Codecov - Coverage reporting.
+
+### TypeScript-Only Enforcement
+
+This project enforces **strict TypeScript/TSX-only** code in `src/` and `functions/` directories. No JavaScript (`.js` or `.jsx`) files are allowed.
+
+#### Setup (First Time)
+
+```bash
+# Install dependencies (if not done)
+npm install
+
+# Setup Husky git hooks (works on Windows, macOS, Linux)
+npm run setup:husky
+```
+
+**Expected output:**
+```
+🔧 Setting up Husky pre-commit hooks...
+
+📦 Installing Husky...
+✅ Created .husky/pre-commit hook
+
+✨ Husky setup complete!
+
+🎯 Pre-commit hooks will now run:
+  1. 📋 File type validation (TypeScript only)
+  2. 🔍 Console usage detection
+  3. 🎨 Biome linting and formatting
+  4. 🔍 ESLint checks
+  5. ✅ TypeScript type checking
+
+🚀 Next time you run: git commit
+   These checks will run automatically!
+```
+
+#### Validation Methods
+
+1. **Manual Check** - Run anytime:
+   ```bash
+   npm run lint:files
+   ```
+   Output example:
+   ```
+   🔍 Validating file types (only .ts/.tsx allowed in src/ and functions/)...
+   ✓ Checked src/
+   ✓ Checked functions/
+   ✅ All files are correct type (.ts/.tsx) in src/ and functions/
+   ```
+
+2. **Pre-commit Hook** - Runs automatically before every `git commit`:
+   ```bash
+   git add .
+   git commit -m "feat: add new feature"
+   # ↓ Validation runs automatically
+   # 🔍 Running pre-commit checks...
+   # 📋 Validating file types...
+   # ✓ File types valid. Checking for console usage...
+   # 🎨 Running Biome linter and formatter...
+   # ✓ Running ESLint...
+   # ✓ ESLint passed. Running TypeScript type check...
+   # ✅ All pre-commit checks passed!
+   ```
+
+3. **CI/CD Pipeline** - Runs on every push and PR via GitHub Actions (`.github/workflows/ci.yml`):
+   - Validates file types
+   - Runs ESLint
+   - Type checks with TypeScript
+   - Runs tests
+   - Builds project
+
+#### Allowed File Types
+
+✅ **Allowed in `src/` and `functions/`:**
+- `.ts` - TypeScript files
+- `.tsx` - React + TypeScript files
+- `.json` - Configuration and data files
+- `.md` - Markdown documentation
+- `.css` - Stylesheets (Tailwind, global styles)
+- `.wasm` - WebAssembly modules
+
+❌ **NOT Allowed:**
+- `.js` - JavaScript files
+- `.jsx` - React JavaScript files
+- Any other file extensions
+
+#### Enforcement Layers
+
+The project uses **6 layers** of enforcement to prevent non-TypeScript files:
+
+| Layer | Type | When It Runs | Action |
+|-------|------|--------------|--------|
+| 1 | TypeScript Config | Compilation | Rejects `.js`/`.jsx` files |
+| 2 | ESLint Config | Linting | Ignores `.js`/`.jsx` files |
+| 3 | Prettier Config | Formatting | Won't format non-TS files |
+| 4 | Validation Script | Manual/Hook | Scans & reports violations |
+| 5 | Git Hook (Husky) | Commit | Blocks commit if violations found |
+| 6 | GitHub Actions CI | Push/PR | Fails build if violations found |
+
+#### Troubleshooting
+
+**"File type not allowed" error**
+
+```bash
+# See which files are violating
+npm run lint:files
+
+# Fix: Delete the .js file and recreate as .ts
+rm src/utils/helper.js
+# Create as TypeScript instead
+echo "export const helper = () => {};" > src/utils/helper.ts
+```
+
+**"Husky hook not running"**
+
+```bash
+# Reinstall Husky
+npm run setup:husky
+
+# Make sure hook is executable
+chmod +x .husky/pre-commit
+```
+
+**"I need to create a .js file temporarily"**
+
+Please don't. If absolutely necessary:
+1. Contact the team for an exception
+2. Update `ALLOWED_EXTENSIONS` in `scripts/validate-file-types.js`
+3. Add to `.prettierignore` and `tsconfig.json`
+4. Document the exception in this README
+
+### Console Usage Detection
+
+The project scans for `console` statements in production code. Use proper logging instead.
+
+**Check for console statements:**
+```bash
+npm run lint:console
+```
+
+**What it detects:**
+- ❌ `console.log()`
+- ❌ `console.debug()`
+- ❌ `console.info()`
+- ❌ `console.warn()`
+- ❌ `console.error()`
+- ❌ `console.trace()`
+
+**What it ignores:**
+- ✅ Test files (`.test.ts`, `.spec.tsx`)
+- ✅ `.css`, `.json`, `.md` files
+- ✅ `__tests__/` directory
+
+**Better alternatives:**
+```typescript
+// ❌ Don't do this:
+console.log('User logged in');
+
+// ✅ Do this instead (if logger available):
+logger.info('User logged in');
+
+// ✅ Or use proper error handling:
+try {
+  // code
+} catch (error) {
+  // Log to monitoring service instead
+}
+```
+
+**Example output:**
+```
+🔍 Scanning for console statements in src/ and functions/...
+
+✓ Scanned src/
+✓ Scanned functions/
+
+⚠️  Found 2 console statement(s) in production code:
+
+📄 src/features/auth/lib/useAuth.ts
+   Line 42: console.log
+   └─ console.log('User data:', userData);
+
+📄 functions/auth/login.ts
+   Line 18: console.debug
+   └─ console.debug('Login attempt');
+
+💡 Tip: Use proper logging (logger.debug(), logger.error()) instead of console
+   Or remove console statements for production code
+```
+
+**More details** - See [VALIDATION_SETUP.md](VALIDATION_SETUP.md) for comprehensive setup guide.
 
 ## Git Hooks
 

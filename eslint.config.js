@@ -1,7 +1,5 @@
 import js from "@eslint/js";
-import prettierConfig from "eslint-config-prettier";
 import boundaries from "eslint-plugin-boundaries";
-import prettier from "eslint-plugin-prettier";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
@@ -11,7 +9,6 @@ export default [
 	{ ignores: ["dist", "build", "node_modules", "coverage", "*.config.js", "**/*.js", "**/*.jsx"] },
 	js.configs.recommended,
 	...tseslint.configs.recommended,
-	prettierConfig,
 	{
 		files: ["**/*.{ts,tsx}"],
 		languageOptions: {
@@ -21,7 +18,6 @@ export default [
 		plugins: {
 			"react-hooks": reactHooks,
 			"react-refresh": reactRefresh,
-			prettier: prettier,
 			boundaries: boundaries,
 		},
 		settings: {
@@ -41,7 +37,6 @@ export default [
 				"warn",
 				{ allowConstantExport: true },
 			],
-			"prettier/prettier": "error",
 			"no-console": "warn",
 			"no-debugger": "error",
 			"@typescript-eslint/no-unused-vars": [

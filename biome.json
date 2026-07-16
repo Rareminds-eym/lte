@@ -1,7 +1,14 @@
 {
   "files": {
     "ignoreUnknown": false,
-    "includes": ["src/**/*.js", "src/**/*.ts", "src/**/*.tsx", "test/**/*.js", "test/**/*.ts", "!**/*.min.js"]
+    "includes": [
+      "src/**/*.js",
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "test/**/*.js",
+      "test/**/*.ts",
+      "!**/*.min.js"
+    ]
   },
   "linter": {
     "enabled": true,

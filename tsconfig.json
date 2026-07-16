@@ -38,7 +38,7 @@
 		/* Testing */
 		"types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx"],
+	"include": ["src/**/*.ts", "src/**/*.tsx", "functions/**/*.ts", "functions/**/*.tsx"],
 	"exclude": ["node_modules", "dist", "build", "**/*.js", "**/*.jsx"],
 	"references": [
 		{

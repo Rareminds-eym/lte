@@ -21,7 +21,7 @@ export const verifyAuthToken = (token: string): AuthContext => {
 export const extractAuthToken = (
 	headers: Record<string, string>,
 ): string | null => {
-	const authHeader = headers.authorization || "";
+	const authHeader = headers["authorization"] || "";
 	const token = authHeader.replace("Bearer ", "");
 	return token || null;
 };
