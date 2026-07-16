@@ -1,3 +1,26 @@
+## Commit Message Format
+
+Please ensure your commits follow the conventional commit format:
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`
+
+**Example:**
+```
+fix(auth): resolve session token storage issue
+
+Updated the auth middleware to comply with new compliance requirements
+for session token handling.
+
+Fixes #123
+```
+
 ## Description
 
 <!-- Provide a brief description of the changes -->
