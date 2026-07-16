@@ -1,4 +1,4 @@
-@import url("tailwindcss");
+@import "tailwindcss";
 
 @layer base {
   html,
@@ -7,10 +7,7 @@
   }
 
   body {
-    @apply font-sans antialiased;
-
-    color: #111827;
-    background-color: #f9fafb;
+    @apply font-sans antialiased text-gray-900 bg-gray-50;
   }
 
   #root {

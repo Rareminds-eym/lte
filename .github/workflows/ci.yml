@@ -39,27 +39,29 @@ jobs:
 
       - name: Lint TypeScript - Changed Files Only
         run: |
-          git fetch origin dev --depth=1
-          CHANGED_TS=$(git diff --name-only origin/dev...HEAD | grep '\.\(ts\|tsx\)$' || echo "")
+          BASE_REF="${{ github.base_ref }}"
+          git fetch origin "$BASE_REF"
+          CHANGED_TS=$(git diff --name-only "origin/$BASE_REF...HEAD" -- '*.ts' '*.tsx' 2>/dev/null | grep -v node_modules || echo "")
           if [ -z "$CHANGED_TS" ]; then
             echo "✓ No TypeScript files changed"
             exit 0
           fi
           echo "Linting changed TypeScript files:"
           echo "$CHANGED_TS"
-          echo "$CHANGED_TS" | xargs npx eslint
+          echo "$CHANGED_TS" | tr '\n' '\0' | xargs -0 npx eslint --max-warnings 0
 
       - name: Lint CSS - Changed Files Only
         run: |
-          git fetch origin dev --depth=1
-          CHANGED_CSS=$(git diff --name-only origin/dev...HEAD | grep '\.css$' || echo "")
+          BASE_REF="${{ github.base_ref }}"
+          git fetch origin "$BASE_REF"
+          CHANGED_CSS=$(git diff --name-only "origin/$BASE_REF...HEAD" -- '*.css' 2>/dev/null | grep -v node_modules || echo "")
           if [ -z "$CHANGED_CSS" ]; then
             echo "✓ No CSS files changed"
             exit 0
           fi
           echo "Linting changed CSS files:"
           echo "$CHANGED_CSS"
-          echo "$CHANGED_CSS" | xargs npx stylelint --max-warnings 0
+          echo "$CHANGED_CSS" | tr '\n' '\0' | xargs -0 npx stylelint --max-warnings 0
 
       - name: Type Check
         run: npm run typecheck
