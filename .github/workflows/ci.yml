@@ -18,19 +18,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure NPM for CI
-        run: |
-          echo "legacy-peer-deps=true" > .npmrc
-          echo "ignore-scripts=true" >> .npmrc
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+
+      - name: Configure NPM for CI
+        run: |
+          rm -f .npmrc
+          npm config set legacy-peer-deps true
+          npm config set ignore-scripts true
 
       - name: Install Required Packages
-        run: npm install --no-save --legacy-peer-deps eslint@9.27.0 typescript@5.9.3 vitest@4.1.0 @types/node@25.5.0
+        run: npm install --no-save eslint@9.27.0 typescript@5.9.3 vitest@4.1.0 @types/node@25.5.0
 
       - name: Validate File Types
         run: npm run lint:files
