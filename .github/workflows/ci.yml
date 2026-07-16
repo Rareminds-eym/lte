@@ -25,7 +25,9 @@ jobs:
           cache: 'npm'
 
       - name: Install Required Packages
-        run: npm install --no-save eslint typescript vitest @types/node
+        run: npm ci --prefix . --package-lock=false
+        env:
+          npm_config_package_json: package-ci.json
 
       - name: Validate File Types
         run: npm run lint:files
