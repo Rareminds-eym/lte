@@ -25,9 +25,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Required Packages
-        run: npm ci --prefix . --package-lock=false
-        env:
-          npm_config_package_json: package-ci.json
+        run: npm install --no-save --legacy-peer-deps eslint@9.27.0 typescript@5.9.3 vitest@4.1.0 @types/node@25.5.0
 
       - name: Validate File Types
         run: npm run lint:files
