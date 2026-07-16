@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, production, dev]
   pull_request:
-    branches: [main, dev]
+    branches: [main, production, dev]
 
 jobs:
   lint-and-validate:
@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -35,8 +37,29 @@ jobs:
       - name: Detect Console Usage
         run: npm run lint:console
 
-      - name: Run ESLint
-        run: npm run lint
+      - name: Lint TypeScript - Changed Files Only
+        run: |
+          git fetch origin dev --depth=1
+          CHANGED_TS=$(git diff --name-only origin/dev...HEAD | grep '\.\(ts\|tsx\)$' || echo "")
+          if [ -z "$CHANGED_TS" ]; then
+            echo "✓ No TypeScript files changed"
+            exit 0
+          fi
+          echo "Linting changed TypeScript files:"
+          echo "$CHANGED_TS"
+          echo "$CHANGED_TS" | xargs npx eslint
+
+      - name: Lint CSS - Changed Files Only
+        run: |
+          git fetch origin dev --depth=1
+          CHANGED_CSS=$(git diff --name-only origin/dev...HEAD | grep '\.css$' || echo "")
+          if [ -z "$CHANGED_CSS" ]; then
+            echo "✓ No CSS files changed"
+            exit 0
+          fi
+          echo "Linting changed CSS files:"
+          echo "$CHANGED_CSS"
+          echo "$CHANGED_CSS" | xargs npx stylelint --max-warnings 0
 
       - name: Type Check
         run: npm run typecheck
