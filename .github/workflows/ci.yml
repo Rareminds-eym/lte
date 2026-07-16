@@ -18,6 +18,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Configure NPM for CI
+        run: |
+          echo "legacy-peer-deps=true" > .npmrc
+          echo "ignore-scripts=true" >> .npmrc
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
