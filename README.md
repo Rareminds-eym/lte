@@ -17,7 +17,7 @@ A modern Learning Transform Engine built with React, TypeScript, Vite, and a Fea
 
 ## Prerequisites
 
-- Node.js >= 20.0.0
+- Node.js >= 22.0.0
 - npm >= 10.0.0
 
 The required runtime versions are defined in `package.json`.
@@ -68,7 +68,8 @@ Note: `workers:dev` references worker-specific scripts for email, payments, SSO,
 
 - `npm test` - Runs Vitest.
 - `npm run test:property` - Runs property tests under `src/__tests__/property/`.
-- `npm run lint` - Runs ESLint over the project.
+- `npm run lint` - Runs ESLint and CSS linting over the project.
+- `npm run lint:css` - **Validates Tailwind CSS usage** in stylesheets.
 - `npm run lint:files` - **Validates that only .ts and .tsx files exist** in `src/` and `functions/` directories.
 - `npm run lint:console` - **Detects console statements** in production code (use proper logging instead).
 - `npm run lint:biome` - **Runs Biome linter and formatter** for code quality and style.
@@ -264,6 +265,123 @@ The application currently uses:
 - Cloudflare-oriented development scripts for Pages and worker service bindings.
 
 The current default route is `/`, which renders the dashboard page. Unknown routes render the `NotFound` page.
+
+## Tailwind CSS v4
+
+This project uses **Tailwind CSS v4** for styling. All CSS must strictly use Tailwind utilities.
+
+### Setup
+
+Tailwind is already configured in the project:
+
+- **Config**: `tailwind.config.ts` - Theme customization and content paths
+- **PostCSS**: `postcss.config.js` - CSS processing pipeline
+- **Global Styles**: `src/app/styles/index.css` - Tailwind directives and base layers
+- **Linting**: `.stylelintrc.json` - CSS validation rules
+
+### Usage
+
+Use Tailwind utility classes directly in JSX:
+
+```tsx
+// ✅ Correct: Use Tailwind utilities
+export function Button() {
+  return (
+    <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+      Click me
+    </button>
+  );
+}
+
+// ❌ Wrong: Don't write custom CSS
+export function Button() {
+  return <button className={styles.button}>Click me</button>;
+}
+```
+
+### Available Colors
+
+Custom colors defined in `tailwind.config.ts`:
+
+- `primary` (#3b82f6) - Blue
+- `secondary` (#8b5cf6) - Purple  
+- `danger` (#ef4444) - Red
+- `success` (#10b981) - Green
+- `warning` (#f59e0b) - Amber
+- `info` (#0ea5e9) - Cyan
+
+Usage:
+```tsx
+<div className="bg-primary text-secondary">Content</div>
+<div className="border border-danger">Error</div>
+```
+
+### Validation
+
+CSS files are validated with Stylelint to enforce Tailwind usage:
+
+```bash
+# Check CSS files
+npm run lint:css
+
+# Runs automatically in full lint
+npm run lint
+```
+
+The validation ensures:
+- Only Tailwind `@apply` directives in custom CSS
+- No hardcoded values in CSS files
+- Proper use of `@layer` for component definitions
+- No conflicting CSS rules
+
+### Styling Patterns
+
+**Component-level styling:**
+```tsx
+export function Card() {
+  return (
+    <div className="bg-white rounded-lg shadow-md p-4">
+      <h2 className="text-lg font-semibold text-gray-900">Card Title</h2>
+    </div>
+  );
+}
+```
+
+**Conditional classes:**
+```tsx
+export function Alert({ type = 'info' }) {
+  const bgColor = {
+    info: 'bg-blue-100',
+    success: 'bg-green-100',
+    error: 'bg-red-100',
+  }[type];
+  
+  return <div className={bgColor}>Alert message</div>;
+}
+```
+
+**Using `@apply` in CSS (for repeated patterns):**
+```css
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition;
+  }
+}
+```
+
+### Configuration Files
+
+**`tailwind.config.ts`** - Extends theme with custom colors and settings
+**`postcss.config.js`** - Processes CSS with Tailwind and Autoprefixer
+**`src/app/styles/index.css`** - Global styles using Tailwind directives
+**`.stylelintrc.json`** - Linting rules for Tailwind CSS files
+
+### References
+
+- [Tailwind CSS Documentation](https://tailwindcss.com/)
+- [Tailwind CSS v4 Release](https://tailwindcss.com/blog/tailwindcss-v4)
+
+---
 
 ## Code Quality Tools
 

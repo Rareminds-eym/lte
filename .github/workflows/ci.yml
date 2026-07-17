@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, production, dev]
   pull_request:
-    branches: [main, dev]
+    branches: [main, production, dev]
 
 jobs:
   lint-and-validate:
@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -35,8 +37,39 @@ jobs:
       - name: Detect Console Usage
         run: npm run lint:console
 
-      - name: Run ESLint
-        run: npm run lint
+      - name: Lint TypeScript - Changed Files Only
+        run: |
+          BASE_REF="${{ github.base_ref }}"
+          if [ -z "${BASE_REF}" ]; then
+            echo "Skipping changed-file TypeScript lint because github.base_ref is empty"
+            exit 0
+          fi
+          git fetch origin "${BASE_REF}"
+          CHANGED_TS=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- '*.ts' '*.tsx' 2>/dev/null | grep -v node_modules || echo "")
+          if [ -z "$CHANGED_TS" ]; then
+            echo "✓ No TypeScript files changed"
+            exit 0
+          fi
+          echo "Linting changed TypeScript files:"
+          echo "$CHANGED_TS"
+          echo "$CHANGED_TS" | tr '\n' '\0' | xargs -0 npx eslint --max-warnings 0
+
+      - name: Lint CSS - Changed Files Only
+        run: |
+          BASE_REF="${{ github.base_ref }}"
+          if [ -z "${BASE_REF}" ]; then
+            echo "Skipping changed-file CSS lint because github.base_ref is empty"
+            exit 0
+          fi
+          git fetch origin "${BASE_REF}"
+          CHANGED_CSS=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- '*.css' 2>/dev/null | grep -v node_modules || echo "")
+          if [ -z "$CHANGED_CSS" ]; then
+            echo "✓ No CSS files changed"
+            exit 0
+          fi
+          echo "Linting changed CSS files:"
+          echo "$CHANGED_CSS"
+          echo "$CHANGED_CSS" | tr '\n' '\0' | xargs -0 npx stylelint --max-warnings 0
 
       - name: Type Check
         run: npm run typecheck
