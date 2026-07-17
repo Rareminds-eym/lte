@@ -60,12 +60,12 @@ async function setupHusky() {
 
 		console.log("Installing Husky...");
 		try {
-			execSync("npx husky install", { stdio: "inherit" });
+			execSync("npx husky", { stdio: "inherit" });
 		} catch (error) {
 			if (!existsSync(path.join(".husky", "_"))) {
 				throw error;
 			}
-			console.log(`Husky install command failed, using existing hooks: ${error.message}`);
+			console.log("Husky setup command failed; reusing existing .husky/_ config");
 		}
 
 		const huskyDir = ".husky";
@@ -75,8 +75,12 @@ async function setupHusky() {
 		}
 
 		const hookPath = path.join(huskyDir, "pre-commit");
-		await writeFile(hookPath, hookContent, { encoding: "utf-8" });
-		console.log("Created .husky/pre-commit hook");
+		if (!existsSync(hookPath)) {
+			await writeFile(hookPath, hookContent, { encoding: "utf-8" });
+			console.log("Created .husky/pre-commit hook");
+		} else {
+			console.log("Existing .husky/pre-commit hook found; leaving it unchanged");
+		}
 
 		if (process.platform !== "win32") {
 			try {
