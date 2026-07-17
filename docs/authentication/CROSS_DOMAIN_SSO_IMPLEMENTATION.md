@@ -50,7 +50,7 @@
 │  │                                  │  │                              │  │
 │  │ POST /api/auth/login             │  │ POST /api/auth/sso/verify    │  │
 │  │ ├─ Receive: email, password      │  │ ├─ Receive: access_token     │  │
-│  │ ├─ RPC: .login()                 │  │ ├─ RPC: .verifyToken()       │  │
+│  │ ├─ RPC: .login()                 │  │ ├─ RPC: .getMe()       │  │
 │  │ ├─ Set refresh cookie            │  │ ├─ Sync to LTE DB            │  │
 │  │ └─ Return: access_token          │  │ ├─ Create LTE tokens         │  │
 │  │                                  │  │ ├─ Set lte_refresh cookie    │  │
@@ -217,8 +217,8 @@ const token = await new SignJWT(payload)
   })
   .setIssuedAt()
   .setExpirationTime("15m")  // Expires in 15 mins
-  .setIssuer("https://sso.rareminds.in")
-  .setAudience("skillpassport,lte")  // Valid for these apps
+  .setIssuer("sso-api")
+  .setAudience("skillpassport")  // App-specific audience
   .sign(privateKey);
 ```
 
@@ -530,10 +530,10 @@ Step 9: Generate LTE Redirect URL
 │                                          │
 │ 3. Add parameters:                       │
 │    lteUrl.searchParams.set(              │
-│      'access_token', token               │
+│      'code', exchangeCode  (one-time)    │
 │    )                                     │
 │    lteUrl.searchParams.set(              │
-│      'return_url', window.location.href  │
+│      'state', state (CSRF token)         │
 │    )                                     │
 │    lteUrl.searchParams.set(              │
 │      'from_app', 'skillpassport'         │
@@ -541,8 +541,8 @@ Step 9: Generate LTE Redirect URL
 │                                          │
 │ 4. Full URL:                             │
 │    https://lte.rareminds.in/auth/sso?    │
-│      access_token=eyJ...&                │
-│      return_url=https://skillpassport... │
+│      code=auth_xyz123&                   │
+│      state=550e8400-e29b...&             │
 │      &from_app=skillpassport             │
 └──────────────────────────────────────────┘
         ↓
@@ -958,10 +958,10 @@ When LTE receives SkillPassport's access_token at /auth/sso/verify:
 LTE verifies it with SSO via RPC
     ↓
 LTE creates SEPARATE refresh tokens:
-    ├─ LTE access_token (HS256, 15 mins)
+    ├─ LTE access_token (RS256, 15 mins)
     │  └─ aud: "lte"
     │  └─ For LTE API calls only
-    └─ LTE refresh_token (HS256, 7 days)
+    └─ LTE refresh_token (RS256, 7 days)
        └─ aud: "lte"
        └─ For LTE token refresh only
        └─ LTE can verify independently
@@ -1053,7 +1053,7 @@ const userClaims = ssoResult.claims;
 // }
 
 // Step 3: SSO Worker creates SEPARATE LTE tokens using JWT_PRIVATE_KEY
-// (This happens inside env.SSO_SERVICE.verifyToken() call)
+// (This happens inside env.SSO_SERVICE.getMe() call)
 const lteAccessToken = await jwt.sign({
   sub: userClaims.sub,
   email: userClaims.email,
@@ -1153,7 +1153,7 @@ Update httpOnly cookie
 
 | Aspect | SkillPassport | LTE |
 |--------|---------------|-----|
-| **Initial Token** | RPC: `.login()` → SSO | RPC: `.verifyToken()` → SSO |
+| **Initial Token** | RPC: `.login()` → SSO | RPC: `.getMe()` → SSO |
 | **Refresh Token** | RPC: `.refresh()` → SSO | Local verify + optional RPC |
 | **Access Token** | 15 mins (RS256) | 15 mins (RS256) |
 | **Refresh Token** | 7 days (RS256) | 7 days (RS256) |
@@ -1290,7 +1290,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       expires_in: 900
     }, {
       headers: {
-        'Set-Cookie': `lte_refresh_token=${newRefreshToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Domain=.rareminds.in; Max-Age=604800`
+        'Set-Cookie': `lte_refresh_token=${newRefreshToken}; Path=/api/auth; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
       }
     });
   } catch (error) {
@@ -1362,7 +1362,7 @@ export async function onRequestPost(context) {
       expires_in: 900
     }, {
       headers: {
-        'Set-Cookie': `lte_refresh_token=${newRefreshToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Domain=.rareminds.in; Max-Age=604800`
+        'Set-Cookie': `lte_refresh_token=${newRefreshToken}; Path=/api/auth; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
       }
     });
   } catch (error) {
@@ -1441,15 +1441,13 @@ entrypoint = "SsoWorker"          # Entry point
 SKILLPASSPORT_URL = "https://skillpassport.rareminds.in"
 LTE_APP_URL = "https://lte.rareminds.in"
 DATABASE_URL = "https://your-supabase.supabase.co"
-JWT_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\n....(same as SkillPassport)\n-----END PUBLIC KEY-----"
-JWT_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n....(SSO's private key)\n-----END PRIVATE KEY-----"
 
 # ============================================================================
-# SECRETS (Set via wrangler secret put or Cloudflare dashboard)
+# SECRETS (Set via: wrangler secret put SECRET_NAME)
 # ============================================================================
-# SUPABASE_SERVICE_ROLE_KEY
-# JWT_PUBLIC_KEY (from SSO Worker)
-# REFRESH_TOKEN_SECRET
+# JWT_PRIVATE_KEY = (SSO's private key - NEVER in vars, always in secrets)
+# JWT_PUBLIC_KEY = (from SSO Worker - can be in vars or secrets)
+# SUPABASE_SERVICE_ROLE_KEY = (database secret key)
 ```
 
 #### Why LTE Can Use SSO_SERVICE Binding
@@ -1631,8 +1629,8 @@ lte/functions/api/auth/sso-verify.ts
   ├─ Validate: is_email_verified, role includes 'learner'
   ├─ Sync user to LTE DB
   ├─ Create LTE tokens:
-  │  ├─ accessToken (15 mins, HS256)
-  │  └─ refreshToken (7 days, HS256)
+  │  ├─ accessToken (15 mins, RS256)
+  │  └─ refreshToken (7 days, RS256)
   ├─ Sets: lte_refresh_token cookie (Domain=.rareminds.in)
   └─ Returns: { success, access_token, user }
 
@@ -1657,7 +1655,7 @@ lte/functions/api/auth/logout.ts
 |-----------|---------------|-----|
 | **Pages Functions** | ✅ Has | ✅ Has |
 | **SSO_SERVICE Binding** | ✅ Uses for login/refresh | ✅ Uses for verify (Recommended) |
-| **RPC Pattern** | `env.SSO_SERVICE.login()` | `env.SSO_SERVICE.verifyToken()` |
+| **RPC Pattern** | `env.SSO_SERVICE.login()` | `env.SSO_SERVICE.getMe()` |
 | **JWT Verification** | SSO does it (not Pages) | SSO does it (via RPC) |
 | **Database** | SkillPassport DB | LTE DB |
 | **Refresh Token Storage** | httpOnly cookie | httpOnly cookie |
@@ -2144,8 +2142,8 @@ router.post('/api/auth/sso/verify', async (request, env) => {
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 900
       },
-      env.JWT_PRIVATE_KEY || 'fallback-secret',
-      { algorithm: 'HS256' }
+      env.JWT_PRIVATE_KEY,
+      { algorithm: 'RS256' }
     );
 
     // Generate LTE refresh token (7 days)
@@ -2157,13 +2155,13 @@ router.post('/api/auth/sso/verify', async (request, env) => {
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 604800
       },
-      env.REFRESH_TOKEN_SECRET || 'fallback-secret',
-      { algorithm: 'HS256' }
+      env.JWT_PRIVATE_KEY,
+      { algorithm: 'RS256' }
     );
 
     // Set httpOnly cookie with parent domain
     const headers = new Headers({
-      'Set-Cookie': `lte_refresh_token=${lteRefreshToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Domain=.rareminds.in; Max-Age=604800`
+      'Set-Cookie': `lte_refresh_token=${lteRefreshToken}; Path=/api/auth; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
     });
 
     return json(
@@ -2491,7 +2489,7 @@ User logs into SkillPassport, clicks "Go to LTE", SkillPassport passes their JWT
 | SkillPassport Frontend | React + Zustand | Login, dropdown navigation |
 | SkillPassport Pages Func | Cloudflare Pages | RPC: `env.SSO_SERVICE.login()` |
 | LTE Frontend | React + Zustand | SSO verification, dashboard |
-| LTE Pages Func | Cloudflare Pages | RPC: `env.SSO_SERVICE.verifyToken()` |
+| LTE Pages Func | Cloudflare Pages | RPC: `env.SSO_SERVICE.getMe()` |
 | SSO Worker | Cloudflare Worker | JWT signing + verification (RS256) |
 | Cookies | httpOnly on `.rareminds.in` | Secure cross-domain session storage |
 | JWT | RS256 Asymmetric | SSO owns all verification logic |
@@ -2532,7 +2530,7 @@ SkillPassport Pattern (Proven):          LTE Pattern (Same):
 │ Pages Function              │         │ Pages Function           │
 │ ├─ Receive credentials      │         │ ├─ Receive JWT           │
 │ ├─ RPC to SSO_SERVICE       │         │ ├─ RPC to SSO_SERVICE    │
-│ │  .login()                 │         │ │  .verifyToken()        │
+│ │  .login()                 │         │ │  .getMe()        │
 │ └─ Return tokens            │         │ └─ Return validation      │
 └─────────────────────────────┘         └──────────────────────────┘
 
@@ -2745,7 +2743,7 @@ T+7s  LTE Pages Function: sso-verify.ts
       Browser                  LTE Pages Function         SSO Worker
       │                              │                        │
       ├─ access_token ───────────────>│                       │
-      │                              ├─ RPC: .verifyToken() >│
+      │                              ├─ RPC: .getMe() >│
       │                              │                        │
       │                              │  Verify signature     │
       │                              │  Decode claims        │
@@ -2802,7 +2800,7 @@ T+12m Token auto-refresh triggered
       Browser                LTE Pages Function            SSO Worker
       │                             │                          │
       ├─ lte_refresh_token ────────>│                          │
-      │                             ├─ RPC: .refreshLteToken()>│
+      │                             ├─ RPC: .refreshSession()>│
       │                             │                          │
       │                             │  Verify HS256 SECRET     │
       │                             │  Check revocation        │
@@ -2848,7 +2846,7 @@ SkillPassport                       SSO Worker                    LTE
      │                                                       │              │
      │ Pass token in URL                                    │              │
      └─────────────────────────────────────────────────────>│              │
-                                                    │ .verifyToken() │
+                                                    │ .getMe() │
                                                     │ with RS256     │
                                                     │ Public Key     │
                                                     │ (RPC to SSO)   │
