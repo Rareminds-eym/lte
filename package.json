@@ -20,9 +20,9 @@
 	},
 	"scripts": {
 		"start": "npm run build:dev && concurrently -n \"workers,pages\" -c \"yellow,magenta\" \"npm run workers:dev\" \"npm run pages:dev\"",
-		"dev:local": "vite --mode development --port 8788",
+		"dev:local": "vite --mode development --port 8789",
 		"dev": "vite --mode development --port 3000",
-		"dev:prod": "vite --port 8788",
+		"dev:prod": "vite --port 8789",
 		"build": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
 		"build:dev": "node --max-old-space-size=12288 ./node_modules/vite/bin/vite.js build --mode development",
 		"lint": "eslint . && npm run lint:css",
@@ -36,8 +36,8 @@
 		"test:property": "vitest --run src/__tests__/property/",
 		"typecheck": "tsc --noEmit -p tsconfig.app.json",
 		"setup:husky": "node scripts/setup-husky-cross-platform.js",
-		"workers:dev": "concurrently -n \"email,pay,sso,realtime\" -c \"blue,yellow,magenta,cyan\" \"npm run workers:email\" \"npm run workers:payments\" \"npm run workers:sso\" \"npm run workers:realtime\"",
-		"pages:dev": "wrangler pages dev dist --compatibility-date=2026-06-08 --port=8788 --service PAYMENT_WORKER=razorpay-api --service SSO_SERVICE=sso-api --service REALTIME_WORKER=realtime-worker --service EMBEDDING_SERVICE=embedding-worker --service EMAIL_SERVICE=shared-email-api",
+		"workers:dev": "npm run workers:sso",
+		"pages:dev": "wrangler pages dev dist --compatibility-date=2026-06-08 --port=8789 --service SSO_SERVICE=sso-api",
 		"pages:build": "npm run build"
 	},
 	"engines": {

@@ -3,6 +3,7 @@
 /**
  * Detects console usage in src and functions directories.
  * Console statements should only be used for debugging, not in production code.
+ * Excludes dedicated logger implementation files and tests.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -16,6 +17,10 @@ const EXCLUDED_DIRS = [
 	"build",
 	"coverage",
 	"__tests__",
+];
+const EXCLUDED_FILES = [
+	"src/shared/config/logging.ts",
+	"functions/lib/logger.ts",
 ];
 const CONSOLE_PATTERNS = [
 	{ pattern: /console\.log\s*\(/, method: "console.log" },
@@ -35,7 +40,7 @@ async function checkDirectory(rootDir) {
 
 			for (const entry of entries) {
 				const fullPath = join(currentPath, entry.name);
-				const relativePath = relative(process.cwd(), fullPath);
+				const relativePath = relative(process.cwd(), fullPath).replace(/\\/g, "/");
 
 				if (entry.isDirectory()) {
 					const isExcluded =
@@ -50,7 +55,8 @@ async function checkDirectory(rootDir) {
 					if (
 						[".ts", ".tsx"].includes(ext) &&
 						!entry.name.includes(".test.") &&
-						!entry.name.includes(".spec.")
+						!entry.name.includes(".spec.") &&
+						!EXCLUDED_FILES.includes(relativePath)
 					) {
 						try {
 							const content = await readFile(fullPath, "utf-8");
@@ -106,7 +112,7 @@ async function main() {
 
 	if (allFindings.length === 0) {
 		console.log(
-			"No console statements found in production code (src/ and functions/)\n",
+			"No unapproved console statements found in production code (src/ and functions/)\n",
 		);
 		process.exit(0);
 	}

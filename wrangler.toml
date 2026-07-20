@@ -1,0 +1,44 @@
+# Wrangler configuration for LTE Cloudflare Pages Functions.
+# SSO owns auth-code Durable Object storage; LTE consumes SSO through RPC.
+
+pages_build_output_dir = "build"
+name = "lte-app"
+compatibility_date = "2026-06-08"
+compatibility_flags = ["nodejs_compat"]
+
+# ============================================================================
+# LOCAL DEV
+# ============================================================================
+
+[dev]
+port = 8789
+host = "127.0.0.1"
+inspector_port = 9228
+
+# ============================================================================
+# SERVICE BINDINGS
+# ============================================================================
+
+[[services]]
+binding = "SSO_SERVICE"
+service = "sso-api"
+entrypoint = "SsoWorker"
+
+# ============================================================================
+# VARIABLES
+# ============================================================================
+
+[vars]
+ENVIRONMENT = "production"
+REFRESH_COOKIE_NAME = "__Host-lte_refresh"
+SSO_WORKER_LOCAL_URL = "http://127.0.0.1:8787"
+
+# ============================================================================
+# SECRETS
+# ============================================================================
+# For local development: add secrets to .dev.vars.
+# For production: set secrets using `wrangler secret put <KEY_NAME>` or dashboard.
+#
+# Required:
+# - SUPABASE_URL
+# - SUPABASE_SERVICE_ROLE_KEY
