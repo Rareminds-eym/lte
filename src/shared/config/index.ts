@@ -13,4 +13,12 @@ export const ROUTES = {
   NOT_FOUND: "/404",
 };
 
+export function getSkillpassportUrl(): string {
+  const url = import.meta.env["VITE_SKILLPASSPORT_URL"]?.trim();
+  if (!url) {
+    throw new Error("VITE_SKILLPASSPORT_URL environment variable is not configured");
+  }
+  return url.replace(/\/+$/, "");
+}
+
 export * from "./logging";

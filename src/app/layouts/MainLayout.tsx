@@ -1,8 +1,8 @@
 import type React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/app/store";
-import { getLogger } from "@/shared";
+import { getLogger, getSkillpassportUrl } from "@/shared";
 
 const logger = getLogger("MainLayout");
 
@@ -14,6 +14,9 @@ export const MainLayout: React.FC = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authError = useAuthStore((state) => state.error);
 
+  const [silentChecking, setSilentChecking] = useState(true);
+
+  // 1. Initial local session load
   useEffect(() => {
     if (location.pathname.startsWith("/auth/callback")) {
       return;
@@ -22,14 +25,64 @@ export const MainLayout: React.FC = () => {
     if (!initialized && !isAuthenticated) {
       logger.info("Calling initialize...");
       void initialize();
-    } else if (initialized && !isAuthenticated && !authError && location.pathname !== "/") {
-      logger.info("Unauthenticated session on protected route. Initiating 0-click SSO check...");
-      const skillpassportUrl = import.meta.env["VITE_SKILLPASSPORT_URL"] || "http://127.0.0.1:8788";
-      const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
-      const ssoLoginUrl = `${skillpassportUrl}/login?target_app=lte&redirect_uri=${redirectUri}`;
-      window.location.href = ssoLoginUrl;
     }
-  }, [initialize, initialized, isAuthenticated, authError, location.pathname]);
+  }, [initialize, initialized, isAuthenticated, location.pathname]);
+
+  // 2. Silent SSO check if local session is absent on protected route
+  useEffect(() => {
+    if (
+      !initialized ||
+      isAuthenticated ||
+      !silentChecking ||
+      location.pathname === "/" ||
+      location.pathname.startsWith("/auth/callback")
+    ) {
+      return;
+    }
+
+    async function performSilentSso() {
+      logger.info("No local session. Performing background silent SSO check...");
+      try {
+        const skillpassportUrl = getSkillpassportUrl();
+        const res = await fetch(`${skillpassportUrl}/api/auth/silent-sso`, {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          const data = (await res.json()) as { redirectUrl: string };
+          if (data?.redirectUrl) {
+            logger.info("Silent SSO check succeeded. Initiating local callback exchange...");
+            window.location.href = data.redirectUrl;
+            return;
+          }
+        }
+      } catch (err) {
+        logger.error(
+          "Silent SSO background check failed:",
+          err instanceof Error ? err : new Error(String(err)),
+        );
+      }
+      setSilentChecking(false);
+    }
+
+    void performSilentSso();
+  }, [initialized, isAuthenticated, silentChecking, location.pathname]);
+
+  // 3. Fallback redirect if silent SSO fails
+  useEffect(() => {
+    if (
+      initialized &&
+      !isAuthenticated &&
+      !silentChecking &&
+      !authError &&
+      location.pathname !== "/" &&
+      !location.pathname.startsWith("/auth/callback")
+    ) {
+      logger.info("Unauthenticated session. Redirecting locally to LTE Home page...");
+      window.location.href = `${window.location.origin}/`;
+    }
+  }, [initialized, isAuthenticated, silentChecking, authError, location.pathname]);
 
   if (location.pathname.startsWith("/auth/callback") || location.pathname === "/") {
     return <Outlet />;
@@ -40,7 +93,7 @@ export const MainLayout: React.FC = () => {
     authError &&
     (authError.includes("Access denied") || authError.includes("LTE access is required"))
   ) {
-    const skillpassportUrl = import.meta.env["VITE_SKILLPASSPORT_URL"] || "http://127.0.0.1:8788";
+    const skillpassportUrl = getSkillpassportUrl();
     return (
       <main
         style={{
@@ -102,7 +155,7 @@ export const MainLayout: React.FC = () => {
   }
 
   // Loading / Unauthenticated state for protected routes
-  if (loading || !initialized || !isAuthenticated) {
+  if (loading || !initialized || !isAuthenticated || (silentChecking && !isAuthenticated)) {
     return (
       <main
         style={{
