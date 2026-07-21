@@ -51,7 +51,7 @@ export async function refreshLteSession(
 	};
 	if (typeof service.authenticateSharedSession === "function") {
 		const res = await service.authenticateSharedSession(refreshToken, "lte", ip ?? undefined, ua ?? undefined);
-		if (!res || !res.success || !res.access_token) {
+		if (!res?.success || !res?.access_token) {
 			throw new Error(res?.error || "Invalid or revoked session");
 		}
 		return { access_token: res.access_token, refresh_token: res.refresh_token || refreshToken };
@@ -76,21 +76,31 @@ export async function getMe(env: Pick<LteEnv, "SSO_SERVICE">, accessToken: strin
 function isMembershipStatus(value: string): value is MembershipStatus {
 	return ["active", "inactive", "suspended", "expired"].includes(value);
 }
+interface RawSsoUser {
+	sub?: unknown;
+	email?: unknown;
+	org_id?: unknown;
+	is_email_verified?: unknown;
+	membership_status?: unknown;
+	roles?: unknown;
+	products?: unknown;
+	user_metadata?: unknown;
+}
 
-export function normalizeAuthUser(value: Record<string, unknown>): AuthUser {
-	const roles = Array.isArray(value["roles"])
-		? value["roles"].filter((role): role is string => typeof role === "string")
+export function normalizeAuthUser(value: RawSsoUser): AuthUser {
+	const roles = Array.isArray(value.roles)
+		? value.roles.filter((role: unknown): role is string => typeof role === "string")
 		: [];
-	const products = Array.isArray(value["products"])
-		? value["products"].filter((product): product is string => typeof product === "string")
+	const products = Array.isArray(value.products)
+		? value.products.filter((product: unknown): product is string => typeof product === "string")
 		: [];
-	const membershipStatus = value["membership_status"];
+	const membershipStatus = value.membership_status;
 
 	if (
-		typeof value["sub"] !== "string" ||
-		typeof value["email"] !== "string" ||
-		typeof value["org_id"] !== "string" ||
-		typeof value["is_email_verified"] !== "boolean" ||
+		typeof value.sub !== "string" ||
+		typeof value.email !== "string" ||
+		typeof value.org_id !== "string" ||
+		typeof value.is_email_verified !== "boolean" ||
 		typeof membershipStatus !== "string"
 	) {
 		throw new Error("Invalid SSO user claims");
@@ -101,18 +111,18 @@ export function normalizeAuthUser(value: Record<string, unknown>): AuthUser {
 	}
 
 	const userMetadata =
-		value["user_metadata"] && typeof value["user_metadata"] === "object" && !Array.isArray(value["user_metadata"])
-			? (value["user_metadata"] as Record<string, unknown>)
+		value.user_metadata && typeof value.user_metadata === "object" && !Array.isArray(value.user_metadata)
+			? (value.user_metadata as Record<string, unknown>)
 			: {};
 
 	return {
-		sub: value["sub"],
-		email: value["email"],
-		org_id: value["org_id"],
+		sub: value.sub,
+		email: value.email,
+		org_id: value.org_id,
 		roles,
 		products,
 		membership_status: membershipStatus,
-		is_email_verified: value["is_email_verified"],
+		is_email_verified: value.is_email_verified,
 		user_metadata: userMetadata,
 	};
 }

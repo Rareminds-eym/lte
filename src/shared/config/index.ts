@@ -14,6 +14,7 @@ export const ROUTES = {
 };
 
 export function getSkillpassportUrl(): string {
+  // biome-ignore lint/complexity/useLiteralKeys: must use index signature to satisfy typescript config
   const url = import.meta.env["VITE_SKILLPASSPORT_URL"]?.trim();
   if (!url) {
     throw new Error("VITE_SKILLPASSPORT_URL environment variable is not configured");

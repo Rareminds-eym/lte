@@ -45,7 +45,7 @@ jobs:
             exit 0
           fi
           git fetch origin "${BASE_REF}"
-          CHANGED_TS=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- '*.ts' '*.tsx' 2>/dev/null | grep -v node_modules || echo "")
+          CHANGED_TS=$(git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" -- '*.ts' '*.tsx' 2>/dev/null | grep -v node_modules || echo "")
           if [ -z "$CHANGED_TS" ]; then
             echo "✓ No TypeScript files changed"
             exit 0
@@ -62,7 +62,7 @@ jobs:
             exit 0
           fi
           git fetch origin "${BASE_REF}"
-          CHANGED_CSS=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- '*.css' 2>/dev/null | grep -v node_modules || echo "")
+          CHANGED_CSS=$(git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" -- '*.css' 2>/dev/null | grep -v node_modules || echo "")
           if [ -z "$CHANGED_CSS" ]; then
             echo "✓ No CSS files changed"
             exit 0

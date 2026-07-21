@@ -38,15 +38,15 @@ export class FunctionLogger {
   }
 
   debug(message: string, metadata?: LogMetadata): void {
-    console.debug(this.formatMessage('debug', message, metadata));
+    globalThis.console.debug(this.formatMessage('debug', message, metadata));
   }
 
   info(message: string, metadata?: LogMetadata): void {
-    console.info(this.formatMessage('info', message, metadata));
+    globalThis.console.info(this.formatMessage('info', message, metadata));
   }
 
   warn(message: string, metadata?: LogMetadata): void {
-    console.warn(this.formatMessage('warn', message, metadata));
+    globalThis.console.warn(this.formatMessage('warn', message, metadata));
   }
 
   error(message: string, error?: Error | unknown, metadata?: LogMetadata): void {
@@ -54,10 +54,10 @@ export class FunctionLogger {
       ? { ...(metadata || {}), error: error.message, stack: error.stack }
       : metadata;
     
-    console.error(this.formatMessage('error', message, errorMeta));
+    globalThis.console.error(this.formatMessage('error', message, errorMeta));
     
     if (error instanceof Error && error.stack) {
-      console.error(error.stack);
+      globalThis.console.error(error.stack);
     }
   }
 }

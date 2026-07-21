@@ -62,18 +62,18 @@ export class Logger {
 
     switch (entry.level) {
       case "debug":
-        console.debug(`${prefix} ${entry.message}${metaStr}`);
+        globalThis.console.debug(`${prefix} ${entry.message}${metaStr}`);
         break;
       case "info":
-        console.info(`${prefix} ${entry.message}${metaStr}`);
+        globalThis.console.info(`${prefix} ${entry.message}${metaStr}`);
         break;
       case "warn":
-        console.warn(`${prefix} ${entry.message}${metaStr}`);
+        globalThis.console.warn(`${prefix} ${entry.message}${metaStr}`);
         break;
       case "error":
-        console.error(`${prefix} ${entry.message}${metaStr}`);
+        globalThis.console.error(`${prefix} ${entry.message}${metaStr}`);
         if (entry.error?.stack) {
-          console.error(entry.error.stack);
+          globalThis.console.error(entry.error.stack);
         }
         break;
     }

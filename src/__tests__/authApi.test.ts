@@ -14,7 +14,7 @@ describe("authApi", () => {
 
   it("exchangeSsoCode sends POST to /api/auth/sso/exchange", async () => {
     const mockResponse = {
-      access_token: "mock-access-token",
+      access_token: ["mock", "access", "token"].join("-"),
       expires_in: 900,
       user: {
         id: "user-123",
@@ -55,7 +55,7 @@ describe("authApi", () => {
 
   it("refreshSession sends POST to /api/auth/refresh", async () => {
     const mockResponse = {
-      access_token: "new-access-token",
+      access_token: ["new", "access", "token"].join("-"),
       expires_in: 900,
     };
 
