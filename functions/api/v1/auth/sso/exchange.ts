@@ -1,11 +1,11 @@
-import { createRefreshCookie } from "../../../lib/cookies";
-import { toAuthApiUser } from "../../../lib/auth";
-import { getClientIp, getUserAgent, jsonError, jsonResponse, readJsonObject } from "../../../lib/http";
-import { exchangeAuthorizationCode } from "../../../lib/sso-client";
-import { createServiceSupabase } from "../../../lib/supabase";
-import { syncSsoShadowData } from "../../../lib/sync-shadow";
-import { ssoLogger } from "../../../lib/logger";
-import type { AuthSuccessResponse, LteEnv, PagesContext } from "../../../lib/types";
+import { createRefreshCookie } from "@functions/lib/cookies";
+import { toAuthApiUser } from "@functions/lib/auth";
+import { getClientIp, getUserAgent, jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
+import { exchangeAuthorizationCode } from "@functions/lib/sso-client";
+import { createServiceSupabase } from "@functions/lib/supabase";
+import { syncSsoShadowData } from "@functions/lib/sync-shadow";
+import { ssoLogger } from "@functions/lib/logger";
+import type { AuthSuccessResponse, LteEnv, PagesContext } from "@functions/lib/types";
 
 function getStringField(body: Record<string, unknown>, field: string): string | null {
 	const value = body[field];
@@ -46,13 +46,12 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 		}
 
 		const headers = new Headers();
-		const cookieHeader = createRefreshCookie(exchange.refresh_token, context.env, context.request);
+		const cookieHeader = createRefreshCookie(exchange.refresh_token, context.request);
 		ssoLogger.debug("Setting refresh cookie", { cookieName: cookieHeader.split("=")[0], url: context.request.url });
 		headers.set("Set-Cookie", cookieHeader);
 
 		const supabase = createServiceSupabase(context.env);
 		await syncSsoShadowData(supabase, exchange.user, exchange.subscription);
-
 
 		return jsonResponse<AuthSuccessResponse>(
 			{
@@ -68,4 +67,3 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 		return jsonError(message, 401);
 	}
 }
-

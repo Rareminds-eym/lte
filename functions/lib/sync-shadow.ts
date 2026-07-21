@@ -43,25 +43,22 @@ function getTrimmedMetadataString(metadata: Record<string, unknown>, key: string
 export async function syncUsers(supabase: SupabaseClient, user: AuthUser): Promise<void> {
 	const metadata = user.user_metadata ?? {};
 	const email = user.email.trim().toLowerCase();
+	const emailPrefix = email.split("@")[0] || "User";
 	const fullName = getTrimmedMetadataString(metadata, "full_name") ?? getTrimmedMetadataString(metadata, "name");
 
 	const firstName =
 		getTrimmedMetadataString(metadata, "first_name") ??
 		getTrimmedMetadataString(metadata, "firstName") ??
 		getTrimmedMetadataString(metadata, "given_name") ??
-		(fullName ? fullName.split(" ")[0] : null);
+		(fullName ? fullName.split(" ")[0] : null) ??
+		emailPrefix;
 
 	const lastName =
 		getTrimmedMetadataString(metadata, "last_name") ??
 		getTrimmedMetadataString(metadata, "lastName") ??
 		getTrimmedMetadataString(metadata, "family_name") ??
-		(fullName?.includes(" ") ? fullName.split(" ").slice(1).join(" ") : null);
-
-	if (!firstName || !lastName) {
-		const msg = `First name and last name are required for user sync (user_id: ${user.sub}, email: ${email})`;
-		authLogger.error(msg, new Error(msg), { userId: user.sub, email });
-		throw new Error(msg);
-	}
+		(fullName?.includes(" ") ? fullName.split(" ").slice(1).join(" ") : null) ??
+		"User";
 
 	const phone =
 		getTrimmedMetadataString(metadata, "phone") ??
@@ -159,6 +156,23 @@ export async function syncSsoShadowData(
 	user: AuthUser,
 	subscription: SsoSubscriptionSnapshot | null,
 ): Promise<void> {
-	await syncUsers(supabase, user);
-	await syncSubscriptionCache(supabase, subscription);
+	// 1. Check if user record already exists in LTE DB
+	const { data: existingUser } = await supabase.from("users").select("id").eq("id", user.sub).maybeSingle();
+	if (!existingUser) {
+		authLogger.info("[Option 1 Applied] User data not found in LTE DB. Provisioning...", { userId: user.sub });
+		await syncUsers(supabase, user);
+	} else {
+		authLogger.info("[Option 2 Applied] User already exists in LTE DB. Skipping user sync.", { userId: user.sub });
+	}
+
+	// 2. Check if subscription_cache record already exists in LTE DB
+	if (subscription) {
+		const { data: existingSub } = await supabase.from("subscription_cache").select("id").eq("id", subscription.id).maybeSingle();
+		if (!existingSub) {
+			authLogger.info("[Option 1 Applied] Subscription cache not found in LTE DB. Provisioning...", { subscriptionId: subscription.id });
+			await syncSubscriptionCache(supabase, subscription);
+		} else {
+			authLogger.info("[Option 2 Applied] Subscription cache already exists in LTE DB. Skipping subscription sync.", { subscriptionId: subscription.id });
+		}
+	}
 }

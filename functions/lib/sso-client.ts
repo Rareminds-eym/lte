@@ -5,12 +5,12 @@ export function getSsoService(env: Pick<LteEnv, "SSO_SERVICE">) {
 	if (!env.SSO_SERVICE) {
 		throw new Error("SSO_SERVICE binding is not configured. Make sure sso-worker is running on port 8787.");
 	}
-	
+
 	// Verify it's actually a service binding object
 	if (typeof env.SSO_SERVICE !== 'object') {
 		throw new Error(`SSO_SERVICE is not a valid service binding. Got type: ${typeof env.SSO_SERVICE}`);
 	}
-	
+
 	return env.SSO_SERVICE;
 }
 
@@ -36,7 +36,27 @@ export async function refreshLteSession(
 	ip?: string | null,
 	ua?: string | null,
 ): Promise<{ access_token: string; refresh_token: string }> {
-	return getSsoService(env).refreshSession(refreshToken, ip ?? undefined, ua ?? undefined);
+	const service = getSsoService(env) as unknown as {
+		authenticateSharedSession?: (
+			refreshToken: string,
+			targetApp: string,
+			ip?: string,
+			ua?: string,
+		) => Promise<{ success?: boolean; access_token?: string; refresh_token?: string; error?: string }>;
+		refreshSession: (
+			refreshToken: string,
+			ip?: string,
+			ua?: string,
+		) => Promise<{ access_token: string; refresh_token: string }>;
+	};
+	if (typeof service.authenticateSharedSession === "function") {
+		const res = await service.authenticateSharedSession(refreshToken, "lte", ip ?? undefined, ua ?? undefined);
+		if (!res || !res.success || !res.access_token) {
+			throw new Error(res?.error || "Invalid or revoked session");
+		}
+		return { access_token: res.access_token, refresh_token: res.refresh_token || refreshToken };
+	}
+	return service.refreshSession(refreshToken, ip ?? undefined, ua ?? undefined);
 }
 
 export async function logoutLteSession(

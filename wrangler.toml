@@ -30,7 +30,6 @@ entrypoint = "SsoWorker"
 
 [vars]
 ENVIRONMENT = "production"
-REFRESH_COOKIE_NAME = "__Host-lte_refresh"
 SSO_WORKER_LOCAL_URL = "http://127.0.0.1:8787"
 
 # ============================================================================

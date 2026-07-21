@@ -1,23 +1,13 @@
-import type { LteEnv } from "./types";
-
-const DEFAULT_REFRESH_COOKIE_NAME = "__Host-lte_refresh";
-const LOCAL_REFRESH_COOKIE_NAME = "lte_refresh";
+const PROD_REFRESH_COOKIE_NAME = "__Host-sso_refresh";
+const LOCAL_REFRESH_COOKIE_NAME = "sso_refresh";
 const REFRESH_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
-export function getRefreshCookieName(env: Pick<LteEnv, "REFRESH_COOKIE_NAME">): string {
-	return env.REFRESH_COOKIE_NAME || DEFAULT_REFRESH_COOKIE_NAME;
+export function getRequestRefreshCookieName(request: Request): string {
+	return isLocalHttpRequest(request) ? LOCAL_REFRESH_COOKIE_NAME : PROD_REFRESH_COOKIE_NAME;
 }
 
-export function getRequestRefreshCookieName(request: Request, env: Pick<LteEnv, "REFRESH_COOKIE_NAME">): string {
-	return isLocalHttpRequest(request) ? LOCAL_REFRESH_COOKIE_NAME : getRefreshCookieName(env);
-}
-
-export function createRefreshCookie(
-	refreshToken: string,
-	env: Pick<LteEnv, "REFRESH_COOKIE_NAME">,
-	request: Request,
-): string {
-	const name = getRequestRefreshCookieName(request, env);
+export function createRefreshCookie(refreshToken: string, request: Request): string {
+	const name = getRequestRefreshCookieName(request);
 	const parts = [
 		`${name}=${refreshToken}`,
 		"Path=/",
@@ -33,15 +23,15 @@ export function createRefreshCookie(
 	return parts.join("; ");
 }
 
-export function clearRefreshCookies(env: Pick<LteEnv, "REFRESH_COOKIE_NAME">): string[] {
+export function clearRefreshCookies(): string[] {
 	return [
-		[`${getRefreshCookieName(env)}=`, "Path=/", "HttpOnly", "Secure", "SameSite=Lax", "Max-Age=0"].join("; "),
+		[`${PROD_REFRESH_COOKIE_NAME}=`, "Path=/", "HttpOnly", "Secure", "SameSite=Lax", "Max-Age=0"].join("; "),
 		[`${LOCAL_REFRESH_COOKIE_NAME}=`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"].join("; "),
 	];
 }
 
-export function getRefreshCookie(request: Request, env: Pick<LteEnv, "REFRESH_COOKIE_NAME">): string | null {
-	return getCookie(request, getRequestRefreshCookieName(request, env)) ?? getCookie(request, getRefreshCookieName(env));
+export function getRefreshCookie(request: Request): string | null {
+	return getCookie(request, getRequestRefreshCookieName(request));
 }
 
 export function getCookie(request: Request, name: string): string | null {

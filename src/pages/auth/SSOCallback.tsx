@@ -1,8 +1,8 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "../../app/store";
-import { getLogger } from "../../shared";
+import { useAuthStore } from "@/app/store";
+import { getLogger } from "@/shared";
 
 const logger = getLogger("SSOCallback");
 const exchangeRequests = new Map<string, Promise<void>>();

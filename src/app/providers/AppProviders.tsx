@@ -1,6 +1,6 @@
 import type React from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { ErrorFallback } from "../../shared/ui/ErrorFallback";
+import { ErrorFallback } from "@/shared/ui/ErrorFallback";
 
 interface AppProvidersProps {
   children: React.ReactNode;

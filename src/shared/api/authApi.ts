@@ -3,7 +3,7 @@ import type {
   LogoutResponse,
   MeResponse,
   RefreshResponse,
-} from "../types/auth";
+} from "@/shared/types/auth";
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => null)) as unknown;
@@ -22,12 +22,15 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
+const API_VERSION = "v1";
+const AUTH_API_PREFIX = `/api/${API_VERSION}/auth`;
+
 export async function exchangeSsoCode(params: {
   code: string;
   state: string;
   redirectUri: string;
 }): Promise<AuthSuccessResponse> {
-  const response = await fetch("/api/auth/sso/exchange", {
+  const response = await fetch(`${AUTH_API_PREFIX}/sso/exchange`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -38,7 +41,7 @@ export async function exchangeSsoCode(params: {
 }
 
 export async function refreshSession(): Promise<RefreshResponse> {
-  const response = await fetch("/api/auth/refresh", {
+  const response = await fetch(`${AUTH_API_PREFIX}/refresh`, {
     method: "POST",
     credentials: "include",
   });
@@ -47,7 +50,7 @@ export async function refreshSession(): Promise<RefreshResponse> {
 }
 
 export async function fetchMe(accessToken: string): Promise<MeResponse> {
-  const response = await fetch("/api/auth/me", {
+  const response = await fetch(`${AUTH_API_PREFIX}/me`, {
     method: "GET",
     headers: { Authorization: `Bearer ${accessToken}` },
     credentials: "include",
@@ -57,7 +60,7 @@ export async function fetchMe(accessToken: string): Promise<MeResponse> {
 }
 
 export async function logoutSession(): Promise<LogoutResponse> {
-  const response = await fetch("/api/auth/logout", {
+  const response = await fetch(`${AUTH_API_PREFIX}/logout`, {
     method: "POST",
     credentials: "include",
   });

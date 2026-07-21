@@ -12,8 +12,8 @@ export function jsonResponse<T>(body: T, init: ResponseInit = {}): Response {
 	});
 }
 
-export function jsonError(error: string, status: number): Response {
-	return jsonResponse<ErrorResponse>({ error }, { status });
+export function jsonError(error: string, status: number, init: ResponseInit = {}): Response {
+	return jsonResponse<ErrorResponse>({ error }, { ...init, status });
 }
 
 export async function readJsonObject(request: Request): Promise<Record<string, unknown>> {
