@@ -24,6 +24,22 @@ export interface Capability {
   step?: number;
 }
 
+// Database Models
+interface CapabilityRow {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+}
+
+interface RoleCapabilitySequenceRow {
+  id: string;
+  sequence_step: number;
+  required_level: string | null;
+  capability_priority: string | null;
+  capabilities: CapabilityRow | CapabilityRow[];
+}
+
 // Request/Response Models
 export interface GetCapabilitiesRequest {
   roleId: string;
@@ -69,7 +85,7 @@ async function getCapabilitiesByRoleId(
     return [];
   }
 
-  return data.map((item: any) => {
+  return data.map((item: RoleCapabilitySequenceRow) => {
     const cap = Array.isArray(item.capabilities)
       ? item.capabilities[0]
       : item.capabilities;
@@ -90,7 +106,7 @@ async function getCapabilitiesByRoleId(
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   try {
-    const body = (await readJsonObject(context.request)) as GetCapabilitiesRequest;
+    const body = (await readJsonObject(context.request)) as unknown as GetCapabilitiesRequest;
     const { roleId } = body;
 
     if (!roleId) {
