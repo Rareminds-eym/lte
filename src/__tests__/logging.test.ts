@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getLogger } from "../shared/config/logging";
+import { getLogger } from "@/shared";
 
 describe("logging", () => {
   beforeEach(() => {

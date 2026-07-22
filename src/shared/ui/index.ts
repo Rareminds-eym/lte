@@ -1,3 +1,3 @@
 // Shared UI components
 export { ErrorFallback } from "./ErrorFallback";
-export { Button } from "./Button";
+export { Button, type ButtonProps } from "./Button";

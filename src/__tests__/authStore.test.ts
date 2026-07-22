@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAuthStore } from "../app/store/authStore";
-import * as authApi from "../shared/api/authApi";
-import type { AuthUser } from "../shared/types/auth";
+import { useAuthStore } from "@/app/store";
+import * as authApi from "@/shared/api/authApi";
+import type { AuthUser } from "@/shared/types/auth";
 
-vi.mock("../shared/api/authApi");
+vi.mock("@/shared/api/authApi");
 
 describe("authStore", () => {
   const mockUser: AuthUser = {

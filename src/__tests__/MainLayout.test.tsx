@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MainLayout } from "../app/layouts/MainLayout";
-import { useAuthStore } from "../app/store/authStore";
+import { MainLayout } from "@/app/layouts/MainLayout";
+import { useAuthStore } from "@/app/store";
 
 describe("MainLayout", () => {
   beforeEach(() => {

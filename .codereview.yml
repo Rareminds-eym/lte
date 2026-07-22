@@ -1012,7 +1012,40 @@ rules:
 
   Such imports must fail linting and CI.
 
+* category: imports
+  title: "Use path alias `@/` for project imports"
+  severity: high
+  description: |
+  All imports referencing project code under `src/` must use the `@/` path alias.
+
+  Preferred:
+  * `import { Button } from "@/shared/ui";`
+  * `import { NavigationDrawer } from "@/widgets/NavigationDrawer";`
+
+  Avoid:
+  * `import { Button } from "../../shared/ui/Button";`
+  * relative path navigation (`../../../`) across FSD slices.
+
+* category: imports
+  title: "Type placement by scope and ownership"
+
+  severity: high
+  description: |
+  TypeScript type definitions must be placed based on scope:
+
+  1. Component Props (e.g. ButtonProps, HeaderProps):
+     * Must be co-located with the component (e.g., `Button.tsx`).
+     * Re-exported through the slice's `index.ts`.
+     * Do not dump component props into `src/shared/types/`.
+
+  2. Global Infrastructure Types (e.g. AuthUser, ApiResponse):
+     * Must live in `src/shared/types/` (e.g., `shared/types/auth.ts`).
+
+  3. Domain Entity & Feature Models (e.g. Course, Assignment):
+     * Must live in `entities/<name>/model/types.ts` or `features/<name>/model/types.ts`.
+
 # --------------------------------------------------------------------------
+
 
 # COMPONENT PLACEMENT
 

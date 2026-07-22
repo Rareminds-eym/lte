@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { exchangeSsoCode, fetchMe, logoutSession, refreshSession } from "../shared/api/authApi";
+import { exchangeSsoCode, fetchMe, logoutSession, refreshSession } from "@/shared/api/authApi";
 
 describe("authApi", () => {
   const originalFetch = globalThis.fetch;

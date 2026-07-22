@@ -1,4 +1,5 @@
-import React from "react";
+import type React from "react";
+import { Fragment } from "react";
 import { Button } from "@/shared/ui";
 
 export interface HeaderProps {
@@ -64,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
           {breadcrumbs.map((crumb, idx) => {
             const isLast = idx === breadcrumbs.length - 1;
             return (
-              <React.Fragment key={crumb.label}>
+              <Fragment key={crumb.label}>
                 {idx > 0 && (
                   <svg
                     aria-hidden="true"
@@ -82,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className={isLast ? "font-bold text-gray-900" : "hover:text-gray-700"}>
                   {crumb.label}
                 </span>
-              </React.Fragment>
+              </Fragment>
             );
           })}
         </nav>
