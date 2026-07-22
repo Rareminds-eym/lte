@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MainLayout } from "../app/layouts/MainLayout";
 import { useAuthStore } from "../app/store/authStore";
@@ -22,24 +22,28 @@ describe("MainLayout", () => {
     useAuthStore.setState({ initialized: false, loading: true });
 
     render(
-      <BrowserRouter>
+      <MemoryRouter initialEntries={["/dashboard"]}>
         <MainLayout />
-      </BrowserRouter>,
+      </MemoryRouter>,
     );
 
-    expect(screen.getByText("Loading LTE session...")).toBeInTheDocument();
+    expect(screen.getByText("Authenticating...")).toBeInTheDocument();
   });
 
-  it("shows access required card when unauthenticated", () => {
-    useAuthStore.setState({ initialized: true, isAuthenticated: false });
+  it("shows access required card when entitlement error occurs", () => {
+    useAuthStore.setState({
+      initialized: true,
+      isAuthenticated: false,
+      error: "LTE access is required",
+    });
 
     render(
-      <BrowserRouter>
+      <MemoryRouter initialEntries={["/dashboard"]}>
         <MainLayout />
-      </BrowserRouter>,
+      </MemoryRouter>,
     );
 
     expect(screen.getByText("LTE Access Required")).toBeInTheDocument();
-    expect(screen.getByText("Sign In with SkillPassport")).toBeInTheDocument();
+    expect(screen.getByText("Manage Subscription on SkillPassport")).toBeInTheDocument();
   });
 });

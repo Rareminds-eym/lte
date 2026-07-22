@@ -12,7 +12,7 @@ describe("authApi", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("exchangeSsoCode sends POST to /api/auth/sso/exchange", async () => {
+  it("exchangeSsoCode sends POST to /api/v1/auth/sso/exchange", async () => {
     const mockResponse = {
       access_token: ["mock", "access", "token"].join("-"),
       expires_in: 900,
@@ -39,7 +39,7 @@ describe("authApi", () => {
       redirectUri: "http://localhost:8789/auth/callback",
     });
 
-    expect(globalThis.fetch).toHaveBeenCalledWith("/api/auth/sso/exchange", {
+    expect(globalThis.fetch).toHaveBeenCalledWith("/api/v1/auth/sso/exchange", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -53,7 +53,7 @@ describe("authApi", () => {
     expect(result).toEqual(mockResponse);
   });
 
-  it("refreshSession sends POST to /api/auth/refresh", async () => {
+  it("refreshSession sends POST to /api/v1/auth/refresh", async () => {
     const mockResponse = {
       access_token: ["new", "access", "token"].join("-"),
       expires_in: 900,
@@ -66,7 +66,7 @@ describe("authApi", () => {
 
     const result = await refreshSession();
 
-    expect(globalThis.fetch).toHaveBeenCalledWith("/api/auth/refresh", {
+    expect(globalThis.fetch).toHaveBeenCalledWith("/api/v1/auth/refresh", {
       method: "POST",
       credentials: "include",
     });
@@ -74,7 +74,7 @@ describe("authApi", () => {
     expect(result).toEqual(mockResponse);
   });
 
-  it("fetchMe sends GET to /api/auth/me with Bearer token", async () => {
+  it("fetchMe sends GET to /api/v1/auth/me with Bearer token", async () => {
     const mockResponse = {
       user: {
         id: "user-123",
@@ -95,7 +95,7 @@ describe("authApi", () => {
 
     const result = await fetchMe("valid-token");
 
-    expect(globalThis.fetch).toHaveBeenCalledWith("/api/auth/me", {
+    expect(globalThis.fetch).toHaveBeenCalledWith("/api/v1/auth/me", {
       method: "GET",
       headers: { Authorization: "Bearer valid-token" },
       credentials: "include",
@@ -104,7 +104,7 @@ describe("authApi", () => {
     expect(result).toEqual(mockResponse);
   });
 
-  it("logoutSession sends POST to /api/auth/logout", async () => {
+  it("logoutSession sends POST to /api/v1/auth/logout", async () => {
     const mockResponse = { success: true };
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -114,7 +114,7 @@ describe("authApi", () => {
 
     const result = await logoutSession();
 
-    expect(globalThis.fetch).toHaveBeenCalledWith("/api/auth/logout", {
+    expect(globalThis.fetch).toHaveBeenCalledWith("/api/v1/auth/logout", {
       method: "POST",
       credentials: "include",
     });
