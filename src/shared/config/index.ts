@@ -1,7 +1,6 @@
 // Shared configuration constants
 
 export const CONFIG = {
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3001",
   APP_NAME: "LTE",
   APP_VERSION: "0.1.0",
   TIMEOUT: 10000,
@@ -13,3 +12,14 @@ export const ROUTES = {
   LOGIN: "/login",
   NOT_FOUND: "/404",
 };
+
+export function getSkillpassportUrl(): string {
+  // biome-ignore lint/complexity/useLiteralKeys: must use index signature to satisfy typescript config
+  const url = import.meta.env["VITE_SKILLPASSPORT_URL"]?.trim();
+  if (!url) {
+    throw new Error("VITE_SKILLPASSPORT_URL environment variable is not configured");
+  }
+  return url.replace(/\/+$/, "");
+}
+
+export * from "./logging";

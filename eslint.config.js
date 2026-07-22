@@ -6,7 +6,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default [
-	{ ignores: ["dist", "build", "node_modules", "coverage", "*.config.js", "**/*.js", "**/*.jsx"] },
+	{ ignores: ["dist", "build", "node_modules", "coverage", ".wrangler", "*.config.js", "**/*.js", "**/*.jsx"] },
 	js.configs.recommended,
 	...tseslint.configs.recommended,
 	{
@@ -77,6 +77,18 @@ export default [
 					],
 				},
 			],
+		},
+	},
+	{
+		files: [
+			"src/shared/config/logging.ts",
+			"functions/lib/logger.ts",
+			"src/__tests__/**/*",
+			"**/*.test.*",
+			"**/*.spec.*",
+		],
+		rules: {
+			"no-console": "off",
 		},
 	},
 ];

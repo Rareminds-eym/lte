@@ -27,61 +27,36 @@ This follows a **modular serverless architecture** where:
 functions/
 ├── README.md                      # This file
 │
-├── auth/                          # Authentication functions
-│   ├── login.ts                  # User login endpoint
-│   ├── register.ts               # User registration
-│   ├── logout.ts                 # User logout
-│   ├── refreshToken.ts           # Token refresh
-│   └── resetPassword.ts          # Password reset
+├── api/                           # Cloudflare Pages API Endpoints (/api/*)
+│   └── auth/                      # Authentication API Endpoints (/api/auth/*)
+│       ├── me.ts                  # GET /api/auth/me (Get current authenticated user)
+│       ├── refresh.ts             # POST /api/auth/refresh (Refresh access token)
+│       ├── logout.ts              # POST /api/auth/logout (Clear auth session)
+│       └── sso/
+│           └── exchange.ts        # POST /api/auth/sso/exchange (SSO auth code exchange)
 │
-├── users/                         # User management functions
-│   ├── getUser.ts                # Get user by ID
-│   ├── updateUser.ts             # Update user profile
-│   ├── deleteUser.ts             # Delete user
-│   └── listUsers.ts              # List users (admin)
-│
-├── courses/                       # Course management functions
-│   ├── getCourses.ts             # List/search courses
-│   ├── getCourse.ts              # Get course by ID
-│   ├── createCourse.ts           # Create new course
-│   ├── updateCourse.ts           # Update course
-│   └── deleteCourse.ts           # Delete course
-│
-├── enrollments/                   # Enrollment functions
-│   ├── enrollUser.ts             # Enroll user in course
-│   ├── unenrollUser.ts           # Unenroll user
-│   ├── getUserEnrollments.ts    # Get user's enrollments
-│   └── getCourseEnrollments.ts  # Get course enrollments
-│
-├── notifications/                 # Notification functions
-│   ├── sendNotification.ts       # Send notification
-│   ├── sendEmail.ts              # Send email
-│   └── sendSMS.ts                # Send SMS (optional)
-│
-├── uploads/                       # File upload functions
-│   ├── uploadFile.ts             # Generic file upload
-│   ├── uploadAvatar.ts           # Upload user avatar
-│   └── uploadCourseMedia.ts      # Upload course media
+├── lib/                           # Serverless helper functions & clients
+│   ├── auth.ts                    # User claim formatting & authentication helpers
+│   ├── cookies.ts                 # Refresh token cookie utilities
+│   ├── http.ts                    # HTTP request parsing & error helpers
+│   ├── logger.ts                  # Serverless function logger utility
+│   ├── sso-client.ts              # SSO Worker RPC integration client
+│   ├── supabase.ts                # Service Supabase client
+│   └── sync-shadow.ts             # SSO user shadow profile syncing
 │
 ├── middleware/                    # Reusable middleware
-│   ├── auth.ts                   # Authentication middleware
-│   ├── errorHandler.ts           # Error handling
-│   ├── validation.ts             # Request validation
-│   ├── cors.ts                   # CORS configuration
-│   └── rateLimit.ts              # Rate limiting
+│   ├── auth.ts                    # Authentication middleware
+│   ├── errorHandler.ts            # Error handling
+│   └── cors.ts                    # CORS configuration
 │
 ├── schemas/                       # Validation schemas
-│   ├── index.ts                  # Schema exports
-│   ├── userSchemas.ts            # User validation schemas
-│   ├── courseSchemas.ts          # Course validation schemas
-│   └── enrollmentSchemas.ts      # Enrollment validation schemas
+│   └── index.ts                   # Schema exports
 │
-└── shared/                        # Shared utilities
-    ├── index.ts                  # Utility exports
-    ├── database.ts               # Database connection
-    ├── storage.ts                # Storage utilities
-    ├── email.ts                  # Email utilities
-    └── constants.ts              # Backend constants
+└── shared/                        # Shared utilities & definitions
+    ├── index.ts                   # Utility & type exports
+    └── types.ts                   # Backend TypeScript interfaces & types
+
+
 ```
 
 **Rules**:

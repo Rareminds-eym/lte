@@ -15,7 +15,8 @@
 		/* Path Aliases */
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["src/*"]
+			"@/*": ["src/*"],
+			"@functions/*": ["functions/*"]
 		},
 		/* Linting */
 		"strict": true,

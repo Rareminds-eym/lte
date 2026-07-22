@@ -1,0 +1,1 @@
+export { SSOCallback } from "./SSOCallback";
