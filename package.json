@@ -36,6 +36,7 @@
 		"test:property": "vitest --run src/__tests__/property/",
 		"typecheck": "tsc --noEmit -p tsconfig.app.json",
 		"setup:husky": "node scripts/setup-husky-cross-platform.js",
+		"ci": "npm run lint:files && npm run lint:console && npm run lint:biome && npm run lint && npm run typecheck && vitest run",
 		"workers:dev": "npm run workers:sso",
 		"pages:dev": "wrangler pages dev dist --compatibility-date=2026-06-08 --port=8789 --service SSO_SERVICE=sso-api",
 		"pages:build": "npm run build"

@@ -1,7 +1,7 @@
+import { create } from "zustand";
+import { getLogger } from "@/shared";
 import { exchangeSsoCode, fetchMe, logoutSession, refreshSession } from "@/shared/api/authApi";
 import type { AuthUser } from "@/shared/types/auth";
-import { getLogger } from "@/shared";
-import { create } from "zustand";
 
 const logger = getLogger("authStore");
 
