@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="text"
             placeholder="Search courses, skills, topics..."
             onChange={handleSearchChange}
-            className="w-full bg-transparent text-slate-900 placeholder:text-slate-500 font-medium text-xs outline-none border-none"
+            className="w-full bg-transparent text-slate-900 placeholder:text-slate-500 font-medium text-sm outline-none border-none"
           />
         </div>
       </div>

@@ -266,7 +266,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
                 type="button"
                 title={isCollapsed ? item.label : undefined}
                 onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl font-semibold text-xs transition-colors duration-150 cursor-pointer overflow-hidden ${
+                className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl font-semibold text-sm transition-colors duration-150 cursor-pointer overflow-hidden ${
                   isActive
                     ? "bg-[#eff6ff] text-[#2563eb]"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -314,13 +314,13 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             <h3 className="text-xs font-bold text-slate-800 leading-snug">
               Need help choosing what to do next?
             </h3>
-            <p className="text-[11px] text-slate-400 font-medium leading-tight">
+            <p className="text-xs text-slate-400 font-medium leading-tight">
               Get guidance from your AI Mentor
             </p>
             <Button
               variant="primary"
               size="sm"
-              className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs border-none justify-center mt-1"
+              className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-xs border-none justify-center mt-1"
               icon={
                 <svg aria-hidden="true" className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                   <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
