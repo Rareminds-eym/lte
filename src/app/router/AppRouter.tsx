@@ -11,7 +11,7 @@ export const AppRouter: React.FC = () => {
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/auth/callback" element={<></>} />
+        <Route path="/auth/callback" element={null} />
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
         </Route>

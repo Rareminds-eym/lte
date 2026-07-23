@@ -56,35 +56,7 @@ export const DashboardLayout: React.FC = () => {
     void performSilentSso();
   }, [initialized, isAuthenticated, silentChecking, location.pathname]);
 
-  // Case 1: Loading / Unauthenticated state for protected routes while checking is in progress
-  if (loading || !initialized || (silentChecking && !isAuthenticated)) {
-    return (
-      <main
-        style={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          padding: "2rem",
-          background: "#f8fafc",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <p
-            style={{
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              color: "#1e293b",
-              marginBottom: "0.5rem",
-            }}
-          >
-            Authenticating...
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  // Case 2: User is authenticated in SSO, but lacks LTE product entitlement
+  // Case 1: User is authenticated in SSO, but lacks LTE product entitlement
   if (
     authError &&
     (authError.includes("Access denied") || authError.includes("LTE access is required"))
@@ -146,6 +118,34 @@ export const DashboardLayout: React.FC = () => {
             Manage Subscription on SkillPassport
           </a>
         </section>
+      </main>
+    );
+  }
+
+  // Case 2: Loading / Unauthenticated state for protected routes while checking is in progress
+  if (loading || !initialized || (silentChecking && !isAuthenticated)) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          padding: "2rem",
+          background: "#f8fafc",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <p
+            style={{
+              fontSize: "1.1rem",
+              fontWeight: 600,
+              color: "#1e293b",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Authenticating...
+          </p>
+        </div>
       </main>
     );
   }
