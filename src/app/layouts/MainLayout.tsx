@@ -1,24 +1,40 @@
 import type React from "react";
-import { useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { Outlet, useLocation, useSearchParams, useNavigate, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/app/store";
-import { getLogger, getSkillpassportUrl } from "@/shared";
+import { getLogger } from "@/shared";
 
 const logger = getLogger("MainLayout");
+const exchangeRequests = new Map<string, Promise<void>>();
+
+function getExchangeKey(params: { code: string; state: string; redirectUri: string }): string {
+  return `${params.redirectUri}:${params.code}:${params.state}`;
+}
 
 export const MainLayout: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
   const initialize = useAuthStore((state) => state.initialize);
-  const loading = useAuthStore((state) => state.loading);
   const initialized = useAuthStore((state) => state.initialized);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const exchangeCode = useAuthStore((state) => state.exchangeCode);
   const authError = useAuthStore((state) => state.error);
 
-  const [silentChecking, setSilentChecking] = useState(true);
+  const [callbackError, setCallbackError] = useState<string | null>(null);
 
-  // 1. Initial local session load
+  // Check if we are on a callback flow (either /auth/callback or code/state query parameters)
+  const callbackParams = useMemo(() => {
+    const code = searchParams.get("code");
+    const state = searchParams.get("state");
+    const redirectUri = `${window.location.origin}/auth/callback`;
+    return code && state ? { code, state, redirectUri } : null;
+  }, [searchParams]);
+
+  // 1. Initial local session load in background (only if not doing callback)
   useEffect(() => {
-    if (location.pathname.startsWith("/auth/callback")) {
+    if (location.pathname.startsWith("/auth/callback") || callbackParams) {
       return;
     }
 
@@ -26,162 +42,64 @@ export const MainLayout: React.FC = () => {
       logger.info("Calling initialize...");
       void initialize();
     }
-  }, [initialize, initialized, isAuthenticated, location.pathname]);
+  }, [initialize, initialized, isAuthenticated, location.pathname, callbackParams]);
 
-  // 2. Silent SSO check if local session is absent on protected route
+  // 2. Perform authorization code exchange if callback parameters are present
   useEffect(() => {
-    if (
-      !initialized ||
-      isAuthenticated ||
-      !silentChecking ||
-      location.pathname === "/" ||
-      location.pathname.startsWith("/auth/callback")
-    ) {
-      return;
+    if (!callbackParams) return;
+
+    let cancelled = false;
+    const exchangeKey = getExchangeKey(callbackParams);
+    let exchangeRequest = exchangeRequests.get(exchangeKey);
+
+    if (!exchangeRequest) {
+      logger.info("Starting code exchange...", callbackParams);
+      exchangeRequest = exchangeCode(callbackParams).catch((error: unknown) => {
+        exchangeRequests.delete(exchangeKey);
+        throw error;
+      });
+      exchangeRequests.set(exchangeKey, exchangeRequest);
     }
 
-    async function performSilentSso() {
-      logger.info("No local session. Performing background silent SSO check...");
-      try {
-        const skillpassportUrl = getSkillpassportUrl();
-        const res = await fetch(`${skillpassportUrl}/api/auth/silent-sso`, {
-          method: "GET",
-          credentials: "include",
-        });
-
-        if (res.ok) {
-          const data = (await res.json()) as { redirectUrl: string };
-          if (data?.redirectUrl) {
-            logger.info("Silent SSO check succeeded. Initiating local callback exchange...");
-            window.location.href = data.redirectUrl;
-            return;
-          }
+    exchangeRequest
+      .then(() => {
+        if (!cancelled) {
+          logger.info("Exchange succeeded, navigating to dashboard");
+          window.history.replaceState({}, "", "/dashboard");
+          navigate("/dashboard", { replace: true });
         }
-      } catch (err) {
-        logger.error(
-          "Silent SSO background check failed:",
-          err instanceof Error ? err : new Error(String(err)),
-        );
-      }
-      setSilentChecking(false);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : "SSO callback failed";
+          logger.error("Exchange failed", error instanceof Error ? error : new Error(message));
+          setCallbackError(message);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [callbackParams, exchangeCode, navigate]);
+
+  // If executing callback, intercept and render loading/error screen
+  if (callbackParams || location.pathname.startsWith("/auth/callback")) {
+    // If we routed to /auth/callback without params, redirect to landing
+    if (!callbackParams) {
+      return <Navigate to="/" replace />;
     }
 
-    void performSilentSso();
-  }, [initialized, isAuthenticated, silentChecking, location.pathname]);
+    const message = callbackError ?? authError;
 
-  // 3. Fallback redirect if silent SSO fails
-  useEffect(() => {
-    if (
-      initialized &&
-      !isAuthenticated &&
-      !silentChecking &&
-      !authError &&
-      location.pathname !== "/" &&
-      !location.pathname.startsWith("/auth/callback")
-    ) {
-      logger.info("Unauthenticated session. Redirecting locally to LTE Home page...");
-      window.location.href = `${window.location.origin}/`;
-    }
-  }, [initialized, isAuthenticated, silentChecking, authError, location.pathname]);
-
-  if (location.pathname.startsWith("/auth/callback") || location.pathname === "/") {
-    return <Outlet />;
-  }
-
-  // Case 2: User is authenticated in SSO, but lacks LTE product entitlement
-  if (
-    authError &&
-    (authError.includes("Access denied") || authError.includes("LTE access is required"))
-  ) {
-    const skillpassportUrl = getSkillpassportUrl();
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          padding: "2rem",
-          background: "#f8fafc",
-        }}
-      >
-        <section
-          style={{
-            maxWidth: "28rem",
-            textAlign: "center",
-            background: "#ffffff",
-            padding: "2.5rem 2rem",
-            borderRadius: "1rem",
-            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01)",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "1.5rem",
-              fontWeight: 700,
-              marginBottom: "0.75rem",
-              color: "#0f172a",
-            }}
-          >
-            LTE Access Required
-          </h2>
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: "0.95rem",
-              lineHeight: 1.5,
-              marginBottom: "1.75rem",
-            }}
-          >
-            Your SkillPassport account does not currently have active LTE product access enabled.
-          </p>
-          <a
-            href={skillpassportUrl}
-            style={{
-              display: "inline-block",
-              background: "#2563eb",
-              color: "#ffffff",
-              fontWeight: 600,
-              fontSize: "0.95rem",
-              padding: "0.75rem 1.5rem",
-              borderRadius: "0.5rem",
-              textDecoration: "none",
-            }}
-          >
-            Manage Subscription on SkillPassport
-          </a>
+      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "2rem" }}>
+        <section style={{ maxWidth: "32rem", textAlign: "center" }}>
+          <h1>{message ? "Unable to sign in" : "Signing you in"}</h1>
+          <p>{message ?? "Please wait while LTE verifies your SkillPassport session."}</p>
         </section>
       </main>
     );
   }
 
-  // Loading / Unauthenticated state for protected routes
-  if (loading || !initialized || !isAuthenticated || (silentChecking && !isAuthenticated)) {
-    return (
-      <main
-        style={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          padding: "2rem",
-          background: "#f8fafc",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <p
-            style={{
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              color: "#1e293b",
-              marginBottom: "0.5rem",
-            }}
-          >
-            Authenticating...
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  logger.debug("Rendering outlet (authenticated)");
   return <Outlet />;
 };
