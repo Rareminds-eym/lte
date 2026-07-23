@@ -1,10 +1,10 @@
 import type React from "react";
 import { Route, Routes } from "react-router-dom";
+import { DashboardLayout } from "@/app/layouts/DashboardLayout";
+import { MainLayout } from "@/app/layouts/MainLayout";
 import { Dashboard } from "@/pages/Dashboard";
 import { HomePage } from "@/pages/HomePage";
 import { NotFound } from "@/pages/NotFound";
-import { MainLayout } from "@/app/layouts/MainLayout";
-import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 
 export const AppRouter: React.FC = () => {
   return (

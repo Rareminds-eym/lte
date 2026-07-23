@@ -15,6 +15,7 @@ describe("DashboardLayout", () => {
       error: null,
       initialize: vi.fn().mockResolvedValue(undefined),
     });
+    // Required: DashboardLayout calls getSkillpassportUrl() internally when rendering the access card
     vi.stubEnv("VITE_SKILLPASSPORT_URL", "http://127.0.0.1:8788");
   });
 

@@ -1,11 +1,10 @@
 import type React from "react";
-import { useEffect, useState, useMemo } from "react";
-import { Outlet, useLocation, useSearchParams, useNavigate, Navigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/app/store";
 import { getLogger } from "@/shared";
 
 const logger = getLogger("MainLayout");
-const exchangeRequests = new Map<string, Promise<void>>();
 
 function getExchangeKey(params: { code: string; state: string; redirectUri: string }): string {
   return `${params.redirectUri}:${params.code}:${params.state}`;
@@ -15,6 +14,9 @@ export const MainLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // Component-scoped cache to deduplicate concurrent exchange requests (React StrictMode safe)
+  const exchangeRequestsRef = useRef(new Map<string, Promise<void>>());
 
   const initialize = useAuthStore((state) => state.initialize);
   const initialized = useAuthStore((state) => state.initialized);
@@ -50,15 +52,15 @@ export const MainLayout: React.FC = () => {
 
     let cancelled = false;
     const exchangeKey = getExchangeKey(callbackParams);
-    let exchangeRequest = exchangeRequests.get(exchangeKey);
+    let exchangeRequest = exchangeRequestsRef.current.get(exchangeKey);
 
     if (!exchangeRequest) {
       logger.info("Starting code exchange...", callbackParams);
       exchangeRequest = exchangeCode(callbackParams).catch((error: unknown) => {
-        exchangeRequests.delete(exchangeKey);
+        exchangeRequestsRef.current.delete(exchangeKey);
         throw error;
       });
-      exchangeRequests.set(exchangeKey, exchangeRequest);
+      exchangeRequestsRef.current.set(exchangeKey, exchangeRequest);
     }
 
     exchangeRequest
@@ -80,7 +82,7 @@ export const MainLayout: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [callbackParams, exchangeCode, navigate]);
+  }, [callbackParams, exchangeCode, navigate, searchParams]);
 
   // If executing callback, intercept and render loading/error screen
   if (callbackParams || location.pathname.startsWith("/auth/callback")) {
