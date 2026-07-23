@@ -1,9 +1,11 @@
 import type React from "react";
 import { useState } from "react";
-import { Button } from "@/shared/ui";
+import { Button, IconButton } from "@/shared/ui";
 
 export interface NavigationDrawerProps {
   activeNavId?: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
   onNavigate?: (id: string) => void;
   className?: string;
 }
@@ -16,10 +18,23 @@ interface NavItem {
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   activeNavId: initialActiveNavId = "dashboard",
+  isCollapsed: isCollapsedProp,
+  onToggleCollapse,
   onNavigate,
   className = "",
 }) => {
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
   const [activeId, setActiveId] = useState(initialActiveNavId);
+
+  const isCollapsed = isCollapsedProp ?? internalCollapsed;
+
+  const handleToggle = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed(!internalCollapsed);
+    }
+  };
 
   const handleNavClick = (id: string) => {
     setActiveId(id);
@@ -28,7 +43,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     }
   };
 
-  const topNavItems: NavItem[] = [
+  const navItems: NavItem[] = [
     {
       id: "dashboard",
       label: "Dashboard",
@@ -64,16 +79,33 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-          <line x1="8" y1="6" x2="16" y2="6" />
-          <line x1="8" y1="10" x2="14" y2="10" />
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
         </svg>
       ),
     },
     {
-      id: "explore",
-      label: "Explore",
+      id: "rewards-milestones",
+      label: "Rewards & Milestones",
+      icon: (
+        <svg
+          aria-hidden="true"
+          className="w-5 h-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="1" y="4" width="22" height="16" rx="2" />
+          <line x1="1" y1="10" x2="23" y2="10" />
+        </svg>
+      ),
+    },
+    {
+      id: "career-explorer",
+      label: "Career Explorer",
       icon: (
         <svg
           aria-hidden="true"
@@ -91,6 +123,44 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
       ),
     },
     {
+      id: "learning-progress",
+      label: "Learning Progress",
+      icon: (
+        <svg
+          aria-hidden="true"
+          className="w-5 h-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+          <path d="m9 14 2 2 4-4" />
+        </svg>
+      ),
+    },
+    {
+      id: "mentor-feedback",
+      label: "Mentor Feedback",
+      icon: (
+        <svg
+          aria-hidden="true"
+          className="w-5 h-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      ),
+    },
+    {
       id: "achievements",
       label: "Achievements",
       icon: (
@@ -104,33 +174,15 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <circle cx="12" cy="8" r="7" />
-          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+          <path d="M18 9h1.5a2.5 2.5 0 0 1 0-5H18" />
+          <path d="M4 22h16" />
+          <path d="M10 14.66V17c0 .55-.45 1-1 1H7.5" />
+          <path d="M14 14.66V17c0 .55.45 1 1 1h1.5" />
+          <path d="M18 4H6v7a6 6 0 0 0 12 0V4z" />
         </svg>
       ),
     },
-    {
-      id: "progress",
-      label: "Progress",
-      icon: (
-        <svg
-          aria-hidden="true"
-          className="w-5 h-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-          <polyline points="17 6 23 6 23 12" />
-        </svg>
-      ),
-    },
-  ];
-
-  const bottomNavItems: NavItem[] = [
     {
       id: "settings",
       label: "Settings",
@@ -150,169 +202,135 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         </svg>
       ),
     },
-    {
-      id: "help-support",
-      label: "Help & Support",
-      icon: (
-        <svg
-          aria-hidden="true"
-          className="w-5 h-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-      ),
-    },
   ];
 
   return (
     <aside
-      className={`w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col justify-between p-4 shrink-0 font-sans select-none ${className}`}
+      className={`relative bg-white border-r border-slate-100 min-h-screen flex flex-col justify-between p-3.5 shrink-0 font-sans select-none transition-[width] duration-300 ease-in-out ${
+        isCollapsed ? "w-[72px]" : "w-64"
+      } ${className}`}
     >
+      {/* Floating Collapse / Expand Toggle Button */}
+      <button
+        type="button"
+        onClick={handleToggle}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 shadow-md flex items-center justify-center -right-4 top-9 absolute z-20 cursor-pointer hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-95"
+      >
+        <svg
+          aria-hidden="true"
+          className="w-4 h-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {isCollapsed ? (
+            <polyline points="9 18 15 12 9 6" />
+          ) : (
+            <polyline points="15 18 9 12 15 6" />
+          )}
+        </svg>
+      </button>
+
       {/* Top Header & Navigation */}
-      <div className="space-y-6">
+      <div className="space-y-6 w-full flex flex-col">
         {/* Brand Logo Section */}
-        <div className="px-2 pt-2">
-          <div className="flex items-center gap-3">
-            {/* Brain/Tree Tech Logo */}
-            <div className="w-10 h-10 flex items-center justify-center shrink-0">
-              <svg aria-hidden="true" viewBox="0 0 40 40" className="w-10 h-10" fill="none">
-                <path
-                  d="M20 30V22M20 22L14 16M20 22L26 16M14 16L10 17M14 16L15 11M26 16L30 17M26 16L25 11M20 12V6"
-                  stroke="#E11D48"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-                <circle cx="10" cy="17" r="2.5" fill="#3B82F6" />
-                <circle cx="15" cy="11" r="2.5" fill="#F97316" />
-                <circle cx="20" cy="6" r="3" fill="#E11D48" />
-                <circle cx="25" cy="11" r="2.5" fill="#F97316" />
-                <circle cx="30" cy="17" r="2.5" fill="#3B82F6" />
-              </svg>
+        <div className="pt-1 pb-2 px-1 w-full flex items-center h-16 overflow-hidden">
+          {isCollapsed ? (
+            <div className="w-full flex justify-center items-center">
+              <img
+                src="/logo/rm-bulb.webp"
+                alt="RareMinds"
+                className="w-11 h-11 object-contain shrink-0 transition-transform duration-200 hover:scale-105"
+              />
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-blue-900 leading-none">
-                RAREMINDS
-              </h1>
-              <p className="text-[9px] font-bold text-red-500 tracking-wider uppercase mt-1 leading-tight">
-                APPLYING LEARNING. TRANSFORMING WORK
-              </p>
-              <p className="text-[8px] text-gray-400 font-medium leading-tight mt-0.5">
-                An ISO 9001 & 31001 Certified Company
-              </p>
-            </div>
-          </div>
+          ) : (
+            <img
+              src="/logo/rareminds.webp"
+              alt="RareMinds - Applied Learning. Transforming Work"
+              className="h-14 max-w-[210px] w-auto object-contain shrink-0 transition-opacity duration-200"
+            />
+          )}
         </div>
 
-        {/* Primary Navigation Menu */}
-        <nav className="space-y-1">
-          {topNavItems.map((item) => {
+        {/* Unified Navigation Menu */}
+        <nav className="space-y-1 w-full flex flex-col">
+          {navItems.map((item) => {
             const isActive = activeId === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
+                title={isCollapsed ? item.label : undefined}
                 onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 cursor-pointer ${
+                className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl font-semibold text-xs transition-colors duration-150 cursor-pointer overflow-hidden ${
                   isActive
-                    ? "bg-blue-50 text-blue-600 font-semibold"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    ? "bg-[#eff6ff] text-[#2563eb]"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
-                <span className={isActive ? "text-blue-600" : "text-gray-400"}>{item.icon}</span>
-                <span>{item.label}</span>
+                <span
+                  className={`shrink-0 flex items-center justify-center w-5 h-5 ${
+                    isActive ? "text-[#2563eb]" : "text-slate-600"
+                  }`}
+                >
+                  {item.icon}
+                </span>
+                <span
+                  className={`transition-all duration-300 overflow-hidden whitespace-nowrap ${
+                    isCollapsed ? "max-w-0 opacity-0" : "max-w-[160px] opacity-100"
+                  }`}
+                >
+                  {item.label}
+                </span>
               </button>
             );
           })}
         </nav>
       </div>
 
-      {/* Secondary Navigation & Bottom Card */}
-      <div className="space-y-6 pt-6">
-        {/* Settings & Help Menu */}
-        <nav className="space-y-1 border-t border-gray-100 pt-4">
-          {bottomNavItems.map((item) => {
-            const isActive = activeId === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 cursor-pointer ${
-                  isActive
-                    ? "bg-blue-50 text-blue-600 font-semibold"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <span className={isActive ? "text-blue-600" : "text-gray-400"}>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Promo Card Widget */}
-        <div className="bg-gradient-to-b from-blue-50/70 to-indigo-50/40 border border-blue-100/60 rounded-2xl p-4 flex flex-col items-center text-center space-y-3">
-          {/* Dashboard Illustration Banner */}
-          <div className="w-full h-24 relative flex items-center justify-center overflow-hidden rounded-xl bg-white/60">
-            <svg aria-hidden="true" viewBox="0 0 160 90" className="w-full h-full" fill="none">
-              {/* Analytics Chart SVG Illustration */}
-              <rect
-                x="10"
-                y="15"
-                width="80"
-                height="55"
-                rx="6"
-                fill="#F1F5F9"
-                stroke="#CBD5E1"
-                strokeWidth="1.5"
-              />
-              <line
-                x1="20"
-                y1="55"
-                x2="80"
-                y2="55"
-                stroke="#94A3B8"
-                strokeWidth="1.5"
-                strokeDasharray="3 3"
-              />
-              <path
-                d="M20 50 L35 38 L50 45 L75 25"
-                stroke="#6366F1"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <circle cx="75" cy="25" r="3" fill="#EC4899" />
-
-              {/* Character Illustration */}
-              <circle cx="120" cy="50" r="14" fill="#818CF8" />
-              <path d="M106 75 C106 62 134 62 134 75" fill="#4F46E5" />
-              <path d="M110 38 L135 20 L130 50" fill="#F43F5E" />
-              <polygon points="120,15 125,25 115,25" fill="#F59E0B" />
-            </svg>
+      {/* Bottom AI Mentor Card Widget */}
+      <div className="w-full pt-4 overflow-hidden">
+        {isCollapsed ? (
+          /* Collapsed AI Mentor Icon Button */
+          <div className="flex justify-center w-full">
+            <IconButton
+              variant="solid-blue"
+              size="lg"
+              aria-label="Ask AI Mentor"
+              icon={
+                <svg aria-hidden="true" className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
+                </svg>
+              }
+            />
           </div>
-
-          {/* Reusable Button Component Call */}
-          <Button
-            variant="primary"
-            size="sm"
-            className="w-full justify-center rounded-xl font-semibold shadow-xs py-2"
-            icon={
-              <svg aria-hidden="true" className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            }
-          >
-            Watch 1 min demo
-          </Button>
-        </div>
+        ) : (
+          /* Expanded AI Mentor Promo Card */
+          <div className="bg-[#f8fafc] border border-slate-100/80 rounded-2xl p-4 flex flex-col space-y-2.5 text-left transition-all duration-300">
+            <h3 className="text-xs font-bold text-slate-800 leading-snug">
+              Need help choosing what to do next?
+            </h3>
+            <p className="text-[11px] text-slate-400 font-medium leading-tight">
+              Get guidance from your AI Mentor
+            </p>
+            <Button
+              variant="primary"
+              size="sm"
+              className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs border-none justify-center mt-1"
+              icon={
+                <svg aria-hidden="true" className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
+                </svg>
+              }
+            >
+              Ask AI Mentor
+            </Button>
+          </div>
+        )}
       </div>
     </aside>
   );

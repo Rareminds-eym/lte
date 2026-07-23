@@ -1,15 +1,24 @@
 import type React from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { useState } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/app/store";
 import { getLogger, getSkillpassportUrl } from "@/shared";
+import { Header, NavigationDrawer } from "@/widgets";
 
 const logger = getLogger("DashboardLayout");
 
 export const DashboardLayout: React.FC = () => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const location = useLocation();
+  const user = useAuthStore((state) => state.user);
   const loading = useAuthStore((state) => state.loading);
   const initialized = useAuthStore((state) => state.initialized);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authError = useAuthStore((state) => state.error);
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed((prev) => !prev);
+  };
 
   // Case 1: Loading / Initializing state
   if (loading || !initialized) {
@@ -52,6 +61,35 @@ export const DashboardLayout: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  logger.debug("Rendering dashboard layout outlet (authenticated)");
-  return <Outlet />;
+  interface UserMetadata {
+    full_name?: string;
+    name?: string;
+    status?: string;
+    level?: string;
+  }
+
+  const userMeta = user?.user_metadata as UserMetadata | undefined;
+
+  const userName =
+    userMeta?.full_name || userMeta?.name || (user?.email ? user.email.split("@")[0] : undefined);
+
+  const userStatus = userMeta?.status || userMeta?.level;
+
+  const activeNavId = location.pathname.includes("dashboard") ? "dashboard" : "my-courses";
+
+  return (
+    <div className="flex min-h-screen bg-slate-50">
+      <NavigationDrawer
+        activeNavId={activeNavId}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={handleToggleCollapse}
+      />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header userName={userName} userStatus={userStatus} />
+        <main className="flex-1 p-6 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
 };
