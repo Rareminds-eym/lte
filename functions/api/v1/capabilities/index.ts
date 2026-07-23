@@ -10,99 +10,12 @@
 
 import { createServiceSupabase } from "@functions/lib/supabase";
 import { jsonResponse, jsonError, readJsonObject } from "@functions/lib/http";
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-
-// Domain Models
-export interface Capability {
-  id: string;
-  name: string;
-  description: string;
-  code?: string;
-  level?: string;
-  priority?: string;
-  step?: number;
-}
-
-// Database Models
-interface CapabilityRow {
-  id: string;
-  code: string;
-  name: string;
-  description: string;
-}
-
-interface RoleCapabilitySequenceRow {
-  id: string;
-  sequence_step: number;
-  required_level: string | null;
-  capability_priority: string | null;
-  capabilities: CapabilityRow | CapabilityRow[];
-}
-
-// Request/Response Models
-export interface GetCapabilitiesRequest {
-  roleId: string;
-}
-
-export interface GetCapabilitiesResponse {
-  success: boolean;
-  capabilities: Capability[];
-  error?: string;
-  count?: number;
-}
-
-// Private Functions
-
-async function getCapabilitiesByRoleId(
-  supabase: SupabaseClient,
-  roleId: string
-): Promise<Capability[]> {
-  // Fetch capabilities for role (ordered by sequence step)
-  // Join with capabilities table to get capability details
-  const { data, error } = await supabase
-    .from('role_capability_sequence')
-    .select(`
-      id,
-      sequence_step,
-      required_level,
-      capability_priority,
-      capabilities (
-        id,
-        code,
-        name,
-        description
-      )
-    `)
-    .eq('role_id', roleId)
-    .order('sequence_step', { ascending: true });
-
-  if (error) {
-    throw new Error(`Failed to fetch role capabilities: ${error.message}`);
-  }
-
-  if (!data || data.length === 0) {
-    return [];
-  }
-
-  return data.map((item: RoleCapabilitySequenceRow) => {
-    const cap = Array.isArray(item.capabilities)
-      ? item.capabilities[0]
-      : item.capabilities;
-
-    return {
-      id: cap?.id ?? '',
-      name: cap?.name ?? '',
-      description: cap?.description ?? '',
-      code: cap?.code ?? undefined,
-      level: item.required_level ?? undefined,
-      priority: item.capability_priority ?? undefined,
-      step: item.sequence_step ?? undefined,
-    };
-  });
-}
-
-// Handler
+import type {
+  GetCapabilitiesRequest,
+  GetCapabilitiesResponse,
+} from "./types";
+import { getCapabilitiesByRoleId } from "./queries";
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   try {
