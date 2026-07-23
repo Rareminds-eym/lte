@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/app/store";
 import { getLogger, getSkillpassportUrl } from "@/shared";
 import { Header, NavigationDrawer } from "@/widgets";
@@ -10,6 +10,7 @@ const logger = getLogger("DashboardLayout");
 export const DashboardLayout: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const loading = useAuthStore((state) => state.loading);
   const initialized = useAuthStore((state) => state.initialized);
@@ -20,14 +21,31 @@ export const DashboardLayout: React.FC = () => {
     setIsCollapsed((prev) => !prev);
   };
 
-  // Case 1: Loading / Initializing state
+  // Case 1: Loading / Initializing state (page content skeleton)
   if (loading || !initialized) {
     return (
-      <main className="grid place-items-center min-h-screen bg-slate-50 p-8">
-        <div className="text-center">
-          <p className="text-lg font-semibold text-slate-800 mb-2">Authenticating...</p>
+      <div className="flex min-h-screen bg-slate-50">
+        <aside className="w-64 bg-white border-r border-slate-100 p-3.5 shrink-0">
+          <div className="h-14 w-full bg-slate-200 rounded-lg animate-pulse mb-6" />
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-10 w-full bg-slate-200 rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        </aside>
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-16 bg-white border-b border-slate-100 px-6 flex items-center">
+            <div className="h-8 w-48 bg-slate-200 rounded-full animate-pulse" />
+          </header>
+          <main className="flex-1 p-6">
+            <div className="space-y-4">
+              <div className="h-8 w-64 bg-slate-200 rounded animate-pulse" />
+              <div className="h-4 w-full bg-slate-200 rounded animate-pulse" />
+              <div className="h-4 w-3/4 bg-slate-200 rounded animate-pulse" />
+            </div>
+          </main>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -75,6 +93,17 @@ export const DashboardLayout: React.FC = () => {
 
   const userStatus = userMeta?.status || userMeta?.level;
 
+  // ponytail: flat navId→path map, replace with route config when sidebar grows beyond 8 items
+  const navPathMap: Record<string, string> = {
+    dashboard: "/dashboard",
+    "my-courses": "/my-courses",
+  };
+
+  const handleNavigate = (id: string) => {
+    const path = navPathMap[id];
+    if (path) navigate(path);
+  };
+
   const activeNavId = location.pathname.includes("dashboard") ? "dashboard" : "my-courses";
 
   return (
@@ -83,6 +112,7 @@ export const DashboardLayout: React.FC = () => {
         activeNavId={activeNavId}
         isCollapsed={isCollapsed}
         onToggleCollapse={handleToggleCollapse}
+        onNavigate={handleNavigate}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <Header userName={userName} userStatus={userStatus} />

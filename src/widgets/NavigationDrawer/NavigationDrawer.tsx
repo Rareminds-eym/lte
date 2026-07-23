@@ -215,7 +215,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         type="button"
         onClick={handleToggle}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 shadow-md flex items-center justify-center -right-4 top-9 absolute z-20 cursor-pointer hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-95"
+        className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 shadow-md flex items-center justify-center -right-4 top-[2.875rem] absolute z-20 cursor-pointer hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-95"
       >
         <svg
           aria-hidden="true"
@@ -242,14 +242,14 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           {isCollapsed ? (
             <div className="w-full flex justify-center items-center">
               <img
-                src="/logo/rm-bulb.webp"
+                src="/assets/images/rm-bulb.webp"
                 alt="RareMinds"
                 className="w-11 h-11 object-contain shrink-0 transition-transform duration-200 hover:scale-105"
               />
             </div>
           ) : (
             <img
-              src="/logo/rareminds.webp"
+              src="/assets/images/rareminds.webp"
               alt="RareMinds - Applied Learning. Transforming Work"
               className="h-14 max-w-[210px] w-auto object-contain shrink-0 transition-opacity duration-200"
             />

@@ -1,7 +1,9 @@
 import type React from "react";
 import { Route, Routes } from "react-router-dom";
+import { GuestGuard } from "@/app/router/guards";
 import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 import { MainLayout } from "@/app/layouts/MainLayout";
+import { Courses } from "@/pages/Courses";
 import { Dashboard } from "@/pages/Dashboard";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
@@ -12,10 +14,18 @@ export const AppRouter: React.FC = () => {
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/login"
+          element={
+            <GuestGuard>
+              <LoginPage />
+            </GuestGuard>
+          }
+        />
         <Route path="/auth/callback" element={null} />
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/my-courses" element={<Courses />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFound />} />
