@@ -158,6 +158,18 @@ const MOCK_COURSES: Course[] = [
   },
 ];
 
+const STATS = {
+  enrolled: MOCK_COURSES.length,
+  completed: MOCK_COURSES.filter((c) => c.status === "completed").length,
+  inProgress: MOCK_COURSES.filter((c) => c.status === "in_progress").length,
+};
+
+const ROLE_COUNTS = {
+  all: MOCK_COURSES.length,
+  backend: MOCK_COURSES.filter((c) => c.role === "backend").length,
+  frontend: MOCK_COURSES.filter((c) => c.role === "frontend").length,
+};
+
 const ROLE_TABS = [
   { id: null as string | null, label: "All Roles" },
   { id: "backend" as const, label: "Backend Engineer" },
@@ -167,8 +179,6 @@ const ROLE_TABS = [
 export const Courses = () => {
   const [activeRole, setActiveRole] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  const [viewMode] = useState<"grid">("grid");
 
   const filteredCourses = useMemo(
     () => (activeRole ? MOCK_COURSES.filter((c) => c.role === activeRole) : MOCK_COURSES),
@@ -182,24 +192,6 @@ export const Courses = () => {
   const paginatedCourses = useMemo(
     () => filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
     [filteredCourses, safePage],
-  );
-
-  const stats = useMemo(
-    () => ({
-      enrolled: MOCK_COURSES.length,
-      completed: MOCK_COURSES.filter((c) => c.status === "completed").length,
-      inProgress: MOCK_COURSES.filter((c) => c.status === "in_progress").length,
-    }),
-    [],
-  );
-
-  const roleCounts = useMemo(
-    () => ({
-      all: MOCK_COURSES.length,
-      backend: MOCK_COURSES.filter((c) => c.role === "backend").length,
-      frontend: MOCK_COURSES.filter((c) => c.role === "frontend").length,
-    }),
-    [],
   );
 
   return (
@@ -222,19 +214,19 @@ export const Courses = () => {
           <div className="flex items-center gap-3 shrink-0 flex-wrap">
             <StatsPill
               icon={<BookIconSmall />}
-              count={stats.enrolled}
+              count={STATS.enrolled}
               label="Enrolled"
               className="bg-purple-50 border-purple-200 text-purple-700 [&_svg]:text-purple-500"
             />
             <StatsPill
               icon={<CheckIconSmall />}
-              count={stats.completed}
+              count={STATS.completed}
               label="Completed"
               className="bg-emerald-50 border-emerald-200 text-emerald-700 [&_svg]:text-emerald-500"
             />
             <StatsPill
               icon={<ClockIconSmall />}
-              count={stats.inProgress}
+              count={STATS.inProgress}
               label="In Progress"
               className="bg-amber-50 border-amber-200 text-amber-700 [&_svg]:text-amber-500"
             />
@@ -247,10 +239,10 @@ export const Courses = () => {
         {ROLE_TABS.map((tab) => {
           const count =
             tab.id === null
-              ? roleCounts.all
+              ? ROLE_COUNTS.all
               : tab.id === "backend"
-                ? roleCounts.backend
-                : roleCounts.frontend;
+                ? ROLE_COUNTS.backend
+                : ROLE_COUNTS.frontend;
           const isActive = activeRole === tab.id;
           return (
             <button
@@ -292,30 +284,7 @@ export const Courses = () => {
           Filter
         </Button>
 
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-[#6B7280] font-medium">
-            {filteredCourses.length} courses
-          </span>
-          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-            <button
-              type="button"
-              aria-label="Grid view"
-              className={cn(
-                "p-2 transition-colors",
-                viewMode === "grid" ? "bg-[#2563EB] text-white" : "text-gray-400 hover:bg-gray-50",
-              )}
-            >
-              <GridViewIcon />
-            </button>
-            <button
-              type="button"
-              aria-label="List view"
-              className="p-2 text-gray-400 hover:bg-gray-50 transition-colors"
-            >
-              <ListViewIcon />
-            </button>
-          </div>
-        </div>
+        <span className="text-sm text-[#6B7280] font-medium">{filteredCourses.length} courses</span>
       </div>
 
       {/* Course Grid */}
@@ -429,43 +398,5 @@ const FilterIcon: React.FC = () => (
     strokeLinejoin="round"
   >
     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-  </svg>
-);
-
-const GridViewIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="3" width="7" height="7" rx="1" />
-    <rect x="14" y="3" width="7" height="7" rx="1" />
-    <rect x="3" y="14" width="7" height="7" rx="1" />
-    <rect x="14" y="14" width="7" height="7" rx="1" />
-  </svg>
-);
-
-const ListViewIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="8" y1="6" x2="21" y2="6" />
-    <line x1="8" y1="12" x2="21" y2="12" />
-    <line x1="8" y1="18" x2="21" y2="18" />
-    <line x1="3" y1="6" x2="3.01" y2="6" />
-    <line x1="3" y1="12" x2="3.01" y2="12" />
-    <line x1="3" y1="18" x2="3.01" y2="18" />
   </svg>
 );
