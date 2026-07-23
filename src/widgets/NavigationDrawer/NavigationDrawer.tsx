@@ -206,7 +206,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
 
   return (
     <aside
-      className={`relative bg-white border-r border-slate-100 min-h-screen flex flex-col justify-between p-3.5 shrink-0 font-sans select-none transition-[width] duration-300 ease-in-out ${
+      className={`relative bg-white border-r border-slate-100 h-screen flex flex-col justify-between p-3.5 shrink-0 font-sans select-none transition-[width] duration-300 ease-in-out ${
         isCollapsed ? "w-[72px]" : "w-64"
       } ${className}`}
     >
@@ -236,7 +236,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
       </button>
 
       {/* Top Header & Navigation */}
-      <div className="space-y-6 w-full flex flex-col">
+      <div className="space-y-6 w-full flex flex-col flex-1 min-h-0 overflow-y-auto">
         {/* Brand Logo Section */}
         <div className="pt-1 pb-2 px-1 w-full flex items-center h-16 overflow-hidden">
           {isCollapsed ? (

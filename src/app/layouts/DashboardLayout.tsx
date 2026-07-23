@@ -24,7 +24,7 @@ export const DashboardLayout: React.FC = () => {
   // Case 1: Loading / Initializing state (page content skeleton)
   if (loading || !initialized) {
     return (
-      <div className="flex min-h-screen bg-slate-50">
+      <div className="flex h-screen bg-slate-50">
         <aside className="w-64 bg-white border-r border-slate-100 p-3.5 shrink-0">
           <div className="h-14 w-full bg-slate-200 rounded-lg animate-pulse mb-6" />
           <div className="space-y-2">
@@ -107,7 +107,7 @@ export const DashboardLayout: React.FC = () => {
   const activeNavId = location.pathname.includes("dashboard") ? "dashboard" : "my-courses";
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-50">
       <NavigationDrawer
         activeNavId={activeNavId}
         isCollapsed={isCollapsed}
