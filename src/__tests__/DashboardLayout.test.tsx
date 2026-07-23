@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardLayout } from "../app/layouts/DashboardLayout";
 import { useAuthStore } from "../app/store/authStore";
+import { useUIStore } from "../shared/store/uiStore";
 
 describe("DashboardLayout", () => {
   beforeEach(() => {
@@ -15,6 +16,8 @@ describe("DashboardLayout", () => {
       error: null,
       initialize: vi.fn().mockResolvedValue(undefined),
     });
+    localStorage.removeItem("lte-ui-store");
+    useUIStore.setState({ sidebarCollapsed: false });
     // Required: DashboardLayout calls getSkillpassportUrl() internally when rendering the access card
     vi.stubEnv("VITE_SKILLPASSPORT_URL", "http://127.0.0.1:8788");
   });

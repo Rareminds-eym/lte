@@ -18,23 +18,14 @@ interface NavItem {
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   activeNavId: initialActiveNavId = "dashboard",
-  isCollapsed: isCollapsedProp,
+  isCollapsed = false,
   onToggleCollapse,
   onNavigate,
   className = "",
 }) => {
-  const [internalCollapsed, setInternalCollapsed] = useState(false);
   const [activeId, setActiveId] = useState(initialActiveNavId);
 
-  const isCollapsed = isCollapsedProp ?? internalCollapsed;
-
-  const handleToggle = () => {
-    if (onToggleCollapse) {
-      onToggleCollapse();
-    } else {
-      setInternalCollapsed(!internalCollapsed);
-    }
-  };
+  const handleToggle = () => onToggleCollapse?.();
 
   const handleNavClick = (id: string) => {
     setActiveId(id);

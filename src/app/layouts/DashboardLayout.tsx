@@ -1,14 +1,13 @@
 import type React from "react";
-import { useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/app/store";
 import { getLogger, getSkillpassportUrl } from "@/shared";
+import { useUIStore } from "@/shared";
 import { Header, NavigationDrawer } from "@/widgets";
 
 const logger = getLogger("DashboardLayout");
 
 export const DashboardLayout: React.FC = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -16,10 +15,8 @@ export const DashboardLayout: React.FC = () => {
   const initialized = useAuthStore((state) => state.initialized);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authError = useAuthStore((state) => state.error);
-
-  const handleToggleCollapse = () => {
-    setIsCollapsed((prev) => !prev);
-  };
+  const isCollapsed = useUIStore((state) => state.sidebarCollapsed);
+  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 
   // Case 1: Loading / Initializing state (page content skeleton)
   if (loading || !initialized) {
@@ -111,7 +108,7 @@ export const DashboardLayout: React.FC = () => {
       <NavigationDrawer
         activeNavId={activeNavId}
         isCollapsed={isCollapsed}
-        onToggleCollapse={handleToggleCollapse}
+        onToggleCollapse={toggleSidebar}
         onNavigate={handleNavigate}
       />
       <div className="flex-1 flex flex-col min-w-0">
