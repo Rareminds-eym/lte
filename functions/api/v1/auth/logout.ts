@@ -21,7 +21,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 	}
 
 	const headers = new Headers();
-	for (const cookie of clearRefreshCookies()) {
+	for (const cookie of clearRefreshCookies(context.env)) {
 		headers.append("Set-Cookie", cookie);
 	}
 

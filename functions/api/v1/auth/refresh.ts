@@ -38,7 +38,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 		authLogger.info("Refresh successful, returning new tokens");
 
 		const headers = new Headers();
-		headers.set("Set-Cookie", createRefreshCookie(refreshed.refresh_token, context.request));
+		headers.set("Set-Cookie", createRefreshCookie(refreshed.refresh_token, context.request, context.env));
 
 		return jsonResponse({ access_token: refreshed.access_token, expires_in: 900 }, { headers });
 	} catch (error) {
@@ -46,7 +46,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 		authLogger.info("Session refresh unauthenticated", { message });
 
 		const headers = new Headers();
-		for (const cookie of clearRefreshCookies()) {
+		for (const cookie of clearRefreshCookies(context.env)) {
 			headers.append("Set-Cookie", cookie);
 		}
 

@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 import { MainLayout } from "@/app/layouts/MainLayout";
 import { Dashboard } from "@/pages/Dashboard";
 import { HomePage } from "@/pages/HomePage";
+import { LoginPage } from "@/pages/LoginPage";
 import { NotFound } from "@/pages/NotFound";
 
 export const AppRouter: React.FC = () => {
@@ -11,6 +12,7 @@ export const AppRouter: React.FC = () => {
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={null} />
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />

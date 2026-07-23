@@ -1,119 +1,43 @@
 import type React from "react";
-import { useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/app/store";
 import { getLogger, getSkillpassportUrl } from "@/shared";
 
 const logger = getLogger("DashboardLayout");
 
 export const DashboardLayout: React.FC = () => {
-  const location = useLocation();
   const loading = useAuthStore((state) => state.loading);
   const initialized = useAuthStore((state) => state.initialized);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authError = useAuthStore((state) => state.error);
 
-  const [silentChecking, setSilentChecking] = useState(true);
+  // Case 1: Loading / Initializing state
+  if (loading || !initialized) {
+    return (
+      <main className="grid place-items-center min-h-screen bg-slate-50 p-8">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-slate-800 mb-2">Authenticating...</p>
+        </div>
+      </main>
+    );
+  }
 
-  // 1. Silent SSO check if local session is absent on protected route
-  useEffect(() => {
-    if (
-      !initialized ||
-      isAuthenticated ||
-      !silentChecking ||
-      location.pathname === "/" ||
-      location.pathname.startsWith("/auth/callback")
-    ) {
-      return;
-    }
-
-    async function performSilentSso() {
-      logger.info("No local session. Performing background silent SSO check...");
-      try {
-        const skillpassportUrl = getSkillpassportUrl();
-        const res = await fetch(`${skillpassportUrl}/api/auth/silent-sso`, {
-          method: "GET",
-          credentials: "include",
-        });
-
-        if (res.ok) {
-          const data = (await res.json()) as { redirectUrl: string };
-          if (data?.redirectUrl) {
-            logger.info("Silent SSO check succeeded. Initiating local callback exchange...");
-            window.location.href = data.redirectUrl;
-            return;
-          }
-        }
-      } catch (err) {
-        logger.error(
-          "Silent SSO background check failed:",
-          err instanceof Error ? err : new Error(String(err)),
-        );
-      }
-      setSilentChecking(false);
-    }
-
-    void performSilentSso();
-  }, [initialized, isAuthenticated, silentChecking, location.pathname]);
-
-  // Case 1: User is authenticated in SSO, but lacks LTE product entitlement
+  // Case 2: User is authenticated in SSO, but lacks LTE product entitlement
   if (
     authError &&
     (authError.includes("Access denied") || authError.includes("LTE access is required"))
   ) {
     const skillpassportUrl = getSkillpassportUrl();
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          padding: "2rem",
-          background: "#f8fafc",
-        }}
-      >
-        <section
-          style={{
-            maxWidth: "28rem",
-            textAlign: "center",
-            background: "#ffffff",
-            padding: "2.5rem 2rem",
-            borderRadius: "1rem",
-            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01)",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "1.5rem",
-              fontWeight: 700,
-              marginBottom: "0.75rem",
-              color: "#0f172a",
-            }}
-          >
-            LTE Access Required
-          </h2>
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: "0.95rem",
-              lineHeight: 1.5,
-              marginBottom: "1.75rem",
-            }}
-          >
+      <main className="grid place-items-center min-h-screen bg-slate-50 p-8">
+        <section className="max-w-md w-full text-center bg-white px-8 py-10 rounded-2xl shadow-lg">
+          <h2 className="text-2xl font-bold mb-3 text-slate-900">LTE Access Required</h2>
+          <p className="text-slate-500 text-sm leading-relaxed mb-7">
             Your SkillPassport account does not currently have active LTE product access enabled.
           </p>
           <a
             href={skillpassportUrl}
-            style={{
-              display: "inline-block",
-              background: "#2563eb",
-              color: "#ffffff",
-              fontWeight: 600,
-              fontSize: "0.95rem",
-              padding: "0.75rem 1.5rem",
-              borderRadius: "0.5rem",
-              textDecoration: "none",
-            }}
+            className="inline-block bg-blue-600 text-white font-semibold text-sm px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors no-underline"
           >
             Manage Subscription on SkillPassport
           </a>
@@ -122,39 +46,10 @@ export const DashboardLayout: React.FC = () => {
     );
   }
 
-  // Case 2: Loading / Unauthenticated state for protected routes while checking is in progress
-  if (loading || !initialized || (silentChecking && !isAuthenticated)) {
-    return (
-      <main
-        style={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          padding: "2rem",
-          background: "#f8fafc",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <p
-            style={{
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              color: "#1e293b",
-              marginBottom: "0.5rem",
-            }}
-          >
-            Authenticating...
-          </p>
-        </div>
-      </main>
-    );
-  }
-
+  // Case 3: Unauthenticated users on protected routes immediately land on LTE login page
   if (!isAuthenticated) {
-    throw new Error(
-      authError ||
-        "LTE Access Required: You need an active SkillPassport session with LTE access to view this learning dashboard.",
-    );
+    logger.info("User is not authenticated. Redirecting to LTE login page.");
+    return <Navigate to="/login" replace />;
   }
 
   logger.debug("Rendering dashboard layout outlet (authenticated)");

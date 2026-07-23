@@ -46,7 +46,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 		}
 
 		const headers = new Headers();
-		const cookieHeader = createRefreshCookie(exchange.refresh_token, context.request);
+		const cookieHeader = createRefreshCookie(exchange.refresh_token, context.request, context.env);
 		ssoLogger.debug("Setting refresh cookie", { cookieName: cookieHeader.split("=")[0], url: context.request.url });
 		headers.set("Set-Cookie", cookieHeader);
 
