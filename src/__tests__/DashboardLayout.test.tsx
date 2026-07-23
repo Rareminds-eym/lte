@@ -22,13 +22,13 @@ describe("DashboardLayout", () => {
   it("shows loading state when initializing", () => {
     useAuthStore.setState({ initialized: false, loading: true });
 
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={["/dashboard"]}>
         <DashboardLayout />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Authenticating...")).toBeInTheDocument();
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
   it("shows access required card when entitlement error occurs", () => {
