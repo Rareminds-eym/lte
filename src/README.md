@@ -214,6 +214,20 @@ Shared layer has no dependencies on other application layers.
 **entities/** - Business domain models (user, course, order)  
 **shared/** - Reusable UI components, utilities, hooks  
 
+## SSO Authentication Architecture
+
+The application implements a centralized Single Sign-On (SSO) integration with the core authentication backend. To respect clean separation of routing and screen concerns, all SSO callback verification and session checks are handled inside layouts rather than dedicated page routes:
+
+* **`MainLayout` ([MainLayout.tsx](file:///c:/Users/P.N.HARIPRASATH/Desktop/rm2/lte/src/app/layouts/MainLayout.tsx))**:
+  - Functions as the root interceptor.
+  - Automatically captures auth parameters (`code` and `state`) from callbacks on any path.
+  - Manages the secure code exchange workflow, redirects to the dashboard, and wipes parameters from the browser history.
+  - Prevents race conditions and token consumption errors from React double-mounts using active promise caching.
+* **`DashboardLayout` ([DashboardLayout.tsx](file:///c:/Users/P.N.HARIPRASATH/Desktop/rm2/lte/src/app/layouts/DashboardLayout.tsx))**:
+  - Wraps and guards protected dashboard pages.
+  - Triggers silent SSO token checking (`/api/auth/silent-sso`) to restore sessions without user interaction.
+  - Manages loading states, permission check errors, and access restrictions (e.g. lack of active LTE product entitlement).
+
 ## Benefits of FSD
 
 ✅ **Predictable structure** - Clear place for every piece of code  
