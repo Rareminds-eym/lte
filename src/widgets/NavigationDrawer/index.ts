@@ -1,2 +1,2 @@
-export { NavigationDrawer } from "./NavigationDrawer";
 export type { NavigationDrawerProps } from "./NavigationDrawer";
+export { NavigationDrawer } from "./NavigationDrawer";

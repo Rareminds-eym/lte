@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { exchangeSsoCode, refreshSession, fetchMe, logoutSession } from "@/shared/api/authApi";
+import { exchangeSsoCode, fetchMe, logoutSession, refreshSession } from "@/shared/api/authApi";
 
 function mockFetch(status: number, body: unknown): void {
   globalThis.fetch = vi.fn().mockResolvedValue({

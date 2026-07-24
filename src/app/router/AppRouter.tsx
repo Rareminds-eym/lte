@@ -1,8 +1,8 @@
 import type React from "react";
 import { Route, Routes } from "react-router-dom";
-import { GuestGuard } from "@/app/router/guards";
 import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 import { MainLayout } from "@/app/layouts/MainLayout";
+import { GuestGuard } from "@/app/router/guards";
 import { Courses } from "@/pages/Courses";
 import { Dashboard } from "@/pages/Dashboard";
 import { HomePage } from "@/pages/HomePage";

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Logger, getLogger } from "@/shared/config/logging";
+import { getLogger, Logger } from "@/shared/config/logging";
 
 beforeEach(() => {
   vi.stubGlobal("console", {

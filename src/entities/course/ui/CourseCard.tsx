@@ -1,7 +1,7 @@
-import type { Course } from "../model/types";
+import type React from "react";
 import { cn } from "@/shared/lib";
 import { Button } from "@/shared/ui";
-import type React from "react";
+import type { Course } from "../model/types";
 
 export interface CourseCardProps {
   course: Course;

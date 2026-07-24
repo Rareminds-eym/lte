@@ -1,8 +1,7 @@
 import type React from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/app/store";
-import { getLogger, getSkillpassportUrl } from "@/shared";
-import { useUIStore } from "@/shared";
+import { getLogger, getSkillpassportUrl, useUIStore } from "@/shared";
 import { Header, NavigationDrawer } from "@/widgets";
 
 const logger = getLogger("DashboardLayout");

@@ -31,8 +31,16 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Run secretlint
+echo "Running secretlint..."
+npm run lint:secrets
+if [ $? -ne 0 ]; then
+  echo "Secretlint detected potential secrets!"
+  exit 1
+fi
+
 # Type check
-echo "ESLint passed. Running TypeScript type check..."
+echo "Secretlint passed. Running TypeScript type check..."
 npm run typecheck
 if [ $? -ne 0 ]; then
   echo "Type check failed!"

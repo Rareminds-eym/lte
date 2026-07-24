@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
-import { CourseCard, type Course } from "@/entities/course";
-import { Pagination } from "@/widgets";
-import { Button } from "@/shared/ui";
+import { useMemo, useState } from "react";
+import { type Course, CourseCard } from "@/entities/course";
 import { cn } from "@/shared/lib";
+import { Button } from "@/shared/ui";
+import { Pagination } from "@/widgets";
 
 // ponytail: mock data, replace with TanStack Query + entities/course/api/ when backend exists
 const PAGE_SIZE = 6;

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { CourseCard } from "@/entities/course";
 import type { Course } from "@/entities/course";
+import { CourseCard } from "@/entities/course";
 
 const baseCourse: Course = {
   id: "test-1",

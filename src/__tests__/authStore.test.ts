@@ -1,8 +1,8 @@
+import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "@/app/store";
 import * as authApi from "@/shared/api/authApi";
 import type { AuthUser } from "@/shared/types/auth";
-import type { Mock } from "vitest";
 
 vi.mock("@/shared/api/authApi", () => ({
   refreshSession: vi.fn(),
