@@ -30,6 +30,7 @@
 		"lint:css": "stylelint \"src/**/*.css\" --max-warnings 0",
 		"lint:files": "node scripts/validate-file-types.js",
 		"lint:console": "node scripts/detect-console-usage.js",
+		"lint:lengths": "node scripts/validate-file-lengths.js",
 		"lint:biome": "biome check --reporter=concise .",
 		"format:biome": "biome check --write .",
 		"lint:secrets": "secretlint \"src/**/*\" \"functions/**/*\"",
@@ -39,7 +40,7 @@
 		"test:property": "vitest --run src/__tests__/property/",
 		"typecheck": "tsc --noEmit -p tsconfig.app.json",
 		"setup:husky": "node scripts/setup-husky-cross-platform.js",
-		"ci": "npm run lint:files && npm run lint:console && npm run lint:biome && npm run lint:secrets && npm run lint && npm run typecheck && vitest run",
+		"ci": "npm run lint:files && npm run lint:console && npm run lint:lengths && npm run lint:biome && npm run lint:secrets && npm run lint && npm run typecheck && vitest run",
 		"workers:dev": "npm run workers:sso",
 		"pages:dev": "wrangler pages dev dist --compatibility-date=2026-06-08 --port=8789 --service SSO_SERVICE=sso-api",
 		"pages:build": "npm run build"

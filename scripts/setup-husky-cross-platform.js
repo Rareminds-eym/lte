@@ -20,6 +20,14 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Validate file lengths
+echo "Validating file lengths..."
+npm run lint:lengths
+if [ $? -ne 0 ]; then
+  echo "File length validation failed!"
+  exit 1
+fi
+
 # Check for console statements
 echo "File types valid. Checking for console usage..."
 npm run lint:console
@@ -125,10 +133,11 @@ async function setupHusky() {
 		console.log("\nHusky setup complete!\n");
 		console.log("Pre-commit hooks will now run:");
 		console.log("  1. File type validation");
-		console.log("  2. Console usage detection");
-		console.log("  3. Biome linting and formatting checks");
-		console.log("  4. ESLint checks");
-		console.log("  5. TypeScript type checking\n");
+		console.log("  2. File length validation (max 1000 lines)");
+		console.log("  3. Console usage detection");
+		console.log("  4. Biome linting and formatting checks");
+		console.log("  5. ESLint checks");
+		console.log("  6. TypeScript type checking\n");
 		console.log("Pre-push hooks will now run:");
 		console.log("  1. Running build check (npm run build)");
 		console.log("  2. Running tests (npm run test)\n");
