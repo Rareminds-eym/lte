@@ -1,10 +1,17 @@
 {
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  },
   "files": {
     "ignoreUnknown": false,
     "includes": [
       "src/**/*.js",
       "src/**/*.ts",
       "src/**/*.tsx",
+      "functions/**/*.ts",
       "test/**/*.js",
       "test/**/*.ts",
       "!**/*.min.js"

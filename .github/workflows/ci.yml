@@ -37,39 +37,41 @@ jobs:
       - name: Detect Console Usage
         run: npm run lint:console
 
-      - name: Lint TypeScript - Changed Files Only
+      - name: Get changed files
+        id: changed
         run: |
           BASE_REF="${{ github.base_ref }}"
           if [ -z "${BASE_REF}" ]; then
-            echo "Skipping changed-file TypeScript lint because github.base_ref is empty"
+            echo "count=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git fetch origin "${BASE_REF}"
-          CHANGED_TS=$(git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" -- '*.ts' '*.tsx' 2>/dev/null | grep -v node_modules || echo "")
-          if [ -z "$CHANGED_TS" ]; then
-            echo "✓ No TypeScript files changed"
-            exit 0
-          fi
-          echo "Linting changed TypeScript files:"
-          echo "$CHANGED_TS"
-          echo "$CHANGED_TS" | tr '\n' '\0' | xargs -0 npx eslint --max-warnings 0
+          git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" \
+            -- '*.ts' '*.tsx' '*.css' '*.js' 2>/dev/null \
+            | grep -v node_modules > /tmp/changed_files.txt || true
+          echo "count=$(wc -l < /tmp/changed_files.txt)" >> "$GITHUB_OUTPUT"
 
-      - name: Lint CSS - Changed Files Only
+      - name: Biome CI (changed files only)
+        if: steps.changed.outputs.count != '0'
+        run: npx biome ci --changed --since="origin/${{ github.base_ref }}" .
+
+      - name: ESLint (changed TS/TSX files only)
+        if: steps.changed.outputs.count != '0'
         run: |
-          BASE_REF="${{ github.base_ref }}"
-          if [ -z "${BASE_REF}" ]; then
-            echo "Skipping changed-file CSS lint because github.base_ref is empty"
-            exit 0
-          fi
-          git fetch origin "${BASE_REF}"
-          CHANGED_CSS=$(git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" -- '*.css' 2>/dev/null | grep -v node_modules || echo "")
-          if [ -z "$CHANGED_CSS" ]; then
-            echo "✓ No CSS files changed"
-            exit 0
-          fi
-          echo "Linting changed CSS files:"
-          echo "$CHANGED_CSS"
-          echo "$CHANGED_CSS" | tr '\n' '\0' | xargs -0 npx stylelint --max-warnings 0
+          grep -E '\.(ts|tsx)$' /tmp/changed_files.txt \
+            | tr '\n' '\0' | xargs -0 npx eslint --max-warnings 0
+
+      - name: Stylelint (changed CSS files only)
+        if: steps.changed.outputs.count != '0'
+        run: |
+          grep -E '\.css$' /tmp/changed_files.txt \
+            | tr '\n' '\0' | xargs -0 npx stylelint --max-warnings 0
+
+      - name: Secretlint (changed files only)
+        if: steps.changed.outputs.count != '0'
+        run: |
+          xargs -a /tmp/changed_files.txt \
+            npx secretlint --no-glob --format github
 
       - name: Type Check
         run: npm run typecheck

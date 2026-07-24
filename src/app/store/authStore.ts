@@ -135,11 +135,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
-export const selectAuthReady = () => {
-  const state = useAuthStore.getState();
-  return !state.loading && state.isAuthenticated;
-};
-
 if (import.meta.env.DEV) {
   useAuthStore.subscribe((state) => {
     logger.debug("State changed", {
