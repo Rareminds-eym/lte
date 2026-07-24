@@ -1,3 +1,6 @@
+import type { z } from "zod";
+import type { GetCapabilitiesRequestSchema } from "./schemas";
+
 // Domain Models
 export interface Capability {
   id: string;
@@ -26,9 +29,7 @@ export interface RoleCapabilitySequenceRow {
 }
 
 // Request/Response Models
-export interface GetCapabilitiesRequest {
-  roleId: string;
-}
+export type GetCapabilitiesRequest = z.infer<typeof GetCapabilitiesRequestSchema>;
 
 export interface GetCapabilitiesResponse {
   success: boolean;

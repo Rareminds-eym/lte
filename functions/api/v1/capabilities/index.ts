@@ -8,23 +8,25 @@
  * No authentication required (public endpoint)
  */
 
+import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { createServiceSupabase } from "@functions/lib/supabase";
-import { jsonResponse, jsonError, readJsonObject } from "@functions/lib/http";
+import { getCapabilitiesByRoleId } from "./queries";
+import { GetCapabilitiesRequestSchema } from "./schemas";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import type {
   GetCapabilitiesRequest,
   GetCapabilitiesResponse,
 } from "./types";
-import { getCapabilitiesByRoleId } from "./queries";
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   try {
-    const body = (await readJsonObject(context.request)) as unknown as GetCapabilitiesRequest;
-    const { roleId } = body;
-
-    if (!roleId) {
-      return jsonError('roleId is required', 400);
+    const parsedBody = GetCapabilitiesRequestSchema.safeParse(await readJsonObject(context.request));
+    if (!parsedBody.success) {
+      return jsonError(parsedBody.error.issues[0]?.message ?? "Invalid request body", 400);
     }
+
+    const body: GetCapabilitiesRequest = parsedBody.data;
+    const { roleId } = body;
 
     const supabase = createServiceSupabase(context.env);
     const capabilities = await getCapabilitiesByRoleId(supabase, roleId);
