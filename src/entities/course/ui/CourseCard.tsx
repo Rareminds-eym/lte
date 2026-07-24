@@ -1,6 +1,6 @@
 import type React from "react";
 import { cn } from "@/shared/lib";
-import { Button } from "@/shared/ui";
+import { Button, Image } from "@/shared/ui";
 import type { Course } from "../model/types";
 
 export interface CourseCardProps {
@@ -103,15 +103,14 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
           className,
         )}
       >
-        <div className="relative w-[240px] shrink-0">
-          <img
-            src={course.imageUrl}
-            alt={course.title}
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
+        <Image
+          src={course.imageUrl}
+          alt={course.title}
+          aspectRatio="240/200"
+          wrapperClassName="w-[240px] shrink-0"
+        >
           {badges}
-        </div>
+        </Image>
 
         <div className="flex flex-col flex-1 p-5 gap-2 min-w-0">
           <div className="flex items-center justify-between">
@@ -171,15 +170,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
         className,
       )}
     >
-      <div className="relative">
-        <img
-          src={course.imageUrl}
-          alt={course.title}
-          loading="lazy"
-          className="w-full h-[200px] object-cover"
-        />
+      <Image src={course.imageUrl} alt={course.title} aspectRatio="400/200">
         {badges}
-      </div>
+      </Image>
 
       <div className="flex flex-col flex-1 p-5 gap-2.5">
         <div className="flex items-center justify-between">

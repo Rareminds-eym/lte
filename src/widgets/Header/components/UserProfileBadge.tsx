@@ -1,4 +1,5 @@
 import type React from "react";
+import { Image } from "@/shared/ui";
 
 export interface UserProfileBadgeProps {
   name: string;
@@ -23,10 +24,11 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
     >
       {/* Avatar Circle */}
       {avatarUrl ? (
-        <img
+        <Image
           src={avatarUrl}
           alt={name}
           className="w-9 h-9 rounded-full object-cover shrink-0 shadow-xs"
+          loading="eager"
         />
       ) : (
         <div className="w-9 h-9 rounded-full bg-brand-600 flex items-center justify-center shrink-0 shadow-xs">

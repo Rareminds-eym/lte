@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { Button, IconButton } from "@/shared/ui";
+import { Button, IconButton, Image } from "@/shared/ui";
 
 const SvgIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <svg
@@ -175,16 +175,18 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         <div className="pt-1 pb-2 px-1 w-full flex items-center h-16 overflow-hidden">
           {isCollapsed ? (
             <div className="w-full flex justify-center items-center">
-              <img
+              <Image
                 src="/assets/images/rm-bulb.webp"
                 alt="RareMinds"
+                priority
                 className="w-11 h-11 object-contain shrink-0 transition-transform duration-200 hover:scale-105"
               />
             </div>
           ) : (
-            <img
+            <Image
               src="/assets/images/rareminds.webp"
               alt="RareMinds - Applied Learning. Transforming Work"
+              priority
               className="h-14 max-w-[210px] w-auto object-contain shrink-0 transition-opacity duration-200"
             />
           )}
