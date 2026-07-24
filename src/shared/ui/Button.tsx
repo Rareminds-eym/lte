@@ -1,0 +1,54 @@
+import type React from "react";
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "icon";
+  size?: "sm" | "md" | "lg";
+  icon?: React.ReactNode;
+  children?: React.ReactNode;
+}
+
+export const Button: React.FC<ButtonProps> = ({
+  variant = "primary",
+  size = "md",
+  icon,
+  children,
+  className = "",
+  disabled,
+  ...props
+}) => {
+  const baseStyles =
+    "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
+
+  const variants = {
+    primary: "bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs",
+    secondary: "bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg",
+    outline: "border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg",
+    ghost: "text-gray-600 hover:bg-gray-100 rounded-lg",
+    icon: "text-gray-500 hover:bg-gray-100 rounded-full border border-gray-200 bg-white shadow-xs",
+  };
+
+  const sizes = {
+    sm: "px-3 py-1.5 text-xs gap-1.5",
+    md: "px-4 py-2 text-sm gap-2",
+    lg: "px-5 py-2.5 text-base gap-2.5",
+  };
+
+  // Special size handling for icon variant if no children provided
+  const isIconOnly = variant === "icon" && !children;
+  const iconOnlySizes = {
+    sm: "w-8 h-8 p-0 text-xs",
+    md: "w-9 h-9 p-0 text-sm",
+    lg: "w-10 h-10 p-0 text-base",
+  };
+
+  const computedSize = isIconOnly ? iconOnlySizes[size] : sizes[size];
+  const combinedClassName =
+    `${baseStyles} ${variants[variant]} ${computedSize} ${className}`.trim();
+
+  return (
+    <button className={combinedClassName} disabled={disabled} {...props}>
+      {icon && <span className="inline-flex shrink-0">{icon}</span>}
+      {children}
+    </button>
+  );
+};

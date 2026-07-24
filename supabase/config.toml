@@ -27,8 +27,8 @@ enabled = false
 
 [db]
 # Port to use for the local database URL.
-# Using 54342 to avoid conflict with skillpassport (54322) and sso-auth (54332)
-port = 54342
+# Using 54347 to avoid conflict with skillpassport (54322) and sso-auth (54332)
+port = 54347
 
 # Port used by db diff command to initialize the shadow database.
 shadow_port = 54340
@@ -66,7 +66,7 @@ port = 54343
 
 api_url = "http://127.0.0.1:54341"
 
-[inbucket]
+[local_smtp]
 enabled = true
 
 # Port to use for the email testing server web interface.

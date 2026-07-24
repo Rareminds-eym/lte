@@ -63,7 +63,7 @@ direct_supabase_auth_allowed: false
 
 styling:
 framework: tailwindcss
-version: "3.4.1"
+version: "4.0.0"
 component_primitives: radix-ui
 animations: framer-motion
 
@@ -89,7 +89,7 @@ component_testing: react-testing-library
 # ============================================================================
 
 structure: |
-lms/
+lte/
 ├── .github/
 │   ├── workflows/
 │   ├── CODEOWNERS
@@ -111,6 +111,8 @@ lms/
 ├── src/
 │   ├── app/
 │   │   ├── layouts/
+│   │   │   ├── MainLayout.tsx
+│   │   │   └── DashboardLayout.tsx
 │   │   ├── providers/
 │   │   ├── router/
 │   │   │   └── guards/
@@ -179,6 +181,108 @@ shared   -> shared only
 # ============================================================================
 
 rules:
+
+# --------------------------------------------------------------------------
+
+# PROJECT SPECIFIC CONSTRAINTS (ADDED AS PER REQUEST)
+
+# --------------------------------------------------------------------------
+
+
+* category: backend
+  title: "Endpoint Versioning"
+  severity: critical
+  description: |
+  API endpoints must be versioned. Versioning must be followed for every endpoint (e.g., /api/v1/...).
+
+* category: ui
+  title: "Restricted Loading States"
+  severity: high
+  description: |
+  Only 3 loading states are allowed in the application:
+  1. Page loading
+  2. Window loading
+  3. Page content loading (must use a skeleton)
+  No other custom loaders or spinners are allowed.
+
+* category: styling
+  title: "Tailwind CSS v4 Only"
+  severity: critical
+  description: |
+  Only Tailwind CSS (v4) is allowed for styling.
+  No raw or custom CSS files are allowed (only Tailwind utility classes).
+  One global style file should be used.
+
+* category: components
+  title: "Modularized Components"
+  severity: high
+  description: |
+  While creating any components, they must be strictly modularized. Follow the FSD structure and avoid monolithic component files.
+
+* category: exports
+  title: "Public API with index.ts"
+  severity: high
+  description: |
+  Each module/folder (e.g., feature, entity, shared slice) must expose its public API using an `index.ts` file. Do not use deep imports; always import from the module's `index.ts`.
+
+* category: testing
+  title: "Mandatory Test Files"
+  severity: critical
+  description: |
+  Test files must be written for all newly created components, utilities, and endpoints. Code should not be merged without adequate test coverage.
+
+* category: state-management
+  title: "Proper TanStack Query Usage"
+  severity: critical
+  description: |
+  All remote/server state must be managed via TanStack Query.
+  * Do not copy TanStack Query responses/data into Zustand.
+  * Loading, caching, fetching, and pagination states must be handled by TanStack Query.
+  * Use TanStack Query mutations for database/write requests.
+
+* category: state-management
+  title: "Proper Zustand Usage"
+  severity: critical
+  description: |
+  Zustand is strictly for local client-side state only.
+  * Use it for transient UI states, workspace settings, global modal/drawer triggers, or temporary caching.
+  * Avoid placing heavy database/server queries or API cache inside Zustand.
+  * Keep stores small, scoped, and modularized near the FSD feature or entity that owns them. Do not create a single monolithic global store.
+
+* category: validation
+  title: "Proper Zod Usage"
+  severity: critical
+  description: |
+  Zod must be used for runtime validation at all boundaries.
+  * Form validations, API request payloads (body, query parameters, route parameters), and env configurations must be validated using Zod.
+  * Perform validations immediately at the boundary before calling downstream services or running business logic.
+
+* category: validation
+  title: "Immediate Validation of Environment Variables"
+  severity: critical
+  description: |
+  All environment variables (including `.dev.vars` bindings or standard `.env` variables) must be validated immediately on the initial load of the application or module.
+  * If any required variables are missing or misconfigured, the application or serverless function must throw a clear configuration error at startup (initial load) rather than failing silently or causing obscure runtime errors downstream.
+  * Use Zod schemas to parse and validate `process.env`, `import.meta.env`, or Cloudflare Page Function `env` bindings immediately during initialization.
+
+* category: quality
+  title: "No Hardcoded Values"
+  severity: critical
+  description: |
+  Do not hardcode configuration values, API URLs, keys, secrets, constants, or user-facing labels directly in code.
+  * Environment-specific values must be fetched from environment variables or configs.
+  * Core configuration constants should be centralized in config modules (e.g., `shared/config/`).
+  * No secrets, API keys, or database credentials should ever be hardcoded.
+
+* category: error-handling
+  title: "Correct Error Handling (No Fallbacks)"
+  severity: critical
+  description: |
+  Error handling must be robust and handled correctly at all layers.
+  * Empty catch blocks (`try {} catch (e) {}` with no logging or action) are strictly prohibited.
+  * Catch and handle all potential promise rejections, database errors, and fetch failures.
+  * Always log errors using the centralized logging utility (`logger.error`).
+  * Provide helpful and graceful user-facing error states (e.g., UI error boundaries, toast notifications) rather than silent failures or basic fallback logic.
 
 # --------------------------------------------------------------------------
 
@@ -1012,7 +1116,40 @@ rules:
 
   Such imports must fail linting and CI.
 
+* category: imports
+  title: "Use path alias `@/` for project imports"
+  severity: high
+  description: |
+  All imports referencing project code under `src/` must use the `@/` path alias.
+
+  Preferred:
+  * `import { Button } from "@/shared/ui";`
+  * `import { NavigationDrawer } from "@/widgets/NavigationDrawer";`
+
+  Avoid:
+  * `import { Button } from "../../shared/ui/Button";`
+  * relative path navigation (`../../../`) across FSD slices.
+
+* category: imports
+  title: "Type placement by scope and ownership"
+
+  severity: high
+  description: |
+  TypeScript type definitions must be placed based on scope:
+
+  1. Component Props (e.g. ButtonProps, HeaderProps):
+     * Must be co-located with the component (e.g., `Button.tsx`).
+     * Re-exported through the slice's `index.ts`.
+     * Do not dump component props into `src/shared/types/`.
+
+  2. Global Infrastructure Types (e.g. AuthUser, ApiResponse):
+     * Must live in `src/shared/types/` (e.g., `shared/types/auth.ts`).
+
+  3. Domain Entity & Feature Models (e.g. Course, Assignment):
+     * Must live in `entities/<name>/model/types.ts` or `features/<name>/model/types.ts`.
+
 # --------------------------------------------------------------------------
+
 
 # COMPONENT PLACEMENT
 

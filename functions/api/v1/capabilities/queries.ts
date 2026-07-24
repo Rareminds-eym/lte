@@ -1,12 +1,12 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Capability, RoleCapabilitySequenceRow } from './types';
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Capability, RoleCapabilitySequenceRow } from "./types";
 
 export async function getCapabilitiesByRoleId(
   supabase: SupabaseClient,
-  roleId: string
+  roleId: string,
 ): Promise<Capability[]> {
   const { data, error } = await supabase
-    .from('role_capability_sequence')
+    .from("role_capability_sequence")
     .select(`
       id,
       sequence_step,
@@ -19,8 +19,8 @@ export async function getCapabilitiesByRoleId(
         description
       )
     `)
-    .eq('role_id', roleId)
-    .order('sequence_step', { ascending: true });
+    .eq("role_id", roleId)
+    .order("sequence_step", { ascending: true });
 
   if (error) {
     throw new Error(`Failed to fetch role capabilities: ${error.message}`);
@@ -31,14 +31,12 @@ export async function getCapabilitiesByRoleId(
   }
 
   return data.map((item: RoleCapabilitySequenceRow) => {
-    const cap = Array.isArray(item.capabilities)
-      ? item.capabilities[0]
-      : item.capabilities;
+    const cap = Array.isArray(item.capabilities) ? item.capabilities[0] : item.capabilities;
 
     return {
-      id: cap?.id ?? '',
-      name: cap?.name ?? '',
-      description: cap?.description ?? '',
+      id: cap?.id ?? "",
+      name: cap?.name ?? "",
+      description: cap?.description ?? "",
       code: cap?.code ?? undefined,
       level: item.required_level ?? undefined,
       priority: item.capability_priority ?? undefined,

@@ -1,5 +1,5 @@
 // Exported widgets (composite components made of multiple features/entities)
-// Example:
-// export { Header } from './Header';
-// export { Sidebar } from './Sidebar';
-// export { Footer } from './Footer';
+
+export { Header, type HeaderProps } from "@/widgets/Header";
+export { NavigationDrawer, type NavigationDrawerProps } from "@/widgets/NavigationDrawer";
+export { Pagination, type PaginationProps } from "@/widgets/Pagination";

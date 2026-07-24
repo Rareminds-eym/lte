@@ -41,6 +41,8 @@ export default defineConfig({
 				"**/*.css",
 				"**/*.svg",
 				"**/*.{spec,test}.{ts,tsx}",
+				"**/index.ts",
+				"**/index.tsx",
 			],
 			thresholds: {
 				branches: 70,

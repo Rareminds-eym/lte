@@ -10,17 +10,16 @@
 
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { createServiceSupabase } from "@functions/lib/supabase";
+import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getCapabilitiesByRoleId } from "./queries";
 import { GetCapabilitiesRequestSchema } from "./schemas";
-import type { LteEnv, PagesContext } from "@functions/lib/types";
-import type {
-  GetCapabilitiesRequest,
-  GetCapabilitiesResponse,
-} from "./types";
+import type { GetCapabilitiesRequest, GetCapabilitiesResponse } from "./types";
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   try {
-    const parsedBody = GetCapabilitiesRequestSchema.safeParse(await readJsonObject(context.request));
+    const parsedBody = GetCapabilitiesRequestSchema.safeParse(
+      await readJsonObject(context.request),
+    );
     if (!parsedBody.success) {
       return jsonError(parsedBody.error.issues[0]?.message ?? "Invalid request body", 400);
     }
@@ -37,7 +36,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       count: capabilities.length,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return jsonError(errorMessage, 500);
   }
 }
