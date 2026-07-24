@@ -38,9 +38,11 @@
   --color-content-secondary: #6b7280;
   --color-content-muted: #9ca3af;
 
-  /* ── Border ── */
+  /* ── Border / Line ── */
   --color-border-default: #e5e7eb;
   --color-border-subtle: #f3f4f6;
+  --color-line-default: #e5e7eb;
+  --color-line-subtle: #f3f4f6;
 }
 
 @layer base {

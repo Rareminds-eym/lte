@@ -237,7 +237,11 @@ export const Courses = () => {
       </header>
 
       {/* Role Tabs */}
-      <div role="tablist" aria-label="Course roles" className="flex items-center gap-6">
+      <div
+        role="tablist"
+        aria-label="Course roles"
+        className="flex items-center gap-6 border-b border-gray-200"
+      >
         {ROLE_TABS.map((tab) => {
           const count =
             tab.id === null
@@ -273,14 +277,12 @@ export const Courses = () => {
                 {count}
               </span>
               {isActive && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 rounded-full" />
+                <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-brand-600 rounded-full z-10" />
               )}
             </button>
           );
         })}
       </div>
-
-      <hr className="border-gray-200" />
 
       {/* Toolbar */}
       <div className="flex items-center justify-between">
