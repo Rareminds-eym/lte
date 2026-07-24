@@ -13,13 +13,13 @@ describe("Pagination", () => {
 
   it("renders Previous and Next buttons", () => {
     render(<Pagination currentPage={1} totalPages={3} onPageChange={() => {}} />);
-    expect(screen.getByText("Previous")).toBeInTheDocument();
+    expect(screen.getByText("Prev")).toBeInTheDocument();
     expect(screen.getByText("Next")).toBeInTheDocument();
   });
 
   it("disables Previous on first page", () => {
     render(<Pagination currentPage={1} totalPages={3} onPageChange={() => {}} />);
-    expect(screen.getByText("Previous")).toBeDisabled();
+    expect(screen.getByText("Prev")).toBeDisabled();
   });
 
   it("disables Next on last page", () => {
@@ -37,7 +37,7 @@ describe("Pagination", () => {
   it("calls onPageChange when Previous is clicked", async () => {
     const handlePageChange = vi.fn();
     render(<Pagination currentPage={2} totalPages={3} onPageChange={handlePageChange} />);
-    await userEvent.click(screen.getByText("Previous"));
+    await userEvent.click(screen.getByText("Prev"));
     expect(handlePageChange).toHaveBeenCalledWith(1);
   });
 
@@ -81,7 +81,7 @@ describe("Pagination", () => {
   it("does not call onPageChange when clicking disabled Previous on first page", async () => {
     const handlePageChange = vi.fn();
     render(<Pagination currentPage={1} totalPages={3} onPageChange={handlePageChange} />);
-    await userEvent.click(screen.getByText("Previous"));
+    await userEvent.click(screen.getByText("Prev"));
     expect(handlePageChange).not.toHaveBeenCalled();
   });
 

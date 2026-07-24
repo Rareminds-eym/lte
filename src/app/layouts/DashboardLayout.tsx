@@ -103,7 +103,7 @@ export const DashboardLayout: React.FC = () => {
   const activeNavId = location.pathname.includes("dashboard") ? "dashboard" : "my-courses";
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-surface-secondary">
       <NavigationDrawer
         activeNavId={activeNavId}
         isCollapsed={isCollapsed}

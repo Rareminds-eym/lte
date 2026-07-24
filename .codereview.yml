@@ -213,6 +213,15 @@ rules:
   No raw or custom CSS files are allowed (only Tailwind utility classes).
   One global style file should be used.
 
+* category: styling
+  title: "Global Semantic Design Tokens Only"
+  severity: critical
+  description: |
+  All colors, theme variables, and styling tokens must be configured globally in `@theme` (`src/app/styles/index.css`) or `tailwind.config.ts`.
+  Do not use arbitrary hardcoded hex codes, RGB values, or ad-hoc color utilities directly inside component or page files (e.g. avoid `text-[#2563EB]`, `bg-[#1D4ED8]`, `border-[#E5E7EB]`).
+  Always consume standard semantic design tokens such as `brand-*`, `success-*`, `warning-*`, `surface-*`, `content-*`, and `border-*`.
+
+
 * category: components
   title: "Modularized Components"
   severity: high

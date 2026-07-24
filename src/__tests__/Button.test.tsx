@@ -35,7 +35,7 @@ describe("Button", () => {
   it("applies variant classes", () => {
     const { container } = render(<Button variant="secondary">Secondary</Button>);
     const btn = container.querySelector("button");
-    expect(btn?.className).toContain("bg-blue-50");
+    expect(btn?.className).toContain("bg-brand-50");
   });
 
   it("renders disabled button", () => {

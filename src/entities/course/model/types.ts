@@ -18,4 +18,5 @@ export interface Course {
   xp: number;
   badge?: string;
   role: CourseRole;
+  qualified?: boolean;
 }
