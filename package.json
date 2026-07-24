@@ -35,6 +35,7 @@
 		"lint:secrets": "secretlint \"src/**/*\" \"functions/**/*\"",
 		"preview": "vite preview",
 		"test": "vitest",
+		"test:ci": "vitest run",
 		"test:property": "vitest --run src/__tests__/property/",
 		"typecheck": "tsc --noEmit -p tsconfig.app.json",
 		"setup:husky": "node scripts/setup-husky-cross-platform.js",
