@@ -21,7 +21,6 @@ export const Image: React.FC<ImageProps> = ({
 }) => {
   const imgProps = {
     ...props,
-    alt,
     loading: (explicitLoading ?? (priority ? "eager" : "lazy")) as "eager" | "lazy",
     decoding: "async" as const,
     fetchPriority: priority ? ("high" as const) : undefined,
@@ -30,7 +29,7 @@ export const Image: React.FC<ImageProps> = ({
   if (aspectRatio) {
     return (
       <div className={cn("relative overflow-hidden", wrapperClassName)} style={{ aspectRatio }}>
-        <img {...imgProps} className={cn("w-full h-full object-cover", className)} />
+        <img alt={alt} {...imgProps} className={cn("w-full h-full object-cover", className)} />
         {children}
       </div>
     );
@@ -39,11 +38,11 @@ export const Image: React.FC<ImageProps> = ({
   if (children) {
     return (
       <div className={cn("relative", wrapperClassName)}>
-        <img {...imgProps} className={className} />
+        <img alt={alt} {...imgProps} className={className} />
         {children}
       </div>
     );
   }
 
-  return <img {...imgProps} className={className} />;
+  return <img alt={alt} {...imgProps} className={className} />;
 };
