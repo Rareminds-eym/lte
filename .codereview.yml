@@ -1593,14 +1593,74 @@ assets:
 root: public/assets
 
 primary_rule: |
-Code must be placed according to ownership and responsibility.
+  Code must be placed according to ownership and responsibility.
 
-```
-Generic reusable code belongs in shared.
-Domain objects belong in entities.
-User actions belong in features.
-Large compositions belong in widgets.
-Route screens belong in pages.
-Application setup belongs in app.
-Security enforcement belongs in functions.
-```
+  ```
+  Generic reusable code belongs in shared.
+  Domain objects belong in entities.
+  User actions belong in features.
+  Large compositions belong in widgets.
+  Route screens belong in pages.
+  Application setup belongs in app.
+  Security enforcement belongs in functions.
+  ```
+
+  # ---------------------------------------------------------------------------
+  # LTE-SPECIFIC RULES (added 2026-07-24)
+  # ---------------------------------------------------------------------------
+
+  - category: performance
+    title: "Enforce React.lazy() for all route-level page imports"
+    description: |
+      All main page components inside `src/pages/*` must be imported dynamically
+      using `React.lazy()` and dynamic `import()` expressions.
+      Lazy declarations must reside at the TOP of `AppRouter.tsx`, outside any
+      rendering component. Static imports of page components at the router level
+      are a violation — they bloat the initial JS bundle downloaded by every user.
+    severity: high
+
+  - category: performance
+    title: "Suspense fallback must use <PageLoader message='...' />"
+    description: |
+      Every React.lazy() route must be individually wrapped in its own <Suspense> block.
+      The fallback prop MUST use the shared <PageLoader message="[Route-Specific Message]" />
+      component from `@/shared/ui`, passing a descriptive route-specific loading message
+      (e.g. "Loading Dashboard...", "Loading Courses...").
+      Bare string fallbacks (<div>Loading...</div>) or missing Suspense wrappers are violations.
+    severity: high
+
+  - category: styling
+    title: "Strictly enforce mobile-first CSS layout approach"
+    description: |
+      All new components and pages must follow a mobile-first design strategy:
+      1. Base CSS / Tailwind classes must target mobile dimensions by default.
+      2. Tablet and desktop overrides must use progressive responsive prefixes:
+         sm: (640px), md: (768px), lg: (1024px), xl: (1280px).
+      3. All grid or flex containers must default to vertical single-column layouts
+         (`flex-col`, `grid-cols-1`) for mobile and expand to multi-column only at
+         higher breakpoints (e.g. `md:grid-cols-2 lg:grid-cols-3`).
+      Desktop-first patterns (e.g. `max-w-screen-md`) are violations.
+    severity: high
+
+  - category: testing
+    title: "Every new module must have a corresponding unit test file"
+    description: |
+      Every new core module, page component, utility helper, or state store must
+      have a corresponding test file created in the SAME pull request.
+      Naming convention: `[Filename].test.ts` or `[Filename].test.tsx`.
+      Location: under the appropriate `src/__tests__/` directory mirroring the
+      source folder structure.
+      PRs that add new components or utilities without accompanying tests will
+      be blocked from merge.
+    severity: high
+
+  - category: testing
+    title: "Use async queries for lazy route tests"
+    description: |
+      When testing dynamically lazy-loaded routes or components that are rendered
+      inside a <Suspense> block, assertions must use asynchronous Testing Library
+      queries: `await screen.findByTestId(...)` or `await waitFor(...)`.
+      Synchronous `screen.getByTestId()` calls on lazy-loaded elements will throw
+      before Suspense resolves. This is the most common testing bug after introducing
+      React.lazy() — enforce it in every review touching AppRouter or page tests.
+    severity: high
