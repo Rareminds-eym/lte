@@ -26,17 +26,25 @@ export const MainLayout: React.FC = () => {
 
   const [callbackError, setCallbackError] = useState<string | null>(null);
 
+  // Validate and parse the redirection target (starts with / or . and not // to prevent XSS / open redirects)
+  const targetNext = useMemo(() => {
+    const next = searchParams.get("next");
+    if (next && (next.startsWith("/") || next.startsWith(".")) && !next.startsWith("//")) {
+      return next;
+    }
+    return "/dashboard";
+  }, [searchParams]);
+
   // Check if we are on a callback flow (either /auth/callback or code/state query parameters)
   const callbackParams = useMemo(() => {
     const code = searchParams.get("code");
     const state = searchParams.get("state");
-    const next = searchParams.get("next");
     let redirectUri = `${window.location.origin}/auth/callback`;
-    if (next) {
-      redirectUri = `${redirectUri}?next=${encodeURIComponent(next)}`;
+    if (targetNext !== "/dashboard") {
+      redirectUri = `${redirectUri}?next=${encodeURIComponent(targetNext)}`;
     }
     return code && state ? { code, state, redirectUri } : null;
-  }, [searchParams]);
+  }, [searchParams, targetNext]);
 
   // 1. Initial local session load in background (only if not doing callback)
   useEffect(() => {
@@ -70,10 +78,9 @@ export const MainLayout: React.FC = () => {
     exchangeRequest
       .then(() => {
         if (!cancelled) {
-          const next = searchParams.get("next") || "/dashboard";
-          logger.info(`Exchange succeeded, navigating to ${next}`);
-          window.history.replaceState({}, "", next);
-          navigate(next, { replace: true });
+          logger.info(`Exchange succeeded, navigating to ${targetNext}`);
+          window.history.replaceState({}, "", targetNext);
+          navigate(targetNext, { replace: true });
         }
       })
       .catch((error: unknown) => {
@@ -87,7 +94,7 @@ export const MainLayout: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [callbackParams, exchangeCode, navigate, searchParams]);
+  }, [callbackParams, exchangeCode, navigate, searchParams, targetNext]);
 
   // If executing callback, intercept and render loading/error screen
   if (callbackParams || location.pathname.startsWith("/auth/callback")) {
