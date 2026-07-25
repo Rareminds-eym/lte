@@ -62,14 +62,20 @@ jobs:
       - name: ESLint (changed TS/TSX files only)
         if: steps.changed.outputs.count != '0'
         run: |
-          grep -E '\.(ts|tsx)$' /tmp/changed_files.txt \
-            | tr '\n' '\0' | xargs -0 npx eslint --max-warnings 0
+          if grep -qE '\.(ts|tsx)$' /tmp/changed_files.txt; then
+            grep -E '\.(ts|tsx)$' /tmp/changed_files.txt | tr '\n' '\0' | xargs -0 npx eslint --max-warnings 0
+          else
+            echo "No TS/TSX files changed. Skipping ESLint."
+          fi
 
       - name: Stylelint (changed CSS files only)
         if: steps.changed.outputs.count != '0'
         run: |
-          grep -E '\.css$' /tmp/changed_files.txt \
-            | tr '\n' '\0' | xargs -0 npx stylelint --max-warnings 0
+          if grep -qE '\.css$' /tmp/changed_files.txt; then
+            grep -E '\.css$' /tmp/changed_files.txt | tr '\n' '\0' | xargs -0 npx stylelint --max-warnings 0
+          else
+            echo "No CSS files changed. Skipping Stylelint."
+          fi
 
       - name: Secretlint (changed files only)
         if: steps.changed.outputs.count != '0'
