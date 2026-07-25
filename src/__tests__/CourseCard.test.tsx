@@ -51,7 +51,7 @@ describe("CourseCard", () => {
 
   it("renders duration and XP", () => {
     render(<CourseCard course={baseCourse} />);
-    expect(screen.getByText("40h")).toBeInTheDocument();
+    expect(screen.getByText("40 hours")).toBeInTheDocument();
     expect(screen.getByText("500 XP")).toBeInTheDocument();
   });
 

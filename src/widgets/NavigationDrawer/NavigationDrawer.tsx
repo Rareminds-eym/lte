@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { Button, IconButton } from "@/shared/ui";
+import { Button, IconButton, Image } from "@/shared/ui";
 
 const SvgIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <svg
@@ -140,7 +140,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
 
   return (
     <aside
-      className={`relative bg-white border-r border-slate-100 h-screen flex flex-col justify-between p-3.5 shrink-0 font-sans select-none transition-[width] duration-300 ease-in-out ${
+      className={`relative bg-white border-r border-line-subtle h-screen flex flex-col justify-between p-3.5 shrink-0 font-sans select-none transition-[width] duration-300 ease-in-out ${
         isCollapsed ? "w-[72px]" : "w-64"
       } ${className}`}
     >
@@ -149,7 +149,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         type="button"
         onClick={handleToggle}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 shadow-md flex items-center justify-center -right-4 top-[2.875rem] absolute z-20 cursor-pointer hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-95"
+        className="w-8 h-8 rounded-full bg-white border border-line-default text-content-secondary shadow-md flex items-center justify-center -right-4 top-[2.875rem] absolute z-20 cursor-pointer hover:bg-surface-muted hover:text-content-primary transition-all active:scale-95"
       >
         <svg
           aria-hidden="true"
@@ -175,16 +175,18 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         <div className="pt-1 pb-2 px-1 w-full flex items-center h-16 overflow-hidden">
           {isCollapsed ? (
             <div className="w-full flex justify-center items-center">
-              <img
+              <Image
                 src="/assets/images/rm-bulb.webp"
                 alt="RareMinds"
+                priority
                 className="w-11 h-11 object-contain shrink-0 transition-transform duration-200 hover:scale-105"
               />
             </div>
           ) : (
-            <img
+            <Image
               src="/assets/images/rareminds.webp"
               alt="RareMinds - Applied Learning. Transforming Work"
+              priority
               className="h-14 max-w-[210px] w-auto object-contain shrink-0 transition-opacity duration-200"
             />
           )}
@@ -202,13 +204,13 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
                 onClick={() => handleNavClick(item.id)}
                 className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl font-semibold text-sm transition-colors duration-150 cursor-pointer overflow-hidden ${
                   isActive
-                    ? "bg-[#eff6ff] text-[#2563eb]"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-brand-50 text-brand-600"
+                    : "text-content-secondary hover:bg-surface-muted hover:text-content-primary"
                 }`}
               >
                 <span
                   className={`shrink-0 flex items-center justify-center w-5 h-5 ${
-                    isActive ? "text-[#2563eb]" : "text-slate-600"
+                    isActive ? "text-brand-600" : "text-content-secondary"
                   }`}
                 >
                   {item.icon}
@@ -244,17 +246,17 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           </div>
         ) : (
           /* Expanded AI Mentor Promo Card */
-          <div className="bg-[#f8fafc] border border-slate-100/80 rounded-2xl p-4 flex flex-col space-y-2.5 text-left transition-all duration-300">
-            <h3 className="text-xs font-bold text-slate-800 leading-snug">
+          <div className="bg-surface-secondary border border-line-subtle/80 rounded-2xl p-4 flex flex-col space-y-2.5 text-left transition-all duration-300">
+            <h3 className="text-xs font-bold text-content-primary leading-snug">
               Need help choosing what to do next?
             </h3>
-            <p className="text-xs text-slate-400 font-medium leading-tight">
+            <p className="text-xs text-content-muted font-medium leading-tight">
               Get guidance from your AI Mentor
             </p>
             <Button
               variant="primary"
               size="sm"
-              className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-xs border-none justify-center mt-1"
+              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-xs border-none justify-center mt-1"
               icon={
                 <svg aria-hidden="true" className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                   <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />

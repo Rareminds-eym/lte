@@ -18,13 +18,13 @@ describe("NavigationDrawer", () => {
   it("defaults activeNavId to dashboard", () => {
     render(<NavigationDrawer />);
     const dashboardBtn = screen.getByText("Dashboard").closest("button");
-    expect(dashboardBtn?.className).toContain("bg-[#eff6ff]");
+    expect(dashboardBtn?.className).toContain("bg-brand-50");
   });
 
   it("accepts a different activeNavId", () => {
     render(<NavigationDrawer activeNavId="my-courses" />);
     const coursesBtn = screen.getByText("My Courses").closest("button");
-    expect(coursesBtn?.className).toContain("bg-[#eff6ff]");
+    expect(coursesBtn?.className).toContain("bg-brand-50");
   });
 
   it("calls onNavigate when a nav item is clicked", () => {
@@ -87,9 +87,9 @@ describe("NavigationDrawer", () => {
   it("handles nav click when onNavigate is not provided", () => {
     render(<NavigationDrawer />);
     const dashboardBtn = screen.getByText("Dashboard").closest("button");
-    expect(dashboardBtn?.className).toContain("bg-[#eff6ff]");
+    expect(dashboardBtn?.className).toContain("bg-brand-50");
     fireEvent.click(screen.getByText("My Courses"));
     const coursesBtn = screen.getByText("My Courses").closest("button");
-    expect(coursesBtn?.className).toContain("bg-[#eff6ff]");
+    expect(coursesBtn?.className).toContain("bg-brand-50");
   });
 });

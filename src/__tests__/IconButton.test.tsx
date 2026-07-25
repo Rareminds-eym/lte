@@ -28,19 +28,19 @@ describe("IconButton", () => {
   it("applies soft-blue variant classes by default", () => {
     render(<IconButton icon={<span>i</span>} />);
     const btn = screen.getByRole("button");
-    expect(btn.className).toContain("border-blue-200");
+    expect(btn.className).toContain("border-brand-200");
   });
 
   it("applies outline variant classes", () => {
     render(<IconButton icon={<span>i</span>} variant="outline" />);
     const btn = screen.getByRole("button");
-    expect(btn.className).toContain("border-slate-200");
+    expect(btn.className).toContain("border-line-default");
   });
 
   it("applies solid-blue variant classes", () => {
     render(<IconButton icon={<span>i</span>} variant="solid-blue" />);
     const btn = screen.getByRole("button");
-    expect(btn.className).toContain("bg-[#2563eb]");
+    expect(btn.className).toContain("bg-brand-600");
   });
 
   it("applies size classes", () => {

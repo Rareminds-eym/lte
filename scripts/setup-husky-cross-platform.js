@@ -20,6 +20,14 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Validate file lengths
+echo "Validating file lengths..."
+npm run lint:lengths
+if [ $? -ne 0 ]; then
+  echo "File length validation failed!"
+  exit 1
+fi
+
 # Check for console statements
 echo "File types valid. Checking for console usage..."
 npm run lint:console
@@ -54,9 +62,30 @@ fi
 echo "All pre-commit checks passed!"
 `;
 
+const prePushContent = `echo "Running pre-push checks..."
+
+# Run Build Check
+echo "Running build check..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "Build failed! Push aborted."
+  exit 1
+fi
+
+# Run Tests
+echo "Running tests..."
+npm run test
+if [ $? -ne 0 ]; then
+  echo "Tests failed! Push aborted."
+  exit 1
+fi
+
+echo "All pre-push checks passed!"
+`;
+
 async function setupHusky() {
 	try {
-		console.log("Setting up Husky pre-commit hooks...\n");
+		console.log("Setting up Husky hooks...\n");
 
 		console.log("Installing Husky...");
 		try {
@@ -74,6 +103,7 @@ async function setupHusky() {
 			console.log("Created .husky directory");
 		}
 
+		// pre-commit
 		const hookPath = path.join(huskyDir, "pre-commit");
 		if (!existsSync(hookPath)) {
 			await writeFile(hookPath, hookContent, { encoding: "utf-8" });
@@ -82,23 +112,36 @@ async function setupHusky() {
 			console.log("Existing .husky/pre-commit hook found; leaving it unchanged");
 		}
 
+		// pre-push
+		const prePushPath = path.join(huskyDir, "pre-push");
+		if (!existsSync(prePushPath)) {
+			await writeFile(prePushPath, prePushContent, { encoding: "utf-8" });
+			console.log("Created .husky/pre-push hook");
+		} else {
+			console.log("Existing .husky/pre-push hook found; leaving it unchanged");
+		}
+
 		if (process.platform !== "win32") {
 			try {
-				execSync(`chmod +x ${hookPath}`, { stdio: "inherit" });
-				console.log("Made hook executable");
+				execSync(`chmod +x ${hookPath} ${prePushPath}`, { stdio: "inherit" });
+				console.log("Made hooks executable");
 			} catch (error) {
-				console.log(`Could not make hook executable: ${error.message}`);
+				console.log(`Could not make hooks executable: ${error.message}`);
 			}
 		}
 
 		console.log("\nHusky setup complete!\n");
 		console.log("Pre-commit hooks will now run:");
 		console.log("  1. File type validation");
-		console.log("  2. Console usage detection");
-		console.log("  3. Biome linting and formatting checks");
-		console.log("  4. ESLint checks");
-		console.log("  5. TypeScript type checking\n");
-		console.log("Next time you run: git commit");
+		console.log("  2. File length validation (max 1000 lines)");
+		console.log("  3. Console usage detection");
+		console.log("  4. Biome linting and formatting checks");
+		console.log("  5. ESLint checks");
+		console.log("  6. TypeScript type checking\n");
+		console.log("Pre-push hooks will now run:");
+		console.log("  1. Running build check (npm run build)");
+		console.log("  2. Running tests (npm run test)\n");
+		console.log("Next time you run: git commit / git push");
 		console.log("   These checks will run automatically!\n");
 
 		process.exit(0);

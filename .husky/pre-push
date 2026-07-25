@@ -1,0 +1,19 @@
+echo "Running pre-push checks..."
+
+# Run Build Check
+echo "Running build check..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "Build failed! Push aborted."
+  exit 1
+fi
+
+# Run Tests
+echo "Running tests..."
+npm run test
+if [ $? -ne 0 ]; then
+  echo "Tests failed! Push aborted."
+  exit 1
+fi
+
+echo "All pre-push checks passed!"

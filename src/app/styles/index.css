@@ -1,5 +1,51 @@
 @import "tailwindcss";
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   Design Tokens — Single source of truth for all colors in the application.
+   Change values here to rebrand the entire app.
+   ══════════════════════════════════════════════════════════════════════════════ */
+@theme {
+  /* ── Brand (primary blue) ── */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+
+  /* ── Success (green) ── */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+
+  /* ── Warning (amber) ── */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  /* ── Surface ── */
+  --color-surface-primary: #ffffff;
+  --color-surface-secondary: #f9fafb;
+  --color-surface-muted: #f3f4f6;
+
+  /* ── Content (text) ── */
+  --color-content-primary: #111827;
+  --color-content-secondary: #6b7280;
+  --color-content-muted: #9ca3af;
+
+  /* ── Border / Line ── */
+  --color-border-default: #e5e7eb;
+  --color-border-subtle: #f3f4f6;
+  --color-line-default: #e5e7eb;
+  --color-line-subtle: #f3f4f6;
+}
+
 @layer base {
   html,
   body {
@@ -7,36 +53,10 @@
   }
 
   body {
-    @apply font-sans antialiased text-gray-900 bg-gray-50 overflow-x-hidden;
+    @apply font-sans antialiased text-content-primary bg-surface-secondary overflow-x-hidden;
   }
 
   #root {
     @apply min-h-screen;
-  }
-}
-
-@layer components {
-  .text-primary {
-    @apply text-blue-500;
-  }
-
-  .text-secondary {
-    @apply text-purple-500;
-  }
-
-  .text-danger {
-    @apply text-red-500;
-  }
-
-  .text-success {
-    @apply text-emerald-500;
-  }
-
-  .text-warning {
-    @apply text-amber-500;
-  }
-
-  .text-info {
-    @apply text-cyan-500;
   }
 }
