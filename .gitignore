@@ -47,3 +47,12 @@ graphify-out/cost.json
 graphify-out/cache/
 graphify-out/20*/
 
+# graphify - regeneratable outputs (keep only graph.json)
+graphify-out/graph.html
+graphify-out/lte-callflow.html
+graphify-out/GRAPH_REPORT.md
+graphify-out/wiki/
+graphify-out/manifest.json
+graphify-out/.graphify_labels*
+.kiro/skills/graphify/references/
+
