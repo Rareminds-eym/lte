@@ -8,6 +8,15 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Validate file lengths
+echo "Validating file lengths..."
+npm run lint:lengths
+if [ $? -ne 0 ]; then
+  echo "File length validation failed!"
+  exit 1
+fi
+
+
 # Check for console statements
 echo "File types valid. Checking for console usage..."
 npm run lint:console

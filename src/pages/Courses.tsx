@@ -9,47 +9,102 @@ const PAGE_SIZE = 6;
 const MOCK_COURSES: Course[] = [
   {
     id: "1",
-    title: "Observability Mastery",
+    title: "Observability: Logging, Monitoring & Debugging",
     description:
-      "Master OpenTelemetry, metrics, logs, and distributed tracing to build production-ready observability into your systems.",
+      "Learn how to debug and monitor backend systems for better performance and stability.",
     category: "Backend Engineer",
     level: "Intermediate",
     role: "backend",
     status: "in_progress",
-    progress: 35,
+    progress: 20,
     currentLevel: 1,
     totalLevels: 5,
     targetLevel: "L3",
     durationHours: 45,
     xp: 500,
     badge: "OBS-L2",
-    imageUrl: "https://picsum.photos/seed/course-1/400/220",
+    imageUrl: "https://picsum.photos/seed/obs-logging/400/220",
     tags: ["Observability & Debugging", "Software Engineering", "Applied Skill"],
   },
   {
     id: "2",
-    title: "Distributed Systems Design",
+    title: "React: Advanced Patterns & Performance Optimization",
     description:
-      "Learn to architect scalable and resilient distributed systems using proven patterns and modern cloud-native technologies.",
-    category: "Backend Engineer",
+      "Deep dive into scalable React patterns, code splitting, and performance optimization.",
+    category: "Frontend Engineer",
     level: "Advanced",
-    role: "backend",
+    role: "frontend",
     status: "in_progress",
-    progress: 60,
-    currentLevel: 2,
-    totalLevels: 6,
-    targetLevel: "L4",
-    durationHours: 60,
-    xp: 750,
-    badge: "SYS-L3",
-    imageUrl: "https://picsum.photos/seed/course-2/400/220",
-    tags: ["System Design", "Architecture", "Applied Skill"],
+    progress: 20,
+    currentLevel: 1,
+    totalLevels: 5,
+    targetLevel: "L3",
+    durationHours: 45,
+    xp: 240,
+    badge: "OBS-L2",
+    imageUrl: "https://picsum.photos/seed/react-patterns/400/220",
+    tags: ["Frontend Frameworks (React)", "Software Engineering", "Applied Skill"],
   },
   {
     id: "3",
-    title: "Advanced SQL & Databases",
+    title: "API Design: REST, GraphQL & Scalability",
+    description: "Design production-ready REST and GraphQL APIs following industry best practices.",
+    category: "Backend Engineer",
+    level: "Intermediate",
+    role: "backend",
+    status: "in_progress",
+    progress: 60,
+    currentLevel: 3,
+    totalLevels: 5,
+    targetLevel: "L3",
+    durationHours: 45,
+    xp: 320,
+    badge: "OBS-L2",
+    imageUrl: "https://picsum.photos/seed/api-design/400/220",
+    tags: ["API Design & Implementation", "Software Engineering", "Applied Skill"],
+    qualified: true,
+  },
+  {
+    id: "4",
+    title: "Database Design: Schema & Query Optimization",
+    description: "Design efficient database schemas and master query optimization techniques.",
+    category: "Backend Engineer",
+    level: "Intermediate",
+    role: "backend",
+    status: "in_progress",
+    progress: 40,
+    currentLevel: 2,
+    totalLevels: 5,
+    targetLevel: "L3",
+    durationHours: 45,
+    xp: 250,
+    badge: "OBS-L2",
+    imageUrl: "https://picsum.photos/seed/db-design/400/220",
+    tags: ["Security & Authentication", "Software Engineering", "Applied Skill"],
+  },
+  {
+    id: "5",
+    title: "Security: Authentication & Authorization Patterns",
+    description: "Implement secure auth flows, JWT, OAuth2, and RBAC in backend services.",
+    category: "Backend Engineer",
+    level: "Intermediate",
+    role: "backend",
+    status: "not_started",
+    progress: 0,
+    currentLevel: 0,
+    totalLevels: 5,
+    targetLevel: "L3",
+    durationHours: 45,
+    xp: 500,
+    badge: "OBS-L2",
+    imageUrl: "https://picsum.photos/seed/security-auth/400/220",
+    tags: ["Observability & Debugging", "Software Engineering", "Applied Skill"],
+  },
+  {
+    id: "6",
+    title: "DevOps Fundamentals: CI/CD & Deployment",
     description:
-      "Deep dive into query optimization, indexing strategies, and database design patterns for high-performance applications.",
+      "Build deployment pipelines and ship applications reliably to production environments.",
     category: "Backend Engineer",
     level: "Intermediate",
     role: "backend",
@@ -58,67 +113,12 @@ const MOCK_COURSES: Course[] = [
     currentLevel: 5,
     totalLevels: 5,
     targetLevel: "L3",
-    durationHours: 40,
-    xp: 600,
-    badge: "SQL-L2",
-    imageUrl: "https://picsum.photos/seed/course-3/400/220",
-    tags: ["Databases", "SQL", "Engineering"],
-  },
-  {
-    id: "4",
-    title: "System Design Fundamentals",
-    description:
-      "Build a strong foundation in system design concepts including load balancing, caching, and database partitioning.",
-    category: "Backend Engineer",
-    level: "Beginner",
-    role: "backend",
-    status: "not_started",
-    progress: 0,
-    currentLevel: 0,
-    totalLevels: 4,
-    targetLevel: "L2",
-    durationHours: 30,
-    xp: 400,
-    imageUrl: "https://picsum.photos/seed/course-4/400/220",
-    tags: ["System Design", "Fundamentals", "Applied Skill"],
-  },
-  {
-    id: "5",
-    title: "Microservices Architecture",
-    description:
-      "Design and implement microservices using event-driven patterns, service mesh, and container orchestration.",
-    category: "Backend Engineer",
-    level: "Advanced",
-    role: "backend",
-    status: "in_progress",
-    progress: 25,
-    currentLevel: 1,
-    totalLevels: 6,
-    targetLevel: "L4",
-    durationHours: 55,
-    xp: 700,
-    badge: "MSA-L2",
-    imageUrl: "https://picsum.photos/seed/course-5/400/220",
-    tags: ["Microservices", "Architecture", "DevOps"],
-  },
-  {
-    id: "6",
-    title: "React Performance",
-    description:
-      "Optimize React applications with profiling, memoization, code splitting, and rendering strategy best practices.",
-    category: "Frontend Engineer",
-    level: "Intermediate",
-    role: "frontend",
-    status: "completed",
-    progress: 100,
-    currentLevel: 4,
-    totalLevels: 4,
-    targetLevel: "L3",
-    durationHours: 35,
-    xp: 500,
-    badge: "RCT-L2",
-    imageUrl: "https://picsum.photos/seed/course-6/400/220",
-    tags: ["React", "Performance", "Frontend"],
+    durationHours: 45,
+    xp: 300,
+    badge: "OBS-L2",
+    imageUrl: "https://picsum.photos/seed/devops-cicd/400/220",
+    tags: ["Observability & Debugging", "Software Engineering", "Applied Skill"],
+    qualified: true,
   },
   {
     id: "7",
@@ -128,15 +128,16 @@ const MOCK_COURSES: Course[] = [
     category: "Frontend Engineer",
     level: "Advanced",
     role: "frontend",
-    status: "not_started",
-    progress: 0,
-    currentLevel: 0,
+    status: "completed",
+    progress: 100,
+    currentLevel: 5,
     totalLevels: 5,
     targetLevel: "L4",
     durationHours: 40,
     xp: 550,
     imageUrl: "https://picsum.photos/seed/course-7/400/220",
     tags: ["TypeScript", "Patterns", "Engineering"],
+    qualified: true,
   },
   {
     id: "8",
@@ -179,6 +180,7 @@ const ROLE_TABS = [
 export const Courses = () => {
   const [activeRole, setActiveRole] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const filteredCourses = useMemo(
     () => (activeRole ? MOCK_COURSES.filter((c) => c.role === activeRole) : MOCK_COURSES),
@@ -200,12 +202,12 @@ export const Courses = () => {
       <header>
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0 mt-1">
+            <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center shrink-0 mt-1">
               <BookIcon />
             </div>
             <div>
-              <h1 className="text-[32px] font-bold text-[#111827] leading-tight">My Courses</h1>
-              <p className="text-[15px] text-[#6B7280] mt-1">
+              <h1 className="text-2xl font-bold text-content-primary leading-tight">My Courses</h1>
+              <p className="text-sm text-content-secondary mt-0.5">
                 Track your enrolled courses and continue where you left off.
               </p>
             </div>
@@ -213,29 +215,33 @@ export const Courses = () => {
 
           <div className="flex items-center gap-3 shrink-0 flex-wrap">
             <StatsPill
-              icon={<BookIconSmall />}
+              icon={<LayersIconSmall />}
               count={STATS.enrolled}
               label="Enrolled"
-              className="bg-purple-50 border-purple-200 text-purple-700 [&_svg]:text-purple-500"
+              className="bg-brand-50 border-brand-100 text-brand-700 [&_svg]:text-brand-500"
             />
             <StatsPill
               icon={<CheckIconSmall />}
               count={STATS.completed}
               label="Completed"
-              className="bg-emerald-50 border-emerald-200 text-emerald-700 [&_svg]:text-emerald-500"
+              className="bg-success-50 border-success-200 text-success-700 [&_svg]:text-success-600"
             />
             <StatsPill
               icon={<ClockIconSmall />}
               count={STATS.inProgress}
               label="In Progress"
-              className="bg-amber-50 border-amber-200 text-amber-700 [&_svg]:text-amber-500"
+              className="bg-warning-50 border-warning-200 text-warning-700 [&_svg]:text-warning-600"
             />
           </div>
         </div>
       </header>
 
       {/* Role Tabs */}
-      <div role="tablist" aria-label="Course roles" className="flex items-center gap-6">
+      <div
+        role="tablist"
+        aria-label="Course roles"
+        className="flex items-center gap-6 border-b border-line-default"
+      >
         {ROLE_TABS.map((tab) => {
           const count =
             tab.id === null
@@ -255,28 +261,28 @@ export const Courses = () => {
                 setCurrentPage(1);
               }}
               className={cn(
-                "relative pb-3 text-sm font-medium transition-colors",
-                isActive ? "text-[#2563EB]" : "text-[#6B7280] hover:text-gray-700",
+                "relative pb-3 text-sm font-medium transition-colors cursor-pointer",
+                isActive ? "text-brand-600" : "text-content-secondary hover:text-content-primary",
               )}
             >
               {tab.label}
               <span
                 className={cn(
                   "ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold rounded-full",
-                  isActive ? "bg-blue-100 text-[#2563EB]" : "bg-gray-100 text-[#6B7280]",
+                  isActive
+                    ? "bg-brand-100 text-brand-600"
+                    : "bg-surface-muted text-content-secondary",
                 )}
               >
                 {count}
               </span>
               {isActive && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563EB] rounded-full" />
+                <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-brand-600 rounded-full z-10" />
               )}
             </button>
           );
         })}
       </div>
-
-      <hr className="border-gray-200" />
 
       {/* Toolbar */}
       <div className="flex items-center justify-between">
@@ -284,18 +290,58 @@ export const Courses = () => {
           Filter
         </Button>
 
-        <span className="text-sm text-[#6B7280] font-medium">{filteredCourses.length} courses</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-content-secondary font-medium">
+            {filteredCourses.length} courses
+          </span>
+          <div className="flex items-center border border-line-default rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              aria-label="Grid view"
+              className={cn(
+                "p-1.5 transition-colors cursor-pointer",
+                viewMode === "grid"
+                  ? "bg-surface-muted text-content-primary"
+                  : "text-content-muted hover:text-content-secondary",
+              )}
+            >
+              <GridIcon />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+              className={cn(
+                "p-1.5 transition-colors cursor-pointer",
+                viewMode === "list"
+                  ? "bg-surface-muted text-content-primary"
+                  : "text-content-muted hover:text-content-secondary",
+              )}
+            >
+              <ListIcon />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Course Grid */}
       {paginatedCourses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              : "flex flex-col gap-4"
+          }
+        >
           {paginatedCourses.map((course) => (
-            <CourseCard key={course.id} course={course} />
+            <CourseCard key={course.id} course={course} variant={viewMode} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 text-[#6B7280]">No courses found on this page.</div>
+        <div className="text-center py-16 text-content-secondary">
+          No courses found on this page.
+        </div>
       )}
 
       {/* Pagination */}
@@ -339,7 +385,7 @@ const BookIcon: React.FC = () => (
   </svg>
 );
 
-const BookIconSmall: React.FC = () => (
+const LayersIconSmall: React.FC = () => (
   <svg
     aria-hidden="true"
     className="w-3.5 h-3.5"
@@ -350,8 +396,9 @@ const BookIconSmall: React.FC = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 12 12 17 22 12" />
+    <polyline points="2 17 12 22 22 17" />
   </svg>
 );
 
@@ -398,5 +445,43 @@ const FilterIcon: React.FC = () => (
     strokeLinejoin="round"
   >
     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+  </svg>
+);
+
+const GridIcon: React.FC = () => (
+  <svg
+    aria-hidden="true"
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="3" y="3" width="7" height="7" />
+    <rect x="14" y="3" width="7" height="7" />
+    <rect x="14" y="14" width="7" height="7" />
+    <rect x="3" y="14" width="7" height="7" />
+  </svg>
+);
+
+const ListIcon: React.FC = () => (
+  <svg
+    aria-hidden="true"
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="8" y1="6" x2="21" y2="6" />
+    <line x1="8" y1="12" x2="21" y2="12" />
+    <line x1="8" y1="18" x2="21" y2="18" />
+    <line x1="3" y1="6" x2="3.01" y2="6" />
+    <line x1="3" y1="12" x2="3.01" y2="12" />
+    <line x1="3" y1="18" x2="3.01" y2="18" />
   </svg>
 );

@@ -47,52 +47,52 @@ vi.mock("@/app/router/guards/GuestGuard", () => ({
 import { AppRouter } from "@/app/router/AppRouter";
 
 describe("AppRouter", () => {
-  it("renders home page at /", () => {
+  it("renders home page at /", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <AppRouter />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("main-layout")).toBeInTheDocument();
-    expect(screen.getByTestId("home-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("main-layout")).toBeInTheDocument();
+    expect(await screen.findByTestId("home-page")).toBeInTheDocument();
   });
 
-  it("renders login page at /login", () => {
+  it("renders login page at /login", async () => {
     render(
       <MemoryRouter initialEntries={["/login"]}>
         <AppRouter />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("guest-guard")).toBeInTheDocument();
-    expect(screen.getByTestId("login-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("guest-guard")).toBeInTheDocument();
+    expect(await screen.findByTestId("login-page")).toBeInTheDocument();
   });
 
-  it("renders dashboard at /dashboard", () => {
+  it("renders dashboard at /dashboard", async () => {
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
         <AppRouter />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("dashboard-layout")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("dashboard-layout")).toBeInTheDocument();
+    expect(await screen.findByTestId("dashboard-page")).toBeInTheDocument();
   });
 
-  it("renders courses at /my-courses", () => {
+  it("renders courses at /my-courses", async () => {
     render(
       <MemoryRouter initialEntries={["/my-courses"]}>
         <AppRouter />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("dashboard-layout")).toBeInTheDocument();
-    expect(screen.getByTestId("courses-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("dashboard-layout")).toBeInTheDocument();
+    expect(await screen.findByTestId("courses-page")).toBeInTheDocument();
   });
 
-  it("renders 404 for unknown paths", () => {
+  it("renders 404 for unknown paths", async () => {
     render(
       <MemoryRouter initialEntries={["/unknown"]}>
         <AppRouter />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("not-found-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("not-found-page")).toBeInTheDocument();
   });
 });

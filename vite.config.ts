@@ -22,7 +22,22 @@ export default defineConfig({
 	},
 	build: {
 		outDir: "dist",
-		sourcemap: true,
+		sourcemap: "hidden",
+		rollupOptions: {
+			output: {
+				manualChunks(id) {
+					const normalized = id.replaceAll("\\", "/");
+					if (
+						normalized.includes("node_modules/react/") ||
+						normalized.includes("node_modules/react-dom/") ||
+						normalized.includes("node_modules/react-router/") ||
+						normalized.includes("node_modules/react-router-dom/")
+					) {
+						return "framework";
+					}
+				},
+			},
+		},
 	},
 	test: {
 		globals: true,

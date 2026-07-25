@@ -51,6 +51,10 @@ jobs:
             | grep -v node_modules > /tmp/changed_files.txt || true
           echo "count=$(wc -l < /tmp/changed_files.txt)" >> "$GITHUB_OUTPUT"
 
+      - name: Validate File Lengths (changed files only)
+        if: steps.changed.outputs.count != '0'
+        run: npm run lint:lengths
+
       - name: Biome CI (changed files only)
         if: steps.changed.outputs.count != '0'
         run: npx biome ci --changed --since="origin/${{ github.base_ref }}" .

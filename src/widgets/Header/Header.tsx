@@ -27,12 +27,12 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`w-full h-16 bg-white border-b border-slate-100 px-6 flex items-center justify-between gap-4 font-sans select-none ${className}`}
+      className={`w-full h-16 bg-white border-b border-line-subtle px-6 flex items-center justify-between gap-4 font-sans select-none ${className}`}
     >
       {/* Center Section: High Contrast Centered Pill Search Bar */}
       <div className="flex-1 flex justify-center max-w-xl mx-auto">
-        <div className="relative flex items-center w-full bg-slate-100/90 rounded-full px-4 py-2.5 border border-slate-300 shadow-2xs hover:border-slate-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
-          <div className="pointer-events-none text-slate-500 mr-2.5 shrink-0">
+        <div className="relative flex items-center w-full bg-white/80 rounded-full px-4 py-2.5 border border-line-default shadow-2xs hover:border-line-default focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition-all">
+          <div className="pointer-events-none text-content-secondary mr-2.5 shrink-0">
             <svg
               aria-hidden="true"
               className="w-4 h-4"
@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="text"
             placeholder="Search courses, skills, topics..."
             onChange={handleSearchChange}
-            className="w-full bg-transparent text-slate-900 placeholder:text-slate-500 font-medium text-sm outline-none border-none"
+            className="w-full bg-transparent text-content-primary placeholder:text-content-secondary font-medium text-sm outline-none border-none"
           />
         </div>
       </div>
@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
           icon={
             <svg
               aria-hidden="true"
-              className="w-5 h-5 text-slate-700"
+              className="w-5 h-5 text-content-secondary"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
