@@ -81,6 +81,7 @@ export default [
 	},
 	{
 		files: [
+			"src/setupTests.ts",
 			"src/shared/config/logging.ts",
 			"functions/lib/logger.ts",
 			"src/__tests__/**/*",
