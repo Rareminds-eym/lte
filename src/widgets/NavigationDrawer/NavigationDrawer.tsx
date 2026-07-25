@@ -246,7 +246,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           </div>
         ) : (
           /* Expanded AI Mentor Promo Card */
-          <div className="bg-surface-secondary border border-line-subtle/80 rounded-2xl p-4 flex flex-col space-y-2.5 text-left transition-all duration-300">
+          <div className="bg-surface-secondary rounded-2xl p-4 flex flex-col space-y-2.5 text-left transition-all duration-300">
             <h3 className="text-xs font-bold text-content-primary leading-snug">
               Need help choosing what to do next?
             </h3>
