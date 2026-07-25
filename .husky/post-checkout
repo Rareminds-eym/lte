@@ -1,0 +1,55 @@
+#!/bin/sh
+# graphify-checkout-hook-start
+# Auto-rebuilds the knowledge graph (code only) when switching branches.
+# Installed by: graphify hook install
+# Rewritten to use graphify CLI instead of Python import (uv tool compat).
+
+export PYTHONHASHSEED=0
+
+# Git for Windows/MSYS hooks can inherit fragile pipe handles from GUI clients
+# and agent shells. Keep hook-triggered rebuilds sequential by default there;
+# explicit GRAPHIFY_MAX_WORKERS still wins for users who want parallelism.
+if [ -n "${WINDIR:-}" ] || [ -n "${MSYSTEM:-}" ]; then
+    export GRAPHIFY_MAX_WORKERS="${GRAPHIFY_MAX_WORKERS:-1}"
+fi
+
+PREV_HEAD=$1
+NEW_HEAD=$2
+BRANCH_SWITCH=$3
+
+# Only run on branch switches, not file checkouts
+if [ "$BRANCH_SWITCH" != "1" ]; then
+    exit 0
+fi
+
+# Only run if graph has been built before
+if [ ! -d "graphify-out" ]; then
+    exit 0
+fi
+
+# Skip during rebase/merge/cherry-pick
+GIT_DIR=${GIT_DIR:-$(git rev-parse --git-dir 2>/dev/null)}
+[ -d "$GIT_DIR/rebase-merge" ] && exit 0
+[ -d "$GIT_DIR/rebase-apply" ] && exit 0
+[ -f "$GIT_DIR/MERGE_HEAD" ] && exit 0
+[ -f "$GIT_DIR/CHERRY_PICK_HEAD" ] && exit 0
+
+# Find graphify CLI
+GFY_CMD=""
+if command -v graphify >/dev/null 2>&1; then
+    GFY_CMD="graphify"
+elif uv tool run --from graphifyy graphify --version >/dev/null 2>&1; then
+    GFY_CMD="uv tool run --from graphifyy graphify"
+fi
+
+if [ -z "$GFY_CMD" ]; then
+    echo "[graphify hook] graphify not found on PATH or via uv. Install: uv tool install graphifyy"
+    exit 0
+fi
+
+# Run rebuild detached so git checkout returns immediately
+_GRAPHIFY_LOG="${HOME}/.cache/graphify-rebuild.log"
+mkdir -p "$(dirname "$_GRAPHIFY_LOG")"
+echo "[graphify] Branch switched - launching background rebuild (log: $_GRAPHIFY_LOG)"
+nohup "$SHELL" -c "$GFY_CMD update . >> $_GRAPHIFY_LOG 2>&1" >/dev/null 2>&1 &
+# graphify-checkout-hook-end

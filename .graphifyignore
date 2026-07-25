@@ -1,0 +1,5 @@
+# graphify-specific ignores (merged with .gitignore)
+# .gitignore already covers: node_modules/, dist/, coverage/, .wrangler/
+
+# generated output
+graphify-out/
