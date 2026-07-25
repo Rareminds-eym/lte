@@ -24,11 +24,11 @@ export const IconButton: React.FC<IconButtonProps> = ({
 
   const variantClasses = {
     "soft-blue":
-      "border border-blue-200/70 bg-white hover:bg-slate-100 text-slate-700 shadow-2xs active:scale-95",
+      "border border-brand-200/70 bg-surface-primary hover:bg-surface-muted text-content-secondary shadow-2xs active:scale-95",
     outline:
-      "border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shadow-2xs active:scale-95",
+      "border border-line-default bg-surface-primary hover:bg-surface-muted text-content-secondary shadow-2xs active:scale-95",
     "solid-blue":
-      "bg-[#2563eb] hover:bg-[#1d4ed8] text-white border-none shadow-xs active:scale-95",
+      "bg-brand-600 hover:bg-brand-700 text-white border-none shadow-xs active:scale-95",
   }[variant];
 
   return (

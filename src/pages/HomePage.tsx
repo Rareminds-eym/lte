@@ -2,13 +2,11 @@ import type React from "react";
 
 export const HomePage: React.FC = () => {
   return (
-    <div style={{ padding: "2rem" }}>
+    <div className="p-8">
       <span>home </span>
-      <a href="/dashboard" style={{ color: "#2563eb", textDecoration: "underline" }}>
+      <a href="/dashboard" className="text-brand-600 underline">
         Dashboard
       </a>
     </div>
   );
 };
-
-export default HomePage;

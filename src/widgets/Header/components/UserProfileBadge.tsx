@@ -20,7 +20,7 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2.5 p-1 rounded-2xl hover:bg-slate-100 transition-colors cursor-pointer text-left border-none bg-transparent ${className}`}
+      className={`flex items-center gap-2.5 p-1 rounded-2xl hover:bg-surface-muted transition-colors cursor-pointer text-left border-none bg-transparent ${className}`}
     >
       {/* Avatar Circle */}
       {avatarUrl ? (
@@ -50,14 +50,14 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
 
       {/* User Details */}
       <div className="flex flex-col leading-tight">
-        <span className="text-sm font-bold text-slate-900">{name}</span>
-        {status && <span className="text-xs font-normal text-slate-400">{status}</span>}
+        <span className="text-sm font-bold text-content-primary">{name}</span>
+        {status && <span className="text-xs font-normal text-content-muted">{status}</span>}
       </div>
 
       {/* Dropdown Chevron */}
       <svg
         aria-hidden="true"
-        className="w-3.5 h-3.5 text-slate-600 ml-0.5"
+        className="w-3.5 h-3.5 text-content-secondary ml-0.5"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

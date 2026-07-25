@@ -9,6 +9,7 @@ export default {
 				brand: {
 					50: "var(--color-brand-50)",
 					100: "var(--color-brand-100)",
+					200: "var(--color-brand-200)",
 					500: "var(--color-brand-500)",
 					600: "var(--color-brand-600)",
 					700: "var(--color-brand-700)",

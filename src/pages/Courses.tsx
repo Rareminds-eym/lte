@@ -240,7 +240,7 @@ export const Courses = () => {
       <div
         role="tablist"
         aria-label="Course roles"
-        className="flex items-center gap-6 border-b border-gray-200"
+        className="flex items-center gap-6 border-b border-line-default"
       >
         {ROLE_TABS.map((tab) => {
           const count =
@@ -294,7 +294,7 @@ export const Courses = () => {
           <span className="text-sm text-content-secondary font-medium">
             {filteredCourses.length} courses
           </span>
-          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+          <div className="flex items-center border border-line-default rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setViewMode("grid")}

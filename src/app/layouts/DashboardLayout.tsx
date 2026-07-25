@@ -20,24 +20,24 @@ export const DashboardLayout: React.FC = () => {
   // Case 1: Loading / Initializing state (page content skeleton)
   if (loading || !initialized) {
     return (
-      <div className="flex h-screen bg-slate-50">
-        <aside className="w-64 bg-white border-r border-slate-100 p-3.5 shrink-0">
-          <div className="h-14 w-full bg-slate-200 rounded-lg animate-pulse mb-6" />
+      <div className="flex h-screen bg-surface-secondary">
+        <aside className="w-64 bg-white border-r border-line-subtle p-3.5 shrink-0">
+          <div className="h-14 w-full bg-surface-muted rounded-lg animate-pulse mb-6" />
           <div className="space-y-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-10 w-full bg-slate-200 rounded-2xl animate-pulse" />
+              <div key={i} className="h-10 w-full bg-surface-muted rounded-2xl animate-pulse" />
             ))}
           </div>
         </aside>
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-16 bg-white border-b border-slate-100 px-6 flex items-center">
-            <div className="h-8 w-48 bg-slate-200 rounded-full animate-pulse" />
+          <header className="h-16 bg-white border-b border-line-subtle px-6 flex items-center">
+            <div className="h-8 w-48 bg-surface-muted rounded-full animate-pulse" />
           </header>
           <main className="flex-1 p-6">
             <div className="space-y-4">
-              <div className="h-8 w-64 bg-slate-200 rounded animate-pulse" />
-              <div className="h-4 w-full bg-slate-200 rounded animate-pulse" />
-              <div className="h-4 w-3/4 bg-slate-200 rounded animate-pulse" />
+              <div className="h-8 w-64 bg-surface-muted rounded animate-pulse" />
+              <div className="h-4 w-full bg-surface-muted rounded animate-pulse" />
+              <div className="h-4 w-3/4 bg-surface-muted rounded animate-pulse" />
             </div>
           </main>
         </div>
@@ -52,15 +52,15 @@ export const DashboardLayout: React.FC = () => {
   ) {
     const skillpassportUrl = getSkillpassportUrl();
     return (
-      <main className="grid place-items-center min-h-screen bg-slate-50 p-8">
+      <main className="grid place-items-center min-h-screen bg-surface-secondary p-8">
         <section className="max-w-md w-full text-center bg-white px-8 py-10 rounded-2xl shadow-lg">
-          <h2 className="text-2xl font-bold mb-3 text-slate-900">LTE Access Required</h2>
-          <p className="text-slate-500 text-sm leading-relaxed mb-7">
+          <h2 className="text-2xl font-bold mb-3 text-content-primary">LTE Access Required</h2>
+          <p className="text-content-secondary text-sm leading-relaxed mb-7">
             Your SkillPassport account does not currently have active LTE product access enabled.
           </p>
           <a
             href={skillpassportUrl}
-            className="inline-block bg-blue-600 text-white font-semibold text-sm px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors no-underline"
+            className="inline-block bg-brand-600 text-white font-semibold text-sm px-6 py-3 rounded-lg hover:bg-brand-700 transition-colors no-underline"
           >
             Manage Subscription on SkillPassport
           </a>

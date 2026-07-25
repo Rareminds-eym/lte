@@ -22,9 +22,9 @@ export const Button: React.FC<ButtonProps> = ({
   const variants = {
     primary: "bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-xs",
     secondary: "bg-brand-50 hover:bg-brand-100 text-brand-600 rounded-lg",
-    outline: "border border-gray-200 hover:bg-surface-muted text-content-primary rounded-lg",
+    outline: "border border-line-default hover:bg-surface-muted text-content-primary rounded-lg",
     ghost: "text-content-secondary hover:bg-surface-muted rounded-lg",
-    icon: "text-content-muted hover:bg-surface-muted rounded-full border border-gray-200 bg-surface-primary shadow-xs",
+    icon: "text-content-muted hover:bg-surface-muted rounded-full border border-line-default bg-surface-primary shadow-xs",
   };
 
   const sizes = {

@@ -94,8 +94,8 @@ export const MainLayout: React.FC = () => {
     const message = callbackError ?? authError;
 
     return (
-      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "2rem" }}>
-        <section style={{ maxWidth: "32rem", textAlign: "center" }}>
+      <main className="min-h-screen grid place-items-center p-8">
+        <section className="max-w-md text-center">
           <h1>{message ? "Unable to sign in" : "Signing you in"}</h1>
           <p>{message ?? "Please wait while LTE verifies your SkillPassport session."}</p>
         </section>

@@ -140,7 +140,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
 
   return (
     <aside
-      className={`relative bg-white border-r border-slate-100 h-screen flex flex-col justify-between p-3.5 shrink-0 font-sans select-none transition-[width] duration-300 ease-in-out ${
+      className={`relative bg-white border-r border-line-subtle h-screen flex flex-col justify-between p-3.5 shrink-0 font-sans select-none transition-[width] duration-300 ease-in-out ${
         isCollapsed ? "w-[72px]" : "w-64"
       } ${className}`}
     >
@@ -149,7 +149,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         type="button"
         onClick={handleToggle}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 shadow-md flex items-center justify-center -right-4 top-[2.875rem] absolute z-20 cursor-pointer hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-95"
+        className="w-8 h-8 rounded-full bg-white border border-line-default text-content-secondary shadow-md flex items-center justify-center -right-4 top-[2.875rem] absolute z-20 cursor-pointer hover:bg-surface-muted hover:text-content-primary transition-all active:scale-95"
       >
         <svg
           aria-hidden="true"
@@ -246,7 +246,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           </div>
         ) : (
           /* Expanded AI Mentor Promo Card */
-          <div className="bg-surface-secondary border border-slate-100/80 rounded-2xl p-4 flex flex-col space-y-2.5 text-left transition-all duration-300">
+          <div className="bg-surface-secondary border border-line-subtle/80 rounded-2xl p-4 flex flex-col space-y-2.5 text-left transition-all duration-300">
             <h3 className="text-xs font-bold text-content-primary leading-snug">
               Need help choosing what to do next?
             </h3>
