@@ -30,7 +30,11 @@ export const MainLayout: React.FC = () => {
   const callbackParams = useMemo(() => {
     const code = searchParams.get("code");
     const state = searchParams.get("state");
-    const redirectUri = `${window.location.origin}/auth/callback`;
+    const next = searchParams.get("next");
+    let redirectUri = `${window.location.origin}/auth/callback`;
+    if (next) {
+      redirectUri = `${redirectUri}?next=${encodeURIComponent(next)}`;
+    }
     return code && state ? { code, state, redirectUri } : null;
   }, [searchParams]);
 
@@ -66,9 +70,10 @@ export const MainLayout: React.FC = () => {
     exchangeRequest
       .then(() => {
         if (!cancelled) {
-          logger.info("Exchange succeeded, navigating to dashboard");
-          window.history.replaceState({}, "", "/dashboard");
-          navigate("/dashboard", { replace: true });
+          const next = searchParams.get("next") || "/dashboard";
+          logger.info(`Exchange succeeded, navigating to ${next}`);
+          window.history.replaceState({}, "", next);
+          navigate(next, { replace: true });
         }
       })
       .catch((error: unknown) => {

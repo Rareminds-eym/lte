@@ -38,6 +38,10 @@ vi.mock("@/pages/NotFound", () => ({
   NotFound: () => <div data-testid="not-found-page" />,
 }));
 
+vi.mock("@/pages/CourseDetail", () => ({
+  CourseDetail: () => <div data-testid="course-detail-page" />,
+}));
+
 vi.mock("@/app/router/guards/GuestGuard", () => ({
   GuestGuard: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="guest-guard">{children}</div>
@@ -85,6 +89,16 @@ describe("AppRouter", () => {
     );
     expect(await screen.findByTestId("dashboard-layout")).toBeInTheDocument();
     expect(await screen.findByTestId("courses-page")).toBeInTheDocument();
+  });
+
+  it("renders course detail at /my-courses/:capabilityCode", async () => {
+    render(
+      <MemoryRouter initialEntries={["/my-courses/SEC-OPS-01"]}>
+        <AppRouter />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByTestId("dashboard-layout")).toBeInTheDocument();
+    expect(await screen.findByTestId("course-detail-page")).toBeInTheDocument();
   });
 
   it("renders 404 for unknown paths", async () => {

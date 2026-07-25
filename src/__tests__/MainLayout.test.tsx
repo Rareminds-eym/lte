@@ -92,6 +92,22 @@ describe("MainLayout", () => {
     });
   });
 
+  it("navigates to custom next parameter URL after successful exchange", async () => {
+    useAuthStore.setState({
+      exchangeCode: vi.fn().mockResolvedValue(undefined),
+    });
+    render(
+      <MemoryRouter
+        initialEntries={["/auth/callback?code=abc&state=def&next=%2Fmy-courses%2FSEC-OPS-01"]}
+      >
+        <MainLayout />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/my-courses/SEC-OPS-01", { replace: true });
+    });
+  });
+
   it("shows error screen when exchange fails", async () => {
     useAuthStore.setState({
       exchangeCode: vi.fn().mockRejectedValue(new Error("SSO failed")),
