@@ -11,6 +11,9 @@ const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const Dashboard = lazy(() => import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })));
 const Courses = lazy(() => import("@/pages/Courses").then((m) => ({ default: m.Courses })));
+const CourseDetail = lazy(() =>
+  import("@/pages/CourseDetail").then((m) => ({ default: m.CourseDetail })),
+);
 const NotFound = lazy(() => import("@/pages/NotFound").then((m) => ({ default: m.NotFound })));
 
 export const AppRouter: React.FC = () => {
@@ -50,6 +53,14 @@ export const AppRouter: React.FC = () => {
             element={
               <Suspense fallback={<PageLoader message="Loading Courses..." />}>
                 <Courses />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/my-courses/:capabilityCode"
+            element={
+              <Suspense fallback={<PageLoader message="Loading Course..." />}>
+                <CourseDetail />
               </Suspense>
             }
           />

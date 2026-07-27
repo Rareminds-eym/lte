@@ -92,6 +92,43 @@ describe("MainLayout", () => {
     });
   });
 
+  it("navigates to custom next parameter URL after successful exchange", async () => {
+    const exchangeCodeSpy = vi.fn().mockResolvedValue(undefined);
+    useAuthStore.setState({
+      exchangeCode: exchangeCodeSpy,
+    });
+    render(
+      <MemoryRouter
+        initialEntries={["/auth/callback?code=abc&state=def&next=%2Fmy-courses%2FSEC-OPS-01"]}
+      >
+        <MainLayout />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/my-courses/SEC-OPS-01", { replace: true });
+    });
+    expect(exchangeCodeSpy).toHaveBeenCalledWith({
+      code: "abc",
+      state: "def",
+      redirectUri: `${window.location.origin}/auth/callback`,
+      targetNext: "/my-courses/SEC-OPS-01",
+    });
+  });
+
+  it("rejects dot-prefixed protocol-relative next values", async () => {
+    useAuthStore.setState({
+      exchangeCode: vi.fn().mockResolvedValue(undefined),
+    });
+    render(
+      <MemoryRouter initialEntries={["/auth/callback?code=abc&state=def&next=.//example.com"]}>
+        <MainLayout />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+    });
+  });
+
   it("shows error screen when exchange fails", async () => {
     useAuthStore.setState({
       exchangeCode: vi.fn().mockRejectedValue(new Error("SSO failed")),

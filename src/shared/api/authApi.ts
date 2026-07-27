@@ -29,6 +29,7 @@ export async function exchangeSsoCode(params: {
   code: string;
   state: string;
   redirectUri: string;
+  targetNext?: string;
 }): Promise<AuthSuccessResponse> {
   const response = await fetch(`${AUTH_API_PREFIX}/sso/exchange`, {
     method: "POST",

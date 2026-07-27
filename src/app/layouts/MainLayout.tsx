@@ -6,7 +6,12 @@ import { getLogger } from "@/shared";
 
 const logger = getLogger("MainLayout");
 
-function getExchangeKey(params: { code: string; state: string; redirectUri: string }): string {
+function getExchangeKey(params: {
+  code: string;
+  state: string;
+  redirectUri: string;
+  targetNext?: string;
+}): string {
   return `${params.redirectUri}:${params.code}:${params.state}`;
 }
 
@@ -26,13 +31,22 @@ export const MainLayout: React.FC = () => {
 
   const [callbackError, setCallbackError] = useState<string | null>(null);
 
+  // Validate and parse the redirection target (starts with / or . and not // to prevent XSS / open redirects)
+  const targetNext = useMemo(() => {
+    const next = searchParams.get("next");
+    if (next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith(".")) {
+      return next;
+    }
+    return "/dashboard";
+  }, [searchParams]);
+
   // Check if we are on a callback flow (either /auth/callback or code/state query parameters)
   const callbackParams = useMemo(() => {
     const code = searchParams.get("code");
     const state = searchParams.get("state");
     const redirectUri = `${window.location.origin}/auth/callback`;
-    return code && state ? { code, state, redirectUri } : null;
-  }, [searchParams]);
+    return code && state ? { code, state, redirectUri, targetNext } : null;
+  }, [searchParams, targetNext]);
 
   // 1. Initial local session load in background (only if not doing callback)
   useEffect(() => {
@@ -66,9 +80,9 @@ export const MainLayout: React.FC = () => {
     exchangeRequest
       .then(() => {
         if (!cancelled) {
-          logger.info("Exchange succeeded, navigating to dashboard");
-          window.history.replaceState({}, "", "/dashboard");
-          navigate("/dashboard", { replace: true });
+          logger.info(`Exchange succeeded, navigating to ${targetNext}`);
+          window.history.replaceState({}, "", targetNext);
+          navigate(targetNext, { replace: true });
         }
       })
       .catch((error: unknown) => {
@@ -82,7 +96,7 @@ export const MainLayout: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [callbackParams, exchangeCode, navigate, searchParams]);
+  }, [callbackParams, exchangeCode, navigate, targetNext]);
 
   // If executing callback, intercept and render loading/error screen
   if (callbackParams || location.pathname.startsWith("/auth/callback")) {

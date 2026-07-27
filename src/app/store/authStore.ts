@@ -13,7 +13,12 @@ interface AuthState {
   initialized: boolean;
   error: string | null;
   initialize: () => Promise<void>;
-  exchangeCode: (params: { code: string; state: string; redirectUri: string }) => Promise<void>;
+  exchangeCode: (params: {
+    code: string;
+    state: string;
+    redirectUri: string;
+    targetNext?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   setAccessToken: (accessToken: string | null) => void;
 }
@@ -91,6 +96,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         code: `${params.code.substring(0, 10)}...`,
         state: `${params.state.substring(0, 10)}...`,
         redirectUri: params.redirectUri,
+        targetNext: params.targetNext,
       });
 
       const exchanged = await exchangeSsoCode(params);
