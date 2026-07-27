@@ -1216,7 +1216,29 @@ Engagement and participation XP (`xp_category = 'engagement'`) motivate the lear
 | Fallback evaluation failed | +1 | engagement | ❌ No | `fallback_fail:{userId}:{submissionId}` |
 | Final artifact failed | +1 / attempt | engagement | ❌ No | `final_fail:{userId}:{submissionId}` |
 
-### 10.3 XP Integrity and Separation Rules
+### 10.3 Accepted Resubmission, Manual Evaluation & Admin Correction Rules
+
+Per PRD Removed Content §9.2.3, §9.3.3, §13.2 & §18.4:
+
+#### 1. Accepted Resubmission Flow & XP Awarding
+- **Attempt-Tiered Award**: When an artifact is resubmitted after an initial `resubmission_required` status and subsequently accepted, the system awards Evidence XP based on the exact attempt tier where acceptance occurred:
+  - **Attempt 1 Acceptance**: **+20 Evidence XP** (`final_artifact_accepted_1`)
+  - **Attempt 2 Acceptance**: **+15 Evidence XP** (`final_artifact_accepted_2`)
+  - **Attempt 3 Acceptance**: **+10 Evidence XP** (`final_artifact_accepted_3`)
+- **Single Acceptance Award**: A given artifact submission can yield at most **ONE** acceptance XP award. The `idempotency_key` (pattern: `final:{userId}:{moduleArtifactId}`) prevents multi-attempt double-awarding.
+- **Mastery Transition**: Upon artifact acceptance, the system automatically transitions the corresponding module status in `user_module_status` from `learning_complete` to `mastered`.
+
+#### 2. Authorised Manual Evaluation Flow
+- **Mandatory Triggers**: AI confidence score $< 0.70$, unreadable/corrupted files (`is_critical_failure = true`), safety concerns, learner disputes, or 2 failed resubmissions (`attempt_number >= 3`).
+- **Authorization & RBAC**: Execution is restricted to authenticated users holding `reviewer`, `faculty`, or `admin` roles verified via `@rareminds-eym/auth-core` JWT claims.
+- **Audit Persistence**: Every manual evaluation is recorded in `public.manual_reviews` with `reviewer_id`, `trigger_reason`, `override_score`, `reviewer_feedback`, `decision` (`accepted` vs `resubmission_required`), and referenced `ai_review_id`.
+- **XP Allocation**: Manual review acceptances award **+5 Evidence XP** (`manual_eval_accepted`) or the corresponding attempt-tier acceptance XP, logged immutably in `xp_events`.
+
+#### 3. Authorised Admin Correction & Governance Controls
+- **Full Audit Logging**: Every admin override (e.g. role re-assignment, artifact score correction, manual dispute resolution) MUST log prior value, new value, acting admin user ID, timestamp, and justification text in `user_role_assignments.assignment_reason`, `manual_reviews.reviewer_feedback`, or `xp_events.metadata`.
+- **Historical Outcome Immunity**: Admin corrections or governance standard updates (course version, rubric version) NEVER retroactively mutate historical completed outcomes or previously awarded XP. Historical `xp_events` ledger rows and `readiness_snapshots` remain immutable.
+
+### 10.4 XP Integrity and Separation Rules
 
 > [!CAUTION]
 > **MANDATORY**: These invariants from PRD Removed Content §9.3.3 are enforced at both database and application levels:
@@ -1228,7 +1250,7 @@ Engagement and participation XP (`xp_category = 'engagement'`) motivate the lear
 5. **Revisiting Content** — Revisiting completed stages or content does not award additional XP.
 6. **Failure Participation vs Acceptance XP** — Failed or incomplete artifacts do NOT receive evidence/acceptance XP (they receive at most +1 engagement participation XP).
 
-### 10.4 XP Summary Query
+### 10.5 XP Summary Query
 
 ```sql
 -- Evidence XP (contributes to readiness)
@@ -1994,12 +2016,35 @@ lte/supabase/seed/
 └── 13_artifact_templates.sql      # Downloadable templates
 ```
 
-### 24.5 Content Governance Rule
+### 24.5 Content Architecture, Capability Governance & Fail-Closed Rules
 
-Per PRD §15:
-- Governance-controlled capability, 6E, and level definitions must be **reused, not recreated by AI**
-- Any change to capability meaning, 6E meaning, level meaning, rubric standard, or XP/readiness rule requires **approval and version traceability**
-- Version columns exist on: `courses.version_no`, `ai_reviews.rubric_version`, `readiness_snapshots.calculation_version`
+Per PRD Removed Content §9.4, §11.2, §12.5, §13.3 & §13.4:
+
+#### 1. Governance Inheritance & Structural Authority
+- **Canonical Assets**: Industry definitions, Domain taxonomies, Capability dictionaries, 6E stage definitions, and L1–L5 Proficiency Levels are canonical, human-governed assets. 
+- **AI Boundary**: AI models MUST NOT invent or alter core capability definitions, 6E pedagogical intents, or level scales. AI operates strictly as an evaluator consuming human-approved rubrics and problem statements.
+- **Top-Down Inheritance**: Every course, module, 6E stage, and artifact question inherits approved governance properties from its parent capability and level scale entry.
+
+#### 2. Fail-Closed Execution on Missing Governance
+- **Blocking Configuration Errors**: If a required governance input (e.g. missing rubric criteria, missing passing threshold, unverified capability code, or missing level anchor) is detected during API or AI worker execution, the system MUST immediately halt processing and return `"MISSING GOVERNANCE INPUT"`.
+- **Publication & Review Safeguards**: Submissions or content items with flagged or missing governance inputs are blocked from publication and automatically routed to the manual review queue with `trigger_reason = 'ambiguous'` or logged as blocking configuration errors.
+
+#### 3. Governance Immutability & Non-Mutation Invariant
+- **No Retroactive Mutation**: A governance-version update (e.g. upgrading a rubric version from `v1` to `v2`, or modifying a course version) MUST NEVER retroactively alter:
+  - Published learning content
+  - Previously completed learner 6E stage records (`user_stage_progress`)
+  - Previously mastered module statuses (`user_module_status`)
+  - Previously awarded XP ledger entries (`xp_events`)
+  - Historical readiness snapshots (`readiness_snapshots`)
+- **Forward-Only Scope**: New governance versions apply strictly forward to newly initiated learning runs and future submission evaluations.
+
+#### 4. Version Traceability Register
+Version tracking is mandatory across all data entities:
+- `courses.version_no` — Tracks course structure and module ordering version.
+- `ai_reviews.rubric_version` — Tracks the exact rubric version used during LLM evaluation.
+- `ai_reviews.prompt_version` — Tracks the prompt engineering template version.
+- `readiness_snapshots.calculation_version` — Tracks the mathematical formula version (`v1.0`).
+- `marketplace_consent.consent_version` — Tracks the versioned terms of consent granted by the learner.
 
 ---
 
