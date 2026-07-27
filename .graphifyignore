@@ -1,5 +1,9 @@
-# graphify-specific ignores (merged with .gitignore)
-# .gitignore already covers: node_modules/, dist/, coverage/, .wrangler/
-
-# generated output
-graphify-out/
+dist/
+build/
+node_modules/
+.wrangler/
+coverage/
+supabase/.temp/
+supabase/.branches/
+.env*
+.dev.vars
