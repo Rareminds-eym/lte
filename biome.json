@@ -14,7 +14,11 @@
       "functions/**/*.ts",
       "test/**/*.js",
       "test/**/*.ts",
-      "!**/*.min.js"
+      "!**/*.min.js",
+      "!!.graphifyignore",
+      "!!.husky",
+      "!!.kiro",
+      "!!graphify-out"
     ]
   },
   "linter": {

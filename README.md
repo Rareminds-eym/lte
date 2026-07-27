@@ -651,6 +651,63 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
+## Knowledge Graph
+
+This project has a code-only knowledge graph at `graphify-out/` (1207 nodes, 1446 edges, 113 communities — 100% extracted from source, zero API cost). The graph maps cross-file relationships: imports, calls, inheritance, and references across `src/`, `functions/`, and config files.
+
+### Prerequisites
+
+- Python 3.10+
+- `uv` (recommended) or `pipx`
+
+### Install
+
+```bash
+uv tool install graphifyy
+```
+
+Verify: `graphify --version`
+
+### Build
+
+```bash
+# From the lte directory
+graphify .
+```
+
+This creates/updates `graphify-out/graph.json`. The `.graphifyignore` at the project root excludes build artifacts (`dist/`, `build/`, `.wrangler/`, `node_modules/`, etc.).
+
+### Query
+
+Once the graph is built, answer codebase questions without grepping files:
+
+```bash
+# Broad context — plain-language question
+graphify query "how does SSO auth flow work?"
+
+# Shortest path between two concepts
+graphify path "SsoRpcService" "authStore.ts"
+
+# Focused explanation of a node
+graphify explain "AppRouter"
+```
+
+For queries specific to the lte subproject, pass `--graph lte/graphify-out/graph.json` from the monorepo root.
+
+### Git
+
+- `graphify-out/graph.json` is committed to the repo — pull and the graph is ready.
+- `graphify-out/cost.json`, `graphify-out/cache/`, `graphify-out/*.html`, and `graphify-out/wiki/` are gitignored.
+- After code changes, run `graphify update .` to refresh the graph (AST-only, no API cost).
+
+### Optional — Post-commit auto-rebuild
+
+```bash
+graphify hook install
+```
+
+Rebuilds the graph automatically on every `git commit` (AST-only, free). Re-run after upgrading graphify.
+
 ## Useful References
 
 - [React Documentation](https://react.dev/)

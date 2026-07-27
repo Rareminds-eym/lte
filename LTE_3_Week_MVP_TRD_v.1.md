@@ -160,9 +160,8 @@ id = "<HYPERDRIVE_ID>"
 [vars]
 ENVIRONMENT = "production"
 COOKIE_DOMAIN = ".rareminds.in"
-MAX_ARTIFACT_SIZE_MB = "50"
-AI_CONFIDENCE_THRESHOLD = "0.7"
-MAX_RESUBMISSIONS = "3"
+# Business limits (MAX_ARTIFACT_SIZE_MB=50, AI_CONFIDENCE_THRESHOLD=0.7, MAX_RESUBMISSIONS=3)
+# are defined in app config (src/shared/config/index.ts) with optional env var overrides.
 ```
 
 ### 2.4 Component Responsibility & RACI Matrix
@@ -2070,8 +2069,8 @@ Per PRD §20, these decisions **must be frozen before coding** the relevant modu
 | PD-006 | Failed attempt XP rule | §20 | **FROZEN** | 0 XP for failed/incomplete/resubmission-required. Evidence-bearing separate from engagement. |
 | PD-007 | Readiness formula weights | §20 | **FROZEN** | Course 30%, Artifact 25%, AI Score 25%, Evidence XP 10%, Profile 10% |
 | PD-008 | Marketplace consent rule | §20 | **FROZEN** | Eligibility ≠ Visibility. Active versioned consent mandatory before marketplace visibility. |
-| PD-009 | AI confidence threshold | §10.2 | **FROZEN** | 0.7 (configurable via env var `AI_CONFIDENCE_THRESHOLD`) |
-| PD-010 | Max resubmission attempts | §10.2 | **FROZEN** | 3 (configurable via env var `MAX_RESUBMISSIONS`) |
+| PD-009 | AI confidence threshold | §10.2 | **FROZEN** | 0.7 (defined in app config `CONFIG.AI_CONFIDENCE_THRESHOLD`) |
+| PD-010 | Max resubmission attempts | §10.2 | **FROZEN** | 3 (defined in app config `CONFIG.MAX_RESUBMISSIONS`) |
 | PD-011 | Readiness band thresholds | §12.4 | **FROZEN** | 0–39 Not Ready, 40–59 Learning in Progress, 60–79 Internship Ready, 80–100 Job Ready |
 
 > [!WARNING]

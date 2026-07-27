@@ -1,0 +1,2 @@
+# graphify merge driver - union merges graph.json to avoid conflict markers
+graphify-out/graph.json merge=graphify
