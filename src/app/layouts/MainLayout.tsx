@@ -6,7 +6,12 @@ import { getLogger } from "@/shared";
 
 const logger = getLogger("MainLayout");
 
-function getExchangeKey(params: { code: string; state: string; redirectUri: string }): string {
+function getExchangeKey(params: {
+  code: string;
+  state: string;
+  redirectUri: string;
+  targetNext?: string;
+}): string {
   return `${params.redirectUri}:${params.code}:${params.state}`;
 }
 
@@ -29,7 +34,7 @@ export const MainLayout: React.FC = () => {
   // Validate and parse the redirection target (starts with / or . and not // to prevent XSS / open redirects)
   const targetNext = useMemo(() => {
     const next = searchParams.get("next");
-    if (next && (next.startsWith("/") || next.startsWith(".")) && !next.startsWith("//")) {
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
       return next;
     }
     return "/dashboard";
@@ -39,11 +44,8 @@ export const MainLayout: React.FC = () => {
   const callbackParams = useMemo(() => {
     const code = searchParams.get("code");
     const state = searchParams.get("state");
-    let redirectUri = `${window.location.origin}/auth/callback`;
-    if (targetNext !== "/dashboard") {
-      redirectUri = `${redirectUri}?next=${encodeURIComponent(targetNext)}`;
-    }
-    return code && state ? { code, state, redirectUri } : null;
+    const redirectUri = `${window.location.origin}/auth/callback`;
+    return code && state ? { code, state, redirectUri, targetNext } : null;
   }, [searchParams, targetNext]);
 
   // 1. Initial local session load in background (only if not doing callback)
@@ -94,7 +96,7 @@ export const MainLayout: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [callbackParams, exchangeCode, navigate, searchParams, targetNext]);
+  }, [callbackParams, exchangeCode, navigate, targetNext]);
 
   // If executing callback, intercept and render loading/error screen
   if (callbackParams || location.pathname.startsWith("/auth/callback")) {
