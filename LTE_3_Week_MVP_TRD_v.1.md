@@ -438,16 +438,30 @@ Append-only XP ledger. Immutable after creation.
 CREATE TYPE public.xp_category AS ENUM ('evidence', 'engagement');
 
 CREATE TYPE public.xp_event_type AS ENUM (
-  'stage_completed',           -- +1
-  'practice_artifact_accepted', -- +2
-  'final_artifact_accepted_1',  -- +20 (1st attempt)
-  'final_artifact_accepted_2',  -- +15 (2nd attempt)
-  'final_artifact_accepted_3',  -- +10 (3rd attempt)
-  'manual_eval_accepted',       -- +5
-  'course_completed_on_time',   -- +10
-  'fast_track_capability',      -- +15
-  'daily_login',                -- engagement only
-  'profile_completed'           -- engagement only
+  -- Evidence-Bearing Events (Contributes to Readiness)
+  'stage_completed',             -- +1
+  'practice_artifact_accepted',   -- +2
+  'final_artifact_accepted_1',    -- +20 (1st attempt)
+  'final_artifact_accepted_2',    -- +15 (2nd attempt)
+  'final_artifact_accepted_3',    -- +10 (3rd attempt)
+  'manual_eval_accepted',         -- +5
+  'course_completed_on_time',     -- +10
+  'fast_track_capability',        -- +15
+  'capstone_completed',           -- configured value
+  -- Engagement & Consistency Events (Excluded from Readiness)
+  'daily_login',                  -- +1/day
+  'profile_completed',            -- +50
+  'streak_7_day',                 -- +5
+  'consistency_30_day',           -- +30
+  'readiness_milestone_25',       -- +10
+  'readiness_milestone_50',       -- +20
+  'readiness_milestone_75',       -- +30
+  'readiness_milestone_100',      -- +100
+  'legacy_consistency_bonus',     -- +20
+  'promotional_xp',               -- as configured
+  'practice_artifact_failed',     -- +1 (engagement)
+  'fallback_eval_failed',        -- +1 (engagement)
+  'final_artifact_failed'         -- +1 per attempt (engagement)
 );
 
 CREATE TABLE public.xp_events (
@@ -1166,32 +1180,55 @@ Content / Extracted Text:
 
 ## 10. XP Engine
 
-### 10.1 XP Allocation Rules
+### 10.1 Evidence-Bearing XP (Contributes to Readiness)
+
+Only evidence-bearing XP (`xp_category = 'evidence'`) contributes to readiness calculations. Per PRD Removed Content §9.3.1:
 
 | Event | XP | Category | Readiness Impact | Idempotency Key Pattern |
 |---|---|---|---|---|
-| 6E stage completed | +1 | evidence | ✅ Yes | `stage:{userId}:{modulesContentId}` |
-| Practice artifact accepted | +2 | evidence | ✅ Yes | `practice:{userId}:{submissionId}` |
-| Final artifact accepted (attempt 1) | +20 | evidence | ✅ Yes | `final:{userId}:{moduleArtifactId}` |
-| Final artifact accepted (attempt 2) | +15 | evidence | ✅ Yes | `final:{userId}:{moduleArtifactId}` |
-| Final artifact accepted (attempt 3) | +10 | evidence | ✅ Yes | `final:{userId}:{moduleArtifactId}` |
-| Manual evaluation accepted | +5 | evidence | ✅ Yes | `manual:{userId}:{submissionId}` |
+| Each completed 6E stage | +1 | evidence | ✅ Yes | `stage:{userId}:{modulesContentId}` |
+| Practice artifact accepted (Pass 1st) | +2 | evidence | ✅ Yes | `practice:{userId}:{submissionId}` |
+| Final artifact accepted (Pass Attempt 1) | +20 | evidence | ✅ Yes | `final:{userId}:{moduleArtifactId}` |
+| Final artifact accepted (Pass Attempt 2) | +15 | evidence | ✅ Yes | `final:{userId}:{moduleArtifactId}` |
+| Final artifact accepted (Pass Attempt 3) | +10 | evidence | ✅ Yes | `final:{userId}:{moduleArtifactId}` |
+| Fallback / Manual evaluation accepted (Pass) | +5 | evidence | ✅ Yes | `manual:{userId}:{submissionId}` |
 | Course completed on time | +10 | evidence | ✅ Yes | `course:{userId}:{courseId}` |
-| Fast-track capability | +15 | evidence | ✅ Yes | `fasttrack:{userId}:{capabilityId}` |
-| Daily login | +1 | engagement | ❌ No | `login:{userId}:{date}` |
-| Profile completed | +5 | engagement | ❌ No | `profile:{userId}` |
+| Fast-track capability completion | +15 | evidence | ✅ Yes | `fasttrack:{userId}:{capabilityId}` |
+| Capstone / approved capability completion | Configured | evidence | ✅ Yes | `capstone:{userId}:{capabilityId}` |
 
-### 10.2 Critical Invariants
+### 10.2 Engagement & Consistency XP (Excluded from Readiness)
+
+Engagement and participation XP (`xp_category = 'engagement'`) motivate the learner but are strictly **excluded** from readiness calculations. Per PRD Removed Content §9.3.2:
+
+| Event | XP | Category | Readiness Impact | Idempotency Key Pattern |
+|---|---|---|---|---|
+| Daily active login | +1 / day | engagement | ❌ No | `login:{userId}:{date}` |
+| Profile completion | +50 | engagement | ❌ No | `profile:{userId}` |
+| 7-day streak | +5 | engagement | ❌ No | `streak7:{userId}:{weekIdentifier}` |
+| 30-day consistency | +30 | engagement | ❌ No | `consistency30:{userId}:{monthIdentifier}` |
+| 25% Readiness milestone | +10 | engagement | ❌ No | `milestone25:{userId}:{roleId}` |
+| 50% Readiness milestone | +20 | engagement | ❌ No | `milestone50:{userId}:{roleId}` |
+| 75% Readiness milestone | +75 | engagement | ❌ No | `milestone75:{userId}:{roleId}` |
+| 100% Readiness milestone | +100 | engagement | ❌ No | `milestone100:{userId}:{roleId}` |
+| Legacy consistency bonus | +20 | engagement | ❌ No | `legacy_bonus:{userId}` |
+| Promotional XP | Configured | engagement | ❌ No | `promo:{userId}:{promoCode}` |
+| Practice artifact failed (1st) | +1 | engagement | ❌ No | `practice_fail:{userId}:{submissionId}` |
+| Fallback evaluation failed | +1 | engagement | ❌ No | `fallback_fail:{userId}:{submissionId}` |
+| Final artifact failed | +1 / attempt | engagement | ❌ No | `final_fail:{userId}:{submissionId}` |
+
+### 10.3 XP Integrity and Separation Rules
 
 > [!CAUTION]
-> **MANDATORY**: These invariants must be enforced at the database level AND application level:
+> **MANDATORY**: These invariants from PRD Removed Content §9.3.3 are enforced at both database and application levels:
 
-1. **Failed artifacts receive 0 XP** — No XP row is inserted for failed/incomplete/resubmission-required submissions.
-2. **No duplicate XP** — The `idempotency_key` UNIQUE constraint prevents double-awarding.
-3. **Engagement XP ≠ Readiness** — `xp_category = 'engagement'` is excluded from readiness calculation.
-4. **Revisiting content does not award XP** — Idempotency key tied to entity, not to timestamp.
+1. **System Assigns, AI Recommends** — XP is assigned deterministically by the system based on verified state transitions. AI provides scores and feedback only.
+2. **Strict Category Separation** — Evidence-bearing XP (`evidence`) and Engagement XP (`engagement`) are stored as separate categories in `xp_events`.
+3. **Readiness Inclusion Boundary** — Readiness calculations include ONLY `xp_category = 'evidence'` and strictly exclude `xp_category = 'engagement'`.
+4. **Idempotency & Deduplication** — The `idempotency_key` UNIQUE constraint prevents double-awarding (`unique_event_reference = user_id + source_type + source_id`).
+5. **Revisiting Content** — Revisiting completed stages or content does not award additional XP.
+6. **Failure Participation vs Acceptance XP** — Failed or incomplete artifacts do NOT receive evidence/acceptance XP (they receive at most +1 engagement participation XP).
 
-### 10.3 XP Summary Query
+### 10.4 XP Summary Query
 
 ```sql
 -- Evidence XP (contributes to readiness)
@@ -2066,7 +2103,7 @@ Per PRD §20, these decisions **must be frozen before coding** the relevant modu
 | PD-003 | 6E primary artifact stage | §20 | **PENDING** | Recommended: Empower. Requires product/governance approval. |
 | PD-004 | AI review rule | §20 | **FROZEN** | AI evaluates and recommends; system applies status, XP, readiness, marketplace decisions |
 | PD-005 | Manual review trigger rule | §20 | **FROZEN** | Initial failure → Resubmission Required. Manual review mandatory after 2 failed resubmissions or any frozen manual-review condition. |
-| PD-006 | Failed attempt XP rule | §20 | **FROZEN** | 0 XP for failed/incomplete/resubmission-required. Evidence-bearing separate from engagement. |
+| PD-006 | Failed attempt XP rule | §20 | **FROZEN** | 0 Evidence XP for failed/incomplete/resubmission-required. Failure participation receives +1 Engagement XP (excluded from readiness). |
 | PD-007 | Readiness formula weights | §20 | **FROZEN** | Course 30%, Artifact 25%, AI Score 25%, Evidence XP 10%, Profile 10% |
 | PD-008 | Marketplace consent rule | §20 | **FROZEN** | Eligibility ≠ Visibility. Active versioned consent mandatory before marketplace visibility. |
 | PD-009 | AI confidence threshold | §10.2 | **FROZEN** | 0.7 (defined in app config `CONFIG.AI_CONFIDENCE_THRESHOLD`) |
