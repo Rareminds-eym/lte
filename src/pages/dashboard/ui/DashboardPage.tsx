@@ -10,7 +10,7 @@ import {
   UpcomingFeedback,
 } from "@/widgets";
 
-export const Dashboard: React.FC = () => {
+export const DashboardPage: React.FC = () => {
   const { data, isLoading, isError } = useDashboardData();
 
   // Loading state using Skeleton (Page Content Loading) as per .codereview.yml rules

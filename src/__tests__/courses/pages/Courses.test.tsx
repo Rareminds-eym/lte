@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { Courses } from "@/pages/Courses";
+import { Courses } from "@/pages/courses";
 
 vi.mock("@/entities/course", () => ({
   CourseCard: ({ course }: { course: { title: string } }) => (

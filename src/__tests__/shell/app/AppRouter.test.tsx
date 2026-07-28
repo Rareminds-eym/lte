@@ -18,27 +18,27 @@ vi.mock("@/app/layouts/MainLayout", () => ({
   ),
 }));
 
-vi.mock("@/pages/Courses", () => ({
+vi.mock("@/pages/courses", () => ({
   Courses: () => <div data-testid="courses-page" />,
 }));
 
-vi.mock("@/pages/Dashboard", () => ({
+vi.mock("@/pages/dashboard", () => ({
   Dashboard: () => <div data-testid="dashboard-page" />,
 }));
 
-vi.mock("@/pages/HomePage", () => ({
+vi.mock("@/pages/home", () => ({
   HomePage: () => <div data-testid="home-page" />,
 }));
 
-vi.mock("@/pages/LoginPage", () => ({
+vi.mock("@/pages/login", () => ({
   LoginPage: () => <div data-testid="login-page" />,
 }));
 
-vi.mock("@/pages/NotFound", () => ({
+vi.mock("@/pages/not-found", () => ({
   NotFound: () => <div data-testid="not-found-page" />,
 }));
 
-vi.mock("@/pages/CourseDetail", () => ({
+vi.mock("@/pages/course-detail", () => ({
   CourseDetail: () => <div data-testid="course-detail-page" />,
 }));
 

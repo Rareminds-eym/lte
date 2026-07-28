@@ -8,7 +8,7 @@ vi.mock("react-router-dom", async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-import { NotFound } from "@/pages/NotFound";
+import { NotFound } from "@/pages/not-found";
 
 describe("NotFound", () => {
   it("renders 404 heading", () => {
