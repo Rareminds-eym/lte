@@ -26,7 +26,11 @@ export const initializeLearningPathSchema = z.object({
     .transform((val) => val ?? ""),
   attemptId: z.string().uuid("attemptId must be a valid UUID"),
   roleId: z.string().uuid("roleId must be a valid UUID"),
-  duration: z.string().trim().optional(),
+  duration: z
+    .string()
+    .trim()
+    .optional()
+    .transform((val) => val ?? "6 months"),
 });
 
 export type InitializeLearningPathPayload = z.infer<typeof initializeLearningPathSchema>;
