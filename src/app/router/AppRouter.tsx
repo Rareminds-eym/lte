@@ -12,7 +12,7 @@ const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default:
 const Dashboard = lazy(() => import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })));
 const Courses = lazy(() => import("@/pages/Courses").then((m) => ({ default: m.Courses })));
 const CourseDetail = lazy(() =>
-  import("@/pages/CourseDetail").then((m) => ({ default: m.CourseDetail })),
+  import("@/pages/course-detail").then((m) => ({ default: m.CourseDetail })),
 );
 const NotFound = lazy(() => import("@/pages/NotFound").then((m) => ({ default: m.NotFound })));
 

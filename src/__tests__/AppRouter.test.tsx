@@ -38,7 +38,7 @@ vi.mock("@/pages/NotFound", () => ({
   NotFound: () => <div data-testid="not-found-page" />,
 }));
 
-vi.mock("@/pages/CourseDetail", () => ({
+vi.mock("@/pages/course-detail", () => ({
   CourseDetail: () => <div data-testid="course-detail-page" />,
 }));
 
