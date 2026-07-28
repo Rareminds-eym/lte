@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { NavigationDrawer } from "@/widgets/NavigationDrawer";
+import { NavigationDrawer } from "@/widgets/app/NavigationDrawer";
 
 describe("NavigationDrawer", () => {
   it("renders all 8 nav items", () => {

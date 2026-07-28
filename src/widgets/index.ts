@@ -1,14 +1,10 @@
-// Exported widgets (composite components made of multiple features/entities)
-
-export { Header, type HeaderProps } from "@/widgets/Header";
-export { NavigationDrawer, type NavigationDrawerProps } from "@/widgets/NavigationDrawer";
-export { Pagination, type PaginationProps } from "@/widgets/Pagination";
-
-// Dashboard Widgets
-export { Achievements, type AchievementsProps } from "./Achievements";
-export { CapabilityGapMap, type CapabilityGapMapProps } from "./CapabilityGapMap";
-export { CareerPaths, type CareerPathsProps } from "./CareerPaths";
-export { CareerTargetBanner, type CareerTargetBannerProps } from "./CareerTargetBanner";
-export { JourneyHero, type JourneyHeroProps } from "./JourneyHero";
-export { TodaysPriorities, type TodaysPrioritiesProps } from "./TodaysPriorities";
-export { UpcomingFeedback, type UpcomingFeedbackProps } from "./UpcomingFeedback";
+export { Header, type HeaderProps } from "./app/Header";
+export { NavigationDrawer, type NavigationDrawerProps } from "./app/NavigationDrawer";
+export { Achievements, type AchievementsProps } from "./dashboard/Achievements";
+export { CapabilityGapMap, type CapabilityGapMapProps } from "./dashboard/CapabilityGapMap";
+export { CareerPaths, type CareerPathsProps } from "./dashboard/CareerPaths";
+export { CareerTargetBanner, type CareerTargetBannerProps } from "./dashboard/CareerTargetBanner";
+export { JourneyHero, type JourneyHeroProps } from "./dashboard/JourneyHero";
+export { TodaysPriorities, type TodaysPrioritiesProps } from "./dashboard/TodaysPriorities";
+export { UpcomingFeedback, type UpcomingFeedbackProps } from "./dashboard/UpcomingFeedback";
+export { Pagination, type PaginationProps } from "./shared/Pagination";

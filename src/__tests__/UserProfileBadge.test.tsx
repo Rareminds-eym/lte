@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { UserProfileBadge } from "@/widgets/Header/components/UserProfileBadge";
+import { UserProfileBadge } from "@/widgets/app/Header/components/UserProfileBadge";
 
 describe("UserProfileBadge", () => {
   it("renders user name", () => {
