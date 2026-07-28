@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LoginPage } from "@/pages/LoginPage";
+import { LoginPage } from "@/pages/login";
 
 beforeEach(() => {
   vi.stubEnv("VITE_SKILLPASSPORT_URL", "https://sso.example.com");

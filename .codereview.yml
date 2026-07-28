@@ -151,6 +151,76 @@ lte/
 
 # ============================================================================
 
+# CURRENT SRC STRUCTURE OVERRIDES
+
+# ============================================================================
+
+current_src_structure: |
+  src/
+    app/
+    pages/
+      README.md
+      index.ts
+      home/
+        index.ts
+        ui/
+          HomePage.tsx
+      login/
+        index.ts
+        ui/
+          LoginPage.tsx
+      dashboard/
+        index.ts
+        ui/
+          DashboardPage.tsx
+      courses/
+        index.ts
+        ui/
+          CoursesPage.tsx
+        model/
+          courseFilters.ts
+      course-detail/
+        index.ts
+        ui/
+          CourseDetailPage.tsx
+      not-found/
+        index.ts
+        ui/
+          NotFoundPage.tsx
+    widgets/
+    features/
+    entities/
+    shared/
+    __tests__/
+      README.md
+      auth/
+        api/
+        guards/
+        pages/
+        store/
+      courses/
+        components/
+        pages/
+      dashboard/
+        api/
+        hooks/
+        layouts/
+        pages/
+        widgets/
+      shared/
+        barrels/
+        config/
+        store/
+        ui/
+      shell/
+        app/
+        errors/
+        layouts/
+        navigation/
+        pages/
+
+# ============================================================================
+
 # FSD LAYER ORDER
 
 # ============================================================================
@@ -569,6 +639,28 @@ rules:
   A page should orchestrate lower layers rather than implement everything
   directly.
 
+  Required page structure:
+
+  * page slices must use lowercase or kebab-case folders under `src/pages/`
+    such as `home`, `login`, `dashboard`, `courses`, `course-detail`, and
+    `not-found`.
+  * each page slice must expose a public API through `index.ts`.
+  * routed page components must live under the slice `ui/` segment.
+  * page-only state helpers may live under the slice `model/` segment.
+  * flat page files such as `src/pages/Dashboard.tsx`,
+    `src/pages/Courses.tsx`, or `src/pages/LoginPage.tsx` are not allowed.
+
+  Approved examples:
+
+  * `src/pages/dashboard/ui/DashboardPage.tsx`
+  * `src/pages/courses/ui/CoursesPage.tsx`
+  * `src/pages/courses/model/courseFilters.ts`
+  * `src/pages/course-detail/ui/CourseDetailPage.tsx`
+
+  Because this project is Tailwind-only, page-specific `.css` or
+  `.module.css` files are not allowed. Page styling must use Tailwind utility
+  classes and global semantic tokens.
+
 * category: fsd
   title: "Do not place generic buttons inside pages"
   severity: medium
@@ -586,6 +678,34 @@ rules:
   Exception:
   A page-specific component may remain inside the page if it is not reused
   and represents only page composition.
+
+* category: fsd
+  title: "Pages must use FSD slice segments"
+  severity: high
+  description: |
+  Page slices must use FSD-style segments instead of ad-hoc folders.
+
+  Allowed inside a page slice:
+
+  * `ui/`
+  * `model/`
+  * `lib/`
+  * `config/`
+  * `api/` only for page-owned route requests that are not reusable
+
+  Disallowed:
+
+  * `src/pages/components/`
+  * `src/pages/hooks/`
+  * `src/pages/utils/`
+  * importing from another page slice
+  * importing from `src/app`
+
+  Use the slice public API when importing pages:
+
+  * `@/pages/dashboard`
+  * `@/pages/courses`
+  * `@/pages/course-detail`
 
 # --------------------------------------------------------------------------
 
@@ -1299,6 +1419,50 @@ rules:
   * error responses
   * database integration
 
+* category: testing
+  title: "Tests must use feature/responsibility folders"
+  severity: high
+  description: |
+  Frontend tests must live under `src/__tests__/` using the approved
+  feature/responsibility structure.
+
+  Approved structure:
+
+  * `src/__tests__/auth/api/`
+  * `src/__tests__/auth/guards/`
+  * `src/__tests__/auth/pages/`
+  * `src/__tests__/auth/store/`
+  * `src/__tests__/courses/components/`
+  * `src/__tests__/courses/pages/`
+  * `src/__tests__/dashboard/api/`
+  * `src/__tests__/dashboard/hooks/`
+  * `src/__tests__/dashboard/layouts/`
+  * `src/__tests__/dashboard/pages/`
+  * `src/__tests__/dashboard/widgets/`
+  * `src/__tests__/shared/barrels/`
+  * `src/__tests__/shared/config/`
+  * `src/__tests__/shared/store/`
+  * `src/__tests__/shared/ui/`
+  * `src/__tests__/shell/app/`
+  * `src/__tests__/shell/errors/`
+  * `src/__tests__/shell/layouts/`
+  * `src/__tests__/shell/navigation/`
+  * `src/__tests__/shell/pages/`
+
+  Test files must not be placed directly under `src/__tests__/`.
+  Test files must not be placed directly under a feature root such as
+  `src/__tests__/dashboard/`.
+
+  Use file extensions by content:
+
+  * `.test.ts` for logic, API, store, config, utility, and barrel tests.
+  * `.test.tsx` for React component, page, layout, guard, widget, provider,
+    and hook tests that use JSX.
+
+  Prefer project aliases such as `@/pages/courses`, `@/shared/ui`, and
+  `@/entities/dashboard`. Do not use deep relative imports across source
+  layers from tests.
+
 # --------------------------------------------------------------------------
 
 # LOGGING AND DEBUGGING
@@ -1612,8 +1776,9 @@ primary_rule: |
   - category: performance
     title: "Enforce React.lazy() for all route-level page imports"
     description: |
-      All main page components inside `src/pages/*` must be imported dynamically
-      using `React.lazy()` and dynamic `import()` expressions.
+      All main page components exposed from `src/pages/<slice>/index.ts` must be
+      imported dynamically using `React.lazy()` and dynamic `import()`
+      expressions.
       Lazy declarations must reside at the TOP of `AppRouter.tsx`, outside any
       rendering component. Static imports of page components at the router level
       are a violation — they bloat the initial JS bundle downloaded by every user.
@@ -1648,8 +1813,9 @@ primary_rule: |
       Every new core module, page component, utility helper, or state store must
       have a corresponding test file created in the SAME pull request.
       Naming convention: `[Filename].test.ts` or `[Filename].test.tsx`.
-      Location: under the appropriate `src/__tests__/` directory mirroring the
-      source folder structure.
+      Location: under the appropriate `src/__tests__/<feature>/<responsibility>/`
+      folder. Do not place tests directly under `src/__tests__/` or directly
+      under a test feature root.
       PRs that add new components or utilities without accompanying tests will
       be blocked from merge.
     severity: high

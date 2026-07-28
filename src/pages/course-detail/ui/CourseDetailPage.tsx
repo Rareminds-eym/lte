@@ -1,7 +1,7 @@
 import type React from "react";
 import { useParams } from "react-router-dom";
 
-export const CourseDetail: React.FC = () => {
+export const CourseDetailPage: React.FC = () => {
   const { capabilityCode } = useParams<{ capabilityCode: string }>();
 
   return (
