@@ -60,7 +60,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="container">
 
 <h1>lte — Complete Call Flow &amp; Architecture Documentation</h1>
-<p class="subtitle">Generated from graphify knowledge graph: 1321 nodes, 1678 edges, 112 communities. Commit: unknown</p>
+<p class="subtitle">Generated from graphify knowledge graph: 1331 nodes, 1687 edges, 107 communities. Commit: unknown</p>
 
 <div class="nav">
     <a href="#overview">Architecture Overview</a>
@@ -75,9 +75,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     <a href="#cross-domain-sso-implementation-skillpassport-lt">Cross-Domain SSO Implementation: SkillPassport → LTE</a>
     <a href="#source-code-architecture">Source Code Architecture</a>
     <a href="#ssorpcservice">SsoRpcService</a>
+    <a href="#4-2-new-tables-required-user-progress-domain">4.2 New Tables Required (User Progress Domain)</a>
     <a href="#pages-layer">Pages Layer</a>
     <a href="#app-layer">App Layer</a>
-    <a href="#lte-sso-implementation-plan">LTE SSO Implementation Plan</a>
     <a href="#other">Other</a>
 </div>
 
@@ -96,11 +96,11 @@ flowchart LR
     class CLI_SKILLS_9964CBB8 module;
     INGEST_CACHE_UPDATE_FF457338("Ingestion &amp; Updates<br/><small>16 nodes</small>")
     class INGEST_CACHE_UPDATE_FF457338 module;
-    SERVE_API_35EC8E86("Serving API<br/><small>161 nodes</small>")
+    SERVE_API_35EC8E86("Serving API<br/><small>151 nodes</small>")
     class SERVE_API_35EC8E86 module;
     SECURITY_GLOBAL_5B9C6A04("Security &amp; Global Graph<br/><small>13 nodes</small>")
     class SECURITY_GLOBAL_5B9C6A04 module;
-    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>270 nodes</small>")
+    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>292 nodes</small>")
     class TESTS_FIXTURES_B84B1DCC module;
     DEPENDENCIES_495117C3("dependencies<br/><small>40 nodes</small>")
     class DEPENDENCIES_495117C3 module;
@@ -110,26 +110,26 @@ flowchart LR
     class SOURCE_CODE_ARCHITECTURE_61C8BA33 module;
     SSORPCSERVICE_942332A0("SsoRpcService<br/><small>20 nodes</small>")
     class SSORPCSERVICE_942332A0 module;
+    SECTION_4_2_NEW_TABLES_REQUIRED_USER_PROGRESS_DO_CB4D054C("4.2 New Tables Required (User Progress Domain)<br/><small>17 nodes</small>")
+    class SECTION_4_2_NEW_TABLES_REQUIRED_USER_PROGRESS_DO_CB4D054C module;
     PAGES_LAYER_01560D8D("Pages Layer<br/><small>17 nodes</small>")
     class PAGES_LAYER_01560D8D module;
     APP_LAYER_221CE3EF("App Layer<br/><small>17 nodes</small>")
     class APP_LAYER_221CE3EF module;
-    LTE_SSO_IMPLEMENTATION_PLAN_66D066A5("LTE SSO Implementation Plan<br/><small>16 nodes</small>")
-    class LTE_SSO_IMPLEMENTATION_PLAN_66D066A5 module;
-    OTHER_D0941E68("Other<br/><small>337 nodes</small>")
+    OTHER_D0941E68("Other<br/><small>334 nodes</small>")
     class OTHER_D0941E68 module;
-    TESTS_FIXTURES_B84B1DCC -->|imports x11| SERVE_API_35EC8E86
-    SERVE_API_35EC8E86 -->|re exports x9| TESTS_FIXTURES_B84B1DCC
-    OTHER_D0941E68 -->|contains x4| SERVE_API_35EC8E86
-    SERVE_API_35EC8E86 -->|contains x3| OTHER_D0941E68
+    OTHER_D0941E68 -->|contains x3| SERVE_API_35EC8E86
+    SERVE_API_35EC8E86 -->|contains x2| OTHER_D0941E68
     OTHER_D0941E68 -->|contains x2| CLI_SKILLS_9964CBB8
     SERVE_API_35EC8E86 -->|imports| BUILD_GRAPH_321CBB04
     SECURITY_GLOBAL_5B9C6A04 -->|contains| OTHER_D0941E68
     SECURITY_GLOBAL_5B9C6A04 -->|contains| INGEST_CACHE_UPDATE_FF457338
     SECURITY_GLOBAL_5B9C6A04 -->|contains| SSORPCSERVICE_942332A0
     OTHER_D0941E68 -->|contains| SECURITY_GLOBAL_5B9C6A04
+    OTHER_D0941E68 -->|contains| SECTION_4_2_NEW_TABLES_REQUIRED_USER_PROGRESS_DO_CB4D054C
     OTHER_D0941E68 -->|contains| OUTPUTS_DOCS_ED82387C
     OTHER_D0941E68 -->|contains| BUILD_GRAPH_321CBB04
+    OTHER_D0941E68 -->|contains| TESTS_FIXTURES_B84B1DCC
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -146,22 +146,22 @@ flowchart LR
     <h4>Architecture Layers</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>Layer</th><th>Nodes</th><th>Communities</th></tr>
-      <tr><td>Graph Build</td><td>260</td><td><code>7, 4, 2, 6, 13, 8, 15, 20, 47</code></td></tr><tr><td>Outputs &amp; Docs</td><td>16</td><td><code>91, 92</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>85</td><td><code>49, 73, 75</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>16</td><td><code>110, 22</code></td></tr><tr><td>Serving API</td><td>161</td><td><code>0, 74, 11, 102, 103, 94, 98, 42, 45</code></td></tr><tr><td>Security &amp; Global Graph</td><td>13</td><td><code>109, 31</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>270</td><td><code>51, 72, 29, 1, 5, 10, 80, 9, 66, 90, 99, 81, 95, 46, 105, 113, 52, 69</code></td></tr><tr><td>dependencies</td><td>40</td><td><code>12</code></td></tr><tr><td>Cross-Domain SSO Implementation: SkillPassport → LTE</td><td>30</td><td><code>71</code></td></tr><tr><td>Source Code Architecture</td><td>23</td><td><code>76</code></td></tr><tr><td>SsoRpcService</td><td>20</td><td><code>30</code></td></tr><tr><td>Pages Layer</td><td>17</td><td><code>78</code></td></tr><tr><td>App Layer</td><td>17</td><td><code>89</code></td></tr><tr><td>LTE SSO Implementation Plan</td><td>16</td><td><code>79</code></td></tr><tr><td>Other</td><td>337</td><td><code>14, 16, 88, 77, 82, 83, 84, 85, 86, 25, 3, 87, 17, 18, 19, 35, 21, 23, 24, 93, 26, 27, 28, 96, 97, 100, 32, 101, 104, 107, 108, 33, 34, 36, 37, 38, 39, 40, 41, 43, 44, 48, 50, 53, 54, 55, 56, 57, 58, 59, 112, 60, 61, 62, 63, 64, 65, 67, 68, 70</code></td></tr>
+      <tr><td>Graph Build</td><td>260</td><td><code>7, 4, 2, 6, 13, 8, 15, 20, 47</code></td></tr><tr><td>Outputs &amp; Docs</td><td>16</td><td><code>91, 92</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>85</td><td><code>49, 73, 75</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>16</td><td><code>110, 22</code></td></tr><tr><td>Serving API</td><td>151</td><td><code>0, 74, 11, 94, 45, 98, 42</code></td></tr><tr><td>Security &amp; Global Graph</td><td>13</td><td><code>109, 31</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>292</td><td><code>9, 51, 72, 29, 1, 5, 10, 80, 3, 66, 95, 46, 113, 52, 69</code></td></tr><tr><td>dependencies</td><td>40</td><td><code>12</code></td></tr><tr><td>Cross-Domain SSO Implementation: SkillPassport → LTE</td><td>30</td><td><code>71</code></td></tr><tr><td>Source Code Architecture</td><td>23</td><td><code>76</code></td></tr><tr><td>SsoRpcService</td><td>20</td><td><code>30</code></td></tr><tr><td>4.2 New Tables Required (User Progress Domain)</td><td>17</td><td><code>14</code></td></tr><tr><td>Pages Layer</td><td>17</td><td><code>78</code></td></tr><tr><td>App Layer</td><td>17</td><td><code>89</code></td></tr><tr><td>Other</td><td>334</td><td><code>79, 16, 88, 77, 82, 83, 84, 85, 86, 25, 87, 17, 18, 19, 21, 35, 23, 24, 26, 93, 27, 28, 96, 97, 100, 32, 36, 40, 101, 104, 107, 108, 33, 34, 37, 38, 39, 41, 43, 44, 48, 50, 53, 54, 55, 56, 57, 58, 59, 112, 60, 61, 62, 63, 64, 65, 67, 68, 70, 81</code></td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Core Flow</h4>
-    <div class="arrow-chain">Cross-Domain SSO Implementation: SkillPassport → LTE -&gt; Graph Build -&gt; Outputs &amp; Docs -&gt; CLI &amp; Skill Installers -&gt; Ingestion &amp; Updates -&gt; Serving API -&gt; Tests &amp; Fixtures</div>
+    <div class="arrow-chain">Cross-Domain SSO Implementation: SkillPassport → LTE -&gt; Graph Build -&gt; Outputs &amp; Docs -&gt; CLI &amp; Skill Installers -&gt; Ingestion &amp; Updates -&gt; Serving API -&gt; Other</div>
   </div>
 </div>
 <div class="grid">
   <div class="card">
     <h4>Graph Report Highlights</h4>
     <ul>
-      <li>1321 nodes · 1678 edges · 112 communities (97 shown, 15 thin omitted)</li>
+      <li>1331 nodes · 1687 edges · 107 communities (95 shown, 12 thin omitted)</li>
       <li>Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.8)</li>
       <li>Token cost: 0 input · 0 output</li>
-      <li>1. `LTE 3-Week MVP — Technical Requirements Document (TRD)` - 32 edges</li>
+      <li>1. `LTE 3-Week MVP — Technical Requirements Document (TRD)` - 33 edges</li>
       <li>2. `compilerOptions` - 31 edges</li>
       <li>3. `scripts` - 25 edges</li>
     </ul>
@@ -1303,12 +1303,12 @@ flowchart LR
 
 <!-- ====== 6. Serving API ====== -->
 <h2 id="serve-api">6. Serving API</h2>
-<p>Serving API groups implementation around functions, api, trd, readmemd, mostly in functions/README.md, LTE_3_Week_MVP_TRD_v.1.md, functions/lib/cookies.ts. This section covers 161 nodes and 295 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Serving API groups implementation around functions, api, trd, lte, mostly in LTE_3_Week_MVP_TRD_v.1.md, functions/README.md, functions/shared/types.ts. This section covers 151 nodes and 283 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Serving API (161 nodes, 295 edges)
+    %% Section: Serving API (151 nodes, 283 edges)
     subgraph serve_api_functions_lib_http_ts_75ebd3b6["functions/lib/http.ts"]
         functions_lib_http_getclientip_c7b37866("getClientIp()<br/><small>functions/lib/http.ts</small>")
         functions_lib_http_getuseragent_d2b5ba7e("getUserAgent()<br/><small>functions/lib/http.ts</small>")
@@ -1363,7 +1363,7 @@ flowchart LR
     functions_api_v1_auth_logout_2b363cdd -->|imports| functions_lib_http_getuseragent_d2b5ba7e
     functions_api_v1_auth_logout_2b363cdd -->|imports| functions_lib_http_jsonresponse_9a93f1b0
     functions_api_v1_auth_logout_2b363cdd -->|imports| functions_lib_sso_client_logoutltesession_d101d50e
-    %% Omitted for readability: 143 nodes, 20 edges
+    %% Omitted for readability: 133 nodes, 20 edges
     class functions_lib_http_getclientip_c7b37866 entry;
     class functions_lib_http_getuseragent_d2b5ba7e function;
     class functions_lib_http_jsonresponse_9a93f1b0 function;
@@ -1650,19 +1650,19 @@ flowchart LR
     <h4>Key Files</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>LTE_3_Week_MVP_TRD_v.1.md</code></td><td>25 nodes</td></tr>
+      <tr><td><code>LTE_3_Week_MVP_TRD_v.1.md</code></td><td>27 nodes</td></tr>
 <tr><td><code>functions/README.md</code></td><td>25 nodes</td></tr>
+<tr><td><code>functions/shared/types.ts</code></td><td>13 nodes</td></tr>
 <tr><td><code>functions/lib/cookies.ts</code></td><td>9 nodes</td></tr>
 <tr><td><code>functions/lib/sso-client.ts</code></td><td>9 nodes</td></tr>
 <tr><td><code>v1/capabilities/types.ts</code></td><td>8 nodes</td></tr>
-<tr><td><code>functions/shared/types.ts</code></td><td>8 nodes</td></tr>
-<tr><td><code>app/router/AppRouter.tsx</code></td><td>8 nodes</td></tr>
 <tr><td><code>.github/PULL_REQUEST_TEMPLATE.md</code></td><td>7 nodes</td></tr>
+<tr><td><code>functions/lib/logger.ts</code></td><td>7 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x131, imports x64, calls x53, imports x39. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x123, imports x63, calls x53, imports x38. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -1861,12 +1861,12 @@ flowchart LR
 
 <!-- ====== 8. Tests & Fixtures ====== -->
 <h2 id="tests-fixtures">8. Tests &amp; Fixtures</h2>
-<p>Tests &amp; Fixtures groups implementation around shared, indexts, widgets, entities, mostly in docs/deployment/SETUP_PROTECTION.md, shared/config/logging.ts, dashboard/model/types.ts. This section covers 270 nodes and 496 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Tests &amp; Fixtures groups implementation around shared, indexts, dashboard, widgets, mostly in docs/deployment/SETUP_PROTECTION.md, shared/config/logging.ts, dashboard/model/types.ts. This section covers 292 nodes and 540 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Tests &amp; Fixtures (270 nodes, 496 edges)
+    %% Section: Tests &amp; Fixtures (292 nodes, 540 edges)
     subgraph tests_fixtures_app_layouts_DashboardLayout_tsx_c896bb88["app/layouts/DashboardLayout.tsx"]
         src_app_layouts_dashboardlayout_8f63a3a5("DashboardLayout.tsx")
         src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4("DashboardLayout()<br/><small>app/layouts/DashboardLayout.tsx</small>")
@@ -1875,6 +1875,7 @@ flowchart LR
         src_app_store_authstore_90065c14("authStore.ts")
         src_app_store_authstore_useauthstore_96365424("useAuthStore<br/><small>app/store/authStore.ts</small>")
     end
+    src_widgets_app_header_header_header_7f799dc4("Header()<br/><small>app/Header/Header.tsx</small>")
     src_app_layouts_mainlayout_mainlayout_08f6758d("MainLayout()<br/><small>app/layouts/MainLayout.tsx</small>")
     src_entities_course_ui_coursecard_coursecard_28e5cfc1("CourseCard()<br/><small>course/ui/CourseCard.tsx</small>")
     src_entities_dashboard_model_usedashboarddata_us_7f2e615a("useDashboardData()<br/><small>dashboard/model/useDashboardData.ts</small>")
@@ -1888,13 +1889,12 @@ flowchart LR
     src_tests_dashboardwidgets_test_cbdf2095("DashboardWidgets.test.tsx")
     src_pages_courses_courses_2596a8b6("Courses()<br/><small>src/pages/Courses.tsx</small>")
     src_pages_dashboard_dashboard_7aec9b33("Dashboard()<br/><small>src/pages/Dashboard.tsx</small>")
-    src_widgets_header_header_header_4c0cc565("Header()<br/><small>widgets/Header/Header.tsx</small>")
     src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4 -->|calls| src_app_store_authstore_useauthstore_96365424
     src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4 -->|calls| src_shared_config_index_getskillpassporturl_db5ef9bf
     src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4 -->|calls| src_shared_store_uistore_useuistore_235c41f6
     src_app_layouts_mainlayout_mainlayout_08f6758d -->|calls| src_app_store_authstore_useauthstore_96365424
     src_app_router_guards_guestguard_guestguard_9dbfb75a -->|calls| src_app_store_authstore_useauthstore_96365424
-    src_app_store_authstore_useauthstore_96365424 -->|calls| src_widgets_header_header_header_4c0cc565
+    src_app_store_authstore_useauthstore_96365424 -->|calls| src_widgets_app_header_header_header_7f799dc4
     src_entities_course_ui_coursecard_coursecard_28e5cfc1 -->|calls| src_shared_lib_index_cn_15d20340
     src_entities_dashboard_model_usedashboarddata_us_7f2e615a -->|calls| src_pages_dashboard_dashboard_7aec9b33
     src_pages_courses_courses_2596a8b6 -->|calls| src_shared_lib_index_cn_15d20340
@@ -1907,12 +1907,13 @@ flowchart LR
     src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_app_store_authstore_useauthstore_96365424
     src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_shared_config_index_getskillpassporturl_db5ef9bf
     src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_shared_store_uistore_useuistore_235c41f6
-    src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_widgets_header_header_header_4c0cc565
-    %% Omitted for readability: 252 nodes, 0 edges
+    src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_widgets_app_header_header_header_7f799dc4
+    %% Omitted for readability: 274 nodes, 0 edges
     class src_app_layouts_dashboardlayout_8f63a3a5 ui;
     class src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4 ui;
     class src_app_store_authstore_90065c14 ui;
     class src_app_store_authstore_useauthstore_96365424 ui;
+    class src_widgets_app_header_header_header_7f799dc4 ui;
     class src_app_layouts_mainlayout_mainlayout_08f6758d ui;
     class src_entities_course_ui_coursecard_coursecard_28e5cfc1 ui;
     class src_entities_dashboard_model_usedashboarddata_us_7f2e615a ui;
@@ -1926,7 +1927,6 @@ flowchart LR
     class src_tests_dashboardwidgets_test_cbdf2095 test;
     class src_pages_courses_courses_2596a8b6 ui;
     class src_pages_dashboard_dashboard_7aec9b33 ui;
-    class src_widgets_header_header_header_4c0cc565 ui;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -1950,243 +1950,243 @@ flowchart LR
 </tr>
 <tr>
   <td>1</td>
-  <td><code>Dashboard.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/Dashboard.test.tsx</small></td>
+  <td><code>AppRouter.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/AppRouter.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>Dashboard()</code><br><small style="color:var(--muted)">src/pages/Dashboard.tsx</small><br><code>Dashboard.tsx</code><br><small style="color:var(--muted)">src/pages/Dashboard.tsx</small></td>
-  <td>Module file in src/__tests__/Dashboard.test.tsx.</td>
+  <td><code>AppRouter()</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small><br><code>AppRouter.tsx</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td>Module file in src/__tests__/AppRouter.test.tsx.</td>
 </tr>
 <tr>
   <td>2</td>
-  <td><code>createTestQueryClient()</code><br><small style="color:var(--muted)">src/__tests__/Dashboard.test.tsx</small></td>
+  <td><code>DashboardLayout.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/DashboardLayout.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Verifies imports, entry points, or version behavior.</td>
+  <td><code>authStore.ts</code><br><small style="color:var(--muted)">app/store/authStore.ts</small><br><code>DashboardLayout()</code><br><small style="color:var(--muted)">app/layouts/DashboardLayout.tsx</small><br><code>DashboardLayout.tsx</code><br><small style="color:var(--muted)">app/layouts/DashboardLayout.tsx</small><br>+3 more</td>
+  <td>Module file in src/__tests__/DashboardLayout.test.tsx.</td>
 </tr>
 <tr>
   <td>3</td>
-  <td><code>DashboardWidgets.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/DashboardWidgets.test.tsx</small></td>
+  <td><code>GuestGuard.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/GuestGuard.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>Achievements()</code><br><small style="color:var(--muted)">Achievements/ui/Achievements.tsx</small><br><code>CapabilityGapMap()</code><br><small style="color:var(--muted)">CapabilityGapMap/ui/CapabilityGapMap.tsx</small><br><code>CareerPaths()</code><br><small style="color:var(--muted)">CareerPaths/ui/CareerPaths.tsx</small><br>+7 more</td>
-  <td>Module file in src/__tests__/DashboardWidgets.test.tsx.</td>
+  <td><code>GuestGuard()</code><br><small style="color:var(--muted)">router/guards/GuestGuard.tsx</small><br><code>GuestGuard.tsx</code><br><small style="color:var(--muted)">router/guards/GuestGuard.tsx</small><br><code>index.ts</code><br><small style="color:var(--muted)">app/store/index.ts</small><br>+1 more</td>
+  <td>Module file in src/__tests__/GuestGuard.test.tsx.</td>
 </tr>
 <tr>
   <td>4</td>
-  <td><code>WidgetCard.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/WidgetCard.test.tsx</small></td>
+  <td><code>Header.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/Header.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>index.ts</code><br><small style="color:var(--muted)">shared/ui/index.ts</small><br><code>WidgetCard()</code><br><small style="color:var(--muted)">shared/ui/WidgetCard.tsx</small></td>
-  <td>Module file in src/__tests__/WidgetCard.test.tsx.</td>
+  <td><code>Header()</code><br><small style="color:var(--muted)">app/Header/Header.tsx</small><br><code>index.ts</code><br><small style="color:var(--muted)">app/Header/index.ts</small></td>
+  <td>Module file in src/__tests__/Header.test.tsx.</td>
 </tr>
 <tr>
   <td>5</td>
-  <td><code>dashboardApi.test.ts</code><br><small style="color:var(--muted)">src/__tests__/dashboardApi.test.ts</small></td>
+  <td><code>renderHeader()</code><br><small style="color:var(--muted)">src/__tests__/Header.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>fetchDashboardData()</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small><br><code>index.ts</code><br><small style="color:var(--muted)">entities/dashboard/index.ts</small><br><code>MOCK_DASHBOARD_DATA</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
-  <td>Module file in src/__tests__/dashboardApi.test.ts.</td>
+  <td>No direct outbound edge</td>
+  <td>renderHeader() node in src/__tests__/Header.test.tsx.</td>
 </tr>
 <tr>
   <td>6</td>
-  <td><code>useDashboardData.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/useDashboardData.test.tsx</small></td>
+  <td><code>MainLayout.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/MainLayout.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>index.ts</code><br><small style="color:var(--muted)">entities/dashboard/index.ts</small><br><code>useDashboardData()</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
-  <td>Module file in src/__tests__/useDashboardData.test.tsx.</td>
+  <td><code>index.ts</code><br><small style="color:var(--muted)">app/store/index.ts</small><br><code>MainLayout()</code><br><small style="color:var(--muted)">app/layouts/MainLayout.tsx</small><br><code>MainLayout.tsx</code><br><small style="color:var(--muted)">app/layouts/MainLayout.tsx</small><br>+1 more</td>
+  <td>Module file in src/__tests__/MainLayout.test.tsx.</td>
 </tr>
 <tr>
   <td>7</td>
-  <td><code>createWrapper()</code><br><small style="color:var(--muted)">src/__tests__/useDashboardData.test.tsx</small></td>
+  <td><code>mockNavigate</code><br><small style="color:var(--muted)">src/__tests__/MainLayout.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>createWrapper() node in src/__tests__/useDashboardData.test.tsx.</td>
+  <td>mockNavigate node in src/__tests__/MainLayout.test.tsx.</td>
 </tr>
 <tr>
   <td>8</td>
-  <td><code>dashboardApi.ts</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
-  <td><span class="tag tag-endpoint">API</span></td>
+  <td><code>UserProfileBadge.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/UserProfileBadge.test.tsx</small></td>
+  <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>DashboardData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small><br><code>types.ts</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small><br><code>useDashboardData.ts</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
-  <td>Module file in dashboard/api/dashboardApi.ts.</td>
+  <td><code>UserProfileBadge()</code><br><small style="color:var(--muted)">Header/components/UserProfileBadge.tsx</small><br><code>UserProfileBadge.tsx</code><br><small style="color:var(--muted)">Header/components/UserProfileBadge.tsx</small></td>
+  <td>Module file in src/__tests__/UserProfileBadge.test.tsx.</td>
 </tr>
 <tr>
   <td>9</td>
-  <td><code>MOCK_DASHBOARD_DATA</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
-  <td><code>dashboardApi.test.ts</code><br><small style="color:var(--muted)">src/__tests__/dashboardApi.test.ts</small><br><code>DashboardWidgets.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/DashboardWidgets.test.tsx</small></td>
-  <td>No direct outbound edge</td>
-  <td>MOCK_DASHBOARD_DATA node in dashboard/api/dashboardApi.ts.</td>
+  <td><code>uiStore.test.ts</code><br><small style="color:var(--muted)">src/__tests__/uiStore.test.ts</small></td>
+  <td><span class="tag tag-func">Test</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>index.ts</code><br><small style="color:var(--muted)">shared/store/index.ts</small><br><code>useUIStore</code><br><small style="color:var(--muted)">shared/store/uiStore.ts</small></td>
+  <td>Module file in src/__tests__/uiStore.test.ts.</td>
 </tr>
 <tr>
   <td>10</td>
-  <td><code>fetchDashboardData()</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>dashboardApi.test.ts</code><br><small style="color:var(--muted)">src/__tests__/dashboardApi.test.ts</small></td>
-  <td><code>useDashboardData.ts</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
-  <td>fetchDashboardData() node in dashboard/api/dashboardApi.ts.</td>
+  <td><code>index.ts</code><br><small style="color:var(--muted)">src/app/index.ts</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in src/app/index.ts.</td>
 </tr>
 <tr>
   <td>11</td>
-  <td><code>index.ts</code><br><small style="color:var(--muted)">entities/dashboard/index.ts</small></td>
-  <td><span class="tag tag-class">Module</span></td>
-  <td><code>dashboardApi.test.ts</code><br><small style="color:var(--muted)">src/__tests__/dashboardApi.test.ts</small><br><code>DashboardWidgets.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/DashboardWidgets.test.tsx</small><br><code>useDashboardData.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/useDashboardData.test.tsx</small></td>
-  <td><code>Achievements.tsx</code><br><small style="color:var(--muted)">Achievements/ui/Achievements.tsx</small><br><code>CapabilityGapMap.tsx</code><br><small style="color:var(--muted)">CapabilityGapMap/ui/CapabilityGapMap.tsx</small><br><code>CareerPaths.tsx</code><br><small style="color:var(--muted)">CareerPaths/ui/CareerPaths.tsx</small><br>+5 more</td>
-  <td>Module file in entities/dashboard/index.ts.</td>
+  <td><code>DashboardLayout.tsx</code><br><small style="color:var(--muted)">app/layouts/DashboardLayout.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>DashboardLayout.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/DashboardLayout.test.tsx</small></td>
+  <td><code>AppRouter.tsx</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small><br><code>getLogger()</code><br><small style="color:var(--muted)">shared/config/logging.ts</small><br><code>getSkillpassportUrl()</code><br><small style="color:var(--muted)">shared/config/index.ts</small><br>+7 more</td>
+  <td>Module file in app/layouts/DashboardLayout.tsx.</td>
 </tr>
 <tr>
   <td>12</td>
-  <td><code>types.ts</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Module</span></td>
-  <td><code>dashboardApi.ts</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
-  <td><code>useDashboardData.ts</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
-  <td>Module file in dashboard/model/types.ts.</td>
+  <td><code>logger</code><br><small style="color:var(--muted)">app/layouts/DashboardLayout.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>logger node in app/layouts/DashboardLayout.tsx.</td>
 </tr>
 <tr>
   <td>13</td>
-  <td><code>CareerTargetData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
-  <td>External entry / no inbound edge</td>
-  <td><code>CareerTargetBanner.tsx</code><br><small style="color:var(--muted)">CareerTargetBanner/ui/CareerTargetBanner.tsx</small></td>
-  <td>CareerTargetData node in dashboard/model/types.ts.</td>
+  <td><code>DashboardLayout()</code><br><small style="color:var(--muted)">app/layouts/DashboardLayout.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>DashboardLayout.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/DashboardLayout.test.tsx</small></td>
+  <td><code>AppRouter.tsx</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small><br><code>getSkillpassportUrl()</code><br><small style="color:var(--muted)">shared/config/index.ts</small><br><code>useAuthStore</code><br><small style="color:var(--muted)">app/store/authStore.ts</small><br>+1 more</td>
+  <td>DashboardLayout() node in app/layouts/DashboardLayout.tsx.</td>
 </tr>
 <tr>
   <td>14</td>
-  <td><code>CurrentJourneyData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
-  <td>External entry / no inbound edge</td>
-  <td><code>JourneyHero.tsx</code><br><small style="color:var(--muted)">JourneyHero/ui/JourneyHero.tsx</small></td>
-  <td>CurrentJourneyData node in dashboard/model/types.ts.</td>
+  <td><code>MainLayout.tsx</code><br><small style="color:var(--muted)">app/layouts/MainLayout.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>MainLayout.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/MainLayout.test.tsx</small></td>
+  <td><code>AppRouter.tsx</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small><br><code>getLogger()</code><br><small style="color:var(--muted)">shared/config/logging.ts</small><br><code>index.ts</code><br><small style="color:var(--muted)">src/shared/index.ts</small><br>+2 more</td>
+  <td>Module file in app/layouts/MainLayout.tsx.</td>
 </tr>
 <tr>
   <td>15</td>
-  <td><code>PriorityItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
+  <td><code>logger</code><br><small style="color:var(--muted)">app/layouts/MainLayout.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>PriorityItem node in dashboard/model/types.ts.</td>
+  <td>logger node in app/layouts/MainLayout.tsx.</td>
 </tr>
 <tr>
   <td>16</td>
-  <td><code>TodaysPrioritiesData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
+  <td><code>getExchangeKey()</code><br><small style="color:var(--muted)">app/layouts/MainLayout.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>TodaysPriorities.tsx</code><br><small style="color:var(--muted)">TodaysPriorities/ui/TodaysPriorities.tsx</small></td>
-  <td>TodaysPrioritiesData node in dashboard/model/types.ts.</td>
+  <td>No direct outbound edge</td>
+  <td>getExchangeKey() node in app/layouts/MainLayout.tsx.</td>
 </tr>
 <tr>
   <td>17</td>
-  <td><code>GapLevel</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
-  <td>External entry / no inbound edge</td>
-  <td><code>CapabilityGapMap.tsx</code><br><small style="color:var(--muted)">CapabilityGapMap/ui/CapabilityGapMap.tsx</small></td>
-  <td>GapLevel node in dashboard/model/types.ts.</td>
+  <td><code>MainLayout()</code><br><small style="color:var(--muted)">app/layouts/MainLayout.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>MainLayout.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/MainLayout.test.tsx</small></td>
+  <td><code>AppRouter.tsx</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small><br><code>useAuthStore</code><br><small style="color:var(--muted)">app/store/authStore.ts</small></td>
+  <td>MainLayout() node in app/layouts/MainLayout.tsx.</td>
 </tr>
 <tr>
   <td>18</td>
-  <td><code>CapabilityGapItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-endpoint">API</span></td>
+  <td><code>index.ts</code><br><small style="color:var(--muted)">app/layouts/index.ts</small></td>
+  <td><span class="tag tag-class">Module</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>CapabilityGapMap.tsx</code><br><small style="color:var(--muted)">CapabilityGapMap/ui/CapabilityGapMap.tsx</small></td>
-  <td>CapabilityGapItem node in dashboard/model/types.ts.</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in app/layouts/index.ts.</td>
 </tr>
 <tr>
   <td>19</td>
-  <td><code>UpcomingItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Turns a local path or remote repository into analysis context.</td>
+  <td><code>AppRouter.tsx</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td><span class="tag tag-endpoint">API</span></td>
+  <td><code>App.tsx</code><br><small style="color:var(--muted)">src/app/App.tsx</small><br><code>AppRouter.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/AppRouter.test.tsx</small><br><code>DashboardLayout()</code><br><small style="color:var(--muted)">app/layouts/DashboardLayout.tsx</small><br>+3 more</td>
+  <td><code>GuestGuard()</code><br><small style="color:var(--muted)">router/guards/GuestGuard.tsx</small><br><code>index.ts</code><br><small style="color:var(--muted)">shared/ui/index.ts</small><br><code>index.ts</code><br><small style="color:var(--muted)">router/guards/index.ts</small><br>+1 more</td>
+  <td>Module file in app/router/AppRouter.tsx.</td>
 </tr>
 <tr>
   <td>20</td>
-  <td><code>FeedbackItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
+  <td><code>HomePage</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>FeedbackItem node in dashboard/model/types.ts.</td>
+  <td>Organizes documentation pages, navigation, or content lookup.</td>
 </tr>
 <tr>
   <td>21</td>
-  <td><code>UpcomingFeedbackData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
+  <td><code>LoginPage</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>UpcomingFeedback.tsx</code><br><small style="color:var(--muted)">UpcomingFeedback/ui/UpcomingFeedback.tsx</small></td>
-  <td>UpcomingFeedbackData node in dashboard/model/types.ts.</td>
+  <td>No direct outbound edge</td>
+  <td>Organizes documentation pages, navigation, or content lookup.</td>
 </tr>
 <tr>
   <td>22</td>
-  <td><code>CareerTrackItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
+  <td><code>Dashboard</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>CareerTrackItem node in dashboard/model/types.ts.</td>
+  <td>Dashboard node in app/router/AppRouter.tsx.</td>
 </tr>
 <tr>
   <td>23</td>
-  <td><code>RecommendedCareerPathsData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
+  <td><code>Courses</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>CareerPaths.tsx</code><br><small style="color:var(--muted)">CareerPaths/ui/CareerPaths.tsx</small></td>
-  <td>RecommendedCareerPathsData node in dashboard/model/types.ts.</td>
+  <td>No direct outbound edge</td>
+  <td>Courses node in app/router/AppRouter.tsx.</td>
 </tr>
 <tr>
   <td>24</td>
-  <td><code>AchievementItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
+  <td><code>CourseDetail</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>AchievementItem node in dashboard/model/types.ts.</td>
+  <td>CourseDetail node in app/router/AppRouter.tsx.</td>
 </tr>
 <tr>
   <td>25</td>
-  <td><code>AchievementsData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
+  <td><code>NotFound</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>Achievements.tsx</code><br><small style="color:var(--muted)">Achievements/ui/Achievements.tsx</small></td>
-  <td>AchievementsData node in dashboard/model/types.ts.</td>
+  <td>No direct outbound edge</td>
+  <td>NotFound node in app/router/AppRouter.tsx.</td>
 </tr>
 <tr>
   <td>26</td>
-  <td><code>DashboardData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
-  <td><code>dashboardApi.ts</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
-  <td><code>useDashboardData.ts</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
-  <td>DashboardData node in dashboard/model/types.ts.</td>
+  <td><code>AppRouter()</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td><span class="tag tag-endpoint">API</span></td>
+  <td><code>App.tsx</code><br><small style="color:var(--muted)">src/app/App.tsx</small><br><code>AppRouter.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/AppRouter.test.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>AppRouter() node in app/router/AppRouter.tsx.</td>
 </tr>
 <tr>
   <td>27</td>
-  <td><code>useDashboardData.ts</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
+  <td><code>GuestGuard.tsx</code><br><small style="color:var(--muted)">router/guards/GuestGuard.tsx</small></td>
   <td><span class="tag tag-hook">UI</span></td>
-  <td><code>dashboardApi.ts</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small><br><code>DashboardData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small><br><code>fetchDashboardData()</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small><br>+1 more</td>
-  <td>No direct outbound edge</td>
-  <td>Module file in dashboard/model/useDashboardData.ts.</td>
+  <td><code>GuestGuard.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/GuestGuard.test.tsx</small></td>
+  <td><code>index.ts</code><br><small style="color:var(--muted)">app/store/index.ts</small><br><code>useAuthStore</code><br><small style="color:var(--muted)">app/store/authStore.ts</small></td>
+  <td>Module file in router/guards/GuestGuard.tsx.</td>
 </tr>
 <tr>
   <td>28</td>
-  <td><code>DASHBOARD_QUERY_KEY</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
-  <td><span class="tag tag-class">Class</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>DASHBOARD_QUERY_KEY node in dashboard/model/useDashboardData.ts.</td>
+  <td><code>GuestGuard()</code><br><small style="color:var(--muted)">router/guards/GuestGuard.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>AppRouter.tsx</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small><br><code>GuestGuard.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/GuestGuard.test.tsx</small></td>
+  <td><code>useAuthStore</code><br><small style="color:var(--muted)">app/store/authStore.ts</small></td>
+  <td>GuestGuard() node in router/guards/GuestGuard.tsx.</td>
 </tr>
 <tr>
   <td>29</td>
-  <td><code>useDashboardData()</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>useDashboardData.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/useDashboardData.test.tsx</small></td>
-  <td><code>Dashboard()</code><br><small style="color:var(--muted)">src/pages/Dashboard.tsx</small><br><code>Dashboard.tsx</code><br><small style="color:var(--muted)">src/pages/Dashboard.tsx</small></td>
-  <td>useDashboardData() node in dashboard/model/useDashboardData.ts.</td>
+  <td><code>index.ts</code><br><small style="color:var(--muted)">router/guards/index.ts</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td><code>AppRouter.tsx</code><br><small style="color:var(--muted)">app/router/AppRouter.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>Module file in router/guards/index.ts.</td>
 </tr>
 <tr>
   <td>30</td>
-  <td><code>Dashboard.tsx</code><br><small style="color:var(--muted)">src/pages/Dashboard.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>Dashboard.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/Dashboard.test.tsx</small><br><code>index.ts</code><br><small style="color:var(--muted)">entities/dashboard/index.ts</small><br><code>useDashboardData()</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
-  <td><code>Achievements()</code><br><small style="color:var(--muted)">Achievements/ui/Achievements.tsx</small><br><code>CapabilityGapMap()</code><br><small style="color:var(--muted)">CapabilityGapMap/ui/CapabilityGapMap.tsx</small><br><code>CareerPaths()</code><br><small style="color:var(--muted)">CareerPaths/ui/CareerPaths.tsx</small><br>+5 more</td>
-  <td>Module file in src/pages/Dashboard.tsx.</td>
+  <td><code>index.ts</code><br><small style="color:var(--muted)">app/router/index.ts</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in app/router/index.ts.</td>
 </tr>
 </table>
 
@@ -2200,14 +2200,14 @@ flowchart LR
 <tr><td><code>dashboard/model/types.ts</code></td><td>15 nodes</td></tr>
 <tr><td><code>src/pages/Courses.tsx</code></td><td>14 nodes</td></tr>
 <tr><td><code>course/ui/CourseCard.tsx</code></td><td>9 nodes</td></tr>
+<tr><td><code>app/router/AppRouter.tsx</code></td><td>8 nodes</td></tr>
 <tr><td><code>shared/types/auth.ts</code></td><td>7 nodes</td></tr>
 <tr><td><code>app/store/authStore.ts</code></td><td>6 nodes</td></tr>
-<tr><td><code>shared/api/authApi.ts</code></td><td>6 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x164, imports x117, re exports x90, imports x81. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x179, imports x123, re exports x103, imports x91. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -3436,8 +3436,240 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 13. Pages Layer ====== -->
-<h2 id="pages-layer">13. Pages Layer</h2>
+<!-- ====== 13. 4.2 New Tables Required (User Progress Domain) ====== -->
+<h2 id="4-2-new-tables-required-user-progress-domain">13. 4.2 New Tables Required (User Progress Domain)</h2>
+<p>4.2 New Tables Required (User Progress Domain) groups implementation around trd, lte, week, mvp, mostly in LTE_3_Week_MVP_TRD_v.1.md. This section covers 17 nodes and 16 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: 4.2 New Tables Required (User Progress Domain) (17 nodes, 16 edges)
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09("4.2 New Tables Required (User Progress...<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_4_database_schema_design_145cb126("4. Database Schema Design<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_4_1_existing_catalog_tabl_d596da53("4.1 Existing Catalog Tables (Already Mi...<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_4_3_identity_model_contra_34cc2480("4.3 Identity Model Contract &amp; User Auth...<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_4_4_data_access_layer_aut_9af8027a("4.4 Data Access Layer &amp; AuthorizationCo...<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_001_user_role_assi_7fc227b1("TRD-DB-001: user_role_assignments<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_002_user_stage_pro_4ae28262("TRD-DB-002: user_stage_progress<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_003_user_module_st_e7db660a("TRD-DB-003: user_module_status<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_004_artifact_submi_3243ac76("TRD-DB-004: artifact_submissions<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_005_ai_reviews_68cfcbaa("TRD-DB-005: ai_reviews<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_006_manual_review_03e67f04("TRD-DB-006: manual_review_tasks &amp; ma...<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_007_xp_events_9454c3b0("TRD-DB-007: xp_events<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_008_readiness_snap_cc57793e("TRD-DB-008: readiness_snapshots<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_009_marketplace_co_34534ba0("TRD-DB-009: marketplace_consent<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_010_user_course_st_846be91a("TRD-DB-010: user_course_status<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_011_user_assessmen_b212c72b("TRD-DB-011: user_assessment_links<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_trd_db_012_audit_events_9ae0075e("TRD-DB-012: audit_events<br/><small>LTE_3_Week_MVP_TRD_v.1.md</small>")
+    lte_3_week_mvp_trd_v_1_4_database_schema_design_145cb126 -->|contains| lte_3_week_mvp_trd_v_1_4_1_existing_catalog_tabl_d596da53
+    lte_3_week_mvp_trd_v_1_4_database_schema_design_145cb126 -->|contains| lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09
+    lte_3_week_mvp_trd_v_1_4_database_schema_design_145cb126 -->|contains| lte_3_week_mvp_trd_v_1_4_3_identity_model_contra_34cc2480
+    lte_3_week_mvp_trd_v_1_4_database_schema_design_145cb126 -->|contains| lte_3_week_mvp_trd_v_1_4_4_data_access_layer_aut_9af8027a
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_001_user_role_assi_7fc227b1
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_002_user_stage_pro_4ae28262
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_003_user_module_st_e7db660a
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_004_artifact_submi_3243ac76
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_005_ai_reviews_68cfcbaa
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_006_manual_review_03e67f04
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_007_xp_events_9454c3b0
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_008_readiness_snap_cc57793e
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_009_marketplace_co_34534ba0
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_010_user_course_st_846be91a
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_011_user_assessmen_b212c72b
+    lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 -->|contains| lte_3_week_mvp_trd_v_1_trd_db_012_audit_events_9ae0075e
+    class lte_3_week_mvp_trd_v_1_4_2_new_tables_required_u_d795ad09 concept;
+    class lte_3_week_mvp_trd_v_1_4_database_schema_design_145cb126 concept;
+    class lte_3_week_mvp_trd_v_1_4_1_existing_catalog_tabl_d596da53 concept;
+    class lte_3_week_mvp_trd_v_1_4_3_identity_model_contra_34cc2480 concept;
+    class lte_3_week_mvp_trd_v_1_4_4_data_access_layer_aut_9af8027a concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_001_user_role_assi_7fc227b1 concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_002_user_stage_pro_4ae28262 concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_003_user_module_st_e7db660a concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_004_artifact_submi_3243ac76 concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_005_ai_reviews_68cfcbaa concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_006_manual_review_03e67f04 concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_007_xp_events_9454c3b0 concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_008_readiness_snap_cc57793e concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_009_marketplace_co_34534ba0 concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_010_user_course_st_846be91a concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_011_user_assessmen_b212c72b concept;
+    class lte_3_week_mvp_trd_v_1_trd_db_012_audit_events_9ae0075e concept;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>4. Database Schema Design</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 4. Database Schema Design.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>4.1 Existing Catalog Tables (Already Migrated)</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 4.1 Existing Catalog Tables (Already Migrated).</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>4.2 New Tables Required (User Progress Domain)</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 4.2 New Tables Required (User Progress Domain).</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>TRD-DB-001: `user_role_assignments`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-001: `user_role_assignments`.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>TRD-DB-002: `user_stage_progress`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-002: `user_stage_progress`.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>TRD-DB-003: `user_module_status`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-003: `user_module_status`.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>TRD-DB-004: `artifact_submissions`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-004: `artifact_submissions`.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>TRD-DB-005: `ai_reviews`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-005: `ai_reviews`.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>TRD-DB-006: `manual_review_tasks` &amp; `manual_review_decisions`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-006: `manual_review_tasks` &amp; `manual_review_decisions`.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>TRD-DB-007: `xp_events`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-007: `xp_events`.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>TRD-DB-008: `readiness_snapshots`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-008: `readiness_snapshots`.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>TRD-DB-010: `user_course_status`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-010: `user_course_status`.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>TRD-DB-011: `user_assessment_links`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-011: `user_assessment_links`.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>TRD-DB-009: `marketplace_consent`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-009: `marketplace_consent`.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>TRD-DB-012: `audit_events`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing TRD-DB-012: `audit_events`.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>4.3 Identity Model Contract &amp; User Authority</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 4.3 Identity Model Contract &amp; User Authority.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>4.4 Data Access Layer &amp; AuthorizationContext Wrapper</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 4.4 Data Access Layer &amp; AuthorizationContext Wrapper.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>LTE_3_Week_MVP_TRD_v.1.md</code></td><td>17 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x16. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 14. Pages Layer ====== -->
+<h2 id="pages-layer">14. Pages Layer</h2>
 <p>Pages Layer groups implementation around readmemd, pages, page, rules, mostly in src/pages/README.md. This section covers 17 nodes and 16 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -3668,8 +3900,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 14. App Layer ====== -->
-<h2 id="app-layer">14. App Layer</h2>
+<!-- ====== 15. App Layer ====== -->
+<h2 id="app-layer">15. App Layer</h2>
 <p>App Layer groups implementation around app, readmemd, rules, allowed, mostly in src/app/README.md. This section covers 17 nodes and 16 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -3900,61 +4132,74 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 15. LTE SSO Implementation Plan ====== -->
-<h2 id="lte-sso-implementation-plan">15. LTE SSO Implementation Plan</h2>
-<p>LTE SSO Implementation Plan groups implementation around lte, sso, implementation, planmd, mostly in docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md. This section covers 16 nodes and 15 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<!-- ====== 16. Other ====== -->
+<h2 id="other">16. Other</h2>
+<p>Other groups implementation around lte, week, mvp, trd, mostly in LTE_3_Week_MVP_TRD_v.1.md, docs/architecture/ARCHITECTURE.md, docs/getting-started/README.md. This section covers 334 nodes and 313 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: LTE SSO Implementation Plan (16 nodes, 15 edges)
-    docs_authentication_lte_sso_implementation_plan_495dd632("LTE SSO Implementation Plan<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_1ef485a4("SSO IMPLEMENTATION PLAN.md<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_9204dfcc("Cookie Rules<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_339675ff("Dashboard Entry Conditions<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_dd72b451("Data Sync<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_72699fd3("Final Flow<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_1906def3("Frontend State Rules<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_7d781a32("Goal<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_1cd007b7("Implementation Order<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_f4683aa0("LTE Files To Create<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_290b5727("LTE Files To Update<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_33e5b83f("LTE Local Tables<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_854dbaaa("SSO Worker Requirements<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_c58dae69("SkillPassport Requirements<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_b91e9245("Tables Not Required<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_726344af("Verification Checklist<br/><small>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</small>")
-    docs_authentication_lte_sso_implementation_plan_1ef485a4 -->|contains| docs_authentication_lte_sso_implementation_plan_495dd632
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_9204dfcc
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_339675ff
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_dd72b451
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_72699fd3
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_1906def3
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_7d781a32
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_1cd007b7
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_f4683aa0
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_290b5727
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_33e5b83f
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_c58dae69
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_854dbaaa
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_b91e9245
-    docs_authentication_lte_sso_implementation_plan_495dd632 -->|contains| docs_authentication_lte_sso_implementation_plan_726344af
-    class docs_authentication_lte_sso_implementation_plan_495dd632 concept;
-    class docs_authentication_lte_sso_implementation_plan_1ef485a4 concept;
-    class docs_authentication_lte_sso_implementation_plan_9204dfcc concept;
-    class docs_authentication_lte_sso_implementation_plan_339675ff concept;
-    class docs_authentication_lte_sso_implementation_plan_dd72b451 concept;
-    class docs_authentication_lte_sso_implementation_plan_72699fd3 concept;
-    class docs_authentication_lte_sso_implementation_plan_1906def3 concept;
-    class docs_authentication_lte_sso_implementation_plan_7d781a32 concept;
-    class docs_authentication_lte_sso_implementation_plan_1cd007b7 concept;
-    class docs_authentication_lte_sso_implementation_plan_f4683aa0 concept;
-    class docs_authentication_lte_sso_implementation_plan_290b5727 concept;
-    class docs_authentication_lte_sso_implementation_plan_33e5b83f concept;
-    class docs_authentication_lte_sso_implementation_plan_854dbaaa concept;
-    class docs_authentication_lte_sso_implementation_plan_c58dae69 concept;
-    class docs_authentication_lte_sso_implementation_plan_b91e9245 concept;
-    class docs_authentication_lte_sso_implementation_plan_726344af concept;
+    %% Section: Other (334 nodes, 313 edges)
+    subgraph other_functions_lib_logger_ts_1ee9f3a9["functions/lib/logger.ts"]
+        functions_lib_logger_functionlogger_7da10c65("FunctionLogger<br/><small>functions/lib/logger.ts</small>")
+        functions_lib_logger_functionlogger_formatmessag_3d8840f4("formatMessage()<br/><small>functions/lib/logger.ts</small>")
+        functions_lib_logger_functionlogger_constructor_3a7d8c8f("constructor()<br/><small>functions/lib/logger.ts</small>")
+        functions_lib_logger_functionlogger_debug_c5078b68("debug()<br/><small>functions/lib/logger.ts</small>")
+        functions_lib_logger_functionlogger_error_9bd2af46("error()<br/><small>functions/lib/logger.ts</small>")
+        functions_lib_logger_functionlogger_info_edebf947("info()<br/><small>functions/lib/logger.ts</small>")
+        functions_lib_logger_functionlogger_warn_64fb1216("warn()<br/><small>functions/lib/logger.ts</small>")
+    end
+    subgraph other_functions_middleware_auth_ts_97b8fb69["functions/middleware/auth.ts"]
+        functions_middleware_auth_authcontext_b772fc00("AuthContext<br/><small>functions/middleware/auth.ts</small>")
+        functions_middleware_auth_7272b88f("auth.ts")
+    end
+    subgraph other_scripts_detect_console_usage_js_5accd1a0["scripts/detect-console-usage.js"]
+        scripts_detect_console_usage_checkdirectory_b32601b4("checkDirectory()<br/><small>scripts/detect-console-usage.js</small>")
+        scripts_detect_console_usage_main_1e233e97("main()<br/><small>scripts/detect-console-usage.js</small>")
+    end
+    subgraph other_scripts_validate_file_lengths_js_03f6929e["scripts/validate-file-lengths.js"]
+        scripts_validate_file_lengths_validatedirectory_dcf148e3("validateDirectory()<br/><small>scripts/validate-file-lengths.js</small>")
+        scripts_validate_file_lengths_main_9a38227f("main()<br/><small>scripts/validate-file-lengths.js</small>")
+    end
+    subgraph other_scripts_validate_file_types_js_976d9ae6["scripts/validate-file-types.js"]
+        scripts_validate_file_types_validatedirectory_e739b690("validateDirectory()<br/><small>scripts/validate-file-types.js</small>")
+        scripts_validate_file_types_main_63aa4a86("main()<br/><small>scripts/validate-file-types.js</small>")
+    end
+    commitlint_config_a39be182("commitlint.config.js")
+    eslint_config_80901414("eslint.config.js")
+    functions_lib_sync_shadow_syncusersshadow_d8c4076b("syncUsersShadow<br/><small>functions/lib/sync-shadow.ts</small>")
+    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_constructor_3a7d8c8f
+    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_debug_c5078b68
+    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_error_9bd2af46
+    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_formatmessag_3d8840f4
+    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_info_edebf947
+    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_warn_64fb1216
+    functions_lib_logger_functionlogger_formatmessag_3d8840f4 -->|calls| functions_lib_logger_functionlogger_debug_c5078b68
+    functions_lib_logger_functionlogger_formatmessag_3d8840f4 -->|calls| functions_lib_logger_functionlogger_error_9bd2af46
+    functions_lib_logger_functionlogger_formatmessag_3d8840f4 -->|calls| functions_lib_logger_functionlogger_info_edebf947
+    functions_lib_logger_functionlogger_formatmessag_3d8840f4 -->|calls| functions_lib_logger_functionlogger_warn_64fb1216
+    scripts_detect_console_usage_checkdirectory_b32601b4 -->|calls| scripts_detect_console_usage_main_1e233e97
+    scripts_validate_file_lengths_validatedirectory_dcf148e3 -->|calls| scripts_validate_file_lengths_main_9a38227f
+    scripts_validate_file_types_validatedirectory_e739b690 -->|calls| scripts_validate_file_types_main_63aa4a86
+    %% Omitted for readability: 316 nodes, 0 edges
+    class functions_lib_logger_functionlogger_7da10c65 klass;
+    class functions_lib_logger_functionlogger_formatmessag_3d8840f4 function;
+    class functions_lib_logger_functionlogger_constructor_3a7d8c8f function;
+    class functions_lib_logger_functionlogger_debug_c5078b68 function;
+    class functions_lib_logger_functionlogger_error_9bd2af46 function;
+    class functions_lib_logger_functionlogger_info_edebf947 function;
+    class functions_lib_logger_functionlogger_warn_64fb1216 function;
+    class functions_middleware_auth_authcontext_b772fc00 klass;
+    class functions_middleware_auth_7272b88f module;
+    class scripts_detect_console_usage_checkdirectory_b32601b4 function;
+    class scripts_detect_console_usage_main_1e233e97 function;
+    class scripts_validate_file_lengths_validatedirectory_dcf148e3 function;
+    class scripts_validate_file_lengths_main_9a38227f function;
+    class scripts_validate_file_types_validatedirectory_e739b690 function;
+    class scripts_validate_file_types_main_63aa4a86 function;
+    class commitlint_config_a39be182 module;
+    class eslint_config_80901414 module;
+    class functions_lib_sync_shadow_syncusersshadow_d8c4076b function;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -4104,238 +4349,8 @@ flowchart LR
   <td>No direct outbound edge</td>
   <td>Documentation node describing Verification Checklist.</td>
 </tr>
-</table>
-
-<div class="grid">
-  <div class="card">
-    <h4>Key Files</h4>
-    <table style="width:100%;font-size:0.85rem;">
-      <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</code></td><td>16 nodes</td></tr>
-    </table>
-  </div>
-  <div class="card">
-    <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x15. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
-  </div>
-</div>
-<hr>
-
-<!-- ====== 16. Other ====== -->
-<h2 id="other">16. Other</h2>
-<p>Other groups implementation around lte, week, mvp, trd, mostly in LTE_3_Week_MVP_TRD_v.1.md, docs/architecture/ARCHITECTURE.md, docs/getting-started/README.md. This section covers 337 nodes and 316 internal edges; the diagram shows only representative relationships to stay readable.</p>
-
-<div class="mermaid">
-%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
-flowchart LR
-    %% Section: Other (337 nodes, 316 edges)
-    subgraph other_functions_lib_logger_ts_1ee9f3a9["functions/lib/logger.ts"]
-        functions_lib_logger_functionlogger_7da10c65("FunctionLogger<br/><small>functions/lib/logger.ts</small>")
-        functions_lib_logger_functionlogger_formatmessag_3d8840f4("formatMessage()<br/><small>functions/lib/logger.ts</small>")
-        functions_lib_logger_functionlogger_constructor_3a7d8c8f("constructor()<br/><small>functions/lib/logger.ts</small>")
-        functions_lib_logger_functionlogger_debug_c5078b68("debug()<br/><small>functions/lib/logger.ts</small>")
-        functions_lib_logger_functionlogger_error_9bd2af46("error()<br/><small>functions/lib/logger.ts</small>")
-        functions_lib_logger_functionlogger_info_edebf947("info()<br/><small>functions/lib/logger.ts</small>")
-        functions_lib_logger_functionlogger_warn_64fb1216("warn()<br/><small>functions/lib/logger.ts</small>")
-    end
-    subgraph other_functions_shared_types_ts_9607132a["functions/shared/types.ts"]
-        functions_shared_types_ssorpcservice_6c100098("SsoRpcService<br/><small>functions/shared/types.ts</small>")
-        functions_shared_types_ssorpcservice_exchangeaut_fc812cd8("exchangeAuthorizationCode()<br/><small>functions/shared/types.ts</small>")
-        functions_shared_types_ssorpcservice_getme_e46b5b39("getMe()<br/><small>functions/shared/types.ts</small>")
-        functions_shared_types_ssorpcservice_logoutsessi_f137ae79("logoutSession()<br/><small>functions/shared/types.ts</small>")
-        functions_shared_types_ssorpcservice_refreshsess_44041780("refreshSession()<br/><small>functions/shared/types.ts</small>")
-    end
-    subgraph other_scripts_detect_console_usage_js_5accd1a0["scripts/detect-console-usage.js"]
-        scripts_detect_console_usage_checkdirectory_b32601b4("checkDirectory()<br/><small>scripts/detect-console-usage.js</small>")
-        scripts_detect_console_usage_main_1e233e97("main()<br/><small>scripts/detect-console-usage.js</small>")
-    end
-    subgraph other_scripts_validate_file_lengths_js_03f6929e["scripts/validate-file-lengths.js"]
-        scripts_validate_file_lengths_validatedirectory_dcf148e3("validateDirectory()<br/><small>scripts/validate-file-lengths.js</small>")
-        scripts_validate_file_lengths_main_9a38227f("main()<br/><small>scripts/validate-file-lengths.js</small>")
-    end
-    subgraph other_scripts_validate_file_types_js_976d9ae6["scripts/validate-file-types.js"]
-        scripts_validate_file_types_validatedirectory_e739b690("validateDirectory()<br/><small>scripts/validate-file-types.js</small>")
-        scripts_validate_file_types_main_63aa4a86("main()<br/><small>scripts/validate-file-types.js</small>")
-    end
-    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_constructor_3a7d8c8f
-    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_debug_c5078b68
-    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_error_9bd2af46
-    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_formatmessag_3d8840f4
-    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_info_edebf947
-    functions_lib_logger_functionlogger_7da10c65 -->|method| functions_lib_logger_functionlogger_warn_64fb1216
-    functions_lib_logger_functionlogger_formatmessag_3d8840f4 -->|calls| functions_lib_logger_functionlogger_debug_c5078b68
-    functions_lib_logger_functionlogger_formatmessag_3d8840f4 -->|calls| functions_lib_logger_functionlogger_error_9bd2af46
-    functions_lib_logger_functionlogger_formatmessag_3d8840f4 -->|calls| functions_lib_logger_functionlogger_info_edebf947
-    functions_lib_logger_functionlogger_formatmessag_3d8840f4 -->|calls| functions_lib_logger_functionlogger_warn_64fb1216
-    functions_shared_types_ssorpcservice_6c100098 -->|method| functions_shared_types_ssorpcservice_exchangeaut_fc812cd8
-    functions_shared_types_ssorpcservice_6c100098 -->|method| functions_shared_types_ssorpcservice_getme_e46b5b39
-    functions_shared_types_ssorpcservice_6c100098 -->|method| functions_shared_types_ssorpcservice_logoutsessi_f137ae79
-    functions_shared_types_ssorpcservice_6c100098 -->|method| functions_shared_types_ssorpcservice_refreshsess_44041780
-    scripts_detect_console_usage_checkdirectory_b32601b4 -->|calls| scripts_detect_console_usage_main_1e233e97
-    scripts_validate_file_lengths_validatedirectory_dcf148e3 -->|calls| scripts_validate_file_lengths_main_9a38227f
-    scripts_validate_file_types_validatedirectory_e739b690 -->|calls| scripts_validate_file_types_main_63aa4a86
-    %% Omitted for readability: 319 nodes, 0 edges
-    class functions_lib_logger_functionlogger_7da10c65 klass;
-    class functions_lib_logger_functionlogger_formatmessag_3d8840f4 function;
-    class functions_lib_logger_functionlogger_constructor_3a7d8c8f function;
-    class functions_lib_logger_functionlogger_debug_c5078b68 function;
-    class functions_lib_logger_functionlogger_error_9bd2af46 function;
-    class functions_lib_logger_functionlogger_info_edebf947 function;
-    class functions_lib_logger_functionlogger_warn_64fb1216 function;
-    class functions_shared_types_ssorpcservice_6c100098 klass;
-    class functions_shared_types_ssorpcservice_exchangeaut_fc812cd8 function;
-    class functions_shared_types_ssorpcservice_getme_e46b5b39 function;
-    class functions_shared_types_ssorpcservice_logoutsessi_f137ae79 function;
-    class functions_shared_types_ssorpcservice_refreshsess_44041780 function;
-    class scripts_detect_console_usage_checkdirectory_b32601b4 function;
-    class scripts_detect_console_usage_main_1e233e97 function;
-    class scripts_validate_file_lengths_validatedirectory_dcf148e3 function;
-    class scripts_validate_file_lengths_main_9a38227f function;
-    class scripts_validate_file_types_validatedirectory_e739b690 function;
-    class scripts_validate_file_types_main_63aa4a86 function;
-    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
-    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
-    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
-    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
-    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
-    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
-    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
-    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
-    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
-</div>
-
-<h3>Call Details</h3>
-<table class="call-table">
 <tr>
-  <th style="width:5%">#</th>
-  <th style="width:28%">Node</th>
-  <th style="width:10%">Type</th>
-  <th style="width:17%">Caller</th>
-  <th style="width:20%">Callees</th>
-  <th style="width:20%">Description</th>
-</tr>
-<tr>
-  <td>1</td>
-  <td><code>4. Database Schema Design</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing 4. Database Schema Design.</td>
-</tr>
-<tr>
-  <td>2</td>
-  <td><code>4.1 Existing Catalog Tables (Already Migrated)</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing 4.1 Existing Catalog Tables (Already Migrated).</td>
-</tr>
-<tr>
-  <td>3</td>
-  <td><code>4.2 New Tables Required (User Progress Domain)</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing 4.2 New Tables Required (User Progress Domain).</td>
-</tr>
-<tr>
-  <td>4</td>
-  <td><code>TRD-DB-001: `user_role_assignments`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-001: `user_role_assignments`.</td>
-</tr>
-<tr>
-  <td>5</td>
-  <td><code>TRD-DB-002: `user_stage_progress`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-002: `user_stage_progress`.</td>
-</tr>
-<tr>
-  <td>6</td>
-  <td><code>TRD-DB-003: `user_module_status`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-003: `user_module_status`.</td>
-</tr>
-<tr>
-  <td>7</td>
-  <td><code>TRD-DB-004: `artifact_submissions`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-004: `artifact_submissions`.</td>
-</tr>
-<tr>
-  <td>8</td>
-  <td><code>TRD-DB-005: `ai_reviews`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-005: `ai_reviews`.</td>
-</tr>
-<tr>
-  <td>9</td>
-  <td><code>TRD-DB-006: `manual_reviews`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-006: `manual_reviews`.</td>
-</tr>
-<tr>
-  <td>10</td>
-  <td><code>TRD-DB-007: `xp_events`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-007: `xp_events`.</td>
-</tr>
-<tr>
-  <td>11</td>
-  <td><code>TRD-DB-008: `readiness_snapshots`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-008: `readiness_snapshots`.</td>
-</tr>
-<tr>
-  <td>12</td>
-  <td><code>TRD-DB-010: `user_course_status`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-010: `user_course_status`.</td>
-</tr>
-<tr>
-  <td>13</td>
-  <td><code>TRD-DB-011: `user_assessment_links`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-011: `user_assessment_links`.</td>
-</tr>
-<tr>
-  <td>14</td>
-  <td><code>TRD-DB-009: `marketplace_consent`</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing TRD-DB-009: `marketplace_consent`.</td>
-</tr>
-<tr>
-  <td>15</td>
-  <td><code>4.3 Row-Level Security Policy</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing 4.3 Row-Level Security Policy.</td>
-</tr>
-<tr>
-  <td>16</td>
+  <td>17</td>
   <td><code>LTE_3_Week_MVP_TRD_v.1.md</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -4343,7 +4358,7 @@ flowchart LR
   <td>Documentation node describing LTE_3_Week_MVP_TRD_v.1.md.</td>
 </tr>
 <tr>
-  <td>17</td>
+  <td>18</td>
   <td><code>LTE 3-Week MVP — Technical Requirements Document (TRD)</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -4351,7 +4366,7 @@ flowchart LR
   <td>Documentation node describing LTE 3-Week MVP — Technical Requirements Document (TRD).</td>
 </tr>
 <tr>
-  <td>18</td>
+  <td>19</td>
   <td><code>Table of Contents</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -4359,7 +4374,39 @@ flowchart LR
   <td>Documentation node describing Table of Contents.</td>
 </tr>
 <tr>
-  <td>19</td>
+  <td>20</td>
+  <td><code>1. Executive Summary</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 1. Executive Summary.</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>Design Principles</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Design Principles.</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td><code>1.2 Non-Functional Requirements (NFR) Summary Matrix</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 1.2 Non-Functional Requirements (NFR) Summary Matrix.</td>
+</tr>
+<tr>
+  <td>23</td>
+  <td><code>5. API Specification</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 5. API Specification.</td>
+</tr>
+<tr>
+  <td>24</td>
   <td><code>12. Marketplace Eligibility Gate</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -4367,15 +4414,15 @@ flowchart LR
   <td>Documentation node describing 12. Marketplace Eligibility Gate.</td>
 </tr>
 <tr>
-  <td>20</td>
-  <td><code>12.1 Eligibility Check Logic</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
+  <td>25</td>
+  <td><code>12.1 Eligibility Check Logic &amp; Readiness Threshold (PD-012)</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>Documentation node describing 12.1 Eligibility Check Logic.</td>
+  <td>Documentation node describing 12.1 Eligibility Check Logic &amp; Readiness Threshold (PD-012).</td>
 </tr>
 <tr>
-  <td>21</td>
+  <td>26</td>
   <td><code>20. Requirement Traceability Matrix</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -4383,7 +4430,7 @@ flowchart LR
   <td>Documentation node describing 20. Requirement Traceability Matrix.</td>
 </tr>
 <tr>
-  <td>22</td>
+  <td>27</td>
   <td><code>21. Risk Register (Technical)</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -4391,7 +4438,7 @@ flowchart LR
   <td>Documentation node describing 21. Risk Register (Technical).</td>
 </tr>
 <tr>
-  <td>23</td>
+  <td>28</td>
   <td><code>22. Glossary</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -4399,7 +4446,7 @@ flowchart LR
   <td>Documentation node describing 22. Glossary.</td>
 </tr>
 <tr>
-  <td>24</td>
+  <td>29</td>
   <td><code>26. Product Decisions Freeze Register</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -4407,52 +4454,12 @@ flowchart LR
   <td>Documentation node describing 26. Product Decisions Freeze Register.</td>
 </tr>
 <tr>
-  <td>25</td>
+  <td>30</td>
   <td><code>27. Out-of-Scope Engineering Boundary</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing 27. Out-of-Scope Engineering Boundary.</td>
-</tr>
-<tr>
-  <td>26</td>
-  <td><code>28. Updated Requirement Traceability Matrix (Complete)</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing 28. Updated Requirement Traceability Matrix (Complete).</td>
-</tr>
-<tr>
-  <td>27</td>
-  <td><code>29. Cross-Ecosystem Alignment &amp; Compatibility Matrix</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing 29. Cross-Ecosystem Alignment &amp; Compatibility Matrix.</td>
-</tr>
-<tr>
-  <td>28</td>
-  <td><code>29.1 Ecosystem Compatibility Audit</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing 29.1 Ecosystem Compatibility Audit.</td>
-</tr>
-<tr>
-  <td>29</td>
-  <td><code>29.2 JWT Claims &amp; Identity Mapping</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_TRD_v.1.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing 29.2 JWT Claims &amp; Identity Mapping.</td>
-</tr>
-<tr>
-  <td>30</td>
-  <td><code>12. Content Architecture, Capability Governance and Upload Strategy</code><br><small style="color:var(--muted)">LTE_3_Week_MVP_PRD_Removed_Content.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing 12. Content Architecture, Capability Governance and Upload Strategy.</td>
 </tr>
 </table>
 
@@ -4461,19 +4468,19 @@ flowchart LR
     <h4>Key Files</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>LTE_3_Week_MVP_TRD_v.1.md</code></td><td>123 nodes</td></tr>
+      <tr><td><code>LTE_3_Week_MVP_TRD_v.1.md</code></td><td>113 nodes</td></tr>
 <tr><td><code>docs/architecture/ARCHITECTURE.md</code></td><td>22 nodes</td></tr>
 <tr><td><code>docs/getting-started/README.md</code></td><td>19 nodes</td></tr>
 <tr><td><code>src/entities/README.md</code></td><td>18 nodes</td></tr>
 <tr><td><code>src/features/README.md</code></td><td>17 nodes</td></tr>
 <tr><td><code>src/widgets/README.md</code></td><td>17 nodes</td></tr>
+<tr><td><code>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</code></td><td>16 nodes</td></tr>
 <tr><td><code>LTE_3_Week_MVP_PRD_Removed_Content.md</code></td><td>14 nodes</td></tr>
-<tr><td><code>docs/authentication/Standalone_Cookie_Architecture.md</code></td><td>12 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x285, references x14, method x10, calls x7. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x286, references x14, calls x7, method x6. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -4484,17 +4491,17 @@ flowchart LR
   <div class="card">
     <h4>Graph</h4>
     <table style="width:100%;font-size:0.85rem;">
-      <tr><td>Nodes</td><td>1321</td></tr>
-      <tr><td>Edges</td><td>1678</td></tr>
+      <tr><td>Nodes</td><td>1331</td></tr>
+      <tr><td>Edges</td><td>1687</td></tr>
       <tr><td>Hyperedges</td><td>0</td></tr>
-      <tr><td>Communities</td><td>112</td></tr>
+      <tr><td>Communities</td><td>107</td></tr>
       <tr><td>Documented Sections</td><td>15</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Edge Confidence</h4>
     <table style="width:100%;font-size:0.85rem;">
-      <tr><td>EXTRACTED</td><td>1676</td></tr>
+      <tr><td>EXTRACTED</td><td>1685</td></tr>
       <tr><td>INFERRED</td><td>2</td></tr>
       <tr><td>AMBIGUOUS</td><td>0</td></tr>
     </table>
@@ -4503,7 +4510,7 @@ flowchart LR
 
 <div style="text-align:center; padding:40px 0; color: var(--muted); font-size:0.9rem;">
   <p>lte — Architecture Documentation</p>
-  <p>Generated: 2026-07-28 07:26 UTC · graphify callflow-html</p>
+  <p>Generated: 2026-07-28 09:51 UTC · graphify callflow-html</p>
 </div>
 
 </div><!-- .container -->

@@ -252,16 +252,17 @@ The following tables already exist in the LTE DB via migration [20260716092555_l
 ### 4.2 New Tables Required (User Progress Domain)
 
 > [!IMPORTANT]
-> All new tables follow the Expand-Migrate-Contract migration pattern per [04-database-api-standards.md](file:///home/gokul/.gemini/antigravity-ide/knowledge/kiro_steering_skill_echosystem/artifacts/04-database-api-standards.md). Each migration does ONE thing.
+> All new tables follow the Expand-Migrate-Contract migration pattern per [04-database-api-standards.md](file:///home/gokul/.gemini/antigravity-ide/knowledge/kiro_steering_skill_echosystem/artifacts/04-database-api-standards.md). Every table enforces institutional multi-tenancy via `org_id` mapped from JWT claims.
 
 #### TRD-DB-001: `user_role_assignments`
 
-Tracks which role a user is pursuing.
+Tracks which role a user is pursuing. Restricted to a single active role per learner in MVP.
 
 ```sql
 CREATE TABLE public.user_role_assignments (
   id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id         uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  org_id          uuid NOT NULL,                  -- Institutional multi-tenancy
   role_id         uuid NOT NULL REFERENCES public.roles(id) ON DELETE RESTRICT,
   assignment_type varchar(20) NOT NULL CHECK (assignment_type IN ('self_selected', 'admin_assigned')),
   assigned_by     uuid REFERENCES public.users(id),  -- admin user_id if admin_assigned
@@ -270,12 +271,17 @@ CREATE TABLE public.user_role_assignments (
   started_at      timestamptz DEFAULT now() NOT NULL,
   completed_at    timestamptz,
   created_at      timestamptz DEFAULT now() NOT NULL,
-  updated_at      timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT uq_user_role_active UNIQUE (user_id, role_id) WHERE is_active = true
+  updated_at      timestamptz DEFAULT now() NOT NULL
 );
 
 CREATE INDEX idx_ura_user_id ON public.user_role_assignments(user_id);
+CREATE INDEX idx_ura_org_user ON public.user_role_assignments(org_id, user_id);
 CREATE INDEX idx_ura_role_id ON public.user_role_assignments(role_id);
+
+-- Enforce single active role per learner via valid Postgres partial unique index
+CREATE UNIQUE INDEX uq_user_single_active_role 
+  ON public.user_role_assignments(user_id) 
+  WHERE is_active = true;
 ```
 
 #### TRD-DB-002: `user_stage_progress`
@@ -290,6 +296,7 @@ CREATE TYPE public.stage_completion_status AS ENUM (
 CREATE TABLE public.user_stage_progress (
   id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  org_id            uuid NOT NULL,
   modules_content_id uuid NOT NULL REFERENCES public.modules_content(id) ON DELETE CASCADE,
   status            public.stage_completion_status DEFAULT 'not_started' NOT NULL,
   started_at        timestamptz,
@@ -302,6 +309,7 @@ CREATE TABLE public.user_stage_progress (
 );
 
 CREATE INDEX idx_usp_user_module ON public.user_stage_progress(user_id, modules_content_id);
+CREATE INDEX idx_usp_org_user ON public.user_stage_progress(org_id, user_id);
 ```
 
 #### TRD-DB-003: `user_module_status`
@@ -316,6 +324,7 @@ CREATE TYPE public.module_mastery_status AS ENUM (
 CREATE TABLE public.user_module_status (
   id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id         uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  org_id          uuid NOT NULL,
   module_id       uuid NOT NULL REFERENCES public.modules(id) ON DELETE CASCADE,
   status          public.module_mastery_status DEFAULT 'not_started' NOT NULL,
   stages_completed smallint DEFAULT 0 NOT NULL CHECK (stages_completed BETWEEN 0 AND 6),
@@ -325,11 +334,13 @@ CREATE TABLE public.user_module_status (
   updated_at      timestamptz DEFAULT now() NOT NULL,
   CONSTRAINT uq_user_module UNIQUE (user_id, module_id)
 );
+
+CREATE INDEX idx_ums_org_user ON public.user_module_status(org_id, user_id);
 ```
 
 #### TRD-DB-004: `artifact_submissions`
 
-Tracks user evidence submissions with full attempt history.
+Tracks user evidence submissions with durable storage references and malware scanning lifecycle.
 
 ```sql
 CREATE TYPE public.artifact_submission_status AS ENUM (
@@ -337,15 +348,22 @@ CREATE TYPE public.artifact_submission_status AS ENUM (
   'manual_review', 'accepted'
 );
 
+CREATE TYPE public.artifact_scan_status AS ENUM (
+  'draft', 'uploaded', 'scanning', 'passed', 'quarantined', 'scan_failed'
+);
+
 CREATE TABLE public.artifact_submissions (
   id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  org_id            uuid NOT NULL,
   module_artifact_id uuid NOT NULL REFERENCES public.module_artifacts(id) ON DELETE RESTRICT,
   attempt_number    smallint NOT NULL CHECK (attempt_number >= 1),
   status            public.artifact_submission_status DEFAULT 'draft' NOT NULL,
-  -- Storage references
+  scan_status       public.artifact_scan_status DEFAULT 'draft' NOT NULL,
+  -- Durable storage references (Signed GET URLs are generated dynamically at runtime)
+  bucket_name       varchar(100) DEFAULT 'lte-artifacts' NOT NULL,
   storage_key       varchar(500),          -- R2 object key
-  storage_url       varchar(1000),         -- Public/signed URL
+  etag              varchar(100),          -- Object entity tag
   file_name         varchar(255),
   file_type         varchar(100),
   file_size_bytes   bigint CHECK (file_size_bytes IS NULL OR file_size_bytes > 0),
@@ -365,6 +383,7 @@ CREATE TABLE public.artifact_submissions (
 );
 
 CREATE INDEX idx_as_user_artifact ON public.artifact_submissions(user_id, module_artifact_id);
+CREATE INDEX idx_as_org_user ON public.artifact_submissions(org_id, user_id);
 CREATE INDEX idx_as_status ON public.artifact_submissions(status);
 CREATE INDEX idx_as_pending_review ON public.artifact_submissions(status)
   WHERE status IN ('submitted', 'under_review', 'manual_review');
@@ -372,12 +391,13 @@ CREATE INDEX idx_as_pending_review ON public.artifact_submissions(status)
 
 #### TRD-DB-005: `ai_reviews`
 
-Stores AI evaluation results. Immutable — one row per evaluation attempt.
+Stores AI evaluation results. Strictly immutable — one row per evaluation attempt.
 
 ```sql
 CREATE TABLE public.ai_reviews (
   id                  uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   submission_id       uuid NOT NULL REFERENCES public.artifact_submissions(id) ON DELETE RESTRICT,
+  org_id              uuid NOT NULL,
   -- AI output
   overall_score       numeric(5,2) NOT NULL CHECK (overall_score BETWEEN 0 AND 100),
   criterion_scores    jsonb NOT NULL DEFAULT '[]'::jsonb,
@@ -390,6 +410,8 @@ CREATE TABLE public.ai_reviews (
   evidence_missing    text[] DEFAULT '{}' NOT NULL,
   learner_feedback    text NOT NULL,        -- learner-safe summary
   resubmission_guidance text,
+  -- Immutability & Superseding tracking
+  superseded_by_id    uuid REFERENCES public.ai_reviews(id),
   -- Metadata
   rubric_version      integer NOT NULL,
   model_id            varchar(100) NOT NULL, -- AI model identifier
@@ -401,13 +423,14 @@ CREATE TABLE public.ai_reviews (
 );
 
 CREATE INDEX idx_ar_submission_id ON public.ai_reviews(submission_id);
+CREATE INDEX idx_ar_org ON public.ai_reviews(org_id);
 CREATE INDEX idx_ar_critical ON public.ai_reviews(is_critical_failure) WHERE is_critical_failure = true;
 CREATE INDEX idx_ar_low_confidence ON public.ai_reviews(confidence) WHERE confidence < 0.7;
 ```
 
-#### TRD-DB-006: `manual_reviews`
+#### TRD-DB-006: `manual_review_tasks` & `manual_review_decisions`
 
-Tracks human review overrides.
+Two-table model separating queued manual review tasks from completed human decisions. Fixes runtime NULL reviewer crashes on automated AI failure enqueueing.
 
 ```sql
 CREATE TYPE public.manual_review_trigger AS ENUM (
@@ -415,11 +438,35 @@ CREATE TYPE public.manual_review_trigger AS ENUM (
   'ai_retry_failure', 'learner_dispute', 'two_failed_resubmissions'
 );
 
-CREATE TABLE public.manual_reviews (
+CREATE TYPE public.manual_task_status AS ENUM (
+  'queued', 'assigned', 'completed', 'cancelled'
+);
+
+-- Table 1: Queued manual review task item (Reviewer ID is NULLABLE upon creation)
+CREATE TABLE public.manual_review_tasks (
+  id                    uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  submission_id         uuid NOT NULL REFERENCES public.artifact_submissions(id) ON DELETE RESTRICT,
+  org_id                uuid NOT NULL,
+  trigger_reason        public.manual_review_trigger NOT NULL,
+  status                public.manual_task_status DEFAULT 'queued' NOT NULL,
+  assigned_reviewer_id  uuid REFERENCES public.users(id), -- NULLABLE until claimed
+  queued_at             timestamptz DEFAULT now() NOT NULL,
+  assigned_at           timestamptz,
+  completed_at          timestamptz,
+  created_at            timestamptz DEFAULT now() NOT NULL,
+  updated_at            timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX idx_mrt_submission ON public.manual_review_tasks(submission_id);
+CREATE INDEX idx_mrt_org_status ON public.manual_review_tasks(org_id, status);
+CREATE INDEX idx_mrt_reviewer ON public.manual_review_tasks(assigned_reviewer_id) WHERE status = 'assigned';
+
+-- Table 2: Completed human review decision record
+CREATE TABLE public.manual_review_decisions (
   id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  task_id         uuid NOT NULL REFERENCES public.manual_review_tasks(id) ON DELETE RESTRICT,
   submission_id   uuid NOT NULL REFERENCES public.artifact_submissions(id) ON DELETE RESTRICT,
-  reviewer_id     uuid NOT NULL REFERENCES public.users(id), -- faculty/mentor user_id
-  trigger_reason  public.manual_review_trigger NOT NULL,
+  reviewer_id     uuid NOT NULL REFERENCES public.users(id), -- MUST be non-null upon submission
   override_score  numeric(5,2) CHECK (override_score IS NULL OR override_score BETWEEN 0 AND 100),
   reviewer_feedback text NOT NULL,
   decision        varchar(20) NOT NULL CHECK (decision IN ('accepted', 'resubmission_required')),
@@ -427,7 +474,8 @@ CREATE TABLE public.manual_reviews (
   created_at      timestamptz DEFAULT now() NOT NULL
 );
 
-CREATE INDEX idx_mr_submission ON public.manual_reviews(submission_id);
+CREATE INDEX idx_mrd_task ON public.manual_review_decisions(task_id);
+CREATE INDEX idx_mrd_submission ON public.manual_review_decisions(submission_id);
 ```
 
 #### TRD-DB-007: `xp_events`
@@ -444,7 +492,7 @@ CREATE TYPE public.xp_event_type AS ENUM (
   'final_artifact_accepted_1',    -- +20 (1st attempt)
   'final_artifact_accepted_2',    -- +15 (2nd attempt)
   'final_artifact_accepted_3',    -- +10 (3rd attempt)
-  'manual_eval_accepted',         -- +5
+  'manual_eval_accepted',         -- +5 (operational metadata)
   'course_completed_on_time',     -- +10
   'fast_track_capability',        -- +15
   'capstone_completed',           -- configured value
@@ -467,6 +515,7 @@ CREATE TYPE public.xp_event_type AS ENUM (
 CREATE TABLE public.xp_events (
   id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id         uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  org_id          uuid NOT NULL,
   event_type      public.xp_event_type NOT NULL,
   xp_category     public.xp_category NOT NULL,
   xp_amount       integer NOT NULL CHECK (xp_amount >= 0),
@@ -482,6 +531,7 @@ CREATE TABLE public.xp_events (
 );
 
 CREATE INDEX idx_xp_user ON public.xp_events(user_id);
+CREATE INDEX idx_xp_org_user ON public.xp_events(org_id, user_id);
 CREATE INDEX idx_xp_user_category ON public.xp_events(user_id, xp_category);
 CREATE INDEX idx_xp_user_evidence ON public.xp_events(user_id)
   WHERE xp_category = 'evidence';
@@ -495,6 +545,7 @@ Point-in-time readiness calculations. Immutable.
 CREATE TABLE public.readiness_snapshots (
   id                    uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id               uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  org_id                uuid NOT NULL,
   role_id               uuid NOT NULL REFERENCES public.roles(id),
   -- Five-component breakdown
   course_completion_pct numeric(5,2) NOT NULL CHECK (course_completion_pct BETWEEN 0 AND 100),
@@ -517,12 +568,13 @@ CREATE TABLE public.readiness_snapshots (
 );
 
 CREATE INDEX idx_rs_user_role ON public.readiness_snapshots(user_id, role_id);
+CREATE INDEX idx_rs_org_user ON public.readiness_snapshots(org_id, user_id);
 CREATE INDEX idx_rs_latest ON public.readiness_snapshots(user_id, role_id, calculated_at DESC);
 ```
 
 #### TRD-DB-010: `user_course_status`
 
-Tracks course-level completion, required for readiness formula ("Course Completion" component) and "course completed on time" XP award.
+Tracks course-level completion, required for readiness formula ("Module Mastery & Course Completion" component) and "course completed on time" XP award.
 
 ```sql
 CREATE TYPE public.course_completion_status AS ENUM (
@@ -532,6 +584,7 @@ CREATE TYPE public.course_completion_status AS ENUM (
 CREATE TABLE public.user_course_status (
   id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  org_id            uuid NOT NULL,
   course_id         uuid NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
   status            public.course_completion_status DEFAULT 'not_started' NOT NULL,
   modules_total     smallint NOT NULL CHECK (modules_total >= 0),
@@ -546,17 +599,19 @@ CREATE TABLE public.user_course_status (
 );
 
 CREATE INDEX idx_ucs_user ON public.user_course_status(user_id);
+CREATE INDEX idx_ucs_org_user ON public.user_course_status(org_id, user_id);
 CREATE INDEX idx_ucs_status ON public.user_course_status(status);
 ```
 
 #### TRD-DB-011: `user_assessment_links`
 
-Stores per-user assessment-to-role context for FR2 ("Learner can view assessment-based tracks and role options"). This bridges the user's SkillPassport assessment result to their LTE role entry.
+Stores per-user assessment-to-role context for FR2.
 
 ```sql
 CREATE TABLE public.user_assessment_links (
   id                 uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id            uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  org_id             uuid NOT NULL,
   -- Assessment reference (from SkillPassport)
   assessment_type    varchar(50) NOT NULL CHECK (assessment_type IN (
     'riasec', 'aptitude', 'big5', 'three_track', 'combined'
@@ -564,10 +619,10 @@ CREATE TABLE public.user_assessment_links (
   assessment_id      uuid,                 -- SkillPassport assessment ID (reference only, no FK)
   assessment_date    timestamptz,
   -- Recommended tracks/roles
-  recommended_tracks jsonb NOT NULL DEFAULT '[]'::jsonb,  -- [{track, confidence, roles: [roleId]}]
-  selected_role_id   uuid REFERENCES public.roles(id),    -- role user chose from recommendations
+  recommended_tracks jsonb NOT NULL DEFAULT '[]'::jsonb,
+  selected_role_id   uuid REFERENCES public.roles(id),
   -- Metadata
-  report_url         varchar(1000),        -- link to 3-track report / AI report
+  report_url         varchar(1000),
   metadata           jsonb DEFAULT '{}'::jsonb NOT NULL,
   created_at         timestamptz DEFAULT now() NOT NULL,
   updated_at         timestamptz DEFAULT now() NOT NULL,
@@ -575,16 +630,21 @@ CREATE TABLE public.user_assessment_links (
 );
 
 CREATE INDEX idx_ual_user ON public.user_assessment_links(user_id);
+CREATE INDEX idx_ual_org_user ON public.user_assessment_links(org_id, user_id);
 ```
 
 #### TRD-DB-009: `marketplace_consent`
 
-Versioned consent for marketplace visibility.
+Versioned consent for marketplace visibility and privacy processing.
 
 ```sql
 CREATE TABLE public.marketplace_consent (
   id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id         uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  org_id          uuid NOT NULL,
+  consent_purpose varchar(50) DEFAULT 'marketplace_visibility' NOT NULL CHECK (
+    consent_purpose IN ('marketplace_visibility', 'ai_processing', 'platform_terms')
+  ),
   consent_version varchar(20) NOT NULL,
   visibility_scope varchar(50)[] NOT NULL DEFAULT '{}', -- internship, job, project, recruiter
   consented_at    timestamptz NOT NULL,
@@ -592,14 +652,80 @@ CREATE TABLE public.marketplace_consent (
   is_active       boolean DEFAULT true NOT NULL,
   metadata        jsonb DEFAULT '{}'::jsonb NOT NULL,
   created_at      timestamptz DEFAULT now() NOT NULL,
-  updated_at      timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT uq_consent_active UNIQUE (user_id) WHERE is_active = true
+  updated_at      timestamptz DEFAULT now() NOT NULL
 );
 
 CREATE INDEX idx_mc_user ON public.marketplace_consent(user_id);
+CREATE INDEX idx_mc_org_user ON public.marketplace_consent(org_id, user_id);
+
+-- Enforce active consent uniqueness per user per purpose via valid Postgres partial index
+CREATE UNIQUE INDEX uq_consent_active 
+  ON public.marketplace_consent(user_id, consent_purpose) 
+  WHERE is_active = true;
 ```
 
-### 4.3 Row-Level Security Policy
+#### TRD-DB-012: `audit_events`
+
+Dedicated immutable audit log table for system security, compliance, and institutional administrative oversight.
+
+```sql
+CREATE TABLE public.audit_events (
+  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id         uuid REFERENCES public.users(id),  -- acting user or target user
+  org_id          uuid NOT NULL,                     -- institutional tenant
+  action          varchar(100) NOT NULL,             -- e.g., 'role_assigned', 'score_override', 'consent_withdrawn'
+  entity_type     varchar(50) NOT NULL,              -- 'user_role_assignment', 'manual_review', 'marketplace_consent'
+  entity_id       uuid NOT NULL,                     -- target entity ID
+  prior_value     jsonb,                             -- previous state snapshot
+  new_value       jsonb,                             -- updated state snapshot
+  ip_address      varchar(45),                       -- client IP address
+  user_agent      text,                              -- client browser user agent
+  created_at      timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX idx_ae_org ON public.audit_events(org_id);
+CREATE INDEX idx_ae_user ON public.audit_events(user_id);
+CREATE INDEX idx_ae_action ON public.audit_events(action);
+CREATE INDEX idx_ae_created ON public.audit_events(created_at DESC);
+```
+
+### 4.3 Identity Model Contract & User Authority
+
+1. **Identity Source of Truth**: The `sso-worker` service (`sso-api`) is the sole system identity authority for authentication, credentials, and session token generation.
+2. **User Shadow Table**: The LTE DB maintains a local shadow table `public.users(id)` where `id` matches `jwt.sub` (UUID) issued by `sso-worker`.
+3. **Provisioning**: When a learner authenticates via SSO code exchange (`AUTH-001`), the Pages Function middleware auto-provisions or syncs the local `public.users` shadow record using JWT claims.
+4. **Institutional Multi-Tenancy**: The claim `jwt.org_id` is extracted by `@rareminds-eym/auth-core` and propagated as `org_id` to all database tables. Every query MUST filter by `org_id` and `user_id`.
+
+### 4.4 Data Access Layer & AuthorizationContext Wrapper
+
+Per review finding 2.3, Pages Functions use `SUPABASE_SERVICE_ROLE_KEY` to communicate with the DB. To prevent RLS bypass vulnerabilities, all service-role database operations MUST execute through a central Data Access Layer requiring an explicit `AuthorizationContext` parameter:
+
+```typescript
+export interface AuthorizationContext {
+  userId: string;                   // Mapped from jwt.sub
+  orgId: string;                    // Mapped from jwt.org_id
+  roles: string[];                  // e.g. ['learner'], ['reviewer'], ['admin']
+  products: string[];               // Must include 'lte'
+  membershipStatus: 'active' | 'inactive';
+}
+
+// Data Access Layer Example Enforcement
+export async function getLearnerProgress(ctx: AuthorizationContext, db: SupabaseClient) {
+  if (ctx.membershipStatus !== 'active') {
+    throw new Error('INACTIVE_MEMBERSHIP_ACCESS_DENIED');
+  }
+  
+  return db
+    .from('user_stage_progress')
+    .select('*')
+    .eq('user_id', ctx.userId)      // Strict user scoping
+    .eq('org_id', ctx.orgId);        // Strict tenant scoping
+}
+```
+
+---
+
+## 5. API Specification
 
 All user-facing tables enforce RLS:
 
@@ -980,27 +1106,36 @@ async function completeStage(req: AuthenticatedRequest, env: Env) {
 
 ## 8. Artifact Upload & Storage
 
-### 8.1 Upload Flow (Presigned URL Pattern)
+### 8.1 Upload Flow & Storage Lifecycle (Presigned URL Pattern)
 
 ```mermaid
 sequenceDiagram
     participant L as Learner Browser
     participant API as Pages Function
     participant R2 as Cloudflare R2
+    participant SCAN as Malware/Signature Scanner
     participant DB as LTE DB
 
     L->>API: POST /api/v1/artifacts/upload-url<br/>{fileName, fileType, artifactId}
-    API->>API: Validate auth + file constraints
+    API->>API: Validate auth + file constraints + magic bytes
     API->>R2: Generate presigned PUT URL<br/>(key: artifacts/{userId}/{artifactId}/{timestamp}_{fileName})
     R2-->>API: Presigned URL (5min TTL)
-    API->>DB: Create submission (status: draft)
+    API->>DB: Create submission (status: draft, scan_status: draft)
     API-->>L: {uploadUrl, submissionId}
     L->>R2: PUT file directly to R2
     R2-->>L: 200 OK
     L->>API: POST /api/v1/artifacts/submit<br/>{submissionId}
-    API->>DB: Update status → submitted
-    API->>API: Enqueue AI review job
-    API-->>L: {status: "submitted"}
+    API->>SCAN: Async malware & magic-byte check
+    alt Scan Passed
+        SCAN-->>API: scan_status = passed
+        API->>DB: Update status → submitted, scan_status → passed
+        API->>API: Enqueue AI review job
+        API-->>L: {status: "submitted", scan_status: "passed"}
+    else Scan Failed / Quarantined
+        SCAN-->>API: scan_status = quarantined
+        API->>DB: Update status → manual_review, scan_status → quarantined
+        API-->>L: {status: "manual_review", scan_status: "quarantined", error: "File failed security scan"}
+    end
 ```
 
 ### 8.2 File Constraints
@@ -1008,9 +1143,10 @@ sequenceDiagram
 | Constraint | Value | Enforcement |
 |---|---|---|
 | Max file size | 50 MB | R2 presigned URL content-length condition |
-| Allowed MIME types | PDF, DOC/DOCX, PPT/PPTX, XLS/XLSX, JPEG, PNG, ZIP | Validated in upload-url endpoint |
+| Allowed MIME types | PDF, DOC/DOCX, PPT/PPTX, XLS/XLSX, JPEG, PNG, ZIP | Validated in upload-url endpoint + magic-bytes check |
 | Max attempts per artifact | 3 (then manual review) | `attempt_number` check in submit endpoint |
 | R2 key pattern | `artifacts/{userId}/{artifactId}/{timestamp}_{fileName}` | Server-generated, not client-controlled |
+| Durable DB references | `bucket_name`, `storage_key`, `etag`, `scan_status` | `storage_url` generated dynamically at runtime (5-min GET TTL) |
 
 ### 8.3 Text/Link Submissions
 
@@ -1026,6 +1162,26 @@ For non-file submissions (text responses, Google Drive links, code links):
   submission_id?: "uuid"          // for file submissions (from upload-url flow)
 }
 ```
+
+### 8.4 File Parsing & P0 Text Extraction Pipeline
+
+Per review finding 2.6, the AI evaluation pipeline requires explicit text extraction specifications before prompt assembly:
+
+| Artifact Format | P0 Scope & Extraction Engine | Truncation & Token Budget | Fallback / Error Handling |
+|---|---|---|---|
+| **Plain Text** | Direct string validation | Max 50,000 chars (~12,500 tokens) | Reject empty strings |
+| **PDF (Extractable)** | Native Worker `pdf-parse` / WASM text extraction | Max 50,000 chars; extract first 15 pages | Scanned/Unreadable PDF $\rightarrow$ Route to `manual_review_tasks` |
+| **JPEG / PNG** | Multi-modal Vision LLM (e.g. Workers AI Vision / LLaVA) | Max 4 MB image size | Low OCR confidence ($<0.7$) $\rightarrow$ Route to `manual_review_tasks` |
+| **URL Submissions** | SSRF-safe HTTP fetch + DOM text extraction | Max 50,000 chars of main body text | Private IPs/Localhost blocked; unreachable URL $\rightarrow$ `manual_review_tasks` |
+| **Office (DOCX/XLSX/PPTX)** | P1 Scope (stored immutably, plain text preview if converted) | Deferred to P1 | Default to `manual_review_tasks` if unparsed |
+| **ZIP Archives** | P1 Scope (security quarantine check only) | Deferred to P1 | Default to `manual_review_tasks` for code verification |
+
+### 8.5 Upload Security & Malware Controls
+
+1. **Magic-Byte Signature Verification**: MIME type provided by the browser is untrusted. Pages Functions inspect file headers (magic bytes) during presigned URL generation.
+2. **SSRF Protection**: Submitted URLs (`link_url`) are validated to prohibit private IP ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.1`, `metadata.google.internal`).
+3. **Executable & Macro Prohibition**: Executable binaries (`.exe`, `.sh`, `.bat`) and macro-enabled documents (`.docm`, `.xlsm`) are blocked automatically.
+4. **Dynamic Presigned GET URLs**: Download links for reviewers are generated dynamically with a 5-minute expiration (`R2.getSignedUrl()`). Raw R2 storage paths are never publicly exposed.
 
 ---
 
@@ -1176,6 +1332,15 @@ Content / Extracted Text:
 }
 ```
 
+### 9.6 AI Privacy, Data Residency & LLM Governance (PD-013)
+
+Per review finding 2.9 and Product Decision **PD-013**, the LLM provider evaluation boundary operates under strict institutional data privacy constraints:
+
+1. **Zero Data Retention Contract**: The LLM API vendor MUST operate under an enterprise contract prohibiting retention, caching, or logging of learner artifact content for model training or vendor analytics.
+2. **Edge PII Scrubbing**: Cloudflare Pages Functions perform regex and pattern-based PII scrubbing (emails, phone numbers, student IDs) on `artifact_extracted_content` prior to prompt assembly.
+3. **Data Residency**: Artifact text and prompt contents are evaluated strictly within approved geographical regions (EU/US enterprise endpoints) matching institutional compliance policies.
+4. **Prompt & Raw Response Audit**: Raw prompt structures and vendor responses are recorded securely in `ai_reviews.raw_response` with access restricted exclusively to system administrators.
+
 ---
 
 ## 10. XP Engine
@@ -1191,7 +1356,6 @@ Only evidence-bearing XP (`xp_category = 'evidence'`) contributes to readiness c
 | Final artifact accepted (Pass Attempt 1) | +20 | evidence | ✅ Yes | `final:{userId}:{moduleArtifactId}` |
 | Final artifact accepted (Pass Attempt 2) | +15 | evidence | ✅ Yes | `final:{userId}:{moduleArtifactId}` |
 | Final artifact accepted (Pass Attempt 3) | +10 | evidence | ✅ Yes | `final:{userId}:{moduleArtifactId}` |
-| Fallback / Manual evaluation accepted (Pass) | +5 | evidence | ✅ Yes | `manual:{userId}:{submissionId}` |
 | Course completed on time | +10 | evidence | ✅ Yes | `course:{userId}:{courseId}` |
 | Fast-track capability completion | +15 | evidence | ✅ Yes | `fasttrack:{userId}:{capabilityId}` |
 | Capstone / approved capability completion | Configured | evidence | ✅ Yes | `capstone:{userId}:{capabilityId}` |
@@ -1212,6 +1376,7 @@ Engagement and participation XP (`xp_category = 'engagement'`) motivate the lear
 | 100% Readiness milestone | +100 | engagement | ❌ No | `milestone100:{userId}:{roleId}` |
 | Legacy consistency bonus | +20 | engagement | ❌ No | `legacy_bonus:{userId}` |
 | Promotional XP | Configured | engagement | ❌ No | `promo:{userId}:{promoCode}` |
+| Manual evaluation operational metadata | +5 | engagement | ❌ No | `manual:{userId}:{submissionId}` |
 | Practice artifact failed (1st) | +1 | engagement | ❌ No | `practice_fail:{userId}:{submissionId}` |
 | Fallback evaluation failed | +1 | engagement | ❌ No | `fallback_fail:{userId}:{submissionId}` |
 | Final artifact failed | +1 / attempt | engagement | ❌ No | `final_fail:{userId}:{submissionId}` |
@@ -1228,15 +1393,15 @@ Per PRD Removed Content §9.2.3, §9.3.3, §13.2 & §18.4:
 - **Single Acceptance Award**: A given artifact submission can yield at most **ONE** acceptance XP award. The `idempotency_key` (pattern: `final:{userId}:{moduleArtifactId}`) prevents multi-attempt double-awarding.
 - **Mastery Transition**: Upon artifact acceptance, the system automatically transitions the corresponding module status in `user_module_status` from `learning_complete` to `mastered`.
 
-#### 2. Authorised Manual Evaluation Flow
-- **Mandatory Triggers**: AI confidence score $< 0.70$, unreadable/corrupted files (`is_critical_failure = true`), safety concerns, learner disputes, or 2 failed resubmissions (`attempt_number >= 3`).
-- **Authorization & RBAC**: Execution is restricted to authenticated users holding `reviewer`, `faculty`, or `admin` roles verified via `@rareminds-eym/auth-core` JWT claims.
-- **Audit Persistence**: Every manual evaluation is recorded in `public.manual_reviews` with `reviewer_id`, `trigger_reason`, `override_score`, `reviewer_feedback`, `decision` (`accepted` vs `resubmission_required`), and referenced `ai_review_id`.
-- **XP Allocation**: Manual review acceptances award **+5 Evidence XP** (`manual_eval_accepted`) or the corresponding attempt-tier acceptance XP, logged immutably in `xp_events`.
+#### 2. Authorised Manual Evaluation Flow & Determinism
+- **Mandatory Triggers**: AI confidence score $< 0.70$, unreadable/corrupted files (`scan_status = 'scan_failed'`), safety concerns, learner disputes, or 2 failed resubmissions (`attempt_number >= 3`).
+- **Authorization & RBAC**: Task claiming and decision submission are restricted to authenticated users holding `reviewer`, `faculty`, or `admin` roles verified via `@rareminds-eym/auth-core` JWT claims.
+- **Deterministic XP Equity**: Manual review functions solely as a review channel. An accepted artifact yields the exact attempt-tier Evidence XP (+20 / +15 / +10) based on attempt number, regardless of whether acceptance originated from AI or human evaluation. `manual_eval_accepted` (+5) is recorded strictly as operational metadata under `xp_category = 'engagement'` to ensure readiness calculation parity.
+- **Audit Persistence**: Decisions create an immutable row in `manual_review_decisions` linked to `manual_review_tasks`.
 
 #### 3. Authorised Admin Correction & Governance Controls
-- **Full Audit Logging**: Every admin override (e.g. role re-assignment, artifact score correction, manual dispute resolution) MUST log prior value, new value, acting admin user ID, timestamp, and justification text in `user_role_assignments.assignment_reason`, `manual_reviews.reviewer_feedback`, or `xp_events.metadata`.
-- **Historical Outcome Immunity**: Admin corrections or governance standard updates (course version, rubric version) NEVER retroactively mutate historical completed outcomes or previously awarded XP. Historical `xp_events` ledger rows and `readiness_snapshots` remain immutable.
+- **Full Audit Logging**: Every admin override (e.g. role re-assignment, artifact score correction, manual dispute resolution) MUST log prior value, new value, acting admin user ID, timestamp, and justification text in `audit_events`.
+- **Historical Outcome Immunity & Superseding Reviews**: Admin score corrections create a superseding review entry (`ai_reviews.superseded_by_id`) or human decision record (`manual_review_decisions`). Historical `ai_reviews` and `xp_events` rows remain 100% immutable to preserve historical auditability.
 
 ### 10.4 XP Integrity and Separation Rules
 
@@ -1306,29 +1471,17 @@ function getReadinessBand(score: number): string {
 
 | Component | Calculation | Missing-Score Rule |
 |---|---|---|
-| Course Completion (30%) | `(mastered_modules / required_modules) * 100` | 0 if no modules mastered |
-| Artifact Completion (25%) | `(accepted_mandatory_artifacts / required_mandatory_artifacts) * 100` | 0 if no artifacts submitted |
-| AI Average Score (25%) | `AVG(overall_score) FROM ai_reviews WHERE submission.status = 'accepted'` | 0 if no accepted AI scores |
-| XP Achievement (10%) | `MIN(evidence_xp_earned / expected_evidence_xp * 100, 100)` | 0 if no expected XP configured (+ warning) |
-| Profile Completion (10%) | `completed_required_fields / total_required_fields * 100` | Use actual percentage |
+| **Module Mastery & Course Completion (30%)** | `(mastered_modules / required_modules) * 100` | 0 if no modules mastered |
+| **Artifact Completion (25%)** | `(accepted_mandatory_artifacts / required_mandatory_artifacts) * 100` | 0 if no artifacts submitted |
+| **AI Authoritative Score (25%)** | `AVG(latest_accepted_score) FROM ai_reviews WHERE submission.status = 'accepted'` per required artifact | 0 if no accepted AI scores |
+| **XP Achievement (10%)** | `MIN(evidence_xp_earned / expected_evidence_xp * 100, 100)` | 0 if no expected XP configured (+ warning) |
+| **Profile Completion (10%)** | `completed_required_fields / total_required_fields * 100` | Use actual percentage |
 
-### 11.3 Readiness Recalculation Triggers & Event Matrix
+### 11.3 Readiness Recalculation Triggers & Event Coalescing
 
-A new point-in-time readiness snapshot (`readiness_snapshots`) is generated deterministically whenever any of the following 8 events occur:
+A new point-in-time readiness snapshot (`readiness_snapshots`) is generated deterministically whenever any of the 8 core events occur. To prevent snapshot explosion during multi-event operations, the engine enforces **transactional event coalescing**: multiple XP or stage events within a single HTTP request or queue batch trigger at most **ONE** readiness recalculation at transaction commit (`userId:roleId:stateVersion`).
 
-| Recalculation Trigger Event | Event Source / API | Database Mutation | Affected Formula Component(s) |
-|---|---|---|---|
-| **1. Module Mastery** | 6E Pipeline / Review Engine | `user_module_status.status` $\rightarrow$ `mastered` | Course Completion (30%), Artifact Completion (25%) |
-| **2. Artifact Acceptance** | embedding-worker AI Review | `artifact_submissions.status` $\rightarrow$ `accepted` | Artifact Completion (25%), AI Average Score (25%), Evidence XP (10%) |
-| **3. Accepted Resubmission** | AI Review / Manual Review | `artifact_submissions.status` $\rightarrow$ `accepted` (Attempt 2/3) | Artifact Completion (25%), AI Average Score (25%), Evidence XP (10%) |
-| **4. Any XP Award (Evidence)** | XP Engine | INSERT INTO `xp_events` (`xp_category = 'evidence'`) | XP Achievement (10%) |
-| **5. Profile Update (Required Fields)** | User Profile API | `users.profile_metadata` / Profile completion update | Profile Completion (10%) |
-| **6. Authorised Manual Evaluation** | `POST /api/v1/admin/reviews/manual` | INSERT INTO `manual_reviews`, `artifact_submissions.status` update | AI Average Score (25%), Artifact Completion (25%), Evidence XP (10%) |
-| **7. Authorised Admin Correction** | Admin Role/Score Overrides | UPDATE `user_role_assignments`, `user_module_status`, `ai_reviews` | All Affected Formula Components |
-| **8. Explicit Recalculation Request** | `POST /api/v1/readiness/calculate` | Forced execution of `calculateReadiness()` | Re-evaluates all 5 components against current state |
-
-> [!NOTE]
-> All readiness recalculations generate an immutable row in `readiness_snapshots` with `calculation_version = 'v1.0'`. Engagement XP grants (`xp_category = 'engagement'`) do NOT trigger readiness recalculations as they are excluded from the readiness formula boundary.
+The public endpoint `POST /api/v1/readiness/calculate` (TRD-API-023) is strictly rate-limited to **5 calls/minute per user** to prevent snapshot database bloat.
 
 ### 11.4 Readiness Display Specification (PRD §12.4)
 
@@ -1398,41 +1551,48 @@ $$\text{Final Rounded Score} = \text{Math.round}(74.25) = \mathbf{74}$$
 
 ## 12. Marketplace Eligibility Gate
 
-### 12.1 Eligibility Check Logic
+### 12.1 Eligibility Check Logic & Readiness Threshold (PD-012)
+
+Per review finding 2.10 and Product Decision **PD-012**, marketplace eligibility explicitly requires a minimum **Readiness Score $\ge 60$** (Internship Ready band or above):
 
 ```typescript
 interface EligibilityResult {
   eligible: boolean;
   visible: boolean;
-  blocking_reasons: string[];
+  eligibilityBlockingReasons: string[];
+  visibilityBlockingReasons: string[];
   readiness_band: string;
   readiness_score: number;
 }
 
 function checkEligibility(learner: LearnerData): EligibilityResult {
-  const blocks: string[] = [];
+  const eligibilityBlocks: string[] = [];
+  const visibilityBlocks: string[] = [];
   
-  // Mandatory conditions (PRD §12.5)
-  if (!learner.target_role_id) blocks.push('No target role assigned');
-  if (!learner.mandatory_profile_complete) blocks.push('Mandatory profile fields incomplete');
-  if (learner.accepted_artifact_count === 0) blocks.push('No accepted artifacts');
-  if (learner.has_unresolved_critical_failure) blocks.push('Unresolved critical failure evaluation');
-  if (!learner.account_active) blocks.push('Account is not active');
+  // Mandatory Eligibility Conditions (PRD §12.5 & PD-012)
+  if (!learner.target_role_id) eligibilityBlocks.push('No target role assigned');
+  if (!learner.mandatory_profile_complete) eligibilityBlocks.push('Mandatory profile fields incomplete');
+  if (learner.accepted_artifact_count === 0) eligibilityBlocks.push('No accepted artifacts');
+  if (learner.has_unresolved_critical_failure) eligibilityBlocks.push('Unresolved critical failure evaluation');
+  if (!learner.account_active) eligibilityBlocks.push('Account is not active');
+  if (learner.readiness_score < 60) eligibilityBlocks.push('Readiness score below 60 threshold (Internship Ready required)');
   
-  const eligible = blocks.length === 0;
+  const eligible = eligibilityBlocks.length === 0;
   
-  // Visibility requires eligibility + active consent
+  // Visibility requires eligibility + active versioned consent
   const hasConsent = learner.consent?.is_active &&
-    learner.consent?.consent_version === CURRENT_CONSENT_VERSION;
+    learner.consent?.consent_version === CURRENT_CONSENT_VERSION &&
+    learner.consent?.consent_purpose === 'marketplace_visibility';
   
-  if (eligible && !hasConsent) {
-    blocks.push('Marketplace visibility consent not granted or version mismatch');
+  if (!hasConsent) {
+    visibilityBlocks.push('Marketplace visibility consent not granted or version mismatch');
   }
   
   return {
     eligible,
     visible: eligible && hasConsent,
-    blocking_reasons: blocks,
+    eligibilityBlockingReasons: eligibilityBlocks,
+    visibilityBlockingReasons: visibilityBlocks,
     readiness_band: learner.readiness_band,
     readiness_score: learner.readiness_score,
   };
@@ -1443,21 +1603,29 @@ function checkEligibility(learner: LearnerData): EligibilityResult {
 
 ## 13. Event-Driven Architecture
 
-### 13.1 Domain Events
+### 13.1 Two-Tier Event Architecture & xAPI Projection
+
+Internal micro-events emitted to `lte-events` queue use compact domain payloads. An async **xAPI Projection Adapter** transforms queue events into IEEE 9274.1.1-2023 statements for external Learning Record Stores (LRS) and audit streams:
+
+```
+Internal Domain Event (Queue) ──> Cloudflare Worker ──> xAPI Projection Adapter ──> LRS / Audit Log
+```
+
+### 13.2 Domain Events Matrix
 
 Per [03-event-driven-architecture.md](file:///home/gokul/.gemini/antigravity-ide/knowledge/kiro_steering_skill_echosystem/artifacts/03-event-driven-architecture.md), events are immutable facts:
 
 | Event Type | Payload | Producer | Consumers |
 |---|---|---|---|
-| `STAGE_COMPLETED` | `{userId, modulesContentId, stageOrder}` | Stage progress API | XP Engine |
-| `ARTIFACT_SUBMITTED` | `{userId, submissionId, artifactId}` | Artifact submit API | embedding-worker |
-| `REVIEW_COMPLETED` | `{submissionId, outcome, score, xpAwarded}` | embedding-worker | Readiness Calculator, Dashboard |
-| `MODULE_MASTERED` | `{userId, moduleId, courseId}` | Review pipeline | Readiness Calculator |
-| `READINESS_RECALCULATED` | `{userId, roleId, score, band}` | Readiness Calculator | Dashboard, Marketplace |
-| `CONSENT_GRANTED` | `{userId, version, scope}` | Consent API | Marketplace |
-| `CONSENT_WITHDRAWN` | `{userId}` | Consent API | Marketplace |
+| `STAGE_COMPLETED` | `{userId, orgId, modulesContentId, stageOrder}` | Stage progress API | XP Engine |
+| `ARTIFACT_SUBMITTED` | `{userId, orgId, submissionId, artifactId}` | Artifact submit API | embedding-worker |
+| `REVIEW_COMPLETED` | `{submissionId, orgId, outcome, score, xpAwarded}` | embedding-worker | Readiness Calculator, Dashboard |
+| `MODULE_MASTERED` | `{userId, orgId, moduleId, courseId}` | Review pipeline | Readiness Calculator |
+| `READINESS_RECALCULATED` | `{userId, orgId, roleId, score, band}` | Readiness Calculator | Dashboard, Marketplace |
+| `CONSENT_GRANTED` | `{userId, orgId, version, scope, purpose}` | Consent API | Marketplace |
+| `CONSENT_WITHDRAWN` | `{userId, orgId, purpose}` | Consent API | Marketplace |
 
-### 13.2 Queue Configuration
+### 13.3 Queue Configuration & Consumer Idempotency (TRD-DB-013)
 
 ```toml
 # Cloudflare Queue
@@ -1473,7 +1641,19 @@ max_retries = 3
 dead_letter_queue = "lte-events-dlq"
 ```
 
-### 13.3 xAPI 2.0 (IEEE 9274.1.1-2023) Event Statement Specification
+To ensure at-least-once queue delivery safety, queue consumer workers verify message headers (`event_id`, `event_type`, `aggregate_id`, `correlation_id`) against `public.event_processing_log`:
+
+```sql
+CREATE TABLE public.event_processing_log (
+  event_id          uuid PRIMARY KEY,
+  event_type        varchar(100) NOT NULL,
+  aggregate_id      uuid NOT NULL,
+  correlation_id    uuid,
+  processed_at      timestamptz DEFAULT now() NOT NULL
+);
+```
+
+### 13.4 xAPI 2.0 (IEEE 9274.1.1-2023) Event Statement Specification
 
 All domain events emitted to `lte-events` queue conform to IEEE 9274.1.1-2023 (xAPI 2.0) standard statements for auditability and ecosystem interoperability:
 
@@ -1625,12 +1805,12 @@ const PaginationSchema = z.object({
 | T-001 | No 6E stage skipping | Unit + E2E | FR6 |
 | T-002 | No learning-complete without all 6 stages | Unit | FR15 |
 | T-003 | No mastered without accepted artifact | Unit | FR15 |
-| T-004 | Failed artifact receives 0 XP | Unit | §11.2 |
+| T-004 | Failed artifact receives 0 Evidence XP and 0 Readiness impact; receives +1 Engagement XP | Unit | §11.2 |
 | T-005 | No duplicate XP for same event | Unit | §11.3 |
 | T-006 | Readiness excludes engagement XP | Unit | §12.1 |
 | T-007 | Critical failure overrides numeric score | Unit | §10.2 |
 | T-008 | Manual review triggered at low confidence | Integration | §10.2 |
-| T-009 | Marketplace blocked without consent | Unit | §12.5 |
+| T-009 | Marketplace blocked without consent or score < 60 | Unit | §12.5 |
 | T-010 | Consent withdrawal stops visibility | Unit | §16 |
 | T-011 | Governance changes don't mutate completed outcomes | Integration | FR16 |
 | T-012 | Full learner loop end-to-end | E2E | §4 |
@@ -1698,18 +1878,26 @@ Per [05-production-readiness.md](file:///home/gokul/.gemini/antigravity-ide/know
 
 ### 18.1 Structured Logging
 
+### 18.1 Structured Logging & Redaction Rules
+
 ```typescript
 // Per 02-cloudflare-platform.md §7.8
 const log = (level: string, message: string, data: Record<string, unknown>) => {
+  // Enforce mandatory log redaction on sensitive parameters
+  const sanitizedData = redactSensitiveFields(data);
+  
   console[level === 'error' ? 'error' : 'log'](JSON.stringify({
     level, message, service: 'lte-app',
     timestamp: new Date().toISOString(),
-    requestId: data.requestId,
-    userId: data.userId,
-    ...data,
+    requestId: sanitizedData.requestId,
+    userId: sanitizedData.userId,
+    ...sanitizedData,
   }));
 };
 ```
+
+> [!CAUTION]
+> **Log Redaction Invariants**: Artifact body text (`text_content`), raw LLM response text, learner feedback strings, authentication JWT tokens, R2 presigned URLs, and personal contact info MUST be scrubbed before sending logs to stdout or external collectors.
 
 ### 18.2 Health Check
 
@@ -1853,6 +2041,20 @@ When system components experience partial or total outages, the application grac
 | **Hyperdrive DB Degraded** | Supabase Database | Serves static learning catalog from stale-while-revalidate KV cache | Catalog viewable; progress saving delayed with local queueing toast | Hyperdrive connection pool responds < 100ms |
 | **R2 Storage Slowdown** | R2 Artifact Store | File upload failures trigger text/link submission modal suggestion | Learner offered alternative text/Google Drive link submission | R2 PUT latency < 2000ms |
 | **SSO Service Interruption** | Auth RPC Binding | Validates active session using cached public JWKS in Edge KV | Existing active users stay logged in; new logins blocked | SSO Worker RPC responds < 500ms |
+
+### 19.6 Database Transaction Boundaries
+
+All multi-table progress mutations MUST execute within explicit database transactions (`BEGIN / COMMIT`):
+
+```sql
+-- Atomic Stage Completion Transaction
+BEGIN;
+  UPDATE public.user_stage_progress SET status = 'completed' WHERE user_id = $1 AND modules_content_id = $2;
+  INSERT INTO public.xp_events (user_id, org_id, event_type, xp_category, xp_amount, source_type, source_id, idempotency_key)
+    VALUES ($1, $3, 'stage_completed', 'evidence', 1, 'stage', $2, $4) ON CONFLICT DO NOTHING;
+  UPDATE public.user_module_status SET stages_completed = stages_completed + 1 WHERE user_id = $1 AND module_id = $5;
+COMMIT;
+```
 
 ---
 
@@ -2162,6 +2364,8 @@ Per PRD §20, these decisions **must be frozen before coding** the relevant modu
 | PD-009 | AI confidence threshold | §10.2 | **FROZEN** | 0.7 (defined in app config `CONFIG.AI_CONFIDENCE_THRESHOLD`) |
 | PD-010 | Max resubmission attempts | §10.2 | **FROZEN** | 3 (defined in app config `CONFIG.MAX_RESUBMISSIONS`) |
 | PD-011 | Readiness band thresholds | §12.4 | **FROZEN** | 0–39 Not Ready, 40–59 Learning in Progress, 60–79 Internship Ready, 80–100 Job Ready |
+| PD-012 | Marketplace readiness score gate | Review §2.10 | **FROZEN** | **Option A**: Marketplace eligibility explicitly requires Readiness Score $\ge 60$ (Internship Ready band). |
+| PD-013 | LLM Vendor Data Privacy & Retention | Review §2.9 | **FROZEN** | Enterprise LLM contract with **Zero Data Retention** for training, Edge PII scrubbing, and US/EU compliance. |
 
 > [!WARNING]
 > **PD-003 (6E primary artifact stage)** is still pending governance approval. Engineering should keep the artifact-to-stage binding configurable (stored in `module_artifacts.modules_content_id` FK) rather than hardcoding "Empower" — so the binding can be set per-module after approval.
