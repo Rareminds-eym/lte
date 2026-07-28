@@ -154,6 +154,7 @@ describe("LearningPathInitializer Feature", () => {
             whyItFits: "",
             attemptId: "777b7ccb-ca18-4770-bc2f-6893608cc738",
             roleId: "888b7ccb-ca18-4770-bc2f-6893608cc739",
+            duration: undefined,
           },
           accessToken: "mock-token",
         },
