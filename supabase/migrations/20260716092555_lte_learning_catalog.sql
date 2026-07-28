@@ -282,7 +282,7 @@ CREATE TABLE IF NOT EXISTS public."modules" (
   "updated_at" timestamptz DEFAULT now() NOT NULL,
   CONSTRAINT "pk_modules" PRIMARY KEY ("id"),
   CONSTRAINT "uq_modules_course_module_no" UNIQUE ("course_id", "module_no"),
-  CONSTRAINT "chk_modules_module_no" CHECK ("module_no" >= 1)
+  CONSTRAINT "chk_modules_module_no" CHECK ("module_no" >= 0)
 );
 
 CREATE INDEX IF NOT EXISTS "idx_modules_active"
