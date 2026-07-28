@@ -34,7 +34,7 @@ export const MainLayout: React.FC = () => {
   // Validate and parse the redirection target (starts with / or . and not // to prevent XSS / open redirects)
   const targetNext = useMemo(() => {
     const next = searchParams.get("next");
-    if (next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith(".")) {
+    if (next?.startsWith("/") && !next.startsWith("//") && !next.startsWith(".")) {
       return next;
     }
     return "/dashboard";
