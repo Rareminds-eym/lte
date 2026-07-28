@@ -1,5 +1,5 @@
 import type { AuthUser } from "@rareminds-eym/auth-core";
-import { getMe, getSsoService } from "./sso-client";
+import { getMe, getSsoService, SsoAuthError } from "./sso-client";
 import type { LteEnv } from "./types";
 
 export function extractBearerToken(request: Request): string | null {
@@ -36,15 +36,8 @@ export async function requireAuth(
     user = await getMe(env, token);
   } catch (err) {
     if (err instanceof AuthError) throw err;
-    const msg = err instanceof Error ? err.message : "Unauthenticated";
-    // Propagate authentic auth errors as 401; let other errors bubble up as 500
-    const isAuthFailure =
-      msg.includes("token") ||
-      msg.includes("claims") ||
-      msg.includes("status") ||
-      msg.includes("Unauthenticated");
-    if (isAuthFailure) {
-      throw new AuthError(msg, "UNAUTHORIZED");
+    if (err instanceof SsoAuthError) {
+      throw new AuthError(err.message, "UNAUTHORIZED");
     }
     throw err;
   }

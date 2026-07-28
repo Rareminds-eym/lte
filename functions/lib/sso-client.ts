@@ -82,12 +82,29 @@ export async function logoutLteSession(
   return getSsoService(env).logoutSession(refreshToken, ip ?? undefined, ua ?? undefined);
 }
 
+export class SsoAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SsoAuthError";
+  }
+}
+
 export async function getMe(
   env: Pick<LteEnv, "SSO_SERVICE">,
   accessToken: string,
 ): Promise<AuthUser> {
-  const result = await getSsoService(env).getMe(accessToken);
-  return normalizeAuthUser(result);
+  try {
+    const result = await getSsoService(env).getMe(accessToken);
+    return normalizeAuthUser(result);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const isServiceError =
+      msg.includes("binding") || msg.includes("fetch failed") || msg.includes("not configured");
+    if (!isServiceError) {
+      throw new SsoAuthError(msg);
+    }
+    throw err;
+  }
 }
 
 function isMembershipStatus(value: string): value is MembershipStatus {

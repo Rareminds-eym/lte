@@ -12,18 +12,10 @@ export const initializeLearningPathSchema = z.object({
     })
     .transform((val) => Number(val))
     .pipe(z.number().min(0).max(100)),
-  whyItFits: z
-    .string()
-    .trim()
-    .optional()
-    .transform((val) => val ?? ""),
+  whyItFits: z.string().trim().default(""),
   attemptId: z.string().uuid("attemptId must be a valid UUID"),
   roleId: z.string().uuid("roleId must be a valid UUID"),
-  duration: z
-    .string()
-    .trim()
-    .optional()
-    .transform((val) => val ?? "6 months"),
+  duration: z.string().trim().default("6 months"),
 });
 
 export type InitializeLearningPathPayload = z.infer<typeof initializeLearningPathSchema>;
