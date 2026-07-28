@@ -7,19 +7,11 @@ export interface AchievementsProps {
 }
 
 export const Achievements: React.FC<AchievementsProps> = ({ data }) => {
-  const getBadgeImage = (iconType: string) => {
-    switch (iconType) {
-      case "project":
-        return "/assets/images/badge_first_project.png";
-      case "streak":
-        return "/assets/images/badge_streak.png";
-      case "api":
-        return "/assets/images/badge_api_mastery.png";
-      case "architect":
-        return "/assets/images/badge_system_architect.png";
-      default:
-        return "/assets/images/badge_first_project.png";
-    }
+  const BADGE_IMAGES: Record<string, string> = {
+    project: "/assets/images/badge_first_project.png",
+    streak: "/assets/images/badge_streak.png",
+    api: "/assets/images/badge_api_mastery.png",
+    architect: "/assets/images/badge_system_architect.png",
   };
 
   return (
@@ -66,7 +58,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ data }) => {
           >
             <div className="w-[42px] h-[42px] shrink-0 overflow-hidden">
               <Image
-                src={getBadgeImage(item.iconType)}
+                src={BADGE_IMAGES[item.iconType] || BADGE_IMAGES["project"]}
                 alt={item.title}
                 loading="eager"
                 className="w-full h-full object-contain"

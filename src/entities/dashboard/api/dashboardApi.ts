@@ -189,7 +189,4 @@ export const MOCK_DASHBOARD_DATA: DashboardData = {
   },
 };
 
-export const fetchDashboardData = async (): Promise<DashboardData> => {
-  // Simulates fast remote response for TanStack Query
-  return Promise.resolve(MOCK_DASHBOARD_DATA);
-};
+export const fetchDashboardData = async (): Promise<DashboardData> => MOCK_DASHBOARD_DATA;

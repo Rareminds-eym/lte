@@ -111,7 +111,7 @@ export const DashboardLayout: React.FC = () => {
         onNavigate={handleNavigate}
       />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header userName={userName} userStatus={userStatus} />
+        <Header userName={userName} userStatus={userStatus} userEmail={user?.email} />
         <main className="flex-1 p-6 overflow-y-auto">
           <Outlet />
         </main>

@@ -5,6 +5,7 @@ export interface UserProfileBadgeProps {
   name: string;
   status?: string;
   avatarUrl?: string;
+  isOpen?: boolean;
   onClick?: () => void;
   className?: string;
 }
@@ -13,6 +14,7 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
   name,
   status,
   avatarUrl,
+  isOpen = false,
   onClick,
   className = "",
 }) => {
@@ -20,6 +22,8 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
     <button
       type="button"
       onClick={onClick}
+      aria-expanded={isOpen}
+      aria-haspopup="menu"
       className={`flex items-center gap-2.5 p-1 rounded-2xl hover:bg-surface-muted transition-colors cursor-pointer text-left border-none bg-transparent ${className}`}
     >
       {/* Avatar Circle */}
@@ -57,7 +61,9 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
       {/* Dropdown Chevron */}
       <svg
         aria-hidden="true"
-        className="w-3.5 h-3.5 text-content-secondary ml-0.5"
+        className={`w-3.5 h-3.5 text-content-secondary ml-0.5 transition-transform duration-200 ${
+          isOpen ? "rotate-180" : ""
+        }`}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

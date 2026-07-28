@@ -60,7 +60,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="container">
 
 <h1>lte — Complete Call Flow &amp; Architecture Documentation</h1>
-<p class="subtitle">Generated from graphify knowledge graph: 1317 nodes, 1670 edges, 108 communities. Commit: unknown</p>
+<p class="subtitle">Generated from graphify knowledge graph: 1321 nodes, 1678 edges, 112 communities. Commit: unknown</p>
 
 <div class="nav">
     <a href="#overview">Architecture Overview</a>
@@ -75,7 +75,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     <a href="#cross-domain-sso-implementation-skillpassport-lt">Cross-Domain SSO Implementation: SkillPassport → LTE</a>
     <a href="#source-code-architecture">Source Code Architecture</a>
     <a href="#ssorpcservice">SsoRpcService</a>
-    <a href="#entities-layer">Entities Layer</a>
+    <a href="#pages-layer">Pages Layer</a>
     <a href="#app-layer">App Layer</a>
     <a href="#lte-sso-implementation-plan">LTE SSO Implementation Plan</a>
     <a href="#other">Other</a>
@@ -96,11 +96,11 @@ flowchart LR
     class CLI_SKILLS_9964CBB8 module;
     INGEST_CACHE_UPDATE_FF457338("Ingestion &amp; Updates<br/><small>16 nodes</small>")
     class INGEST_CACHE_UPDATE_FF457338 module;
-    SERVE_API_35EC8E86("Serving API<br/><small>144 nodes</small>")
+    SERVE_API_35EC8E86("Serving API<br/><small>161 nodes</small>")
     class SERVE_API_35EC8E86 module;
     SECURITY_GLOBAL_5B9C6A04("Security &amp; Global Graph<br/><small>13 nodes</small>")
     class SECURITY_GLOBAL_5B9C6A04 module;
-    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>288 nodes</small>")
+    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>270 nodes</small>")
     class TESTS_FIXTURES_B84B1DCC module;
     DEPENDENCIES_495117C3("dependencies<br/><small>40 nodes</small>")
     class DEPENDENCIES_495117C3 module;
@@ -110,16 +110,18 @@ flowchart LR
     class SOURCE_CODE_ARCHITECTURE_61C8BA33 module;
     SSORPCSERVICE_942332A0("SsoRpcService<br/><small>20 nodes</small>")
     class SSORPCSERVICE_942332A0 module;
-    ENTITIES_LAYER_824C7880("Entities Layer<br/><small>17 nodes</small>")
-    class ENTITIES_LAYER_824C7880 module;
+    PAGES_LAYER_01560D8D("Pages Layer<br/><small>17 nodes</small>")
+    class PAGES_LAYER_01560D8D module;
     APP_LAYER_221CE3EF("App Layer<br/><small>17 nodes</small>")
     class APP_LAYER_221CE3EF module;
     LTE_SSO_IMPLEMENTATION_PLAN_66D066A5("LTE SSO Implementation Plan<br/><small>16 nodes</small>")
     class LTE_SSO_IMPLEMENTATION_PLAN_66D066A5 module;
-    OTHER_D0941E68("Other<br/><small>332 nodes</small>")
+    OTHER_D0941E68("Other<br/><small>337 nodes</small>")
     class OTHER_D0941E68 module;
+    TESTS_FIXTURES_B84B1DCC -->|imports x11| SERVE_API_35EC8E86
+    SERVE_API_35EC8E86 -->|re exports x9| TESTS_FIXTURES_B84B1DCC
+    OTHER_D0941E68 -->|contains x4| SERVE_API_35EC8E86
     SERVE_API_35EC8E86 -->|contains x3| OTHER_D0941E68
-    OTHER_D0941E68 -->|contains x3| SERVE_API_35EC8E86
     OTHER_D0941E68 -->|contains x2| CLI_SKILLS_9964CBB8
     SERVE_API_35EC8E86 -->|imports| BUILD_GRAPH_321CBB04
     SECURITY_GLOBAL_5B9C6A04 -->|contains| OTHER_D0941E68
@@ -128,8 +130,6 @@ flowchart LR
     OTHER_D0941E68 -->|contains| SECURITY_GLOBAL_5B9C6A04
     OTHER_D0941E68 -->|contains| OUTPUTS_DOCS_ED82387C
     OTHER_D0941E68 -->|contains| BUILD_GRAPH_321CBB04
-    OTHER_D0941E68 -->|contains| TESTS_FIXTURES_B84B1DCC
-    OTHER_D0941E68 -->|contains| DEPENDENCIES_495117C3
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -146,19 +146,19 @@ flowchart LR
     <h4>Architecture Layers</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>Layer</th><th>Nodes</th><th>Communities</th></tr>
-      <tr><td>Graph Build</td><td>260</td><td><code>7, 4, 2, 6, 13, 8, 15, 20, 47</code></td></tr><tr><td>Outputs &amp; Docs</td><td>16</td><td><code>91, 92</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>85</td><td><code>49, 73, 75</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>16</td><td><code>110, 22</code></td></tr><tr><td>Serving API</td><td>144</td><td><code>0, 74, 11, 94, 98, 42, 45</code></td></tr><tr><td>Security &amp; Global Graph</td><td>13</td><td><code>109, 31</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>288</td><td><code>51, 9, 72, 29, 1, 10, 5, 80, 81, 90, 95, 46, 113, 52, 69</code></td></tr><tr><td>dependencies</td><td>40</td><td><code>12</code></td></tr><tr><td>Cross-Domain SSO Implementation: SkillPassport → LTE</td><td>30</td><td><code>71</code></td></tr><tr><td>Source Code Architecture</td><td>23</td><td><code>76</code></td></tr><tr><td>SsoRpcService</td><td>20</td><td><code>30</code></td></tr><tr><td>Entities Layer</td><td>17</td><td><code>77</code></td></tr><tr><td>App Layer</td><td>17</td><td><code>89</code></td></tr><tr><td>LTE SSO Implementation Plan</td><td>16</td><td><code>79</code></td></tr><tr><td>Other</td><td>332</td><td><code>14, 16, 88, 82, 83, 84, 85, 86, 25, 87, 17, 18, 19, 35, 78, 21, 23, 24, 93, 26, 27, 28, 96, 97, 100, 3, 32, 101, 102, 107, 108, 33, 34, 36, 37, 38, 39, 40, 41, 43, 44, 99, 48, 50, 53, 54, 55, 56, 57, 58, 59, 112, 60, 61, 62, 63, 64, 65, 67, 68, 70</code></td></tr>
+      <tr><td>Graph Build</td><td>260</td><td><code>7, 4, 2, 6, 13, 8, 15, 20, 47</code></td></tr><tr><td>Outputs &amp; Docs</td><td>16</td><td><code>91, 92</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>85</td><td><code>49, 73, 75</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>16</td><td><code>110, 22</code></td></tr><tr><td>Serving API</td><td>161</td><td><code>0, 74, 11, 102, 103, 94, 98, 42, 45</code></td></tr><tr><td>Security &amp; Global Graph</td><td>13</td><td><code>109, 31</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>270</td><td><code>51, 72, 29, 1, 5, 10, 80, 9, 66, 90, 99, 81, 95, 46, 105, 113, 52, 69</code></td></tr><tr><td>dependencies</td><td>40</td><td><code>12</code></td></tr><tr><td>Cross-Domain SSO Implementation: SkillPassport → LTE</td><td>30</td><td><code>71</code></td></tr><tr><td>Source Code Architecture</td><td>23</td><td><code>76</code></td></tr><tr><td>SsoRpcService</td><td>20</td><td><code>30</code></td></tr><tr><td>Pages Layer</td><td>17</td><td><code>78</code></td></tr><tr><td>App Layer</td><td>17</td><td><code>89</code></td></tr><tr><td>LTE SSO Implementation Plan</td><td>16</td><td><code>79</code></td></tr><tr><td>Other</td><td>337</td><td><code>14, 16, 88, 77, 82, 83, 84, 85, 86, 25, 3, 87, 17, 18, 19, 35, 21, 23, 24, 93, 26, 27, 28, 96, 97, 100, 32, 101, 104, 107, 108, 33, 34, 36, 37, 38, 39, 40, 41, 43, 44, 48, 50, 53, 54, 55, 56, 57, 58, 59, 112, 60, 61, 62, 63, 64, 65, 67, 68, 70</code></td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Core Flow</h4>
-    <div class="arrow-chain">Cross-Domain SSO Implementation: SkillPassport → LTE -&gt; Graph Build -&gt; Outputs &amp; Docs -&gt; CLI &amp; Skill Installers -&gt; Ingestion &amp; Updates -&gt; Serving API -&gt; Other</div>
+    <div class="arrow-chain">Cross-Domain SSO Implementation: SkillPassport → LTE -&gt; Graph Build -&gt; Outputs &amp; Docs -&gt; CLI &amp; Skill Installers -&gt; Ingestion &amp; Updates -&gt; Serving API -&gt; Tests &amp; Fixtures</div>
   </div>
 </div>
 <div class="grid">
   <div class="card">
     <h4>Graph Report Highlights</h4>
     <ul>
-      <li>1317 nodes · 1670 edges · 108 communities (95 shown, 13 thin omitted)</li>
+      <li>1321 nodes · 1678 edges · 112 communities (97 shown, 15 thin omitted)</li>
       <li>Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.8)</li>
       <li>Token cost: 0 input · 0 output</li>
       <li>1. `LTE 3-Week MVP — Technical Requirements Document (TRD)` - 32 edges</li>
@@ -1303,12 +1303,12 @@ flowchart LR
 
 <!-- ====== 6. Serving API ====== -->
 <h2 id="serve-api">6. Serving API</h2>
-<p>Serving API groups implementation around functions, api, trd, readmemd, mostly in functions/README.md, LTE_3_Week_MVP_TRD_v.1.md, functions/lib/cookies.ts. This section covers 144 nodes and 276 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Serving API groups implementation around functions, api, trd, readmemd, mostly in functions/README.md, LTE_3_Week_MVP_TRD_v.1.md, functions/lib/cookies.ts. This section covers 161 nodes and 295 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Serving API (144 nodes, 276 edges)
+    %% Section: Serving API (161 nodes, 295 edges)
     subgraph serve_api_functions_lib_http_ts_75ebd3b6["functions/lib/http.ts"]
         functions_lib_http_getclientip_c7b37866("getClientIp()<br/><small>functions/lib/http.ts</small>")
         functions_lib_http_getuseragent_d2b5ba7e("getUserAgent()<br/><small>functions/lib/http.ts</small>")
@@ -1363,7 +1363,7 @@ flowchart LR
     functions_api_v1_auth_logout_2b363cdd -->|imports| functions_lib_http_getuseragent_d2b5ba7e
     functions_api_v1_auth_logout_2b363cdd -->|imports| functions_lib_http_jsonresponse_9a93f1b0
     functions_api_v1_auth_logout_2b363cdd -->|imports| functions_lib_sso_client_logoutltesession_d101d50e
-    %% Omitted for readability: 126 nodes, 20 edges
+    %% Omitted for readability: 143 nodes, 20 edges
     class functions_lib_http_getclientip_c7b37866 entry;
     class functions_lib_http_getuseragent_d2b5ba7e function;
     class functions_lib_http_jsonresponse_9a93f1b0 function;
@@ -1656,13 +1656,13 @@ flowchart LR
 <tr><td><code>functions/lib/sso-client.ts</code></td><td>9 nodes</td></tr>
 <tr><td><code>v1/capabilities/types.ts</code></td><td>8 nodes</td></tr>
 <tr><td><code>functions/shared/types.ts</code></td><td>8 nodes</td></tr>
+<tr><td><code>app/router/AppRouter.tsx</code></td><td>8 nodes</td></tr>
 <tr><td><code>.github/PULL_REQUEST_TEMPLATE.md</code></td><td>7 nodes</td></tr>
-<tr><td><code>functions/lib/logger.ts</code></td><td>7 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x120, imports x63, calls x53, imports x38. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x131, imports x64, calls x53, imports x39. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -1861,12 +1861,12 @@ flowchart LR
 
 <!-- ====== 8. Tests & Fixtures ====== -->
 <h2 id="tests-fixtures">8. Tests &amp; Fixtures</h2>
-<p>Tests &amp; Fixtures groups implementation around shared, indexts, widgets, entities, mostly in docs/deployment/SETUP_PROTECTION.md, shared/config/logging.ts, dashboard/model/types.ts. This section covers 288 nodes and 532 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Tests &amp; Fixtures groups implementation around shared, indexts, widgets, entities, mostly in docs/deployment/SETUP_PROTECTION.md, shared/config/logging.ts, dashboard/model/types.ts. This section covers 270 nodes and 496 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Tests &amp; Fixtures (288 nodes, 532 edges)
+    %% Section: Tests &amp; Fixtures (270 nodes, 496 edges)
     subgraph tests_fixtures_app_layouts_DashboardLayout_tsx_c896bb88["app/layouts/DashboardLayout.tsx"]
         src_app_layouts_dashboardlayout_8f63a3a5("DashboardLayout.tsx")
         src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4("DashboardLayout()<br/><small>app/layouts/DashboardLayout.tsx</small>")
@@ -1874,10 +1874,6 @@ flowchart LR
     subgraph tests_fixtures_app_store_authStore_ts_e8300139["app/store/authStore.ts"]
         src_app_store_authstore_90065c14("authStore.ts")
         src_app_store_authstore_useauthstore_96365424("useAuthStore<br/><small>app/store/authStore.ts</small>")
-    end
-    subgraph tests_fixtures_src_pages_Courses_tsx_33ed813b["src/pages/Courses.tsx"]
-        src_pages_courses_courses_2596a8b6("Courses()<br/><small>src/pages/Courses.tsx</small>")
-        src_pages_courses_statspill_aaa9c675("StatsPill()<br/><small>src/pages/Courses.tsx</small>")
     end
     src_app_layouts_mainlayout_mainlayout_08f6758d("MainLayout()<br/><small>app/layouts/MainLayout.tsx</small>")
     src_entities_course_ui_coursecard_coursecard_28e5cfc1("CourseCard()<br/><small>course/ui/CourseCard.tsx</small>")
@@ -1890,16 +1886,18 @@ flowchart LR
     src_shared_store_uistore_useuistore_235c41f6("useUIStore<br/><small>shared/store/uiStore.ts</small>")
     src_tests_dashboardlayout_test_0819c178("DashboardLayout.test.tsx")
     src_tests_dashboardwidgets_test_cbdf2095("DashboardWidgets.test.tsx")
+    src_pages_courses_courses_2596a8b6("Courses()<br/><small>src/pages/Courses.tsx</small>")
     src_pages_dashboard_dashboard_7aec9b33("Dashboard()<br/><small>src/pages/Dashboard.tsx</small>")
+    src_widgets_header_header_header_4c0cc565("Header()<br/><small>widgets/Header/Header.tsx</small>")
     src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4 -->|calls| src_app_store_authstore_useauthstore_96365424
     src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4 -->|calls| src_shared_config_index_getskillpassporturl_db5ef9bf
     src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4 -->|calls| src_shared_store_uistore_useuistore_235c41f6
     src_app_layouts_mainlayout_mainlayout_08f6758d -->|calls| src_app_store_authstore_useauthstore_96365424
     src_app_router_guards_guestguard_guestguard_9dbfb75a -->|calls| src_app_store_authstore_useauthstore_96365424
+    src_app_store_authstore_useauthstore_96365424 -->|calls| src_widgets_header_header_header_4c0cc565
     src_entities_course_ui_coursecard_coursecard_28e5cfc1 -->|calls| src_shared_lib_index_cn_15d20340
     src_entities_dashboard_model_usedashboarddata_us_7f2e615a -->|calls| src_pages_dashboard_dashboard_7aec9b33
     src_pages_courses_courses_2596a8b6 -->|calls| src_shared_lib_index_cn_15d20340
-    src_pages_courses_statspill_aaa9c675 -->|calls| src_shared_lib_index_cn_15d20340
     src_tests_dashboardlayout_test_0819c178 -->|imports| src_app_layouts_dashboardlayout_8f63a3a5
     src_tests_dashboardlayout_test_0819c178 -->|imports| src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4
     src_tests_dashboardlayout_test_0819c178 -->|imports| src_app_store_authstore_90065c14
@@ -1909,13 +1907,12 @@ flowchart LR
     src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_app_store_authstore_useauthstore_96365424
     src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_shared_config_index_getskillpassporturl_db5ef9bf
     src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_shared_store_uistore_useuistore_235c41f6
-    %% Omitted for readability: 270 nodes, 0 edges
+    src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_widgets_header_header_header_4c0cc565
+    %% Omitted for readability: 252 nodes, 0 edges
     class src_app_layouts_dashboardlayout_8f63a3a5 ui;
     class src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4 ui;
     class src_app_store_authstore_90065c14 ui;
     class src_app_store_authstore_useauthstore_96365424 ui;
-    class src_pages_courses_courses_2596a8b6 ui;
-    class src_pages_courses_statspill_aaa9c675 ui;
     class src_app_layouts_mainlayout_mainlayout_08f6758d ui;
     class src_entities_course_ui_coursecard_coursecard_28e5cfc1 ui;
     class src_entities_dashboard_model_usedashboarddata_us_7f2e615a ui;
@@ -1927,7 +1924,9 @@ flowchart LR
     class src_shared_store_uistore_useuistore_235c41f6 ui;
     class src_tests_dashboardlayout_test_0819c178 test;
     class src_tests_dashboardwidgets_test_cbdf2095 test;
+    class src_pages_courses_courses_2596a8b6 ui;
     class src_pages_dashboard_dashboard_7aec9b33 ui;
+    class src_widgets_header_header_header_4c0cc565 ui;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -1975,14 +1974,6 @@ flowchart LR
 </tr>
 <tr>
   <td>4</td>
-  <td><code>Pagination.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/Pagination.test.tsx</small></td>
-  <td><span class="tag tag-func">Test</span></td>
-  <td>External entry / no inbound edge</td>
-  <td><code>index.ts</code><br><small style="color:var(--muted)">src/widgets/index.ts</small><br><code>Pagination()</code><br><small style="color:var(--muted)">widgets/Pagination/Pagination.tsx</small></td>
-  <td>Module file in src/__tests__/Pagination.test.tsx.</td>
-</tr>
-<tr>
-  <td>5</td>
   <td><code>WidgetCard.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/WidgetCard.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
@@ -1990,7 +1981,7 @@ flowchart LR
   <td>Module file in src/__tests__/WidgetCard.test.tsx.</td>
 </tr>
 <tr>
-  <td>6</td>
+  <td>5</td>
   <td><code>dashboardApi.test.ts</code><br><small style="color:var(--muted)">src/__tests__/dashboardApi.test.ts</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
@@ -1998,7 +1989,7 @@ flowchart LR
   <td>Module file in src/__tests__/dashboardApi.test.ts.</td>
 </tr>
 <tr>
-  <td>7</td>
+  <td>6</td>
   <td><code>useDashboardData.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/useDashboardData.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
@@ -2006,7 +1997,7 @@ flowchart LR
   <td>Module file in src/__tests__/useDashboardData.test.tsx.</td>
 </tr>
 <tr>
-  <td>8</td>
+  <td>7</td>
   <td><code>createWrapper()</code><br><small style="color:var(--muted)">src/__tests__/useDashboardData.test.tsx</small></td>
   <td><span class="tag tag-func">Test</span></td>
   <td>External entry / no inbound edge</td>
@@ -2014,7 +2005,7 @@ flowchart LR
   <td>createWrapper() node in src/__tests__/useDashboardData.test.tsx.</td>
 </tr>
 <tr>
-  <td>9</td>
+  <td>8</td>
   <td><code>dashboardApi.ts</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
   <td><span class="tag tag-endpoint">API</span></td>
   <td>External entry / no inbound edge</td>
@@ -2022,7 +2013,7 @@ flowchart LR
   <td>Module file in dashboard/api/dashboardApi.ts.</td>
 </tr>
 <tr>
-  <td>10</td>
+  <td>9</td>
   <td><code>MOCK_DASHBOARD_DATA</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td><code>dashboardApi.test.ts</code><br><small style="color:var(--muted)">src/__tests__/dashboardApi.test.ts</small><br><code>DashboardWidgets.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/DashboardWidgets.test.tsx</small></td>
@@ -2030,7 +2021,7 @@ flowchart LR
   <td>MOCK_DASHBOARD_DATA node in dashboard/api/dashboardApi.ts.</td>
 </tr>
 <tr>
-  <td>11</td>
+  <td>10</td>
   <td><code>fetchDashboardData()</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>dashboardApi.test.ts</code><br><small style="color:var(--muted)">src/__tests__/dashboardApi.test.ts</small></td>
@@ -2038,7 +2029,7 @@ flowchart LR
   <td>fetchDashboardData() node in dashboard/api/dashboardApi.ts.</td>
 </tr>
 <tr>
-  <td>12</td>
+  <td>11</td>
   <td><code>index.ts</code><br><small style="color:var(--muted)">entities/dashboard/index.ts</small></td>
   <td><span class="tag tag-class">Module</span></td>
   <td><code>dashboardApi.test.ts</code><br><small style="color:var(--muted)">src/__tests__/dashboardApi.test.ts</small><br><code>DashboardWidgets.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/DashboardWidgets.test.tsx</small><br><code>useDashboardData.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/useDashboardData.test.tsx</small></td>
@@ -2046,7 +2037,7 @@ flowchart LR
   <td>Module file in entities/dashboard/index.ts.</td>
 </tr>
 <tr>
-  <td>13</td>
+  <td>12</td>
   <td><code>types.ts</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Module</span></td>
   <td><code>dashboardApi.ts</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
@@ -2054,7 +2045,7 @@ flowchart LR
   <td>Module file in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>14</td>
+  <td>13</td>
   <td><code>CareerTargetData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2062,7 +2053,7 @@ flowchart LR
   <td>CareerTargetData node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>15</td>
+  <td>14</td>
   <td><code>CurrentJourneyData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2070,7 +2061,7 @@ flowchart LR
   <td>CurrentJourneyData node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>16</td>
+  <td>15</td>
   <td><code>PriorityItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2078,7 +2069,7 @@ flowchart LR
   <td>PriorityItem node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>17</td>
+  <td>16</td>
   <td><code>TodaysPrioritiesData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2086,7 +2077,7 @@ flowchart LR
   <td>TodaysPrioritiesData node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>18</td>
+  <td>17</td>
   <td><code>GapLevel</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2094,7 +2085,7 @@ flowchart LR
   <td>GapLevel node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>19</td>
+  <td>18</td>
   <td><code>CapabilityGapItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-endpoint">API</span></td>
   <td>External entry / no inbound edge</td>
@@ -2102,7 +2093,7 @@ flowchart LR
   <td>CapabilityGapItem node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>20</td>
+  <td>19</td>
   <td><code>UpcomingItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2110,7 +2101,7 @@ flowchart LR
   <td>Turns a local path or remote repository into analysis context.</td>
 </tr>
 <tr>
-  <td>21</td>
+  <td>20</td>
   <td><code>FeedbackItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2118,7 +2109,7 @@ flowchart LR
   <td>FeedbackItem node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>22</td>
+  <td>21</td>
   <td><code>UpcomingFeedbackData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2126,7 +2117,7 @@ flowchart LR
   <td>UpcomingFeedbackData node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>23</td>
+  <td>22</td>
   <td><code>CareerTrackItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2134,7 +2125,7 @@ flowchart LR
   <td>CareerTrackItem node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>24</td>
+  <td>23</td>
   <td><code>RecommendedCareerPathsData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2142,7 +2133,7 @@ flowchart LR
   <td>RecommendedCareerPathsData node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>25</td>
+  <td>24</td>
   <td><code>AchievementItem</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2150,7 +2141,7 @@ flowchart LR
   <td>AchievementItem node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>26</td>
+  <td>25</td>
   <td><code>AchievementsData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2158,7 +2149,7 @@ flowchart LR
   <td>AchievementsData node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>27</td>
+  <td>26</td>
   <td><code>DashboardData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td><code>dashboardApi.ts</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small></td>
@@ -2166,7 +2157,7 @@ flowchart LR
   <td>DashboardData node in dashboard/model/types.ts.</td>
 </tr>
 <tr>
-  <td>28</td>
+  <td>27</td>
   <td><code>useDashboardData.ts</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
   <td><span class="tag tag-hook">UI</span></td>
   <td><code>dashboardApi.ts</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small><br><code>DashboardData</code><br><small style="color:var(--muted)">dashboard/model/types.ts</small><br><code>fetchDashboardData()</code><br><small style="color:var(--muted)">dashboard/api/dashboardApi.ts</small><br>+1 more</td>
@@ -2174,7 +2165,7 @@ flowchart LR
   <td>Module file in dashboard/model/useDashboardData.ts.</td>
 </tr>
 <tr>
-  <td>29</td>
+  <td>28</td>
   <td><code>DASHBOARD_QUERY_KEY</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -2182,12 +2173,20 @@ flowchart LR
   <td>DASHBOARD_QUERY_KEY node in dashboard/model/useDashboardData.ts.</td>
 </tr>
 <tr>
-  <td>30</td>
+  <td>29</td>
   <td><code>useDashboardData()</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
   <td><span class="tag tag-hook">UI</span></td>
   <td><code>useDashboardData.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/useDashboardData.test.tsx</small></td>
   <td><code>Dashboard()</code><br><small style="color:var(--muted)">src/pages/Dashboard.tsx</small><br><code>Dashboard.tsx</code><br><small style="color:var(--muted)">src/pages/Dashboard.tsx</small></td>
   <td>useDashboardData() node in dashboard/model/useDashboardData.ts.</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td><code>Dashboard.tsx</code><br><small style="color:var(--muted)">src/pages/Dashboard.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>Dashboard.test.tsx</code><br><small style="color:var(--muted)">src/__tests__/Dashboard.test.tsx</small><br><code>index.ts</code><br><small style="color:var(--muted)">entities/dashboard/index.ts</small><br><code>useDashboardData()</code><br><small style="color:var(--muted)">dashboard/model/useDashboardData.ts</small></td>
+  <td><code>Achievements()</code><br><small style="color:var(--muted)">Achievements/ui/Achievements.tsx</small><br><code>CapabilityGapMap()</code><br><small style="color:var(--muted)">CapabilityGapMap/ui/CapabilityGapMap.tsx</small><br><code>CareerPaths()</code><br><small style="color:var(--muted)">CareerPaths/ui/CareerPaths.tsx</small><br>+5 more</td>
+  <td>Module file in src/pages/Dashboard.tsx.</td>
 </tr>
 </table>
 
@@ -2201,14 +2200,14 @@ flowchart LR
 <tr><td><code>dashboard/model/types.ts</code></td><td>15 nodes</td></tr>
 <tr><td><code>src/pages/Courses.tsx</code></td><td>14 nodes</td></tr>
 <tr><td><code>course/ui/CourseCard.tsx</code></td><td>9 nodes</td></tr>
-<tr><td><code>app/router/AppRouter.tsx</code></td><td>8 nodes</td></tr>
 <tr><td><code>shared/types/auth.ts</code></td><td>7 nodes</td></tr>
 <tr><td><code>app/store/authStore.ts</code></td><td>6 nodes</td></tr>
+<tr><td><code>shared/api/authApi.ts</code></td><td>6 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x176, imports x121, re exports x103, imports x89. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x164, imports x117, re exports x90, imports x81. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -3437,64 +3436,64 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 13. Entities Layer ====== -->
-<h2 id="entities-layer">13. Entities Layer</h2>
-<p>Entities Layer groups implementation around entities, readmemd, entity, rules, mostly in src/entities/README.md. This section covers 17 nodes and 16 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<!-- ====== 13. Pages Layer ====== -->
+<h2 id="pages-layer">13. Pages Layer</h2>
+<p>Pages Layer groups implementation around readmemd, pages, page, rules, mostly in src/pages/README.md. This section covers 17 nodes and 16 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Entities Layer (17 nodes, 16 edges)
-    src_entities_readme_entities_layer_f62c28e8("Entities Layer<br/><small>src/entities/README.md</small>")
-    src_entities_readme_fsd_rules_9d9c41bd("FSD Rules<br/><small>src/entities/README.md</small>")
-    src_entities_readme_common_patterns_dbaaeacf("Common Patterns<br/><small>src/entities/README.md</small>")
-    src_entities_readme_anti_patterns_to_avoid_c32af4c6("Anti-Patterns to Avoid<br/><small>src/entities/README.md</small>")
-    src_entities_readme_best_practices_c53df3a1("Best Practices<br/><small>src/entities/README.md</small>")
-    src_entities_readme_description_665b894c("Description<br/><small>src/entities/README.md</small>")
-    src_entities_readme_entity_formatters_231d1484("Entity Formatters<br/><small>src/entities/README.md</small>")
-    src_entities_readme_entity_vs_feature_05b62e07("Entity vs Feature<br/><small>src/entities/README.md</small>")
-    src_entities_readme_entity_with_react_query_00ac486b("Entity with React Query<br/><small>src/entities/README.md</small>")
-    src_entities_readme_file_naming_conventions_1b82fced("File Naming Conventions<br/><small>src/entities/README.md</small>")
-    src_entities_readme_purpose_83207dd4("Purpose<br/><small>src/entities/README.md</small>")
-    src_entities_readme_related_documentation_119352db("Related Documentation<br/><small>src/entities/README.md</small>")
-    src_entities_readme_structure_73047f63("Structure<br/><small>src/entities/README.md</small>")
-    src_entities_readme_when_to_create_a_new_entity_a51b056d("When to Create a New Entity<br/><small>src/entities/README.md</small>")
-    src_entities_readme_allowed_80c04097("✅ Allowed<br/><small>src/entities/README.md</small>")
-    src_entities_readme_not_allowed_06f550c1("❌ Not Allowed<br/><small>src/entities/README.md</small>")
-    src_entities_readme_dependency_rules_2739cfbc("📦 Dependency Rules<br/><small>src/entities/README.md</small>")
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_anti_patterns_to_avoid_c32af4c6
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_best_practices_c53df3a1
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_common_patterns_dbaaeacf
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_description_665b894c
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_entity_vs_feature_05b62e07
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_file_naming_conventions_1b82fced
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_fsd_rules_9d9c41bd
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_purpose_83207dd4
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_related_documentation_119352db
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_structure_73047f63
-    src_entities_readme_entities_layer_f62c28e8 -->|contains| src_entities_readme_when_to_create_a_new_entity_a51b056d
-    src_entities_readme_fsd_rules_9d9c41bd -->|contains| src_entities_readme_allowed_80c04097
-    src_entities_readme_fsd_rules_9d9c41bd -->|contains| src_entities_readme_dependency_rules_2739cfbc
-    src_entities_readme_fsd_rules_9d9c41bd -->|contains| src_entities_readme_not_allowed_06f550c1
-    src_entities_readme_common_patterns_dbaaeacf -->|contains| src_entities_readme_entity_formatters_231d1484
-    src_entities_readme_common_patterns_dbaaeacf -->|contains| src_entities_readme_entity_with_react_query_00ac486b
-    class src_entities_readme_entities_layer_f62c28e8 concept;
-    class src_entities_readme_fsd_rules_9d9c41bd concept;
-    class src_entities_readme_common_patterns_dbaaeacf concept;
-    class src_entities_readme_anti_patterns_to_avoid_c32af4c6 concept;
-    class src_entities_readme_best_practices_c53df3a1 concept;
-    class src_entities_readme_description_665b894c concept;
-    class src_entities_readme_entity_formatters_231d1484 concept;
-    class src_entities_readme_entity_vs_feature_05b62e07 concept;
-    class src_entities_readme_entity_with_react_query_00ac486b concept;
-    class src_entities_readme_file_naming_conventions_1b82fced concept;
-    class src_entities_readme_purpose_83207dd4 concept;
-    class src_entities_readme_related_documentation_119352db concept;
-    class src_entities_readme_structure_73047f63 concept;
-    class src_entities_readme_when_to_create_a_new_entity_a51b056d concept;
-    class src_entities_readme_allowed_80c04097 concept;
-    class src_entities_readme_not_allowed_06f550c1 concept;
-    class src_entities_readme_dependency_rules_2739cfbc concept;
+    %% Section: Pages Layer (17 nodes, 16 edges)
+    src_pages_readme_pages_layer_199ca770("Pages Layer<br/><small>src/pages/README.md</small>")
+    src_pages_readme_common_patterns_352911a7("Common Patterns<br/><small>src/pages/README.md</small>")
+    src_pages_readme_fsd_rules_2abc45d2("FSD Rules<br/><small>src/pages/README.md</small>")
+    src_pages_readme_28552850("README.md")
+    src_pages_readme_anti_patterns_to_avoid_4d7a914f("Anti-Patterns to Avoid<br/><small>src/pages/README.md</small>")
+    src_pages_readme_best_practices_eb0a41f0("Best Practices<br/><small>src/pages/README.md</small>")
+    src_pages_readme_description_bfbb8c83("Description<br/><small>src/pages/README.md</small>")
+    src_pages_readme_file_naming_conventions_5254c087("File Naming Conventions<br/><small>src/pages/README.md</small>")
+    src_pages_readme_page_with_seo_3e92e65f("Page with SEO<br/><small>src/pages/README.md</small>")
+    src_pages_readme_page_with_tabs_1567586b("Page with Tabs<br/><small>src/pages/README.md</small>")
+    src_pages_readme_protected_page_0a3c4504("Protected Page<br/><small>src/pages/README.md</small>")
+    src_pages_readme_purpose_4a694c36("Purpose<br/><small>src/pages/README.md</small>")
+    src_pages_readme_related_documentation_0f03e91f("Related Documentation<br/><small>src/pages/README.md</small>")
+    src_pages_readme_structure_8cbf53c0("Structure<br/><small>src/pages/README.md</small>")
+    src_pages_readme_allowed_ab23df74("✅ Allowed<br/><small>src/pages/README.md</small>")
+    src_pages_readme_not_allowed_aedf645e("❌ Not Allowed<br/><small>src/pages/README.md</small>")
+    src_pages_readme_dependency_rules_a0594f29("📦 Dependency Rules<br/><small>src/pages/README.md</small>")
+    src_pages_readme_28552850 -->|contains| src_pages_readme_pages_layer_199ca770
+    src_pages_readme_pages_layer_199ca770 -->|contains| src_pages_readme_anti_patterns_to_avoid_4d7a914f
+    src_pages_readme_pages_layer_199ca770 -->|contains| src_pages_readme_best_practices_eb0a41f0
+    src_pages_readme_pages_layer_199ca770 -->|contains| src_pages_readme_common_patterns_352911a7
+    src_pages_readme_pages_layer_199ca770 -->|contains| src_pages_readme_description_bfbb8c83
+    src_pages_readme_pages_layer_199ca770 -->|contains| src_pages_readme_file_naming_conventions_5254c087
+    src_pages_readme_pages_layer_199ca770 -->|contains| src_pages_readme_fsd_rules_2abc45d2
+    src_pages_readme_pages_layer_199ca770 -->|contains| src_pages_readme_purpose_4a694c36
+    src_pages_readme_pages_layer_199ca770 -->|contains| src_pages_readme_related_documentation_0f03e91f
+    src_pages_readme_pages_layer_199ca770 -->|contains| src_pages_readme_structure_8cbf53c0
+    src_pages_readme_fsd_rules_2abc45d2 -->|contains| src_pages_readme_allowed_ab23df74
+    src_pages_readme_fsd_rules_2abc45d2 -->|contains| src_pages_readme_dependency_rules_a0594f29
+    src_pages_readme_fsd_rules_2abc45d2 -->|contains| src_pages_readme_not_allowed_aedf645e
+    src_pages_readme_common_patterns_352911a7 -->|contains| src_pages_readme_page_with_seo_3e92e65f
+    src_pages_readme_common_patterns_352911a7 -->|contains| src_pages_readme_page_with_tabs_1567586b
+    src_pages_readme_common_patterns_352911a7 -->|contains| src_pages_readme_protected_page_0a3c4504
+    class src_pages_readme_pages_layer_199ca770 concept;
+    class src_pages_readme_common_patterns_352911a7 concept;
+    class src_pages_readme_fsd_rules_2abc45d2 concept;
+    class src_pages_readme_28552850 concept;
+    class src_pages_readme_anti_patterns_to_avoid_4d7a914f concept;
+    class src_pages_readme_best_practices_eb0a41f0 concept;
+    class src_pages_readme_description_bfbb8c83 concept;
+    class src_pages_readme_file_naming_conventions_5254c087 concept;
+    class src_pages_readme_page_with_seo_3e92e65f concept;
+    class src_pages_readme_page_with_tabs_1567586b concept;
+    class src_pages_readme_protected_page_0a3c4504 concept;
+    class src_pages_readme_purpose_4a694c36 concept;
+    class src_pages_readme_related_documentation_0f03e91f concept;
+    class src_pages_readme_structure_8cbf53c0 concept;
+    class src_pages_readme_allowed_ab23df74 concept;
+    class src_pages_readme_not_allowed_aedf645e concept;
+    class src_pages_readme_dependency_rules_a0594f29 concept;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -3518,127 +3517,127 @@ flowchart LR
 </tr>
 <tr>
   <td>1</td>
-  <td><code>Entities Layer</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td><code>README.md</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>Documentation node describing Entities Layer.</td>
+  <td>Documentation node describing README.md.</td>
 </tr>
 <tr>
   <td>2</td>
-  <td><code>Description</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td><code>Pages Layer</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Pages Layer.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>Description</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing Description.</td>
 </tr>
 <tr>
-  <td>3</td>
-  <td><code>Purpose</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td>4</td>
+  <td><code>Purpose</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing Purpose.</td>
 </tr>
 <tr>
-  <td>4</td>
-  <td><code>FSD Rules</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td>5</td>
+  <td><code>FSD Rules</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing FSD Rules.</td>
 </tr>
 <tr>
-  <td>5</td>
-  <td><code>✅ Allowed</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td>6</td>
+  <td><code>✅ Allowed</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing ✅ Allowed.</td>
 </tr>
 <tr>
-  <td>6</td>
-  <td><code>❌ Not Allowed</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td>7</td>
+  <td><code>❌ Not Allowed</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing ❌ Not Allowed.</td>
 </tr>
 <tr>
-  <td>7</td>
-  <td><code>📦 Dependency Rules</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td>8</td>
+  <td><code>📦 Dependency Rules</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing 📦 Dependency Rules.</td>
 </tr>
 <tr>
-  <td>8</td>
-  <td><code>Structure</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td>9</td>
+  <td><code>Structure</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing Structure.</td>
 </tr>
 <tr>
-  <td>9</td>
-  <td><code>Best Practices</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td>10</td>
+  <td><code>Best Practices</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing Best Practices.</td>
 </tr>
 <tr>
-  <td>10</td>
-  <td><code>Common Patterns</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td>11</td>
+  <td><code>Common Patterns</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing Common Patterns.</td>
 </tr>
 <tr>
-  <td>11</td>
-  <td><code>Entity with React Query</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing Entity with React Query.</td>
-</tr>
-<tr>
   <td>12</td>
-  <td><code>Entity Formatters</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td><code>Page with Tabs</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>Documentation node describing Entity Formatters.</td>
+  <td>Documentation node describing Page with Tabs.</td>
 </tr>
 <tr>
   <td>13</td>
-  <td><code>Anti-Patterns to Avoid</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td><code>Protected Page</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Protected Page.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>Page with SEO</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Page with SEO.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>Anti-Patterns to Avoid</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>Documentation node describing Anti-Patterns to Avoid.</td>
 </tr>
 <tr>
-  <td>14</td>
-  <td><code>Entity vs Feature</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing Entity vs Feature.</td>
-</tr>
-<tr>
-  <td>15</td>
-  <td><code>When to Create a New Entity</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
-  <td><span class="tag tag-func">Concept</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>Documentation node describing When to Create a New Entity.</td>
-</tr>
-<tr>
   <td>16</td>
-  <td><code>File Naming Conventions</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td><code>File Naming Conventions</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
@@ -3646,7 +3645,7 @@ flowchart LR
 </tr>
 <tr>
   <td>17</td>
-  <td><code>Related Documentation</code><br><small style="color:var(--muted)">src/entities/README.md</small></td>
+  <td><code>Related Documentation</code><br><small style="color:var(--muted)">src/pages/README.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
@@ -3659,7 +3658,7 @@ flowchart LR
     <h4>Key Files</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>src/entities/README.md</code></td><td>17 nodes</td></tr>
+      <tr><td><code>src/pages/README.md</code></td><td>17 nodes</td></tr>
     </table>
   </div>
   <div class="card">
@@ -4124,12 +4123,12 @@ flowchart LR
 
 <!-- ====== 16. Other ====== -->
 <h2 id="other">16. Other</h2>
-<p>Other groups implementation around lte, week, mvp, trd, mostly in LTE_3_Week_MVP_TRD_v.1.md, docs/architecture/ARCHITECTURE.md, docs/getting-started/README.md. This section covers 332 nodes and 312 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Other groups implementation around lte, week, mvp, trd, mostly in LTE_3_Week_MVP_TRD_v.1.md, docs/architecture/ARCHITECTURE.md, docs/getting-started/README.md. This section covers 337 nodes and 316 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Other (332 nodes, 312 edges)
+    %% Section: Other (337 nodes, 316 edges)
     subgraph other_functions_lib_logger_ts_1ee9f3a9["functions/lib/logger.ts"]
         functions_lib_logger_functionlogger_7da10c65("FunctionLogger<br/><small>functions/lib/logger.ts</small>")
         functions_lib_logger_functionlogger_formatmessag_3d8840f4("formatMessage()<br/><small>functions/lib/logger.ts</small>")
@@ -4175,7 +4174,7 @@ flowchart LR
     scripts_detect_console_usage_checkdirectory_b32601b4 -->|calls| scripts_detect_console_usage_main_1e233e97
     scripts_validate_file_lengths_validatedirectory_dcf148e3 -->|calls| scripts_validate_file_lengths_main_9a38227f
     scripts_validate_file_types_validatedirectory_e739b690 -->|calls| scripts_validate_file_types_main_63aa4a86
-    %% Omitted for readability: 314 nodes, 0 edges
+    %% Omitted for readability: 319 nodes, 0 edges
     class functions_lib_logger_functionlogger_7da10c65 klass;
     class functions_lib_logger_functionlogger_formatmessag_3d8840f4 function;
     class functions_lib_logger_functionlogger_constructor_3a7d8c8f function;
@@ -4465,8 +4464,8 @@ flowchart LR
       <tr><td><code>LTE_3_Week_MVP_TRD_v.1.md</code></td><td>123 nodes</td></tr>
 <tr><td><code>docs/architecture/ARCHITECTURE.md</code></td><td>22 nodes</td></tr>
 <tr><td><code>docs/getting-started/README.md</code></td><td>19 nodes</td></tr>
+<tr><td><code>src/entities/README.md</code></td><td>18 nodes</td></tr>
 <tr><td><code>src/features/README.md</code></td><td>17 nodes</td></tr>
-<tr><td><code>src/pages/README.md</code></td><td>17 nodes</td></tr>
 <tr><td><code>src/widgets/README.md</code></td><td>17 nodes</td></tr>
 <tr><td><code>LTE_3_Week_MVP_PRD_Removed_Content.md</code></td><td>14 nodes</td></tr>
 <tr><td><code>docs/authentication/Standalone_Cookie_Architecture.md</code></td><td>12 nodes</td></tr>
@@ -4474,7 +4473,7 @@ flowchart LR
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x280, references x15, method x10, calls x7. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x285, references x14, method x10, calls x7. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -4485,17 +4484,17 @@ flowchart LR
   <div class="card">
     <h4>Graph</h4>
     <table style="width:100%;font-size:0.85rem;">
-      <tr><td>Nodes</td><td>1317</td></tr>
-      <tr><td>Edges</td><td>1670</td></tr>
+      <tr><td>Nodes</td><td>1321</td></tr>
+      <tr><td>Edges</td><td>1678</td></tr>
       <tr><td>Hyperedges</td><td>0</td></tr>
-      <tr><td>Communities</td><td>108</td></tr>
+      <tr><td>Communities</td><td>112</td></tr>
       <tr><td>Documented Sections</td><td>15</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Edge Confidence</h4>
     <table style="width:100%;font-size:0.85rem;">
-      <tr><td>EXTRACTED</td><td>1668</td></tr>
+      <tr><td>EXTRACTED</td><td>1676</td></tr>
       <tr><td>INFERRED</td><td>2</td></tr>
       <tr><td>AMBIGUOUS</td><td>0</td></tr>
     </table>
@@ -4504,7 +4503,7 @@ flowchart LR
 
 <div style="text-align:center; padding:40px 0; color: var(--muted); font-size:0.9rem;">
   <p>lte — Architecture Documentation</p>
-  <p>Generated: 2026-07-28 06:26 UTC · graphify callflow-html</p>
+  <p>Generated: 2026-07-28 07:26 UTC · graphify callflow-html</p>
 </div>
 
 </div><!-- .container -->

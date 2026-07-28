@@ -92,31 +92,22 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
         <div className="hidden lg:block w-px h-16 bg-line-default self-center mx-2" />
 
         {/* 2. Middle Section: Domain, Industry, Level — labels + pills left-aligned on shared columns */}
+        {/* 2. Middle Section: Domain, Industry, Level — labels + pills left-aligned on shared columns */}
         <div className="flex flex-col justify-center space-y-2.5">
-          <div className="flex items-center gap-6">
-            <span className="text-xs text-content-secondary font-semibold w-16 shrink-0">
-              Domain
-            </span>
-            <span className="px-4 py-1.5 bg-surface-secondary text-content-primary text-xs font-extrabold rounded-xl shadow-2xs">
-              {data.domain}
-            </span>
-          </div>
-          <div className="flex items-center gap-6">
-            <span className="text-xs text-content-secondary font-semibold w-16 shrink-0">
-              Industry
-            </span>
-            <span className="px-4 py-1.5 bg-surface-secondary text-content-primary text-xs font-extrabold rounded-xl shadow-2xs">
-              {data.industry}
-            </span>
-          </div>
-          <div className="flex items-center gap-6">
-            <span className="text-xs text-content-secondary font-semibold w-16 shrink-0">
-              Level
-            </span>
-            <span className="px-4 py-1.5 bg-surface-secondary text-content-primary text-xs font-extrabold rounded-xl shadow-2xs">
-              {data.level}
-            </span>
-          </div>
+          {[
+            { label: "Domain", value: data.domain },
+            { label: "Industry", value: data.industry },
+            { label: "Level", value: data.level },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-6">
+              <span className="text-xs text-content-secondary font-semibold w-16 shrink-0">
+                {item.label}
+              </span>
+              <span className="px-4 py-1.5 bg-surface-secondary text-content-primary text-xs font-extrabold rounded-xl shadow-2xs">
+                {item.value}
+              </span>
+            </div>
+          ))}
         </div>
 
         {/* Vertical Divider 2 */}

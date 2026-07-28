@@ -7,19 +7,11 @@ export interface CapabilityGapMapProps {
 }
 
 export const CapabilityGapMap: React.FC<CapabilityGapMapProps> = ({ data }) => {
-  const getLevelBadge = (level: GapLevel) => {
-    switch (level) {
-      case "Developing":
-        return "bg-level-developing-bg text-level-developing-text";
-      case "Working Knowledge":
-        return "bg-level-working-bg text-level-working-text";
-      case "Foundation":
-        return "bg-level-foundation-bg text-level-foundation-text";
-      case "Proficient":
-        return "bg-level-proficient-bg text-level-proficient-text";
-      default:
-        return "bg-surface-muted text-content-body";
-    }
+  const LEVEL_BADGES: Record<GapLevel, string> = {
+    Developing: "bg-level-developing-bg text-level-developing-text",
+    "Working Knowledge": "bg-level-working-bg text-level-working-text",
+    Foundation: "bg-level-foundation-bg text-level-foundation-text",
+    Proficient: "bg-level-proficient-bg text-level-proficient-text",
   };
 
   return (
@@ -53,18 +45,14 @@ export const CapabilityGapMap: React.FC<CapabilityGapMapProps> = ({ data }) => {
             <span className="text-sm font-bold text-content-primary">{item.capability}</span>
             <div className="text-center">
               <span
-                className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getLevelBadge(
-                  item.currentLevel,
-                )}`}
+                className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${LEVEL_BADGES[item.currentLevel]}`}
               >
                 {item.currentLevel}
               </span>
             </div>
             <div className="text-center">
               <span
-                className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getLevelBadge(
-                  item.targetLevel,
-                )}`}
+                className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${LEVEL_BADGES[item.targetLevel]}`}
               >
                 {item.targetLevel}
               </span>
