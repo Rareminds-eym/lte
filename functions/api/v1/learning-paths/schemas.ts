@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const DEFAULT_DURATION = "6 months";
+
 export const InitializeLearningPathSchema = z.object({
   fit: z.enum(["High", "Medium", "Explore"], {
     message: "fit must be one of 'High', 'Medium', 'Explore'",
@@ -7,10 +9,14 @@ export const InitializeLearningPathSchema = z.object({
   track: z.string().trim().min(1, "track is required"),
   matchScore: z
     .union([z.number(), z.string()])
-    .transform((val) => {
+    .transform((val, ctx) => {
       const num = Number(val);
       if (Number.isNaN(num)) {
-        throw new Error("matchScore must be a number or numeric string");
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "matchScore must be a number or numeric string",
+        });
+        return 0;
       }
       return num;
     })
@@ -26,7 +32,7 @@ export const InitializeLearningPathSchema = z.object({
     .string()
     .trim()
     .optional()
-    .transform((val) => val ?? "6 months"),
+    .transform((val) => val ?? DEFAULT_DURATION),
 });
 
 export type InitializeLearningPathRequest = z.infer<typeof InitializeLearningPathSchema>;

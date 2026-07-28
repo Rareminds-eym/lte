@@ -5,9 +5,10 @@ import { LearningPathInitializer } from "@/features/initialize-learning-path";
 export const CourseDetailPage: React.FC = () => {
   const { capabilityCode } = useParams<{ capabilityCode: string }>();
   const location = useLocation();
-
   // Read error from router state passed on redirect
-  const initError = location.state?.initializationError as string | undefined;
+  const state = location.state as Record<string, unknown> | null;
+  const initError =
+    typeof state?.["initializationError"] === "string" ? state["initializationError"] : undefined;
 
   if (!capabilityCode) {
     return (

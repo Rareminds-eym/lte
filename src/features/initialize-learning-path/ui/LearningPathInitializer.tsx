@@ -14,6 +14,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
   const searchParamsString = searchParams.toString();
   const navigate = useNavigate();
   const initializationStartedRef = useRef(false);
+  const lastParamsRef = useRef<string | null>(null);
 
   const { accessToken, loading: authLoading, initialized: authInitialized } = useAuthStore();
 
@@ -52,6 +53,11 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
   }, [capabilityCode, navigate]);
 
   useEffect(() => {
+    if (searchParamsString !== lastParamsRef.current) {
+      initializationStartedRef.current = false;
+      lastParamsRef.current = searchParamsString;
+    }
+
     if (
       parsedParams === null ||
       authLoading ||
@@ -67,10 +73,9 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     if (!parsedParams.success) {
       // If validation fails, clean URL and pass validation error
       const firstIssue = parsedParams.error.issues[0];
-      const errorMessage =
-        firstIssue && firstIssue.path
-          ? `${firstIssue.path.join(".")}: ${firstIssue.message}`
-          : "Invalid initialization parameters.";
+      const errorMessage = firstIssue?.path
+        ? `${firstIssue.path.join(".")}: ${firstIssue.message}`
+        : "Invalid initialization parameters.";
 
       navigate(`/my-courses/${encodeURIComponent(capabilityCode)}`, {
         replace: true,
@@ -100,10 +105,6 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
         },
       },
     );
-
-    return () => {
-      initializationStartedRef.current = false;
-    };
   }, [
     parsedParams,
     authLoading,
@@ -113,6 +114,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     capabilityCode,
     navigate,
     cleanUrl,
+    searchParamsString,
   ]);
 
   if (isPending) {
