@@ -1,6 +1,8 @@
 // Shared utility functions and helpers
 import { twMerge } from "tailwind-merge";
 
+export * from "./queryClient";
+
 export const cn = (...classes: (string | undefined | null | false)[]): string => {
   return twMerge(classes.filter(Boolean).join(" "));
 };

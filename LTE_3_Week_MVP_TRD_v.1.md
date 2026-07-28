@@ -1208,7 +1208,7 @@ Engagement and participation XP (`xp_category = 'engagement'`) motivate the lear
 | 30-day consistency | +30 | engagement | ❌ No | `consistency30:{userId}:{monthIdentifier}` |
 | 25% Readiness milestone | +10 | engagement | ❌ No | `milestone25:{userId}:{roleId}` |
 | 50% Readiness milestone | +20 | engagement | ❌ No | `milestone50:{userId}:{roleId}` |
-| 75% Readiness milestone | +75 | engagement | ❌ No | `milestone75:{userId}:{roleId}` |
+| 75% Readiness milestone | +30 | engagement | ❌ No | `milestone75:{userId}:{roleId}` |
 | 100% Readiness milestone | +100 | engagement | ❌ No | `milestone100:{userId}:{roleId}` |
 | Legacy consistency bonus | +20 | engagement | ❌ No | `legacy_bonus:{userId}` |
 | Promotional XP | Configured | engagement | ❌ No | `promo:{userId}:{promoCode}` |
@@ -1312,15 +1312,23 @@ function getReadinessBand(score: number): string {
 | XP Achievement (10%) | `MIN(evidence_xp_earned / expected_evidence_xp * 100, 100)` | 0 if no expected XP configured (+ warning) |
 | Profile Completion (10%) | `completed_required_fields / total_required_fields * 100` | Use actual percentage |
 
-### 11.3 Recalculation Triggers
+### 11.3 Readiness Recalculation Triggers & Event Matrix
 
-Readiness is recalculated (new snapshot created) on:
-- Artifact accepted
-- Module mastered
-- Course completed
-- Manual review resolved
-- Profile updated (required fields)
-- Explicit recalculation request
+A new point-in-time readiness snapshot (`readiness_snapshots`) is generated deterministically whenever any of the following 8 events occur:
+
+| Recalculation Trigger Event | Event Source / API | Database Mutation | Affected Formula Component(s) |
+|---|---|---|---|
+| **1. Module Mastery** | 6E Pipeline / Review Engine | `user_module_status.status` $\rightarrow$ `mastered` | Course Completion (30%), Artifact Completion (25%) |
+| **2. Artifact Acceptance** | embedding-worker AI Review | `artifact_submissions.status` $\rightarrow$ `accepted` | Artifact Completion (25%), AI Average Score (25%), Evidence XP (10%) |
+| **3. Accepted Resubmission** | AI Review / Manual Review | `artifact_submissions.status` $\rightarrow$ `accepted` (Attempt 2/3) | Artifact Completion (25%), AI Average Score (25%), Evidence XP (10%) |
+| **4. Any XP Award (Evidence)** | XP Engine | INSERT INTO `xp_events` (`xp_category = 'evidence'`) | XP Achievement (10%) |
+| **5. Profile Update (Required Fields)** | User Profile API | `users.profile_metadata` / Profile completion update | Profile Completion (10%) |
+| **6. Authorised Manual Evaluation** | `POST /api/v1/admin/reviews/manual` | INSERT INTO `manual_reviews`, `artifact_submissions.status` update | AI Average Score (25%), Artifact Completion (25%), Evidence XP (10%) |
+| **7. Authorised Admin Correction** | Admin Role/Score Overrides | UPDATE `user_role_assignments`, `user_module_status`, `ai_reviews` | All Affected Formula Components |
+| **8. Explicit Recalculation Request** | `POST /api/v1/readiness/calculate` | Forced execution of `calculateReadiness()` | Re-evaluates all 5 components against current state |
+
+> [!NOTE]
+> All readiness recalculations generate an immutable row in `readiness_snapshots` with `calculation_version = 'v1.0'`. Engagement XP grants (`xp_category = 'engagement'`) do NOT trigger readiness recalculations as they are excluded from the readiness formula boundary.
 
 ### 11.4 Readiness Display Specification (PRD §12.4)
 

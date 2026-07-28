@@ -1,29 +1,81 @@
 import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/app/store";
 import { IconButton } from "@/shared/ui";
 import { UserProfileBadge } from "./components/UserProfileBadge";
+import { UserProfileDropdown } from "./components/UserProfileDropdown";
 
 export interface HeaderProps {
   userName?: string;
   userStatus?: string;
+  userEmail?: string;
   notificationCount?: number;
   onSearch?: (query: string) => void;
+  onProfileClick?: () => void;
+  onLogoutClick?: () => void;
   className?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   userName,
   userStatus,
+  userEmail,
   notificationCount,
   onSearch,
+  onProfileClick,
+  onLogoutClick,
   className = "",
 }) => {
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onSearch) {
-      onSearch(e.target.value);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const storeUserEmail = useAuthStore((state) => state.user?.email);
+  const storeLogout = useAuthStore((state) => state.logout);
+
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDropdownOpen]);
+
+  const displayName = userName?.trim() || "Learner";
+  const displayEmail = userEmail || storeUserEmail || "alex.johnson@example.com";
+
+  const handleProfile = () => {
+    if (onProfileClick) {
+      onProfileClick();
+    } else {
+      navigate("/dashboard");
     }
   };
 
-  const displayName = userName?.trim() || "Learner";
+  const handleLogout = async () => {
+    if (onLogoutClick) {
+      onLogoutClick();
+    } else {
+      await storeLogout();
+      navigate("/login");
+    }
+  };
 
   return (
     <header
@@ -50,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
           <input
             type="text"
             placeholder="Search courses, skills, topics..."
-            onChange={handleSearchChange}
+            onChange={(e) => onSearch?.(e.target.value)}
             className="w-full bg-transparent text-content-primary placeholder:text-content-secondary font-medium text-sm outline-none border-none"
           />
         </div>
@@ -81,8 +133,22 @@ export const Header: React.FC<HeaderProps> = ({
           }
         />
 
-        {/* User Profile Component */}
-        <UserProfileBadge name={displayName} status={userStatus} />
+        {/* User Profile Container with Dropdown */}
+        <div ref={containerRef} className="relative">
+          <UserProfileBadge
+            name={displayName}
+            status={userStatus}
+            isOpen={isDropdownOpen}
+            onClick={() => setIsDropdownOpen((p) => !p)}
+          />
+          <UserProfileDropdown
+            email={displayEmail}
+            isOpen={isDropdownOpen}
+            onClose={() => setIsDropdownOpen(false)}
+            onProfileClick={handleProfile}
+            onLogoutClick={handleLogout}
+          />
+        </div>
       </div>
     </header>
   );

@@ -5,7 +5,7 @@ import { DashboardLayout } from "../app/layouts/DashboardLayout";
 import { useAuthStore } from "../app/store/authStore";
 import { useUIStore } from "../shared/store/uiStore";
 
-vi.mock("@/widgets/NavigationDrawer", () => ({
+vi.mock("@/widgets/app/NavigationDrawer", () => ({
   NavigationDrawer: ({
     activeNavId,
     onNavigate,
@@ -21,7 +21,7 @@ vi.mock("@/widgets/NavigationDrawer", () => ({
   ),
 }));
 
-vi.mock("@/widgets/Header", () => ({
+vi.mock("@/widgets/app/Header", () => ({
   Header: ({ userName }: { userName?: string }) => (
     <div data-testid="header" data-user={userName} />
   ),

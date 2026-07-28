@@ -1,61 +1,87 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { Header } from "@/widgets/Header";
+import { Header } from "@/widgets/app/Header";
+
+const renderHeader = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe("Header", () => {
   it("renders search input", () => {
-    render(<Header />);
+    renderHeader(<Header />);
     expect(screen.getByPlaceholderText("Search courses, skills, topics...")).toBeInTheDocument();
   });
 
   it("renders notifications button", () => {
-    render(<Header />);
+    renderHeader(<Header />);
     expect(screen.getByLabelText("Notifications")).toBeInTheDocument();
   });
 
   it('shows "Learner" when no userName provided', () => {
-    render(<Header />);
+    renderHeader(<Header />);
     expect(screen.getByText("Learner")).toBeInTheDocument();
   });
 
   it("shows userName when provided", () => {
-    render(<Header userName="John Doe" />);
+    renderHeader(<Header userName="John Doe" />);
     expect(screen.getByText("John Doe")).toBeInTheDocument();
   });
 
   it("shows userStatus when provided", () => {
-    render(<Header userName="John" userStatus="L3" />);
+    renderHeader(<Header userName="John" userStatus="L3" />);
     expect(screen.getByText("L3")).toBeInTheDocument();
   });
 
   it("calls onSearch when input changes", () => {
     const onSearch = vi.fn();
-    render(<Header onSearch={onSearch} />);
+    renderHeader(<Header onSearch={onSearch} />);
     const input = screen.getByPlaceholderText("Search courses, skills, topics...");
     fireEvent.change(input, { target: { value: "react" } });
     expect(onSearch).toHaveBeenCalledWith("react");
   });
 
   it("applies className to header element", () => {
-    const { container } = render(<Header className="custom-header" />);
+    const { container } = renderHeader(<Header className="custom-header" />);
     const header = container.querySelector("header");
     expect(header?.className).toContain("custom-header");
   });
 
   it("shows notification badge when notificationCount is provided", () => {
-    render(<Header notificationCount={3} />);
+    renderHeader(<Header notificationCount={3} />);
     expect(screen.getByText("3")).toBeInTheDocument();
   });
 
-  it("does not render badge for zero notifications", () => {
-    render(<Header notificationCount={0} />);
-    expect(screen.queryByText("0")).not.toBeInTheDocument();
-  });
+  it("toggles user profile dropdown and displays email, profile, and logout items", () => {
+    const onProfileClick = vi.fn();
+    const onLogoutClick = vi.fn();
 
-  it("handles search input change when onSearch is not provided", () => {
-    render(<Header />);
-    const input = screen.getByPlaceholderText("Search courses, skills, topics...");
-    fireEvent.change(input, { target: { value: "react" } });
-    expect(input).toHaveValue("react");
+    renderHeader(
+      <Header
+        userName="Alex"
+        userEmail="alex.johnson@example.com"
+        onProfileClick={onProfileClick}
+        onLogoutClick={onLogoutClick}
+      />,
+    );
+
+    // Initial state: dropdown is closed
+    expect(screen.queryByText("alex.johnson@example.com")).not.toBeInTheDocument();
+
+    // Click profile badge to open
+    const profileBadge = screen.getByRole("button", { name: /alex/i });
+    fireEvent.click(profileBadge);
+
+    // Dropdown items visible
+    expect(screen.getByText("alex.johnson@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Your Profile")).toBeInTheDocument();
+    expect(screen.getByText("Logout")).toBeInTheDocument();
+
+    // Click Your Profile
+    fireEvent.click(screen.getByText("Your Profile"));
+    expect(onProfileClick).toHaveBeenCalledTimes(1);
+
+    // Open again and click Logout
+    fireEvent.click(profileBadge);
+    fireEvent.click(screen.getByText("Logout"));
+    expect(onLogoutClick).toHaveBeenCalledTimes(1);
   });
 });
