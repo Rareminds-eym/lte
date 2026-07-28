@@ -7,14 +7,14 @@ import { GuestGuard } from "@/app/router/guards";
 import { PageLoader } from "@/shared/ui";
 
 // Lazy loaded page components
-const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
-const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
-const Dashboard = lazy(() => import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })));
-const Courses = lazy(() => import("@/pages/Courses").then((m) => ({ default: m.Courses })));
+const HomePage = lazy(() => import("@/pages/home").then((m) => ({ default: m.HomePage })));
+const LoginPage = lazy(() => import("@/pages/login").then((m) => ({ default: m.LoginPage })));
+const Dashboard = lazy(() => import("@/pages/dashboard").then((m) => ({ default: m.Dashboard })));
+const Courses = lazy(() => import("@/pages/courses").then((m) => ({ default: m.Courses })));
 const CourseDetail = lazy(() =>
   import("@/pages/course-detail").then((m) => ({ default: m.CourseDetail })),
 );
-const NotFound = lazy(() => import("@/pages/NotFound").then((m) => ({ default: m.NotFound })));
+const NotFound = lazy(() => import("@/pages/not-found").then((m) => ({ default: m.NotFound })));
 
 export const AppRouter: React.FC = () => {
   return (

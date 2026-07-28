@@ -3,9 +3,14 @@ import { type Course, CourseCard } from "@/entities/course";
 import { cn } from "@/shared/lib";
 import { Button } from "@/shared/ui";
 import { Pagination } from "@/widgets";
+import {
+  COURSE_PAGE_SIZE,
+  filterCoursesByRole,
+  getSafeCoursePage,
+  paginateCourses,
+} from "../model/courseFilters";
 
 // ponytail: mock data, replace with TanStack Query + entities/course/api/ when backend exists
-const PAGE_SIZE = 6;
 const MOCK_COURSES: Course[] = [
   {
     id: "1",
@@ -177,22 +182,22 @@ const ROLE_TABS = [
   { id: "frontend" as const, label: "Frontend Engineer" },
 ] as const;
 
-export const Courses = () => {
+export const CoursesPage = () => {
   const [activeRole, setActiveRole] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const filteredCourses = useMemo(
-    () => (activeRole ? MOCK_COURSES.filter((c) => c.role === activeRole) : MOCK_COURSES),
+    () => filterCoursesByRole(MOCK_COURSES, activeRole),
     [activeRole],
   );
 
-  const totalPages = Math.ceil(filteredCourses.length / PAGE_SIZE);
+  const totalPages = Math.ceil(filteredCourses.length / COURSE_PAGE_SIZE);
 
-  const safePage = Math.min(currentPage, Math.max(1, totalPages));
+  const safePage = getSafeCoursePage(currentPage, totalPages);
 
   const paginatedCourses = useMemo(
-    () => filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    () => paginateCourses(filteredCourses, safePage),
     [filteredCourses, safePage],
   );
 
