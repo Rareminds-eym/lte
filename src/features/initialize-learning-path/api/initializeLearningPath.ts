@@ -49,5 +49,6 @@ export const initializeLearningPath = async ({
     );
   }
 
-  return response.json() as Promise<InitializeLearningPathResponse>;
+  const data = await response.json();
+  return data as InitializeLearningPathResponse;
 };

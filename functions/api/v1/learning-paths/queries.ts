@@ -19,6 +19,7 @@ export async function upsertLearningTrack(
     track: string;
     matchScore: number;
     whyItFits: string;
+    duration?: string;
   },
 ): Promise<string> {
   // Query first because there is no unique constraint/index on (user_id, assessment_id, track)
@@ -61,7 +62,7 @@ export async function upsertLearningTrack(
         track: params.track,
         match_score: params.matchScore,
         why_it_fits: params.whyItFits,
-        duration: "6 months",
+        duration: params.duration ?? "6 months",
         topics: [],
       })
       .select("id")

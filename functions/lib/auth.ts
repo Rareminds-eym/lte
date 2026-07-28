@@ -9,21 +9,36 @@ export function extractBearerToken(request: Request): string | null {
   return token || null;
 }
 
+export class AuthError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "UNAUTHORIZED" | "FORBIDDEN",
+  ) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
 export async function requireAuth(
   request: Request,
   env: Pick<LteEnv, "SSO_SERVICE">,
 ): Promise<AuthUser> {
   const token = extractBearerToken(request);
   if (!token) {
-    throw new Error("Missing bearer token");
+    throw new AuthError("Missing bearer token", "UNAUTHORIZED");
   }
 
-  const user = await getMe(env, token);
-  if (!user.products.includes("lte")) {
-    throw new Error("LTE access is required");
+  try {
+    const user = await getMe(env, token);
+    if (!user.products.includes("lte")) {
+      throw new AuthError("LTE access is required", "FORBIDDEN");
+    }
+    return user;
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
+    const msg = err instanceof Error ? err.message : "Unauthenticated";
+    throw new AuthError(msg, "UNAUTHORIZED");
   }
-
-  return user;
 }
 
 export function toAuthApiUser(user: AuthUser) {

@@ -1,4 +1,4 @@
-import { requireAuth } from "@functions/lib/auth";
+import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonResponse, readJsonObject } from "@functions/lib/http";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
@@ -53,7 +53,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       );
     }
 
-    const { fit, track, matchScore, whyItFits, attemptId, roleId } = parsedBody.data;
+    const { fit, track, matchScore, whyItFits, attemptId, roleId, duration } = parsedBody.data;
 
     // 3. Initialize Supabase Client
     const supabase = createServiceSupabase(context.env);
@@ -84,6 +84,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       track,
       matchScore,
       whyItFits,
+      duration,
     });
 
     // Next, deactivate other active learning paths for this user (enforcing active path constraint)
@@ -105,27 +106,24 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       { status: 200 },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-
-    // Handle authentication / permission errors
-    if (
-      message.includes("bearer token") ||
-      message.includes("Unauthenticated") ||
-      message.includes("access is required")
-    ) {
+    if (error instanceof AuthError) {
+      const code = error.code;
+      const status = code === "UNAUTHORIZED" ? 401 : 403;
       return jsonResponse(
         {
           success: false,
           error: {
-            code: "UNAUTHORIZED",
-            message,
+            code,
+            message: error.message,
             details: {},
           },
           requestId,
         },
-        { status: 401 },
+        { status },
       );
     }
+
+    const message = error instanceof Error ? error.message : "Internal server error";
 
     // Fallback error for other issues
     return jsonResponse(

@@ -49,7 +49,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
 
   useEffect(() => {
     if (
-      !parsedParams ||
+      parsedParams === null ||
       authLoading ||
       !authInitialized ||
       !accessToken ||

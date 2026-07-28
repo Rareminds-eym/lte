@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, useNavigate } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "@/app/store/authStore";
 import { initializeLearningPathSchema } from "@/features/initialize-learning-path/model/initializeLearningPath.schema";
@@ -16,10 +16,11 @@ vi.mock("@/features/initialize-learning-path/model/useInitializeLearningPath", (
   useInitializeLearningPath: vi.fn(),
 }));
 
+const mockNavigate = vi.fn();
+
 // Mock react-router-dom's navigate
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
-  const mockNavigate = vi.fn();
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -109,7 +110,6 @@ describe("LearningPathInitializer Feature", () => {
     });
 
     it("redirects with validation error when query parameters are invalid", async () => {
-      const mockNavigate = useNavigate();
       renderInitializer(
         "fit=High&track=Frontend&matchScore=invalid_score&attemptId=not-uuid&roleId=not-uuid",
       );

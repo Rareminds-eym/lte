@@ -1,12 +1,16 @@
-import { requireAuth } from "@functions/lib/auth";
+import { AuthError, requireAuth } from "@functions/lib/auth";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost } from "../initialize";
 
-vi.mock("@functions/lib/auth", () => ({
-  requireAuth: vi.fn(),
-}));
+vi.mock("@functions/lib/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/auth")>();
+  return {
+    ...actual,
+    requireAuth: vi.fn(),
+  };
+});
 
 vi.mock("@functions/lib/supabase", () => ({
   createServiceSupabase: vi.fn(),
@@ -56,7 +60,9 @@ describe("POST /api/v1/learning-paths/initialize", () => {
   });
 
   it("should return 401 when requireAuth throws an authentication error", async () => {
-    vi.mocked(requireAuth).mockRejectedValueOnce(new Error("Missing bearer token"));
+    vi.mocked(requireAuth).mockRejectedValueOnce(
+      new AuthError("Missing bearer token", "UNAUTHORIZED"),
+    );
 
     const request = new Request("http://localhost/api/v1/learning-paths/initialize", {
       method: "POST",
