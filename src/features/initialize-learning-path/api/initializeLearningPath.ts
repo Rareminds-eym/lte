@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { getLogger } from "@/shared";
 import type { InitializeLearningPathPayload } from "../model/initializeLearningPath.schema";
+
+const apiLogger = getLogger("api");
 
 const initializeLearningPathResponseSchema = z.object({
   learningTrackId: z.string(),
@@ -44,7 +47,10 @@ export const initializeLearningPath = async ({
   });
 
   if (!response.ok) {
-    const errorData: ApiErrorResponse | null = await response.json().catch(() => null);
+    const errorData: ApiErrorResponse | null = await response.json().catch((err) => {
+      apiLogger.error("Failed to parse API error response as JSON", err);
+      return null;
+    });
 
     throw new InitializeLearningPathError(
       errorData?.error?.message || `Request failed with status ${response.status}.`,

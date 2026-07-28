@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { ZodIssue } from "zod";
 import { useAuthStore } from "@/app/store/authStore";
@@ -55,25 +55,27 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     });
   }, [searchParamsString]);
 
-  const cleanUrl = useCallback(() => {
-    navigate(buildCourseDetailUrl(capabilityCode), {
-      replace: true,
-    });
-  }, [capabilityCode, navigate]);
-
   useEffect(() => {
-    if (searchParamsString !== lastParamsRef.current) {
+    // Determine if search parameters changed
+    const paramsChanged = searchParamsString !== lastParamsRef.current;
+
+    // Check if we should skip initialization
+    if (parsedParams === null || authLoading || !authInitialized || !accessToken) {
+      if (paramsChanged) {
+        lastParamsRef.current = searchParamsString;
+        initializationStartedRef.current = false;
+      }
+      return;
+    }
+
+    // If params changed, reset state to allow a new initialization cycle
+    if (paramsChanged) {
       initializationStartedRef.current = false;
       lastParamsRef.current = searchParamsString;
     }
 
-    if (
-      parsedParams === null ||
-      authLoading ||
-      !authInitialized ||
-      !accessToken ||
-      initializationStartedRef.current
-    ) {
+    // Guard against duplicate mutations for the same parameters
+    if (initializationStartedRef.current) {
       return;
     }
 
@@ -100,7 +102,9 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
       },
       {
         onSuccess: () => {
-          cleanUrl();
+          navigate(buildCourseDetailUrl(capabilityCode), {
+            replace: true,
+          });
         },
         onError: (error) => {
           navigate(buildCourseDetailUrl(capabilityCode), {
@@ -120,7 +124,6 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     mutate,
     capabilityCode,
     navigate,
-    cleanUrl,
     searchParamsString,
   ]);
 

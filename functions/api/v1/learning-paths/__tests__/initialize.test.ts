@@ -32,6 +32,7 @@ function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): Mo
     update: vi.fn().mockImplementation(() => chain),
     insert: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
+    neq: vi.fn().mockImplementation(() => chain),
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
   };

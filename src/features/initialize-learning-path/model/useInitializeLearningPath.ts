@@ -17,6 +17,14 @@ export const useInitializeLearningPath = () => {
       }),
 
     retry: (failureCount, error) => {
+      // Do not retry on aborted requests
+      if (
+        (error instanceof DOMException && error.name === "AbortError") ||
+        (error instanceof Error && error.name === "AbortError")
+      ) {
+        return false;
+      }
+
       // Do not retry on client-side errors (400-499)
       if (
         error instanceof InitializeLearningPathError &&

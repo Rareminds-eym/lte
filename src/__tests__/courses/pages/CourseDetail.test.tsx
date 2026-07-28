@@ -7,7 +7,13 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useParams: () => ({ capabilityCode: "TEST-CAP-101" }),
-    useLocation: () => ({ state: null }),
+    useLocation: () => ({
+      pathname: "/my-courses/TEST-CAP-101",
+      search: "",
+      hash: "",
+      state: null,
+      key: "default",
+    }),
   };
 });
 

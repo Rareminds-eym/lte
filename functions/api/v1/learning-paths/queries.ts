@@ -42,6 +42,7 @@ export async function upsertLearningTrack(
         fit: params.fit,
         match_score: params.matchScore,
         why_it_fits: params.whyItFits,
+        duration: params.duration ?? "6 months",
       })
       .eq("id", existingTrack.id)
       .select("id")

@@ -9,17 +9,10 @@ export const InitializeLearningPathSchema = z.object({
   track: z.string().trim().min(1, "track is required"),
   matchScore: z
     .union([z.number(), z.string()])
-    .transform((val, ctx) => {
-      const num = Number(val);
-      if (Number.isNaN(num)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "matchScore must be a number or numeric string",
-        });
-        return 0;
-      }
-      return num;
+    .refine((val) => !Number.isNaN(Number(val)), {
+      message: "matchScore must be a number or numeric string",
     })
+    .transform((val) => Number(val))
     .pipe(z.number().min(0).max(100)),
   whyItFits: z
     .string()

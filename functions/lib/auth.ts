@@ -1,5 +1,5 @@
 import type { AuthUser } from "@rareminds-eym/auth-core";
-import { getMe } from "./sso-client";
+import { getMe, getSsoService } from "./sso-client";
 import type { LteEnv } from "./types";
 
 export function extractBearerToken(request: Request): string | null {
@@ -28,17 +28,31 @@ export async function requireAuth(
     throw new AuthError("Missing bearer token", "UNAUTHORIZED");
   }
 
+  // Pre-validate SSO service binding to throw configuration/binding errors early (as 500s)
+  getSsoService(env);
+
+  let user: AuthUser;
   try {
-    const user = await getMe(env, token);
-    if (!user.products.includes("lte")) {
-      throw new AuthError("LTE access is required", "FORBIDDEN");
-    }
-    return user;
+    user = await getMe(env, token);
   } catch (err) {
     if (err instanceof AuthError) throw err;
     const msg = err instanceof Error ? err.message : "Unauthenticated";
-    throw new AuthError(msg, "UNAUTHORIZED");
+    // Propagate authentic auth errors as 401; let other errors bubble up as 500
+    const isAuthFailure =
+      msg.includes("token") ||
+      msg.includes("claims") ||
+      msg.includes("status") ||
+      msg.includes("Unauthenticated");
+    if (isAuthFailure) {
+      throw new AuthError(msg, "UNAUTHORIZED");
+    }
+    throw err;
   }
+
+  if (!user.products.includes("lte")) {
+    throw new AuthError("LTE access is required", "FORBIDDEN");
+  }
+  return user;
 }
 
 export function toAuthApiUser(user: AuthUser) {
