@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import type { ZodIssue } from "zod";
 import { useAuthStore } from "@/app/store/authStore";
 import { PageLoader } from "@/shared/ui";
 import { initializeLearningPathSchema } from "../model/initializeLearningPath.schema";
@@ -7,6 +8,14 @@ import { useInitializeLearningPath } from "../model/useInitializeLearningPath";
 
 type LearningPathInitializerProps = {
   capabilityCode: string;
+};
+
+const buildCourseDetailUrl = (code: string) => `/my-courses/${encodeURIComponent(code)}`;
+
+const formatZodIssue = (issue: ZodIssue | undefined): string => {
+  if (!issue) return "Invalid initialization parameters.";
+  const pathStr = issue.path.join(".");
+  return pathStr ? `${pathStr}: ${issue.message}` : issue.message;
 };
 
 export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitializerProps) => {
@@ -47,7 +56,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
   }, [searchParamsString]);
 
   const cleanUrl = useCallback(() => {
-    navigate(`/my-courses/${encodeURIComponent(capabilityCode)}`, {
+    navigate(buildCourseDetailUrl(capabilityCode), {
       replace: true,
     });
   }, [capabilityCode, navigate]);
@@ -73,11 +82,9 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     if (!parsedParams.success) {
       // If validation fails, clean URL and pass validation error
       const firstIssue = parsedParams.error.issues[0];
-      const errorMessage = firstIssue?.path
-        ? `${firstIssue.path.join(".")}: ${firstIssue.message}`
-        : "Invalid initialization parameters.";
+      const errorMessage = formatZodIssue(firstIssue);
 
-      navigate(`/my-courses/${encodeURIComponent(capabilityCode)}`, {
+      navigate(buildCourseDetailUrl(capabilityCode), {
         replace: true,
         state: {
           initializationError: errorMessage,
@@ -96,7 +103,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
           cleanUrl();
         },
         onError: (error) => {
-          navigate(`/my-courses/${encodeURIComponent(capabilityCode)}`, {
+          navigate(buildCourseDetailUrl(capabilityCode), {
             replace: true,
             state: {
               initializationError: error.message,

@@ -21,7 +21,8 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     let rawBody: Record<string, unknown>;
     try {
       rawBody = await readJsonObject(context.request);
-    } catch {
+    } catch (err) {
+      console.error(`[${requestId}] Failed to parse JSON request body:`, err);
       return jsonResponse(
         {
           success: false,

@@ -1,9 +1,12 @@
+import { z } from "zod";
 import type { InitializeLearningPathPayload } from "../model/initializeLearningPath.schema";
 
-type InitializeLearningPathResponse = {
-  learningTrackId: string;
-  learningPathId: string;
-};
+const initializeLearningPathResponseSchema = z.object({
+  learningTrackId: z.string(),
+  learningPathId: z.string(),
+});
+
+export type InitializeLearningPathResponse = z.infer<typeof initializeLearningPathResponseSchema>;
 
 type ApiErrorResponse = {
   error?: {
@@ -50,5 +53,10 @@ export const initializeLearningPath = async ({
   }
 
   const data = await response.json();
-  return data as InitializeLearningPathResponse;
+  const parsed = initializeLearningPathResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new InitializeLearningPathError("Invalid response format from server");
+  }
+
+  return parsed.data;
 };
