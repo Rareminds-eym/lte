@@ -5,3 +5,4 @@ export { ErrorFallback } from "./ErrorFallback";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { Image } from "./Image";
 export { PageLoader } from "./PageLoader";
+export { WidgetCard, type WidgetCardProps } from "./WidgetCard";

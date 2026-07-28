@@ -1,5 +1,6 @@
 import type React from "react";
 import type { UpcomingFeedbackData } from "@/entities/dashboard";
+import { WidgetCard } from "@/shared/ui";
 
 export interface UpcomingFeedbackProps {
   data: UpcomingFeedbackData;
@@ -7,51 +8,40 @@ export interface UpcomingFeedbackProps {
 
 export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
   return (
-    <div className="bg-surface-primary rounded-2xl border border-line-default p-6 shadow-xs flex flex-col justify-between h-full">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-line-default">
-          <div className="flex items-center gap-1.5">
-            <h2 className="text-base font-bold text-content-primary">Upcoming & Feedback</h2>
-            <button
-              type="button"
-              aria-label="Upcoming events info"
-              className="text-content-muted hover:text-content-default transition-colors cursor-pointer"
-            >
-              <svg
-                aria-hidden="true"
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <a
-            href="#calendar"
-            className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors inline-flex items-center gap-1"
-          >
-            View calendar →
-          </a>
-        </div>
-
+    <WidgetCard
+      title="Upcoming & Feedback"
+      infoTooltip="Upcoming events info"
+      icon={
+        <svg
+          aria-hidden="true"
+          className="w-5 h-5 text-content-primary shrink-0"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M11 5H6a2 2 0 00-2 2v11l4-4h10a2 2 0 002-2V7a2 2 0 00-2-2h-5m-2 4h4m-4 4h2"
+          />
+        </svg>
+      }
+      action={{
+        label: "View calendar",
+        href: "#calendar",
+      }}
+    >
+      <div className="space-y-5">
         {/* Section 1: UPCOMING */}
         <div>
-          <div className="text-[10px] font-extrabold text-content-muted uppercase tracking-wider mb-3">
+          <div className="text-xs font-extrabold text-content-muted uppercase tracking-wider mb-3">
             UPCOMING
           </div>
           <div className="space-y-4">
             {data.upcoming.map((item) => (
               <div key={item.id} className="flex items-center justify-between group cursor-pointer">
-                <div className="flex items-start gap-3 min-w-0 pr-2">
+                <div className="flex items-start gap-3.5 min-w-0 pr-2">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       item.type === "education"
@@ -68,11 +58,15 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                         stroke="currentColor"
                         strokeWidth="2"
                       >
-                        <path d="M12 14l9-5-9-5-9 5 9 5z" />
                         <path
-                          d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
                           strokeLinecap="round"
                           strokeLinejoin="round"
+                          d="M12 14l9-5-9-5-9 5 9 5z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
                         />
                       </svg>
                     ) : (
@@ -96,13 +90,13 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                     <h3 className="text-sm font-bold text-content-primary group-hover:text-brand-600 transition-colors leading-snug">
                       {item.title}
                     </h3>
-                    <p className="text-[11px] text-content-secondary font-medium truncate mt-0.5">
+                    <p className="text-xs text-content-secondary font-medium truncate mt-0.5">
                       {item.subtitle}
                     </p>
                   </div>
                 </div>
 
-                <span className="px-3 py-1 bg-surface-muted text-content-body text-[10px] font-bold rounded-full shrink-0">
+                <span className="px-3 py-1 bg-surface-secondary text-content-secondary text-xs font-semibold rounded-full shrink-0 shadow-2xs">
                   {item.tag}
                 </span>
               </div>
@@ -110,15 +104,18 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
           </div>
         </div>
 
+        {/* Section Divider Line */}
+        <div className="border-b border-line-subtle/80 pt-1" />
+
         {/* Section 2: RECENT FEEDBACK */}
         <div>
-          <div className="text-[10px] font-extrabold text-content-muted uppercase tracking-wider mb-3">
+          <div className="text-xs font-extrabold text-content-muted uppercase tracking-wider mb-3">
             RECENT FEEDBACK
           </div>
           <div className="space-y-4">
             {data.recentFeedback.map((item) => (
               <div key={item.id} className="flex items-center justify-between group cursor-pointer">
-                <div className="flex items-start gap-3 min-w-0 pr-2">
+                <div className="flex items-start gap-3.5 min-w-0 pr-2">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       item.type === "interview"
@@ -162,16 +159,16 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                     <h3 className="text-sm font-bold text-content-primary group-hover:text-brand-600 transition-colors leading-snug">
                       {item.title}
                     </h3>
-                    <p className="text-[11px] text-content-secondary font-medium truncate mt-0.5">
+                    <p className="text-xs text-content-secondary font-medium truncate mt-0.5">
                       {item.subtitle}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-[11px] text-content-secondary font-medium shrink-0 pt-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-content-secondary font-semibold shrink-0 pt-0.5">
                   <svg
                     aria-hidden="true"
-                    className="w-3.5 h-3.5 text-content-muted"
+                    className="w-3.5 h-3.5 text-content-secondary"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -190,6 +187,6 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
           </div>
         </div>
       </div>
-    </div>
+    </WidgetCard>
   );
 };

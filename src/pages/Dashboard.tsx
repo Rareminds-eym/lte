@@ -61,39 +61,39 @@ export const Dashboard: React.FC = () => {
 
       {/* Row 1: Journey Hero Banner + Today's Priorities */}
       <section
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch"
         aria-label="Journey and Priorities"
       >
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 h-full">
           <JourneyHero data={data.journey} />
         </div>
-        <div>
+        <div className="h-full">
           <TodaysPriorities data={data.priorities} />
         </div>
       </section>
 
       {/* Row 2: Capability Gap Map + Upcoming & Feedback */}
       <section
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch"
         aria-label="Capabilities and Upcoming Events"
       >
-        <div>
+        <div className="h-full">
           <CapabilityGapMap data={data.capabilityGaps} />
         </div>
-        <div>
+        <div className="h-full">
           <UpcomingFeedback data={data.upcomingFeedback} />
         </div>
       </section>
 
       {/* Row 3: Recommended Career Paths + Achievements */}
       <section
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch"
         aria-label="Career Paths and Achievements"
       >
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 h-full">
           <CareerPaths data={data.careerPaths} />
         </div>
-        <div>
+        <div className="h-full">
           <Achievements data={data.achievements} />
         </div>
       </section>

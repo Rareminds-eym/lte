@@ -10,7 +10,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
   return (
     <div className="relative bg-surface-hero text-content-inverse rounded-2xl p-6 lg:p-8 overflow-hidden shadow-lg flex flex-col justify-between min-h-[340px]">
       {/* Background Graphic: 3D Orb Mesh using shared Image component */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[340px] h-[340px] opacity-90 pointer-events-none translate-x-12">
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[340px] h-[340px] opacity-20 pointer-events-none translate-x-0">
         <Image
           src="/assets/images/mesh_orb.png"
           alt="3D Mesh Sphere Graphic"

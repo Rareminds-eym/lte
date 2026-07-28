@@ -1328,7 +1328,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "functions_shared_index",
-      "community": 29,
+      "community": 0,
       "norm_label": "index.ts"
     },
     {
@@ -1338,7 +1338,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "functions_shared_index_generateid",
-      "community": 29,
+      "community": 0,
       "norm_label": "generateid()"
     },
     {
@@ -1348,7 +1348,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "functions_shared_index_getcurrenttimestamp",
-      "community": 29,
+      "community": 0,
       "norm_label": "getcurrenttimestamp()"
     },
     {
@@ -1358,7 +1358,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "functions_shared_index_sleep",
-      "community": 29,
+      "community": 0,
       "norm_label": "sleep()"
     },
     {
@@ -1368,7 +1368,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "functions_shared_index_safejsonparse",
-      "community": 29,
+      "community": 0,
       "norm_label": "safejsonparse()"
     },
     {
@@ -2840,7 +2840,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_test",
-      "community": 104,
+      "community": 9,
       "norm_label": "app.test.tsx"
     },
     {
@@ -2850,7 +2850,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tests_appproviders_test",
-      "community": 104,
+      "community": 9,
       "norm_label": "appproviders.test.tsx"
     },
     {
@@ -3000,7 +3000,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tests_iconbutton_test",
-      "community": 90,
+      "community": 5,
       "norm_label": "iconbutton.test.tsx"
     },
     {
@@ -3010,7 +3010,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tests_image_test",
-      "community": 90,
+      "community": 81,
       "norm_label": "image.test.tsx"
     },
     {
@@ -3094,13 +3094,23 @@
       "norm_label": "userprofilebadge.test.tsx"
     },
     {
+      "label": "WidgetCard.test.tsx",
+      "file_type": "code",
+      "source_file": "src/__tests__/WidgetCard.test.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_tests_widgetcard_test",
+      "community": 51,
+      "norm_label": "widgetcard.test.tsx"
+    },
+    {
       "label": "authApi.test.ts",
       "file_type": "code",
       "source_file": "src/__tests__/authApi.test.ts",
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tests_authapi_test",
-      "community": 9,
+      "community": 29,
       "norm_label": "authapi.test.ts"
     },
     {
@@ -3110,7 +3120,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_tests_authapi_test_mockfetch",
-      "community": 9,
+      "community": 29,
       "norm_label": "mockfetch()"
     },
     {
@@ -3120,7 +3130,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tests_authstore_test",
-      "community": 9,
+      "community": 29,
       "norm_label": "authstore.test.ts"
     },
     {
@@ -3130,7 +3140,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_tests_authstore_test_mockauthuser",
-      "community": 9,
+      "community": 29,
       "norm_label": "mockauthuser"
     },
     {
@@ -3200,7 +3210,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_app",
-      "community": 104,
+      "community": 9,
       "norm_label": "app.tsx"
     },
     {
@@ -3210,7 +3220,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_app_app",
-      "community": 104,
+      "community": 9,
       "norm_label": "app()"
     },
     {
@@ -3310,7 +3320,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_providers_appproviders",
-      "community": 104,
+      "community": 9,
       "norm_label": "appproviders.tsx"
     },
     {
@@ -3320,7 +3330,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_providers_appproviders_appproviders",
-      "community": 104,
+      "community": 9,
       "norm_label": "appproviders()"
     },
     {
@@ -3330,7 +3340,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_providers_index",
-      "community": 104,
+      "community": 9,
       "norm_label": "index.ts"
     },
     {
@@ -3460,7 +3470,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_store_authstore",
-      "community": 9,
+      "community": 29,
       "norm_label": "authstore.ts"
     },
     {
@@ -3470,7 +3480,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_store_authstore_logger",
-      "community": 9,
+      "community": 29,
       "norm_label": "logger"
     },
     {
@@ -3480,7 +3490,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_store_authstore_authstate",
-      "community": 9,
+      "community": 29,
       "norm_label": "authstate"
     },
     {
@@ -3490,7 +3500,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "src_app_store_authstore_buildauthenticatedstate",
-      "community": 9,
+      "community": 29,
       "norm_label": "buildauthenticatedstate()"
     },
     {
@@ -3500,7 +3510,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_app_store_authstore_buildsignedoutstate",
-      "community": 9,
+      "community": 29,
       "norm_label": "buildsignedoutstate()"
     },
     {
@@ -3727,7 +3737,7 @@
       "label": "fetchDashboardData()",
       "file_type": "code",
       "source_file": "src/entities/dashboard/api/dashboardApi.ts",
-      "source_location": "L193",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "src_entities_dashboard_api_dashboardapi_fetchdashboarddata",
       "community": 51,
@@ -3950,7 +3960,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_main",
-      "community": 104,
+      "community": 9,
       "norm_label": "main.tsx"
     },
     {
@@ -3960,7 +3970,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_main_root",
-      "community": 104,
+      "community": 9,
       "norm_label": "root"
     },
     {
@@ -4050,7 +4060,7 @@
       "source_location": "L353",
       "_origin": "ast",
       "id": "src_pages_courses_statspill",
-      "community": 80,
+      "community": 81,
       "norm_label": "statspill()"
     },
     {
@@ -4220,7 +4230,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_api_authapi",
-      "community": 9,
+      "community": 29,
       "norm_label": "authapi.ts"
     },
     {
@@ -4230,7 +4240,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_shared_api_authapi_parsejsonresponse",
-      "community": 9,
+      "community": 29,
       "norm_label": "parsejsonresponse()"
     },
     {
@@ -4240,7 +4250,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_shared_api_authapi_exchangessocode",
-      "community": 9,
+      "community": 29,
       "norm_label": "exchangessocode()"
     },
     {
@@ -4250,7 +4260,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "src_shared_api_authapi_refreshsession",
-      "community": 9,
+      "community": 29,
       "norm_label": "refreshsession()"
     },
     {
@@ -4260,7 +4270,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "src_shared_api_authapi_fetchme",
-      "community": 9,
+      "community": 29,
       "norm_label": "fetchme()"
     },
     {
@@ -4270,7 +4280,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_shared_api_authapi_logoutsession",
-      "community": 9,
+      "community": 29,
       "norm_label": "logoutsession()"
     },
     {
@@ -4480,7 +4490,7 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "src_shared_config_logging_getlogger",
-      "community": 9,
+      "community": 10,
       "norm_label": "getlogger()"
     },
     {
@@ -4570,7 +4580,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_lib_queryclient",
-      "community": 104,
+      "community": 9,
       "norm_label": "queryclient.ts"
     },
     {
@@ -4580,7 +4590,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_shared_lib_queryclient_queryclient",
-      "community": 104,
+      "community": 9,
       "norm_label": "queryclient"
     },
     {
@@ -4680,7 +4690,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_types_auth",
-      "community": 9,
+      "community": 29,
       "norm_label": "auth.ts"
     },
     {
@@ -4690,7 +4700,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_types_auth_membershipstatus",
-      "community": 9,
+      "community": 29,
       "norm_label": "membershipstatus"
     },
     {
@@ -4700,7 +4710,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_shared_types_auth_authuser",
-      "community": 9,
+      "community": 29,
       "norm_label": "authuser"
     },
     {
@@ -4710,7 +4720,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_shared_types_auth_authsuccessresponse",
-      "community": 9,
+      "community": 29,
       "norm_label": "authsuccessresponse"
     },
     {
@@ -4720,7 +4730,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_shared_types_auth_meresponse",
-      "community": 9,
+      "community": 29,
       "norm_label": "meresponse"
     },
     {
@@ -4730,7 +4740,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_shared_types_auth_refreshresponse",
-      "community": 9,
+      "community": 29,
       "norm_label": "refreshresponse"
     },
     {
@@ -4740,7 +4750,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_shared_types_auth_logoutresponse",
-      "community": 9,
+      "community": 29,
       "norm_label": "logoutresponse"
     },
     {
@@ -4840,7 +4850,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_iconbutton",
-      "community": 90,
+      "community": 5,
       "norm_label": "iconbutton.tsx"
     },
     {
@@ -4850,7 +4860,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_shared_ui_iconbutton_iconbuttonprops",
-      "community": 90,
+      "community": 5,
       "norm_label": "iconbuttonprops"
     },
     {
@@ -4860,7 +4870,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_shared_ui_iconbutton_iconbutton",
-      "community": 90,
+      "community": 5,
       "norm_label": "iconbutton()"
     },
     {
@@ -4890,7 +4900,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_shared_ui_image_image",
-      "community": 90,
+      "community": 81,
       "norm_label": "image()"
     },
     {
@@ -4900,7 +4910,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_pageloader",
-      "community": 90,
+      "community": 5,
       "norm_label": "pageloader.tsx"
     },
     {
@@ -4910,7 +4920,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_shared_ui_pageloader_pageloaderprops",
-      "community": 90,
+      "community": 5,
       "norm_label": "pageloaderprops"
     },
     {
@@ -4920,8 +4930,38 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_shared_ui_pageloader_pageloader",
-      "community": 90,
+      "community": 5,
       "norm_label": "pageloader()"
+    },
+    {
+      "label": "WidgetCard.tsx",
+      "file_type": "code",
+      "source_file": "src/shared/ui/WidgetCard.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_shared_ui_widgetcard",
+      "community": 51,
+      "norm_label": "widgetcard.tsx"
+    },
+    {
+      "label": "WidgetCardProps",
+      "file_type": "code",
+      "source_file": "src/shared/ui/WidgetCard.tsx",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "src_shared_ui_widgetcard_widgetcardprops",
+      "community": 51,
+      "norm_label": "widgetcardprops"
+    },
+    {
+      "label": "WidgetCard()",
+      "file_type": "code",
+      "source_file": "src/shared/ui/WidgetCard.tsx",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "src_shared_ui_widgetcard_widgetcard",
+      "community": 51,
+      "norm_label": "widgetcard()"
     },
     {
       "label": "index.ts",
@@ -4930,7 +4970,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_index",
-      "community": 90,
+      "community": 5,
       "norm_label": "index.ts"
     },
     {
@@ -5027,7 +5067,7 @@
       "label": "CapabilityGapMapProps",
       "file_type": "code",
       "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "_origin": "ast",
       "id": "src_widgets_capabilitygapmap_ui_capabilitygapmap_capabilitygapmapprops",
       "community": 51,
@@ -5037,7 +5077,7 @@
       "label": "CapabilityGapMap()",
       "file_type": "code",
       "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
-      "source_location": "L8",
+      "source_location": "L9",
       "_origin": "ast",
       "id": "src_widgets_capabilitygapmap_ui_capabilitygapmap_capabilitygapmap",
       "community": 51,
@@ -5067,7 +5107,7 @@
       "label": "CareerPathsProps",
       "file_type": "code",
       "source_file": "src/widgets/CareerPaths/ui/CareerPaths.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "_origin": "ast",
       "id": "src_widgets_careerpaths_ui_careerpaths_careerpathsprops",
       "community": 51,
@@ -5240,7 +5280,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_widgets_navigationdrawer_navigationdrawer",
-      "community": 90,
+      "community": 95,
       "norm_label": "navigationdrawer.tsx"
     },
     {
@@ -5250,7 +5290,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_widgets_navigationdrawer_navigationdrawer_svgicon",
-      "community": 90,
+      "community": 95,
       "norm_label": "svgicon()"
     },
     {
@@ -5270,7 +5310,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_widgets_navigationdrawer_navigationdrawer_navitem",
-      "community": 90,
+      "community": 95,
       "norm_label": "navitem"
     },
     {
@@ -5377,7 +5417,7 @@
       "label": "TodaysPrioritiesProps",
       "file_type": "code",
       "source_file": "src/widgets/TodaysPriorities/ui/TodaysPriorities.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "_origin": "ast",
       "id": "src_widgets_todayspriorities_ui_todayspriorities_todaysprioritiesprops",
       "community": 51,
@@ -5387,7 +5427,7 @@
       "label": "TodaysPriorities()",
       "file_type": "code",
       "source_file": "src/widgets/TodaysPriorities/ui/TodaysPriorities.tsx",
-      "source_location": "L8",
+      "source_location": "L9",
       "_origin": "ast",
       "id": "src_widgets_todayspriorities_ui_todayspriorities_todayspriorities",
       "community": 51,
@@ -5417,7 +5457,7 @@
       "label": "UpcomingFeedbackProps",
       "file_type": "code",
       "source_file": "src/widgets/UpcomingFeedback/ui/UpcomingFeedback.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "_origin": "ast",
       "id": "src_widgets_upcomingfeedback_ui_upcomingfeedback_upcomingfeedbackprops",
       "community": 51,
@@ -5427,7 +5467,7 @@
       "label": "UpcomingFeedback()",
       "file_type": "code",
       "source_file": "src/widgets/UpcomingFeedback/ui/UpcomingFeedback.tsx",
-      "source_location": "L8",
+      "source_location": "L9",
       "_origin": "ast",
       "id": "src_widgets_upcomingfeedback_ui_upcomingfeedback_upcomingfeedback",
       "community": 51,
@@ -11970,7 +12010,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_readme_fsd_rules",
-      "community": 66,
+      "community": 89,
       "norm_label": "fsd rules"
     },
     {
@@ -11980,7 +12020,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_app_readme_allowed",
-      "community": 66,
+      "community": 89,
       "norm_label": "\u2705 allowed"
     },
     {
@@ -11990,7 +12030,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "src_app_readme_not_allowed",
-      "community": 66,
+      "community": 89,
       "norm_label": "\u274c not allowed"
     },
     {
@@ -12000,7 +12040,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_app_readme_dependency_rules",
-      "community": 66,
+      "community": 89,
       "norm_label": "\ud83d\udce6 dependency rules"
     },
     {
@@ -12020,7 +12060,7 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "src_app_readme_usage_examples",
-      "community": 99,
+      "community": 89,
       "norm_label": "usage examples"
     },
     {
@@ -12030,7 +12070,7 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "src_app_readme_main_app_component",
-      "community": 99,
+      "community": 89,
       "norm_label": "main app component"
     },
     {
@@ -12040,7 +12080,7 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "src_app_readme_composing_providers",
-      "community": 99,
+      "community": 89,
       "norm_label": "composing providers"
     },
     {
@@ -12050,7 +12090,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "src_app_readme_router_configuration",
-      "community": 99,
+      "community": 89,
       "norm_label": "router configuration"
     },
     {
@@ -12490,7 +12530,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_pages_readme_fsd_rules",
-      "community": 78,
+      "community": 99,
       "norm_label": "fsd rules"
     },
     {
@@ -12500,7 +12540,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_pages_readme_allowed",
-      "community": 78,
+      "community": 99,
       "norm_label": "\u2705 allowed"
     },
     {
@@ -12510,7 +12550,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "src_pages_readme_not_allowed",
-      "community": 78,
+      "community": 99,
       "norm_label": "\u274c not allowed"
     },
     {
@@ -12520,7 +12560,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_pages_readme_dependency_rules",
-      "community": 78,
+      "community": 99,
       "norm_label": "\ud83d\udce6 dependency rules"
     },
     {
@@ -12550,7 +12590,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "src_pages_readme_common_patterns",
-      "community": 78,
+      "community": 102,
       "norm_label": "common patterns"
     },
     {
@@ -12560,7 +12600,7 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "src_pages_readme_page_with_tabs",
-      "community": 78,
+      "community": 102,
       "norm_label": "page with tabs"
     },
     {
@@ -12570,7 +12610,7 @@
       "source_location": "L115",
       "_origin": "ast",
       "id": "src_pages_readme_protected_page",
-      "community": 78,
+      "community": 102,
       "norm_label": "protected page"
     },
     {
@@ -12580,7 +12620,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "src_pages_readme_page_with_seo",
-      "community": 78,
+      "community": 102,
       "norm_label": "page with seo"
     },
     {
@@ -18126,6 +18166,28 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/__tests__/WidgetCard.test.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_tests_widgetcard_test",
+      "target": "src_shared_ui_index",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/__tests__/WidgetCard.test.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_tests_widgetcard_test",
+      "target": "src_shared_ui_widgetcard_widgetcard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/__tests__/authApi.test.ts",
       "source_location": "L2",
       "weight": 1.0,
@@ -18257,7 +18319,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/__tests__/dashboardApi.test.ts",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_tests_dashboardapi_test",
       "target": "src_entities_dashboard_api_dashboardapi_fetchdashboarddata",
@@ -18268,7 +18330,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/__tests__/dashboardApi.test.ts",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_tests_dashboardapi_test",
       "target": "src_entities_dashboard_api_dashboardapi_mock_dashboard_data",
@@ -18279,7 +18341,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/__tests__/dashboardApi.test.ts",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_tests_dashboardapi_test",
       "target": "src_entities_dashboard_index",
@@ -18345,7 +18407,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/__tests__/useDashboardData.test.tsx",
-      "source_location": "L1",
+      "source_location": "L5",
       "weight": 1.0,
       "source": "src_tests_usedashboarddata_test",
       "target": "src_entities_dashboard_index",
@@ -18356,7 +18418,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/__tests__/useDashboardData.test.tsx",
-      "source_location": "L1",
+      "source_location": "L5",
       "weight": 1.0,
       "source": "src_tests_usedashboarddata_test",
       "target": "src_entities_dashboard_model_usedashboarddata_usedashboarddata",
@@ -18517,7 +18579,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/app/layouts/DashboardLayout.tsx",
-      "source_location": "L1",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_app_layouts_dashboardlayout",
       "target": "src_app_store_authstore_useauthstore",
@@ -18528,7 +18590,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/app/layouts/DashboardLayout.tsx",
-      "source_location": "L1",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_app_layouts_dashboardlayout",
       "target": "src_app_store_index",
@@ -18539,7 +18601,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/app/layouts/DashboardLayout.tsx",
-      "source_location": "L2",
+      "source_location": "L4",
       "weight": 1.0,
       "source": "src_app_layouts_dashboardlayout",
       "target": "src_shared_config_index_getskillpassporturl",
@@ -18550,7 +18612,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/app/layouts/DashboardLayout.tsx",
-      "source_location": "L2",
+      "source_location": "L4",
       "weight": 1.0,
       "source": "src_app_layouts_dashboardlayout",
       "target": "src_shared_config_logging_getlogger",
@@ -18561,7 +18623,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/app/layouts/DashboardLayout.tsx",
-      "source_location": "L2",
+      "source_location": "L4",
       "weight": 1.0,
       "source": "src_app_layouts_dashboardlayout",
       "target": "src_shared_index",
@@ -18572,7 +18634,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/app/layouts/DashboardLayout.tsx",
-      "source_location": "L2",
+      "source_location": "L4",
       "weight": 1.0,
       "source": "src_app_layouts_dashboardlayout",
       "target": "src_shared_store_uistore_useuistore",
@@ -18583,7 +18645,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/app/layouts/DashboardLayout.tsx",
-      "source_location": "L3",
+      "source_location": "L5",
       "weight": 1.0,
       "source": "src_app_layouts_dashboardlayout",
       "target": "src_widgets_header_header_header",
@@ -18594,7 +18656,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/app/layouts/DashboardLayout.tsx",
-      "source_location": "L3",
+      "source_location": "L5",
       "weight": 1.0,
       "source": "src_app_layouts_dashboardlayout",
       "target": "src_widgets_index",
@@ -18605,7 +18667,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/app/layouts/DashboardLayout.tsx",
-      "source_location": "L3",
+      "source_location": "L5",
       "weight": 1.0,
       "source": "src_app_layouts_dashboardlayout",
       "target": "src_widgets_navigationdrawer_navigationdrawer_navigationdrawer",
@@ -19685,7 +19747,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/entities/dashboard/api/dashboardApi.ts",
-      "source_location": "L193",
+      "source_location": "L192",
       "weight": 1.0,
       "source": "src_entities_dashboard_api_dashboardapi",
       "target": "src_entities_dashboard_api_dashboardapi_fetchdashboarddata",
@@ -19728,7 +19790,7 @@
       "context": "export",
       "confidence": "EXTRACTED",
       "source_file": "src/entities/dashboard/index.ts",
-      "source_location": "L3",
+      "source_location": "L1",
       "weight": 1.0,
       "source": "src_entities_dashboard_index",
       "target": "src_entities_dashboard_api_dashboardapi",
@@ -19772,7 +19834,7 @@
       "context": "export",
       "confidence": "EXTRACTED",
       "source_file": "src/entities/dashboard/index.ts",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_entities_dashboard_index",
       "target": "src_entities_dashboard_model_types",
@@ -19783,7 +19845,7 @@
       "context": "export",
       "confidence": "EXTRACTED",
       "source_file": "src/entities/dashboard/index.ts",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_entities_dashboard_index",
       "target": "src_entities_dashboard_model_usedashboarddata",
@@ -19805,7 +19867,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_entities_dashboard_index",
@@ -19816,7 +19878,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/Achievements/ui/Achievements.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_achievements_ui_achievements",
       "target": "src_entities_dashboard_index",
@@ -19827,7 +19889,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_capabilitygapmap_ui_capabilitygapmap",
       "target": "src_entities_dashboard_index",
@@ -19838,7 +19900,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CareerPaths/ui/CareerPaths.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_careerpaths_ui_careerpaths",
       "target": "src_entities_dashboard_index",
@@ -19849,7 +19911,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CareerTargetBanner/ui/CareerTargetBanner.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_careertargetbanner_ui_careertargetbanner",
       "target": "src_entities_dashboard_index",
@@ -19860,7 +19922,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/JourneyHero/ui/JourneyHero.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_journeyhero_ui_journeyhero",
       "target": "src_entities_dashboard_index",
@@ -19871,7 +19933,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/TodaysPriorities/ui/TodaysPriorities.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_todayspriorities_ui_todayspriorities",
       "target": "src_entities_dashboard_index",
@@ -19882,7 +19944,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/UpcomingFeedback/ui/UpcomingFeedback.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_upcomingfeedback_ui_upcomingfeedback",
       "target": "src_entities_dashboard_index",
@@ -20044,7 +20106,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CareerTargetBanner/ui/CareerTargetBanner.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_careertargetbanner_ui_careertargetbanner",
       "target": "src_entities_dashboard_model_types_careertargetdata",
@@ -20066,7 +20128,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/JourneyHero/ui/JourneyHero.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_journeyhero_ui_journeyhero",
       "target": "src_entities_dashboard_model_types_currentjourneydata",
@@ -20088,7 +20150,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/TodaysPriorities/ui/TodaysPriorities.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_todayspriorities_ui_todayspriorities",
       "target": "src_entities_dashboard_model_types_todaysprioritiesdata",
@@ -20099,7 +20161,7 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/TodaysPriorities/ui/TodaysPriorities.tsx",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0,
       "source": "src_widgets_todayspriorities_ui_todayspriorities_todaysprioritiesprops",
       "target": "src_entities_dashboard_model_types_todaysprioritiesdata",
@@ -20110,7 +20172,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_capabilitygapmap_ui_capabilitygapmap",
       "target": "src_entities_dashboard_model_types_gaplevel",
@@ -20121,7 +20183,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_capabilitygapmap_ui_capabilitygapmap",
       "target": "src_entities_dashboard_model_types_capabilitygapitem",
@@ -20132,7 +20194,7 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0,
       "source": "src_widgets_capabilitygapmap_ui_capabilitygapmap_capabilitygapmapprops",
       "target": "src_entities_dashboard_model_types_capabilitygapitem",
@@ -20143,7 +20205,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/UpcomingFeedback/ui/UpcomingFeedback.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_upcomingfeedback_ui_upcomingfeedback",
       "target": "src_entities_dashboard_model_types_upcomingfeedbackdata",
@@ -20154,7 +20216,7 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/UpcomingFeedback/ui/UpcomingFeedback.tsx",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0,
       "source": "src_widgets_upcomingfeedback_ui_upcomingfeedback_upcomingfeedbackprops",
       "target": "src_entities_dashboard_model_types_upcomingfeedbackdata",
@@ -20165,7 +20227,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CareerPaths/ui/CareerPaths.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_careerpaths_ui_careerpaths",
       "target": "src_entities_dashboard_model_types_recommendedcareerpathsdata",
@@ -20176,7 +20238,7 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CareerPaths/ui/CareerPaths.tsx",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0,
       "source": "src_widgets_careerpaths_ui_careerpaths_careerpathsprops",
       "target": "src_entities_dashboard_model_types_recommendedcareerpathsdata",
@@ -20187,7 +20249,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/Achievements/ui/Achievements.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_widgets_achievements_ui_achievements",
       "target": "src_entities_dashboard_model_types_achievementsdata",
@@ -20240,7 +20302,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L1",
+      "source_location": "L2",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_entities_dashboard_model_usedashboarddata_usedashboarddata",
@@ -20510,7 +20572,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_widgets_achievements_ui_achievements_achievements",
@@ -20521,7 +20583,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_widgets_capabilitygapmap_ui_capabilitygapmap_capabilitygapmap",
@@ -20532,7 +20594,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_widgets_careerpaths_ui_careerpaths_careerpaths",
@@ -20543,7 +20605,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_widgets_careertargetbanner_ui_careertargetbanner_careertargetbanner",
@@ -20554,7 +20616,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_widgets_index",
@@ -20565,7 +20627,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_widgets_journeyhero_ui_journeyhero_journeyhero",
@@ -20576,7 +20638,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_widgets_todayspriorities_ui_todayspriorities_todayspriorities",
@@ -20587,7 +20649,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/Dashboard.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_pages_dashboard",
       "target": "src_widgets_upcomingfeedback_ui_upcomingfeedback_upcomingfeedback",
@@ -21776,7 +21838,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/Achievements/ui/Achievements.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_widgets_achievements_ui_achievements",
       "target": "src_shared_ui_image_image",
@@ -21798,7 +21860,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/JourneyHero/ui/JourneyHero.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_widgets_journeyhero_ui_journeyhero",
       "target": "src_shared_ui_image_image",
@@ -21858,13 +21920,143 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shared/ui/index.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "src_shared_ui_index",
+      "target": "src_shared_ui_widgetcard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shared/ui/WidgetCard.tsx",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "src_shared_ui_widgetcard",
+      "target": "src_shared_ui_widgetcard_widgetcard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shared/ui/WidgetCard.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_shared_ui_widgetcard",
+      "target": "src_shared_ui_widgetcard_widgetcardprops",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "re_exports",
+      "context": "re-export",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shared/ui/index.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "src_shared_ui_index",
+      "target": "src_shared_ui_widgetcard_widgetcardprops",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "re_exports",
+      "context": "re-export",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shared/ui/index.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "src_shared_ui_index",
+      "target": "src_shared_ui_widgetcard_widgetcard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/Achievements/ui/Achievements.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_achievements_ui_achievements",
+      "target": "src_shared_ui_widgetcard_widgetcard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_capabilitygapmap_ui_capabilitygapmap",
+      "target": "src_shared_ui_widgetcard_widgetcard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/CareerPaths/ui/CareerPaths.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_careerpaths_ui_careerpaths",
+      "target": "src_shared_ui_widgetcard_widgetcard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/TodaysPriorities/ui/TodaysPriorities.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_todayspriorities_ui_todayspriorities",
+      "target": "src_shared_ui_widgetcard_widgetcard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/UpcomingFeedback/ui/UpcomingFeedback.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_upcomingfeedback_ui_upcomingfeedback",
+      "target": "src_shared_ui_widgetcard_widgetcard",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/Achievements/ui/Achievements.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_widgets_achievements_ui_achievements",
+      "target": "src_shared_ui_index",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_capabilitygapmap_ui_capabilitygapmap",
+      "target": "src_shared_ui_index",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/CareerPaths/ui/CareerPaths.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_careerpaths_ui_careerpaths",
       "target": "src_shared_ui_index",
       "confidence_score": 1.0
     },
@@ -21895,7 +22087,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/JourneyHero/ui/JourneyHero.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0,
       "source": "src_widgets_journeyhero_ui_journeyhero",
       "target": "src_shared_ui_index",
@@ -21909,6 +22101,28 @@
       "source_location": "L3",
       "weight": 1.0,
       "source": "src_widgets_navigationdrawer_navigationdrawer",
+      "target": "src_shared_ui_index",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/TodaysPriorities/ui/TodaysPriorities.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_todayspriorities_ui_todayspriorities",
+      "target": "src_shared_ui_index",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/UpcomingFeedback/ui/UpcomingFeedback.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_upcomingfeedback_ui_upcomingfeedback",
       "target": "src_shared_ui_index",
       "confidence_score": 1.0
     },
@@ -22044,7 +22258,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0,
       "source": "src_widgets_capabilitygapmap_ui_capabilitygapmap",
       "target": "src_widgets_capabilitygapmap_ui_capabilitygapmap_capabilitygapmap",
@@ -22054,7 +22268,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CapabilityGapMap/ui/CapabilityGapMap.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "source": "src_widgets_capabilitygapmap_ui_capabilitygapmap",
       "target": "src_widgets_capabilitygapmap_ui_capabilitygapmap_capabilitygapmapprops",
@@ -22118,7 +22332,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/CareerPaths/ui/CareerPaths.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "source": "src_widgets_careerpaths_ui_careerpaths",
       "target": "src_widgets_careerpaths_ui_careerpaths_careerpathsprops",
@@ -22574,7 +22788,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/TodaysPriorities/ui/TodaysPriorities.tsx",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0,
       "source": "src_widgets_todayspriorities_ui_todayspriorities",
       "target": "src_widgets_todayspriorities_ui_todayspriorities_todayspriorities",
@@ -22584,7 +22798,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/TodaysPriorities/ui/TodaysPriorities.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "source": "src_widgets_todayspriorities_ui_todayspriorities",
       "target": "src_widgets_todayspriorities_ui_todayspriorities_todaysprioritiesprops",
@@ -22638,7 +22852,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/UpcomingFeedback/ui/UpcomingFeedback.tsx",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0,
       "source": "src_widgets_upcomingfeedback_ui_upcomingfeedback",
       "target": "src_widgets_upcomingfeedback_ui_upcomingfeedback_upcomingfeedback",
@@ -22648,7 +22862,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/UpcomingFeedback/ui/UpcomingFeedback.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "source": "src_widgets_upcomingfeedback_ui_upcomingfeedback",
       "target": "src_widgets_upcomingfeedback_ui_upcomingfeedback_upcomingfeedbackprops",
