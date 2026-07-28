@@ -1,5 +1,6 @@
 import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonResponse, readJsonObject } from "@functions/lib/http";
+import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import {
@@ -22,7 +23,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     try {
       rawBody = await readJsonObject(context.request);
     } catch (err) {
-      console.error(`[${requestId}] Failed to parse JSON request body:`, err);
+      apiLogger.error("Failed to parse JSON request body", err, { requestId });
       return jsonResponse(
         {
           success: false,
@@ -124,6 +125,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       );
     }
 
+    apiLogger.error("Unhandled error", error, { requestId });
     const message = error instanceof Error ? error.message : "Internal server error";
 
     // Fallback error for other issues
