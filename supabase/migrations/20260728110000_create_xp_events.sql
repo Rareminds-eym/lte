@@ -37,7 +37,6 @@ CREATE TYPE IF NOT EXISTS public.xp_event_type AS ENUM (
 CREATE TABLE IF NOT EXISTS public.xp_events (
   id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id         uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id          uuid NOT NULL,
   event_type      public.xp_event_type NOT NULL,
   xp_category     public.xp_category NOT NULL,
   xp_amount       integer NOT NULL CHECK (xp_amount >= 0),

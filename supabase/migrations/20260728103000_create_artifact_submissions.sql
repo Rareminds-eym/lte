@@ -18,7 +18,6 @@ CREATE TYPE IF NOT EXISTS public.artifact_scan_status AS ENUM (
 CREATE TABLE IF NOT EXISTS public.artifact_submissions (
   id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id            uuid NOT NULL,
   module_artifact_id uuid NOT NULL REFERENCES public.module_artifacts(id) ON DELETE RESTRICT,
   attempt_number    smallint NOT NULL CHECK (attempt_number >= 1),
   status            public.artifact_submission_status DEFAULT 'draft' NOT NULL,

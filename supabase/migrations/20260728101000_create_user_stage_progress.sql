@@ -12,7 +12,6 @@ CREATE TYPE IF NOT EXISTS public.stage_completion_status AS ENUM (
 CREATE TABLE IF NOT EXISTS public.user_stage_progress (
   id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id            uuid NOT NULL,
   modules_content_id uuid NOT NULL REFERENCES public.modules_content(id) ON DELETE CASCADE,
   status            public.stage_completion_status DEFAULT 'not_started' NOT NULL,
   started_at        timestamptz,

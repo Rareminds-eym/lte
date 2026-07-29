@@ -9,7 +9,6 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS public.ai_reviews (
   id                  uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   submission_id       uuid NOT NULL REFERENCES public.artifact_submissions(id) ON DELETE RESTRICT,
-  org_id              uuid NOT NULL,
   -- AI output
   overall_score       numeric(5,2) NOT NULL CHECK (overall_score BETWEEN 0 AND 100),
   criterion_scores    jsonb NOT NULL DEFAULT '[]'::jsonb,
