@@ -124,7 +124,6 @@ CREATE INDEX IF NOT EXISTS "idx_capabilities_sequence"
 CREATE TABLE IF NOT EXISTS public."level_scale" (
   "id" uuid DEFAULT gen_random_uuid() NOT NULL,
   "level_no" integer NOT NULL,
-  "level_code" varchar(10) NOT NULL,
   "level_label" varchar(100) NOT NULL,
   "generic_definition" text NOT NULL,
   "metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -132,7 +131,6 @@ CREATE TABLE IF NOT EXISTS public."level_scale" (
   "updated_at" timestamptz DEFAULT now() NOT NULL,
   CONSTRAINT "pk_level_scale" PRIMARY KEY ("id"),
   CONSTRAINT "uq_level_scale_level_no" UNIQUE ("level_no"),
-  CONSTRAINT "uq_level_scale_level_code" UNIQUE ("level_code"),
   CONSTRAINT "chk_level_scale_level_no" CHECK ("level_no" BETWEEN 1 AND 5)
 );
 
@@ -201,9 +199,9 @@ CREATE INDEX IF NOT EXISTS "idx_skills_tags"
 -- not on the course.
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS public."courses" (
+CREATE TABLE IF NOT EXISTS public."levels" (
   "id" uuid DEFAULT gen_random_uuid() NOT NULL,
-  "course_code" varchar(50) NOT NULL,
+  "level_code" varchar(50) NOT NULL,
   "capability_id" uuid NOT NULL
     REFERENCES public."capabilities" ("id")
     ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -222,42 +220,42 @@ CREATE TABLE IF NOT EXISTS public."courses" (
   "metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
   "created_at" timestamptz DEFAULT now() NOT NULL,
   "updated_at" timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT "pk_courses" PRIMARY KEY ("id"),
-  CONSTRAINT "uq_courses_course_code" UNIQUE ("course_code"),
-  CONSTRAINT "uq_courses_capability_level"
+  CONSTRAINT "pk_levels" PRIMARY KEY ("id"),
+  CONSTRAINT "uq_levels_level_code" UNIQUE ("level_code"),
+  CONSTRAINT "uq_levels_capability_level"
     UNIQUE ("capability_id", "level_id"),
-  CONSTRAINT "chk_courses_duration" CHECK ("duration_minutes" > 0),
-  CONSTRAINT "chk_courses_version" CHECK ("version_no" >= 1)
+  CONSTRAINT "chk_levels_duration" CHECK ("duration_minutes" > 0),
+  CONSTRAINT "chk_levels_version" CHECK ("version_no" >= 1)
 );
 
-CREATE INDEX IF NOT EXISTS "idx_courses_level_id"
-  ON public."courses" ("level_id");
-CREATE INDEX IF NOT EXISTS "idx_courses_status"
-  ON public."courses" ("course_status");
-CREATE INDEX IF NOT EXISTS "idx_courses_difficulty"
-  ON public."courses" ("difficulty_level");
-CREATE INDEX IF NOT EXISTS "idx_courses_active"
-  ON public."courses" ("is_active");
+CREATE INDEX IF NOT EXISTS "idx_levels_level_id"
+  ON public."levels" ("level_id");
+CREATE INDEX IF NOT EXISTS "idx_levels_status"
+  ON public."levels" ("course_status");
+CREATE INDEX IF NOT EXISTS "idx_levels_difficulty"
+  ON public."levels" ("difficulty_level");
+CREATE INDEX IF NOT EXISTS "idx_levels_active"
+  ON public."levels" ("is_active");
 
 -- ============================================================================
--- 7. COURSE-SKILL JUNCTION
+-- 7. LEVEL-SKILL JUNCTION
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS public."course_skills" (
+CREATE TABLE IF NOT EXISTS public."level_skills" (
   "id" uuid DEFAULT gen_random_uuid() NOT NULL,
-  "course_id" uuid NOT NULL
-    REFERENCES public."courses" ("id")
+  "level_id" uuid NOT NULL
+    REFERENCES public."levels" ("id")
     ON UPDATE CASCADE ON DELETE CASCADE,
   "skill_id" uuid NOT NULL
     REFERENCES public."skills" ("id")
     ON UPDATE CASCADE ON DELETE CASCADE,
   "created_at" timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT "pk_course_skills" PRIMARY KEY ("id"),
-  CONSTRAINT "uq_course_skills" UNIQUE ("course_id", "skill_id")
+  CONSTRAINT "pk_level_skills" PRIMARY KEY ("id"),
+  CONSTRAINT "uq_level_skills" UNIQUE ("level_id", "skill_id")
 );
 
-CREATE INDEX IF NOT EXISTS "idx_course_skills_skill_id"
-  ON public."course_skills" ("skill_id");
+CREATE INDEX IF NOT EXISTS "idx_level_skills_skill_id"
+  ON public."level_skills" ("skill_id");
 
 -- ============================================================================
 -- 8. MODULES
@@ -265,8 +263,8 @@ CREATE INDEX IF NOT EXISTS "idx_course_skills_skill_id"
 
 CREATE TABLE IF NOT EXISTS public."modules" (
   "id" uuid DEFAULT gen_random_uuid() NOT NULL,
-  "course_id" uuid NOT NULL
-    REFERENCES public."courses" ("id")
+  "level_id" uuid NOT NULL
+    REFERENCES public."levels" ("id")
     ON UPDATE CASCADE ON DELETE CASCADE,
   "module_no" smallint NOT NULL,
   "title" text NOT NULL,
@@ -281,7 +279,7 @@ CREATE TABLE IF NOT EXISTS public."modules" (
   "created_at" timestamptz DEFAULT now() NOT NULL,
   "updated_at" timestamptz DEFAULT now() NOT NULL,
   CONSTRAINT "pk_modules" PRIMARY KEY ("id"),
-  CONSTRAINT "uq_modules_course_module_no" UNIQUE ("course_id", "module_no"),
+  CONSTRAINT "uq_modules_level_module_no" UNIQUE ("level_id", "module_no"),
   CONSTRAINT "chk_modules_module_no" CHECK ("module_no" >= 0)
 );
 
@@ -517,8 +515,8 @@ CREATE TRIGGER set_skills_timestamps
   BEFORE INSERT OR UPDATE ON public."skills"
   FOR EACH ROW EXECUTE FUNCTION public.set_lte_timestamps();
 
-CREATE TRIGGER set_courses_timestamps
-  BEFORE INSERT OR UPDATE ON public."courses"
+CREATE TRIGGER set_levels_timestamps
+  BEFORE INSERT OR UPDATE ON public."levels"
   FOR EACH ROW EXECUTE FUNCTION public.set_lte_timestamps();
 
 CREATE TRIGGER set_modules_timestamps
