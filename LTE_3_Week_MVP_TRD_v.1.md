@@ -240,27 +240,33 @@ graph LR
 > 2. **Application & API Tier (TypeScript, React, & JSON Payloads)**: Enforces JavaScript `camelCase` properties (`userId`, `orgId`, `moduleId`, `attemptNumber`, `storageKey`, `scanStatus`).
 > 3. **Queue Messages & xAPI Statements**: Enforces JSON `camelCase` properties (`userId`, `orgId`, `submissionId`) mapped via Data Access Layer transformers.
 
-### 4.2 Existing Catalog Tables (Already Migrated)
+### 4.2 Existing Catalog & Core Mirror Tables (Migrated)
 
-The following tables already exist in the LTE DB via migration [20260716092555_lte_learning_catalog.sql](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/supabase/migrations/20260716092555_lte_learning_catalog.sql):
+The following core catalog, identity mirror, and learning path tables exist in the LTE DB via migrations in [`lte/supabase/migrations`](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/supabase/migrations):
 
-| Table | Purpose | Key Constraints |
-|---|---|---|
-| `roles` | Shadow of SkillPassport `role_family_roles` | PK: id (UUIDv5 mirror), UQ: (role_name, role_family_name, domain_name) |
-| `capabilities` | Reusable capability catalog | UQ: code |
-| `level_scale` | L1–L5 proficiency levels | CHK: level_no BETWEEN 1 AND 5 |
-| `role_capability_sequence` | Learning path per role context | UQ: (role_id, sequence_step), (role_id, capability_id) |
-| `skills` | Reusable skill catalog | UQ: code |
-| `courses` | One course per capability per level | UQ: course_code, (capability_id, level_id) |
-| `course_skills` | Course ↔ Skill junction | UQ: (course_id, skill_id) |
-| `modules` | Course modules | UQ: (course_id, module_no) |
-| `modules_content` | 6E stages per module | UQ: (module_id, stage_name), CHK: stage_order 1–6 |
-| `e_content` | Content items within 6E stages | Carries xp_reward |
-| `module_artifacts` | Artifact requirements per 6E stage | CHK: total_score > 0 |
-| `artifact_questions` | Questions within artifacts | UQ: (artifact_id, question_order) |
-| `artifact_templates` | Downloadable templates | FK: artifact_id, question_id |
+| Table | Migration File | Purpose | Key Constraints / Field Updates |
+|---|---|---|---|
+| `users` | `20260718000000_create_users.sql` | Minimal LTE user mirror matching SSO ID | PK: id (SSO UUID), UQ: email, status enum |
+| `user_profiles` | `20260727112321_create_user_profiles.sql` | 1-to-1 user profile state | PK: id, UQ: user_id, auto-provision trigger |
+| `learning_tracks` | `20260727112352_create_learning_tracks.sql` | Assessment-recommended learning tracks | FK: user_id, CHK: fit IN ('High', 'Medium', 'Explore'), match_score 0..100 |
+| `learning_paths` | `20260727112414_create_learning_paths.sql` | Personalized versioned learning paths | UQ: (user_id, learning_track_id, role_id), partial index uq_learning_paths_one_active_per_user |
+| `subscription_cache` | `20260718093100_create_subscription_cache.sql` | Local shadow of SSO subscription entitlements | PK: id, FK: user_id, product_code DEFAULT 'lte' |
+| `roles` | `20260716092555_lte_learning_catalog.sql` | Shadow of SkillPassport `role_family_roles` | PK: id (UUIDv5 mirror), UQ: (role_name, role_family_name, domain_name) |
+| `capabilities` | `20260727000000_add_lte_catalog_slug...sql` | Reusable capability catalog | UQ: code, UQ: slug (partial) |
+| `level_scale` | `20260716092555_lte_learning_catalog.sql` | L1–L5 proficiency levels | CHK: level_no BETWEEN 1 AND 5 |
+| `levels` | `20260727000100_change_course_...sql` | Level definitions | Added `problem_statement`, `observable_behavior` (jsonb array), `example_outputs` (jsonb array) |
+| `role_capability_sequence` | `20260716092555_lte_learning_catalog.sql` | Learning path per role context | UQ: (role_id, sequence_step), (role_id, capability_id) |
+| `skills` | `20260716092555_lte_learning_catalog.sql` | Reusable skill catalog | UQ: code |
+| `courses` | `20260716092555_lte_learning_catalog.sql` | One course per capability per level | UQ: course_code, (capability_id, level_id) |
+| `course_skills` | `20260716092555_lte_learning_catalog.sql` | Course ↔ Skill junction | UQ: (course_id, skill_id) |
+| `modules` | `20260728000000_change_module_...sql` | Course modules | Added `module_problem_statement`, `pressure_points` (jsonb), `user_confusion` (jsonb), `prerequisites` (jsonb), `what_youll_learn` (jsonb) |
+| `modules_content` | `20260724000000_add_course_...sql` | 6E stages per module | Added `stage_description`, `module_context`, `curriculum_reference` (jsonb) |
+| `e_content` | `20260716092555_lte_learning_catalog.sql` | Content items within 6E stages | Carries xp_reward |
+| `module_artifacts` | `20260716092555_lte_learning_catalog.sql` | Artifact requirements per 6E stage | CHK: total_score > 0 |
+| `artifact_questions` | `20260724000100_change_artifact_...sql` | Questions within artifacts | UQ: (artifact_id, question_order), `instructions` jsonb |
+| `artifact_templates` | `20260716092555_lte_learning_catalog.sql` | Downloadable templates | FK: artifact_id, question_id |
 
-### 4.2 New Tables Required (User Progress Domain)
+### 4.3 New Tables Required (User Progress & Path Domain)
 
 > [!IMPORTANT]
 > All new tables follow the Expand-Migrate-Contract migration pattern per [04-database-api-standards.md](file:///home/gokul/.gemini/antigravity-ide/knowledge/kiro_steering_skill_echosystem/artifacts/04-database-api-standards.md). Every table enforces institutional multi-tenancy via `org_id` mapped from JWT claims.
@@ -710,7 +716,145 @@ CREATE INDEX idx_ae_action ON public.audit_events(action);
 CREATE INDEX idx_ae_created ON public.audit_events(created_at DESC);
 ```
 
-### 4.3 Identity Model Contract & User Authority
+#### TRD-DB-013: `user_profiles`
+
+Main user profile information table linked one-to-one with `users`. Automatically provisioned via DB trigger.
+
+```sql
+CREATE TABLE public.user_profiles (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL UNIQUE REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  is_active  boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX idx_user_profiles_user_id ON public.user_profiles (user_id);
+CREATE INDEX idx_user_profiles_is_active ON public.user_profiles (is_active);
+
+-- Auto-provisioning trigger for new users
+CREATE OR REPLACE FUNCTION public.handle_new_user_profile()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.user_profiles (user_id, is_active)
+  VALUES (NEW.id, true)
+  ON CONFLICT (user_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trg_create_user_profile
+AFTER INSERT ON public.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_profile();
+```
+
+#### TRD-DB-014: `learning_tracks`
+
+Learning track recommendations generated for learners from SkillPassport assessment results.
+
+```sql
+CREATE TABLE public.learning_tracks (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  assessment_id  uuid NOT NULL,
+  fit            varchar NOT NULL CHECK (fit IN ('High', 'Medium', 'Explore')),
+  track          varchar NOT NULL,
+  match_score    integer NOT NULL CHECK (match_score BETWEEN 0 AND 100),
+  topics         jsonb NOT NULL DEFAULT '[]'::jsonb,
+  duration       varchar NOT NULL,
+  why_it_fits    text NOT NULL,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  updated_at     timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_learning_tracks_user_id ON public.learning_tracks (user_id);
+CREATE INDEX idx_learning_tracks_fit ON public.learning_tracks (fit);
+CREATE INDEX idx_learning_tracks_match_score ON public.learning_tracks (match_score);
+CREATE INDEX idx_learning_tracks_user_fit ON public.learning_tracks (user_id, fit);
+```
+
+#### TRD-DB-015: `learning_paths`
+
+Personalized and versioned learning paths for users and their selected learning tracks.
+
+```sql
+CREATE TABLE public.learning_paths (
+  id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  learning_track_id        uuid NOT NULL REFERENCES public.learning_tracks(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  user_id                  uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  role_id                  uuid NOT NULL REFERENCES public.roles(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  role_readiness_percentage numeric(5, 2) NOT NULL DEFAULT 0.00 CHECK (role_readiness_percentage BETWEEN 0.00 AND 100.00),
+  badge                    varchar NULL CHECK (badge IS NULL OR badge IN ('developing', 'skilled', 'mastery')),
+  level                    integer NOT NULL CHECK (level IN (1, 2, 3, 4, 5)),
+  status                   varchar NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed', 'paused')),
+  is_active                boolean NOT NULL DEFAULT true,
+  version_no               integer NOT NULL DEFAULT 1 CHECK (version_no > 0),
+  is_latest                boolean NOT NULL DEFAULT true,
+  started_at               timestamptz NULL,
+  completed_at             timestamptz NULL,
+  created_at               timestamptz NOT NULL DEFAULT now(),
+  updated_at               timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_learning_paths_user_track UNIQUE (user_id, learning_track_id, role_id)
+);
+
+CREATE UNIQUE INDEX uq_learning_paths_one_active_per_user ON public.learning_paths (user_id) WHERE is_active = true;
+CREATE INDEX idx_learning_paths_user_is_active ON public.learning_paths (user_id, is_active);
+CREATE INDEX idx_learning_paths_status ON public.learning_paths (status);
+CREATE INDEX idx_learning_paths_user_status ON public.learning_paths (user_id, status);
+```
+
+#### TRD-DB-016: `subscription_cache`
+
+Read-only local shadow of SSO subscription/product entitlement for LTE feature access.
+
+```sql
+CREATE TABLE public.subscription_cache (
+  id                      uuid PRIMARY KEY,
+  user_id                 uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  organization_id         uuid,
+  plan_id                 uuid,
+  plan_code               text,
+  plan_name               text,
+  plan_type               text,
+  plan_amount             numeric,
+  billing_cycle           text,
+  status                  text NOT NULL,
+  features                jsonb NOT NULL DEFAULT '[]'::jsonb,
+  product_code            text NOT NULL DEFAULT 'lte',
+  product_id              uuid,
+  subscription_start_date timestamptz,
+  subscription_end_date   timestamptz,
+  synced_at               timestamptz NOT NULL DEFAULT now(),
+  auth_updated_at         timestamptz
+);
+
+CREATE INDEX idx_subscription_cache_user ON public.subscription_cache (user_id);
+CREATE INDEX idx_subscription_cache_status ON public.subscription_cache (status);
+```
+
+#### TRD-DB-017: `users` (Identity Mirror)
+
+Minimal user identity mirror table matching SSO ID.
+
+```sql
+CREATE TYPE public.lte_user_status AS ENUM ('active', 'inactive', 'suspended', 'deleted');
+
+CREATE TABLE public.users (
+  id               uuid NOT NULL PRIMARY KEY,
+  email            text NOT NULL UNIQUE,
+  first_name       varchar(255),
+  last_name        varchar(255),
+  phone            varchar(50),
+  status           public.lte_user_status DEFAULT 'active' NOT NULL,
+  deleted_at       timestamptz,
+  last_activity_at timestamptz,
+  metadata         jsonb DEFAULT '{}'::jsonb NOT NULL,
+  created_at       timestamptz DEFAULT now() NOT NULL,
+  updated_at       timestamptz DEFAULT now() NOT NULL
+);
+```
+
+### 4.4 Identity Model Contract & User Authority
 
 1. **Identity Source of Truth**: The `sso-worker` service (`sso-api`) is the sole system identity authority for authentication, credentials, and session token generation.
 2. **User Shadow Table**: The LTE DB maintains a local shadow table `public.users(id)` where `id` matches `jwt.sub` (UUID) issued by `sso-worker`.
@@ -1648,7 +1792,7 @@ Per [03-event-driven-architecture.md](file:///home/gokul/.gemini/antigravity-ide
 | `CONSENT_GRANTED` | `{userId, orgId, version, scope, purpose}` | Consent API | Marketplace |
 | `CONSENT_WITHDRAWN` | `{userId, orgId, purpose}` | Consent API | Marketplace |
 
-### 13.3 Queue Configuration & Consumer Idempotency (TRD-DB-013)
+### 13.3 Queue Configuration & Consumer Idempotency
 
 ```toml
 # Cloudflare Queue
@@ -2155,7 +2299,7 @@ The PRD mandates a 3-week build. This section maps TRD deliverables to weekly sp
 
 | Day | Deliverable | TRD Reference |
 |---|---|---|
-| **Day 1** | DB migrations: all 11 new tables + RLS policies | TRD-DB-001..011 |
+| **Day 1** | DB migrations: all 17 tables + RLS policies | TRD-DB-001..017 |
 | **Day 2** | Auth integration: SSO RPC binding, auth middleware | §14.1, AUTH-001..004 |
 | **Day 3** | Roles & Roadmap API: listing, detail, assignment | TRD-API-001..005 |
 | **Day 4** | Course & Module API: listing, detail, 6E content | TRD-API-006..009 |
