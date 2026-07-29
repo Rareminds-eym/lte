@@ -7,8 +7,19 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useParams: () => ({ capabilityCode: "TEST-CAP-101" }),
+    useLocation: () => ({
+      pathname: "/my-courses/TEST-CAP-101",
+      search: "",
+      hash: "",
+      state: null,
+      key: "default",
+    }),
   };
 });
+
+vi.mock("@/features/initialize-learning-path", () => ({
+  LearningPathInitializer: () => <div data-testid="learning-path-initializer" />,
+}));
 
 describe("CourseDetail", () => {
   it("renders heading and capability code", () => {

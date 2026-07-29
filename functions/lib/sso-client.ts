@@ -3,16 +3,20 @@ import type { LteEnv, SsoExchangeResponse } from "./types";
 
 export function getSsoService(env: Pick<LteEnv, "SSO_SERVICE">) {
   if (!env.SSO_SERVICE) {
-    throw new Error(
+    const err = new Error(
       "SSO_SERVICE binding is not configured. Make sure sso-worker is running on port 8787.",
     );
+    err.name = "ConfigError";
+    throw err;
   }
 
   // Verify it's actually a service binding object
   if (typeof env.SSO_SERVICE !== "object") {
-    throw new Error(
+    const err = new Error(
       `SSO_SERVICE is not a valid service binding. Got type: ${typeof env.SSO_SERVICE}`,
     );
+    err.name = "ConfigError";
+    throw err;
   }
 
   return env.SSO_SERVICE;
@@ -82,12 +86,28 @@ export async function logoutLteSession(
   return getSsoService(env).logoutSession(refreshToken, ip ?? undefined, ua ?? undefined);
 }
 
+export class SsoAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SsoAuthError";
+  }
+}
+
 export async function getMe(
   env: Pick<LteEnv, "SSO_SERVICE">,
   accessToken: string,
 ): Promise<AuthUser> {
-  const result = await getSsoService(env).getMe(accessToken);
-  return normalizeAuthUser(result);
+  try {
+    const result = await getSsoService(env).getMe(accessToken);
+    return normalizeAuthUser(result);
+  } catch (err) {
+    const isServiceError = err instanceof Error && err.name === "ConfigError";
+    if (!isServiceError) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new SsoAuthError(msg);
+    }
+    throw err;
+  }
 }
 
 function isMembershipStatus(value: string): value is MembershipStatus {
