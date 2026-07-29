@@ -1,5 +1,5 @@
 import type { AuthUser } from "@rareminds-eym/auth-core";
-import { getMe } from "./sso-client";
+import { getMe, SsoAuthError } from "./sso-client";
 import type { LteEnv } from "./types";
 
 export function extractBearerToken(request: Request): string | null {
@@ -9,20 +9,40 @@ export function extractBearerToken(request: Request): string | null {
   return token || null;
 }
 
+export class AuthError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "UNAUTHORIZED" | "FORBIDDEN",
+  ) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
 export async function requireAuth(
   request: Request,
   env: Pick<LteEnv, "SSO_SERVICE">,
 ): Promise<AuthUser> {
   const token = extractBearerToken(request);
   if (!token) {
-    throw new Error("Missing bearer token");
+    throw new AuthError("Missing bearer token", "UNAUTHORIZED");
   }
 
-  const user = await getMe(env, token);
+  let user: AuthUser;
+  try {
+    user = await getMe(env, token);
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
+    if (err instanceof SsoAuthError) {
+      throw new AuthError(err.message, "UNAUTHORIZED");
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Unexpected auth error: ${msg}`);
+  }
+
   if (!user.products.includes("lte")) {
-    throw new Error("LTE access is required");
+    throw new AuthError("LTE access is required", "FORBIDDEN");
   }
-
   return user;
 }
 
