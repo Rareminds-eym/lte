@@ -1,5 +1,5 @@
 import type { AuthUser } from "@rareminds-eym/auth-core";
-import { getMe, getSsoService, SsoAuthError } from "./sso-client";
+import { getMe, SsoAuthError } from "./sso-client";
 import type { LteEnv } from "./types";
 
 export function extractBearerToken(request: Request): string | null {
@@ -27,9 +27,6 @@ export async function requireAuth(
   if (!token) {
     throw new AuthError("Missing bearer token", "UNAUTHORIZED");
   }
-
-  // Pre-validate SSO service binding to throw configuration/binding errors early (as 500s)
-  getSsoService(env);
 
   let user: AuthUser;
   try {
