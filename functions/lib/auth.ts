@@ -36,7 +36,8 @@ export async function requireAuth(
     if (err instanceof SsoAuthError) {
       throw new AuthError(err.message, "UNAUTHORIZED");
     }
-    throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Unexpected auth error: ${msg}`);
   }
 
   if (!user.products.includes("lte")) {

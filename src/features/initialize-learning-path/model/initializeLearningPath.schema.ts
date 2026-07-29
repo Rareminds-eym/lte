@@ -7,10 +7,10 @@ export const initializeLearningPathSchema = z.object({
   track: z.string().trim().min(1, "track is required"),
   matchScore: z
     .union([z.number(), z.string()])
-    .refine((val) => !Number.isNaN(Number(val)), {
+    .transform((val) => Number(val))
+    .refine((num) => !Number.isNaN(num), {
       message: "matchScore must be a number or numeric string",
     })
-    .transform((val) => Number(val))
     .pipe(z.number().min(0).max(100)),
   whyItFits: z.string().trim().default(""),
   attemptId: z.string().uuid("attemptId must be a valid UUID"),

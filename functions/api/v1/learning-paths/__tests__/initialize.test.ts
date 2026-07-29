@@ -21,7 +21,7 @@ interface MockQueryChain {
   update: (payload?: unknown) => MockQueryChain;
   insert: () => MockQueryChain;
   eq: (col: string, val: unknown) => MockQueryChain;
-  neq?: (col: string, val: unknown) => MockQueryChain;
+  neq: (col: string, val: unknown) => MockQueryChain;
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
   single: () => Promise<{ data: unknown; error: unknown }>;
 }

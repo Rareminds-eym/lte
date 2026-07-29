@@ -18,10 +18,10 @@ export const useInitializeLearningPath = () => {
 
     retry: (failureCount, error) => {
       // Do not retry on aborted requests
-      if (
-        (error instanceof DOMException && error.name === "AbortError") ||
-        (error instanceof Error && error.name === "AbortError")
-      ) {
+      if (error instanceof DOMException && error.code === 20) {
+        return false;
+      }
+      if (error instanceof Error && error.name === "AbortError") {
         return false;
       }
 

@@ -1,6 +1,8 @@
 import type React from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import { useLocation, useParams } from "react-router-dom";
 import { LearningPathInitializer } from "@/features/initialize-learning-path";
+import { ErrorFallback } from "@/shared/ui";
 
 interface InitErrorState {
   initializationError: string;
@@ -11,7 +13,7 @@ const hasInitError = (state: unknown): state is InitErrorState => {
     typeof state === "object" &&
     state !== null &&
     "initializationError" in state &&
-    typeof (state as Record<string, unknown>)["initializationError"] === "string"
+    typeof (state as { initializationError: unknown })["initializationError"] === "string"
   );
 };
 
@@ -31,7 +33,9 @@ export const CourseDetailPage: React.FC = () => {
 
   return (
     <main className="p-4 md:p-8" data-testid="course-detail-page">
-      <LearningPathInitializer capabilityCode={capabilityCode} />
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <LearningPathInitializer capabilityCode={capabilityCode} />
+      </ErrorBoundary>
 
       <h1 className="text-2xl font-bold text-content-primary">Course Details</h1>
 

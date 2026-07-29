@@ -101,8 +101,7 @@ export async function getMe(
     const result = await getSsoService(env).getMe(accessToken);
     return normalizeAuthUser(result);
   } catch (err) {
-    const isServiceError =
-      err instanceof TypeError || (err instanceof Error && err.name === "ConfigError");
+    const isServiceError = err instanceof Error && err.name === "ConfigError";
     if (!isServiceError) {
       const msg = err instanceof Error ? err.message : String(err);
       throw new SsoAuthError(msg);
