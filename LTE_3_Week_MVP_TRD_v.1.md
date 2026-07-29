@@ -1,8 +1,8 @@
 # LTE 3-Week MVP — Technical Requirements Document (TRD)
 
-**Version**: 1.0  
-**Status**: Draft for Technical Lead Review  
-**Date**: 2026-07-24  
+**Version**: 1.0 (Industrial-Grade Production Specification)  
+**Status**: Draft for Final Technical Lead Review (Pending Approval)  
+**Date**: 2026-07-28  
 **Company**: Rareminds Pvt. Ltd.  
 **Parent PRD**: [LTE_3_Week_MVP_PRD_v.1.md](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/LTE_3_Week_MVP_PRD_v.1.md)
 
@@ -24,10 +24,10 @@
 
 ## Table of Contents
 
-1. [Executive Summary](#1-executive-summary)
+1. [Executive Summary & Document Control](#1-executive-summary--document-control)
 2. [System Architecture](#2-system-architecture)
 3. [Cross-Ecosystem Integration Map](#3-cross-ecosystem-integration-map)
-4. [Database Schema Design](#4-database-schema-design)
+4. [Database Schema Design & Naming Standards](#4-database-schema-design--naming-standards)
 5. [API Specification](#5-api-specification)
 6. [Frontend Architecture](#6-frontend-architecture)
 7. [6E Learning Engine](#7-6e-learning-engine)
@@ -51,17 +51,22 @@
 25. [Learner Dashboard UX Specification](#25-learner-dashboard-ux-specification)
 26. [Product Decisions Freeze Register](#26-product-decisions-freeze-register)
 27. [Out-of-Scope Engineering Boundary](#27-out-of-scope-engineering-boundary)
-28. [Updated Requirement Traceability Matrix (Complete)](#28-updated-requirement-traceability-matrix-complete)
-29. [Cross-Ecosystem Alignment & Compatibility Matrix](#29-cross-ecosystem-alignment--compatibility-matrix)
-30. [Architecture Decision Records (ADR Registry)](#30-architecture-decision-records-adr-registry)
+28. [Cross-Ecosystem Alignment & Compatibility Matrix](#28-cross-ecosystem-alignment--compatibility-matrix)
+29. [Architecture Decision Records (ADR Registry)](#29-architecture-decision-records-adr-registry)
 
 ---
 
-## 1. Executive Summary
+## 1. Executive Summary & Document Control
 
 This TRD translates the [LTE 3-Week MVP PRD](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/LTE_3_Week_MVP_PRD_v.1.md) into implementable engineering specifications. The LTE is **not a traditional LMS** — it is a deterministic, role-readiness engine that transforms Skill Ecosystem assessment outputs into a learning execution journey with evidence-based mastery, XP allocation, readiness scoring, and marketplace eligibility.
 
-### Design Principles
+### 1.1 Document Revision History
+
+| Version | Date | Author / Owner | Summary of Changes |
+|---|---|---|---|
+| **v1.0** | 2026-07-28 | Lead Architect & Tech Lead | Industrial-grade baseline TRD specification aligned 1:1 with parent PRD v1.0, integrating all 25-point technical review fixes, multi-tenancy `org_id`, durable R2 storage, P0 file parsing, zero data retention PD-013, readiness gate PD-012, post-upload magic-byte timing, quarantined file safety boundary, and sequential 15-day sprint execution plan. |
+
+### 1.2 Design Principles
 
 1. **Engine-First**: Build the deterministic pipeline (6E → Artifact → AI Review → XP → Readiness → Marketplace) before scaling content.
 2. **Two-Database Split**: LTE DB owns learning catalog + learner progress. SkillPassport DB owns assessment data (RIASEC, aptitude, Big5, roles). Bridge via deterministic UUIDv5 shadow `roles` table.
@@ -69,7 +74,7 @@ This TRD translates the [LTE 3-Week MVP PRD](file:///mnt/E230EB0F30EAEA0D/Raremi
 4. **Immutable Evidence Trail**: Every XP event, artifact submission, AI review, and readiness calculation is append-only with version tracking.
 5. **AI Recommends, System Decides**: AI generates evaluation scores and feedback; the system deterministically applies status, XP, readiness, and marketplace rules.
 
-### 1.2 Non-Functional Requirements (NFR) Summary Matrix
+### 1.3 Non-Functional Requirements (NFR) Summary Matrix
 
 | NFR Category | Technical Target / Threshold | Measurement / Standard | Enforcement Point |
 |---|---|---|---|
@@ -225,11 +230,17 @@ graph LR
 | embedding-worker → LTE | Inbound | Direct DB write (Hyperdrive) | Review results & embeddings |
 | LTE → Email Worker | Outbound | Queue (future) | Notifications (P2) |
 
----
+## 4. Database Schema Design & Naming Standards
 
-## 4. Database Schema Design
+### 4.1 Architecture Naming Convention Standard
 
-### 4.1 Existing Catalog Tables (Already Migrated)
+> [!NOTE]
+> **Strict Boundary Naming Rules**:
+> 1. **Database Tier (SQL DDL & Postgres Queries)**: Enforces PostgreSQL `snake_case` column and table identifiers (`user_id`, `org_id`, `module_id`, `attempt_number`, `storage_key`, `scan_status`).
+> 2. **Application & API Tier (TypeScript, React, & JSON Payloads)**: Enforces JavaScript `camelCase` properties (`userId`, `orgId`, `moduleId`, `attemptNumber`, `storageKey`, `scanStatus`).
+> 3. **Queue Messages & xAPI Statements**: Enforces JSON `camelCase` properties (`userId`, `orgId`, `submissionId`) mapped via Data Access Layer transformers.
+
+### 4.2 Existing Catalog Tables (Already Migrated)
 
 The following tables already exist in the LTE DB via migration [20260716092555_lte_learning_catalog.sql](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/supabase/migrations/20260716092555_lte_learning_catalog.sql):
 
@@ -357,6 +368,7 @@ CREATE TABLE public.artifact_submissions (
   user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   org_id            uuid NOT NULL,
   module_artifact_id uuid NOT NULL REFERENCES public.module_artifacts(id) ON DELETE RESTRICT,
+  submission_type   varchar(20) NOT NULL CHECK (submission_type IN ('file', 'text', 'link')),
   attempt_number    smallint NOT NULL CHECK (attempt_number >= 1),
   status            public.artifact_submission_status DEFAULT 'draft' NOT NULL,
   scan_status       public.artifact_scan_status DEFAULT 'draft' NOT NULL,
@@ -377,8 +389,10 @@ CREATE TABLE public.artifact_submissions (
   created_at        timestamptz DEFAULT now() NOT NULL,
   updated_at        timestamptz DEFAULT now() NOT NULL,
   CONSTRAINT uq_submission_attempt UNIQUE (user_id, module_artifact_id, attempt_number),
-  CONSTRAINT chk_has_content CHECK (
-    storage_key IS NOT NULL OR text_content IS NOT NULL OR link_url IS NOT NULL
+  CONSTRAINT chk_content_matches_type CHECK (
+    (submission_type = 'file' AND storage_key IS NOT NULL) OR
+    (submission_type = 'text' AND text_content IS NOT NULL) OR
+    (submission_type = 'link' AND link_url IS NOT NULL)
   )
 );
 
@@ -417,7 +431,7 @@ CREATE TABLE public.ai_reviews (
   model_id            varchar(100) NOT NULL, -- AI model identifier
   prompt_version      varchar(50) NOT NULL,
   latency_ms          integer,
-  raw_response        jsonb,                -- full AI response for audit
+  raw_response        jsonb,                -- full AI response for audit (purged after 30 days)
   created_at          timestamptz DEFAULT now() NOT NULL,
   CONSTRAINT chk_criterion_scores CHECK (jsonb_typeof(criterion_scores) = 'array')
 );
@@ -461,6 +475,13 @@ CREATE INDEX idx_mrt_submission ON public.manual_review_tasks(submission_id);
 CREATE INDEX idx_mrt_org_status ON public.manual_review_tasks(org_id, status);
 CREATE INDEX idx_mrt_reviewer ON public.manual_review_tasks(assigned_reviewer_id) WHERE status = 'assigned';
 
+-- Enforce idempotency on queue retries: single active task per submission and trigger
+CREATE UNIQUE INDEX uq_mrt_active_submission_trigger 
+  ON public.manual_review_tasks(submission_id, trigger_reason) 
+  WHERE status IN ('queued', 'assigned');
+```
+
+```sql
 -- Table 2: Completed human review decision record
 CREATE TABLE public.manual_review_decisions (
   id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -723,9 +744,7 @@ export async function getLearnerProgress(ctx: AuthorizationContext, db: Supabase
 }
 ```
 
----
-
-## 5. API Specification
+### 4.5 Row-Level Security Policy
 
 All user-facing tables enforce RLS:
 
@@ -864,10 +883,10 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 **Request Payload:**
 ```json
 {
-  "module_artifact_id": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
-  "file_name": "capstone_project_v1.pdf",
-  "file_type": "application/pdf",
-  "file_size_bytes": 14285700
+  "moduleArtifactId": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+  "fileName": "capstone_project_v1.pdf",
+  "fileType": "application/pdf",
+  "fileSizeBytes": 14285700
 }
 ```
 
@@ -875,10 +894,10 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 ```json
 {
   "data": {
-    "submission_id": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
-    "upload_url": "https://lte-artifacts.r2.cloudflarestorage.com/artifacts/user_123/art_456/1784965200_capstone_project_v1.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&...",
-    "expires_at": "2026-07-25T10:36:24Z",
-    "storage_key": "artifacts/user_123/art_456/1784965200_capstone_project_v1.pdf"
+    "submissionId": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
+    "uploadUrl": "https://lte-artifacts.r2.cloudflarestorage.com/artifacts/user_123/art_456/1784965200_capstone_project_v1.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&...",
+    "expiresAt": "2026-07-25T10:36:24Z",
+    "storageKey": "artifacts/user_123/art_456/1784965200_capstone_project_v1.pdf"
   }
 }
 ```
@@ -888,9 +907,9 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 **Request Payload:**
 ```json
 {
-  "submission_id": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
-  "module_artifact_id": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
-  "submission_type": "file"
+  "submissionId": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
+  "moduleArtifactId": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+  "submissionType": "file"
 }
 ```
 
@@ -898,11 +917,11 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 ```json
 {
   "data": {
-    "submission_id": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
+    "submissionId": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
     "status": "submitted",
-    "attempt_number": 1,
-    "submitted_at": "2026-07-25T10:31:30Z",
-    "review_status": "queued_for_ai"
+    "attemptNumber": 1,
+    "submittedAt": "2026-07-25T10:31:30Z",
+    "reviewStatus": "queued_for_ai"
   }
 }
 ```
@@ -913,30 +932,30 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 ```json
 {
   "data": {
-    "next_action": {
+    "nextAction": {
       "action": "submit_artifact",
       "label": "Submit evidence artifact for Data Engineering Module 2",
-      "target_id": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c"
+      "targetId": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c"
     },
-    "active_role": {
+    "activeRole": {
       "id": "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
       "name": "Senior Data Engineer",
       "family": "Data & AI",
       "domain": "Enterprise Software"
     },
-    "progress_summary": {
-      "courses_completed": 2,
-      "courses_total": 6,
-      "modules_mastered": 5,
-      "modules_total": 18,
-      "evidence_xp": 45,
-      "engagement_xp": 12,
-      "total_xp": 57
+    "progressSummary": {
+      "coursesCompleted": 2,
+      "coursesTotal": 6,
+      "modulesMastered": 5,
+      "modulesTotal": 18,
+      "evidenceXp": 45,
+      "engagementXp": 12,
+      "totalXp": 57
     },
     "readiness": {
       "score": 74,
       "band": "Internship Ready",
-      "last_calculated": "2026-07-25T08:15:00Z"
+      "lastCalculated": "2026-07-25T08:15:00Z"
     },
     "marketplace": {
       "eligible": true,
@@ -1117,7 +1136,7 @@ sequenceDiagram
     participant DB as LTE DB
 
     L->>API: POST /api/v1/artifacts/upload-url<br/>{fileName, fileType, artifactId}
-    API->>API: Validate auth + file constraints + magic bytes
+    API->>API: Validate auth + metadata file constraints
     API->>R2: Generate presigned PUT URL<br/>(key: artifacts/{userId}/{artifactId}/{timestamp}_{fileName})
     R2-->>API: Presigned URL (5min TTL)
     API->>DB: Create submission (status: draft, scan_status: draft)
@@ -1125,7 +1144,7 @@ sequenceDiagram
     L->>R2: PUT file directly to R2
     R2-->>L: 200 OK
     L->>API: POST /api/v1/artifacts/submit<br/>{submissionId}
-    API->>SCAN: Async malware & magic-byte check
+    API->>SCAN: Inspect magic-bytes (first 512 bytes from R2) & malware scan
     alt Scan Passed
         SCAN-->>API: scan_status = passed
         API->>DB: Update status → submitted, scan_status → passed
@@ -1133,8 +1152,9 @@ sequenceDiagram
         API-->>L: {status: "submitted", scan_status: "passed"}
     else Scan Failed / Quarantined
         SCAN-->>API: scan_status = quarantined
-        API->>DB: Update status → manual_review, scan_status → quarantined
-        API-->>L: {status: "manual_review", scan_status: "quarantined", error: "File failed security scan"}
+        API->>DB: Update status → draft, scan_status → quarantined
+        API-->>L: {status: "draft", scan_status: "quarantined", error: "File failed security scan. Please upload a clean file."}
+        Note over API,DB: Quarantined files are ISOLATED and PROHIBITED from entering manual_review_tasks
     end
 ```
 
@@ -1143,7 +1163,7 @@ sequenceDiagram
 | Constraint | Value | Enforcement |
 |---|---|---|
 | Max file size | 50 MB | R2 presigned URL content-length condition |
-| Allowed MIME types | PDF, DOC/DOCX, PPT/PPTX, XLS/XLSX, JPEG, PNG, ZIP | Validated in upload-url endpoint + magic-bytes check |
+| Allowed MIME types | PDF, DOC/DOCX, PPT/PPTX, XLS/XLSX, JPEG, PNG, ZIP | Validated in upload-url metadata + post-upload magic-bytes check |
 | Max attempts per artifact | 3 (then manual review) | `attempt_number` check in submit endpoint |
 | R2 key pattern | `artifacts/{userId}/{artifactId}/{timestamp}_{fileName}` | Server-generated, not client-controlled |
 | Durable DB references | `bucket_name`, `storage_key`, `etag`, `scan_status` | `storage_url` generated dynamically at runtime (5-min GET TTL) |
@@ -1178,10 +1198,11 @@ Per review finding 2.6, the AI evaluation pipeline requires explicit text extrac
 
 ### 8.5 Upload Security & Malware Controls
 
-1. **Magic-Byte Signature Verification**: MIME type provided by the browser is untrusted. Pages Functions inspect file headers (magic bytes) during presigned URL generation.
-2. **SSRF Protection**: Submitted URLs (`link_url`) are validated to prohibit private IP ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.1`, `metadata.google.internal`).
-3. **Executable & Macro Prohibition**: Executable binaries (`.exe`, `.sh`, `.bat`) and macro-enabled documents (`.docm`, `.xlsm`) are blocked automatically.
-4. **Dynamic Presigned GET URLs**: Download links for reviewers are generated dynamically with a 5-minute expiration (`R2.getSignedUrl()`). Raw R2 storage paths are never publicly exposed.
+1. **Magic-Byte Signature Verification**: MIME type provided by the browser is untrusted. After file upload, the backend reads the initial 512 bytes from R2 to inspect magic bytes before passing `scan_status`.
+2. **Quarantined File Safety Isolation**: Quarantined or infected files are marked `scan_status = 'quarantined'`, isolated in storage, and **strictly prohibited** from being enqueued as manual grading tasks for human reviewers (`manual_review_tasks`).
+3. **SSRF Protection**: Submitted URLs (`link_url`) are validated to prohibit private IP ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.1`, `metadata.google.internal`).
+4. **Executable & Macro Prohibition**: Executable binaries (`.exe`, `.sh`, `.bat`) and macro-enabled documents (`.docm`, `.xlsm`) are blocked automatically.
+5. **Dynamic Presigned GET URLs**: Download links for reviewers are generated dynamically with a 5-minute expiration (`R2.getSignedUrl()`). Raw R2 storage paths are never publicly exposed.
 
 ---
 
@@ -1339,7 +1360,9 @@ Per review finding 2.9 and Product Decision **PD-013**, the LLM provider evaluat
 1. **Zero Data Retention Contract**: The LLM API vendor MUST operate under an enterprise contract prohibiting retention, caching, or logging of learner artifact content for model training or vendor analytics.
 2. **Edge PII Scrubbing**: Cloudflare Pages Functions perform regex and pattern-based PII scrubbing (emails, phone numbers, student IDs) on `artifact_extracted_content` prior to prompt assembly.
 3. **Data Residency**: Artifact text and prompt contents are evaluated strictly within approved geographical regions (EU/US enterprise endpoints) matching institutional compliance policies.
-4. **Prompt & Raw Response Audit**: Raw prompt structures and vendor responses are recorded securely in `ai_reviews.raw_response` with access restricted exclusively to system administrators.
+4. **Audit Provenance & Hash-Based Verification**: The primary, permanent audit record consists of the **SHA-256 hash** of the assembled prompt structure alongside structured scoring metadata (`criterion_scores`, `evidence_found`, `evidence_missing`).
+5. **Raw Prompt Retention & Purge Policy**: Full raw prompt structures and vendor responses stored in `ai_reviews.raw_response` are retained for a maximum **30-day window** (matching the learner evaluation dispute window). After 30 days, a Cloudflare Cron Worker automatically truncates `raw_response` to null, preserving only the SHA-256 hash and structured scoring JSON.
+6. **Encryption & RBAC**: Prompt logs and review payloads are encrypted at rest using Supabase KMS/AES-256 and accessible exclusively through authenticated admin audit roles.
 
 ---
 
@@ -1655,7 +1678,7 @@ CREATE TABLE public.event_processing_log (
 
 ### 13.4 xAPI 2.0 (IEEE 9274.1.1-2023) Event Statement Specification
 
-All domain events emitted to `lte-events` queue conform to IEEE 9274.1.1-2023 (xAPI 2.0) standard statements for auditability and ecosystem interoperability:
+As specified in Section 13.1, internal micro-events on the `lte-events` queue use compact domain payloads for high edge performance. The async **xAPI Projection Adapter** consumes internal queue events and generates standard IEEE 9274.1.1-2023 (xAPI 2.0) statements for external Learning Record Store (LRS) streaming, analytics, and institutional audit persistence:
 
 ```json
 {
@@ -1796,7 +1819,7 @@ const PaginationSchema = z.object({
 | Unit Tests | 80%+ | XP engine rules, readiness formula, eligibility gate, stage sequencing |
 | Integration Tests | Critical paths | API endpoints, DB queries, queue consumer |
 | E2E Tests | Full learner loop | Login → role → course → 6E → artifact → review → XP → readiness |
-| Property Tests | Invariants | "Failed artifacts never produce XP", "Readiness never exceeds 100" |
+| Property Tests | Invariants | "Failed artifacts never produce Evidence XP and never increase readiness", "Readiness never exceeds 100" |
 
 ### 16.2 Critical Test Cases
 
@@ -2060,24 +2083,31 @@ COMMIT;
 
 ## 20. Requirement Traceability Matrix
 
-| PRD FR | TRD Requirement | API | DB Table | Test |
-|---|---|---|---|---|
-| FR1 (Login/Profile) | Reuse SSO Worker + auth packages | AUTH-001..004 | (SSO DB) | T-012 |
-| FR2 (Assessment Entry) | Read from SkillPassport via shadow roles | TRD-API-001 | `roles` | T-012 |
-| FR3 (Role Selection) | Learner/admin role assignment | TRD-API-003..004 | `user_role_assignments` | T-012 |
-| FR4 (6-Month Roadmap) | Role → capability sequence → courses | TRD-API-005 | `role_capability_sequence` | T-012 |
-| FR5 (Role-Based Course) | Course listing by role | TRD-API-006..007 | `courses`, `user_course_status` | T-012 |
-| FR6 (6E Module Delivery) | Sequential stage delivery + guards | TRD-API-008..011 | `modules_content`, `user_stage_progress` | T-001 |
-| FR7 (Problem Statement) | Problem + rubric in module content | TRD-API-009 | `artifact_questions` | T-012 |
-| FR8 (Artifact Upload) | R2 presigned upload + submission | TRD-API-013..014 | `artifact_submissions` | T-012 |
-| FR9 (AI/Rubric Review) | Async queue → embedding-worker → structured output | TRD-API-017 | `ai_reviews`, `manual_reviews` | T-007, T-008 |
-| FR10 (XP Allocation) | Deterministic XP engine + idempotency | TRD-API-020..021 | `xp_events` | T-004, T-005 |
-| FR11 (Learner Dashboard) | Aggregated dashboard endpoint | TRD-API-024 | All progress tables | T-012 |
-| FR12 (Readiness Score) | Five-component formula + snapshots | TRD-API-022..023 | `readiness_snapshots` | T-006 |
-| FR13 (Marketplace) | Eligibility gate + versioned consent | TRD-API-025..027 | `marketplace_consent` | T-009, T-010 |
-| FR14 (Admin Tracking) | Admin endpoints + manual review queue | TRD-API-028..030 | All tables (admin scope) | T-012 |
-| FR15 (Completion ≠ Mastery) | Separate enum states | — | `user_module_status` | T-002, T-003 |
-| FR16 (Governance) | Version columns + immutable event logs | — | `version_no`, `calculation_version` | T-011 |
+| PRD Section | PRD Requirement | TRD Section | API | DB Table | Test |
+|---|---|---|---|---|---|
+| FR1 | Login and Profile Reuse | §14.1 | AUTH-001..004 | (SSO DB) | T-012 |
+| FR2 | Assessment Output / 3-Track Entry | §4.2 (DB-011) | TRD-API-001 | `user_assessment_links`, `roles` | T-012 |
+| FR3 | Role Selection / Admin Assignment | §5.3 | TRD-API-003..004 | `user_role_assignments` | T-012 |
+| FR4 | 6-Month Roadmap | §5.3, §25 | TRD-API-005 | `role_capability_sequence` | T-012 |
+| FR5 | Role-Based Course | §5.3 | TRD-API-006..007 | `courses`, `user_course_status` | T-012 |
+| FR6 | 6E Module Delivery | §7 | TRD-API-008..012 | `modules_content`, `user_stage_progress` | T-001 |
+| FR7 | Problem Statement Workflow | §5.3 | TRD-API-009 | `artifact_questions`, `artifact_templates` | T-012 |
+| FR8 | Artifact Upload | §8 | TRD-API-013..016 | `artifact_submissions` | T-012 |
+| FR9 | AI/Rubric Evaluation | §9 | TRD-API-017..019 | `ai_reviews`, `manual_reviews` | T-007, T-008 |
+| FR10 | XP Allocation | §10 | TRD-API-020..021 | `xp_events` | T-004, T-005 |
+| FR11 | Learner Dashboard | §25 | TRD-API-024 | All progress tables | T-012 |
+| FR12 | Readiness Score + Display | §11, §11.4 | TRD-API-022..023 | `readiness_snapshots` | T-006 |
+| FR13 | Marketplace Eligibility | §12 | TRD-API-025..027 | `marketplace_consent` | T-009, T-010 |
+| FR14 | Admin Tracking | §5.3 | TRD-API-028..030 | All tables (admin scope) | T-012 |
+| FR15 | Completion ≠ Mastery | §7.1 | — | `user_module_status` | T-002, T-003 |
+| FR16 | Product Governance | §26 | — | `version_no`, `calculation_version` | T-011 |
+| §9 | 6E Learning Design | §7 | — | `modules_content` | T-001 |
+| §12.4 | Readiness Display | §11.4 | TRD-API-022 | `readiness_snapshots` | T-012 |
+| §13 | Dashboard UX | §25 | TRD-API-024 | All tables | T-012 |
+| §15 | Content Architecture | §24 | — | Seed scripts | — |
+| §16 | Consent, Privacy | §12, §14.3 | TRD-API-025..027 | `marketplace_consent` | T-009, T-010 |
+| §18 | Out-of-Scope | §27 | — | — | — |
+| §20 | Product Decisions Freeze | §26 | — | — | — |
 
 ---
 
@@ -2125,13 +2155,11 @@ The PRD mandates a 3-week build. This section maps TRD deliverables to weekly sp
 
 | Day | Deliverable | TRD Reference |
 |---|---|---|
-| D1–D2 | DB migrations: all 11 new tables + RLS policies | TRD-DB-001..011 |
-| D2–D3 | Auth integration: SSO RPC binding, auth middleware | §14.1, AUTH-001..004 |
-| D3–D4 | Roles & Roadmap API: listing, detail, assignment | TRD-API-001..005 |
-| D4–D5 | Course & Module API: listing, detail, 6E content | TRD-API-006..009 |
-| D5 | 6E Stage Progress API + StageGuard | TRD-API-010..012, §7 |
-| D5 | R2 bucket setup + presigned upload API | TRD-API-013 |
-| D5 | Health check endpoint | §18.2 |
+| **Day 1** | DB migrations: all 11 new tables + RLS policies | TRD-DB-001..011 |
+| **Day 2** | Auth integration: SSO RPC binding, auth middleware | §14.1, AUTH-001..004 |
+| **Day 3** | Roles & Roadmap API: listing, detail, assignment | TRD-API-001..005 |
+| **Day 4** | Course & Module API: listing, detail, 6E content | TRD-API-006..009 |
+| **Day 5** | 6E Stage Progress API + StageGuard, R2 bucket setup, health check endpoint | TRD-API-010..013, §7, §18.2 |
 
 **Week 1 Exit Criteria**: Learner can log in → see roles → select role → view roadmap → view course/module → navigate 6E stages sequentially. All catalog data seeded.
 
@@ -2139,12 +2167,11 @@ The PRD mandates a 3-week build. This section maps TRD deliverables to weekly sp
 
 | Day | Deliverable | TRD Reference |
 |---|---|---|
-| D6–D7 | Artifact submission API (file + text + link) | TRD-API-013..016 |
-| D7–D8 | embedding-worker enhancement: queue consumer, prompt, structured output | §9, embedding-worker |
-| D8–D9 | AI review → outcome rules → XP award pipeline | TRD-API-017, §10 |
-| D9 | Manual review API + queue | TRD-API-018..019 |
-| D9–D10 | Readiness calculator + snapshot creation | TRD-API-022..023, §11 |
-| D10 | Marketplace eligibility + consent API | TRD-API-025..027, §12 |
+| **Day 6** | Artifact submission API (file + text + link) | TRD-API-013..016 |
+| **Day 7** | embedding-worker enhancement: queue consumer, prompt, structured output | §9, embedding-worker |
+| **Day 8** | AI review → outcome rules → XP award pipeline | TRD-API-017, §10 |
+| **Day 9** | Manual review API + queue | TRD-API-018..019 |
+| **Day 10** | Readiness calculator + snapshot creation, Marketplace eligibility + consent API | TRD-API-022..027, §11, §12 |
 
 **Week 2 Exit Criteria**: Full engine loop works — artifact submitted → AI reviews → XP awarded → readiness calculated → marketplace eligibility shown. Content/rubrics frozen for priority courses.
 
@@ -2152,13 +2179,11 @@ The PRD mandates a 3-week build. This section maps TRD deliverables to weekly sp
 
 | Day | Deliverable | TRD Reference |
 |---|---|---|
-| D11–D12 | Learner Dashboard page (all fields from §25) | TRD-FE-001, TRD-API-024 |
-| D12–D13 | Admin Dashboard + Learner Detail + Analytics | TRD-FE-008..010, TRD-API-028..030 |
-| D13 | Manual Review UI | TRD-FE-009 |
-| D13–D14 | XP display, Readiness gauge, Marketplace status UI | TRD-FE-005..007 |
-| D14 | E2E tests: full learner loop | T-012 |
-| D14–D15 | Bug fixes, performance validation, staging deploy | §15, §17 |
-| D15 | Demo rehearsal + sign-off | §17.3 |
+| **Day 11** | Learner Dashboard page (all fields from §25) | TRD-FE-001, TRD-API-024 |
+| **Day 12** | Admin Dashboard + Learner Detail + Analytics | TRD-FE-008..010, TRD-API-028..030 |
+| **Day 13** | Manual Review UI, XP display, Readiness gauge, Marketplace status UI | TRD-FE-005..009 |
+| **Day 14** | E2E tests: full learner loop | T-012 |
+| **Day 15** | Bug fixes, performance validation, staging deploy, demo rehearsal & sign-off | §15, §17, §17.3 |
 
 **Week 3 Exit Criteria**: Complete learner demo loop. All P0 features working. 80%+ test coverage. Staging deployed.
 
@@ -2396,43 +2421,11 @@ Per PRD §18, these items are explicitly excluded from this TRD and must not be 
 
 ---
 
-## 28. Updated Requirement Traceability Matrix (Complete)
-
-This supersedes §20 with the gap-filled requirements:
-
-| PRD Section | PRD Requirement | TRD Section | API | DB Table | Test |
-|---|---|---|---|---|---|
-| FR1 | Login and Profile Reuse | §14.1 | AUTH-001..004 | (SSO DB) | T-012 |
-| FR2 | Assessment Output / 3-Track Entry | §4.2 (DB-011) | TRD-API-001 | `user_assessment_links`, `roles` | T-012 |
-| FR3 | Role Selection / Admin Assignment | §5.3 | TRD-API-003..004 | `user_role_assignments` | T-012 |
-| FR4 | 6-Month Roadmap | §5.3, §25 | TRD-API-005 | `role_capability_sequence` | T-012 |
-| FR5 | Role-Based Course | §5.3 | TRD-API-006..007 | `courses`, `user_course_status` | T-012 |
-| FR6 | 6E Module Delivery | §7 | TRD-API-008..012 | `modules_content`, `user_stage_progress` | T-001 |
-| FR7 | Problem Statement Workflow | §5.3 | TRD-API-009 | `artifact_questions`, `artifact_templates` | T-012 |
-| FR8 | Artifact Upload | §8 | TRD-API-013..016 | `artifact_submissions` | T-012 |
-| FR9 | AI/Rubric Evaluation | §9 | TRD-API-017..019 | `ai_reviews`, `manual_reviews` | T-007, T-008 |
-| FR10 | XP Allocation | §10 | TRD-API-020..021 | `xp_events` | T-004, T-005 |
-| FR11 | Learner Dashboard | §25 | TRD-API-024 | All progress tables | T-012 |
-| FR12 | Readiness Score + Display | §11, §11.4 | TRD-API-022..023 | `readiness_snapshots` | T-006 |
-| FR13 | Marketplace Eligibility | §12 | TRD-API-025..027 | `marketplace_consent` | T-009, T-010 |
-| FR14 | Admin Tracking | §5.3 | TRD-API-028..030 | All tables (admin scope) | T-012 |
-| FR15 | Completion ≠ Mastery | §7.1 | — | `user_module_status` | T-002, T-003 |
-| FR16 | Product Governance | §26 | — | `version_no`, `calculation_version` | T-011 |
-| §9 | 6E Learning Design | §7 | — | `modules_content` | T-001 |
-| §12.4 | Readiness Display | §11.4 | TRD-API-022 | `readiness_snapshots` | T-012 |
-| §13 | Dashboard UX | §25 | TRD-API-024 | All tables | T-012 |
-| §15 | Content Architecture | §24 | — | Seed scripts | — |
-| §16 | Consent, Privacy | §12, §14.3 | TRD-API-025..027 | `marketplace_consent` | T-009, T-010 |
-| §18 | Out-of-Scope | §27 | — | — | — |
-| §20 | Product Decisions Freeze | §26 | — | — | — |
-
----
-
-## 29. Cross-Ecosystem Alignment & Compatibility Matrix
+## 28. Cross-Ecosystem Alignment & Compatibility Matrix
 
 This section explicitly verifies alignment between the LTE TRD and all connected applications within the `skill-echosystem` workspace.
 
-### 29.1 Ecosystem Compatibility Audit
+### 28.1 Ecosystem Compatibility Audit
 
 | Ecosystem Component | Protocol / Standard | LTE Integration Mechanism | Verified Status |
 |---|---|---|---|
@@ -2445,7 +2438,7 @@ This section explicitly verifies alignment between the LTE TRD and all connected
 | **Cloudflare R2 (`lte-artifacts`)** | Direct S3 Presigned URL PUT | Presigned upload URL generation in Pages Functions | ✅ FULLY ALIGNED |
 | **Cloudflare Queues** | Event Bus (`lte-events`, `auth-db-sync-queue`) | Async event producer/consumer for AI review & sync | ✅ FULLY ALIGNED |
 
-### 29.2 JWT Claims & Identity Mapping
+### 28.2 JWT Claims & Identity Mapping
 
 The JWT payload issued by `sso-worker` and decoded by `@rareminds-eym/auth-core` is directly mapped in LTE Functions:
 
@@ -2462,7 +2455,7 @@ export interface LTEAuthUser {
 
 ---
 
-## 30. Architecture Decision Records (ADR Registry)
+## 29. Architecture Decision Records (ADR Registry)
 
 This registry records key technical architectural decisions, context, and trade-offs made for the LTE 3-Week MVP.
 
