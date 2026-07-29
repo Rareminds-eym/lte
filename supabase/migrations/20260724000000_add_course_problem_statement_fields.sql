@@ -1,7 +1,7 @@
 BEGIN;
 
 ALTER TABLE public."levels"
-  ADD COLUMN IF NOT EXISTS "course_problem_statement" jsonb;
+  ADD COLUMN IF NOT EXISTS "problem_statement" jsonb;
 
 ALTER TABLE public."modules"
   ADD COLUMN IF NOT EXISTS "module_problem_statement" text;
