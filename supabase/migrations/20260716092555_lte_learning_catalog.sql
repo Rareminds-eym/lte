@@ -37,7 +37,7 @@ CREATE TYPE public.difficulty_level AS ENUM (
   'beginner', 'foundation', 'intermediate', 'advanced', 'expert'
 );
 
-CREATE TYPE public.course_status AS ENUM ('draft', 'published', 'archived');
+CREATE TYPE public.status AS ENUM ('draft', 'published', 'archived');
 
 CREATE TYPE public.lte_6e_stage AS ENUM (
   'engage', 'explore', 'explain', 'express', 'empower', 'evolve'
@@ -214,7 +214,7 @@ CREATE TABLE IF NOT EXISTS public."levels" (
   "example_outputs" text NOT NULL,
   "duration_minutes" integer NOT NULL,
   "difficulty_level" public.difficulty_level NOT NULL,
-  "course_status" public.course_status DEFAULT 'draft' NOT NULL,
+  "status" public.status DEFAULT 'draft' NOT NULL,
   "version_no" integer DEFAULT 1 NOT NULL,
   "is_active" boolean DEFAULT true NOT NULL,
   "metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS public."levels" (
 CREATE INDEX IF NOT EXISTS "idx_levels_level_id"
   ON public."levels" ("level_id");
 CREATE INDEX IF NOT EXISTS "idx_levels_status"
-  ON public."levels" ("course_status");
+  ON public."levels" ("status");
 CREATE INDEX IF NOT EXISTS "idx_levels_difficulty"
   ON public."levels" ("difficulty_level");
 CREATE INDEX IF NOT EXISTS "idx_levels_active"
