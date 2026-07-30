@@ -124,7 +124,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
     if (!callbackParams) {
       // Bare /auth/callback with no params — bounce to landing
       navigate("/", { replace: true });
-      return null;
+      return <ApplicationLoader message="Redirecting…" />;
     }
     const message = callbackError ?? authError;
     if (message) {
