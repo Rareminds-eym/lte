@@ -25,6 +25,7 @@ interface MockQueryChain {
   neq: (col: string, val: unknown) => MockQueryChain;
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
   single: () => Promise<{ data: unknown; error: unknown }>;
+  then: typeof Promise.prototype.then;
 }
 
 function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): MockQueryChain {
@@ -37,6 +38,10 @@ function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): Mo
     neq: vi.fn().mockImplementation(() => chain),
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
+    // biome-ignore lint/suspicious/noThenProperty: needed to make mock chain await-able
+    then(onfulfilled) {
+      return Promise.resolve({ data: resolveVal, error: errorVal }).then(onfulfilled);
+    },
   };
   return chain;
 }
