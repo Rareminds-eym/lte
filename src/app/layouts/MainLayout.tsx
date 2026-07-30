@@ -1,121 +1,13 @@
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "@/entities/session";
-import { getLogger } from "@/shared";
+import { Outlet } from "react-router-dom";
 
-const logger = getLogger("MainLayout");
-
-function getExchangeKey(params: {
-  code: string;
-  state: string;
-  redirectUri: string;
-  targetNext?: string;
-}): string {
-  return `${params.redirectUri}:${params.code}:${params.state}`;
-}
-
-export const MainLayout: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  // Component-scoped cache to deduplicate concurrent exchange requests (React StrictMode safe)
-  const exchangeRequestsRef = useRef(new Map<string, Promise<void>>());
-
-  const initialize = useAuthStore((state) => state.initialize);
-  const initialized = useAuthStore((state) => state.initialized);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const exchangeCode = useAuthStore((state) => state.exchangeCode);
-  const authError = useAuthStore((state) => state.error);
-
-  const [callbackError, setCallbackError] = useState<string | null>(null);
-
-  // Validate and parse the redirection target (starts with / or . and not // to prevent XSS / open redirects)
-  const targetNext = useMemo(() => {
-    const next = searchParams.get("next");
-    if (next?.startsWith("/") && !next.startsWith("//") && !next.startsWith(".")) {
-      return next;
-    }
-    return "/dashboard";
-  }, [searchParams]);
-
-  // Check if we are on a callback flow (either /auth/callback or code/state query parameters)
-  const callbackParams = useMemo(() => {
-    const code = searchParams.get("code");
-    const state = searchParams.get("state");
-    const redirectUri = `${window.location.origin}/auth/callback`;
-    return code && state ? { code, state, redirectUri, targetNext } : null;
-  }, [searchParams, targetNext]);
-
-  // 1. Initial local session load in background (only if not doing callback)
-  useEffect(() => {
-    if (location.pathname.startsWith("/auth/callback") || callbackParams) {
-      return;
-    }
-
-    if (!initialized && !isAuthenticated) {
-      logger.info("Calling initialize...");
-      void initialize();
-    }
-  }, [initialize, initialized, isAuthenticated, location.pathname, callbackParams]);
-
-  // 2. Perform authorization code exchange if callback parameters are present
-  useEffect(() => {
-    if (!callbackParams) return;
-
-    let cancelled = false;
-    const exchangeKey = getExchangeKey(callbackParams);
-    let exchangeRequest = exchangeRequestsRef.current.get(exchangeKey);
-
-    if (!exchangeRequest) {
-      logger.info("Starting code exchange...", callbackParams);
-      exchangeRequest = exchangeCode(callbackParams).catch((error: unknown) => {
-        exchangeRequestsRef.current.delete(exchangeKey);
-        throw error;
-      });
-      exchangeRequestsRef.current.set(exchangeKey, exchangeRequest);
-    }
-
-    exchangeRequest
-      .then(() => {
-        if (!cancelled) {
-          logger.info(`Exchange succeeded, navigating to ${targetNext}`);
-          window.history.replaceState({}, "", targetNext);
-          navigate(targetNext, { replace: true });
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          const message = error instanceof Error ? error.message : "SSO callback failed";
-          logger.error("Exchange failed", error instanceof Error ? error : new Error(message));
-          setCallbackError(message);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [callbackParams, exchangeCode, navigate, targetNext]);
-
-  // If executing callback, intercept and render loading/error screen
-  if (callbackParams || location.pathname.startsWith("/auth/callback")) {
-    // If we routed to /auth/callback without params, redirect to landing
-    if (!callbackParams) {
-      return <Navigate to="/" replace />;
-    }
-
-    const message = callbackError ?? authError;
-
-    return (
-      <main className="min-h-screen grid place-items-center p-8">
-        <section className="max-w-md text-center">
-          <h1>{message ? "Unable to sign in" : "Signing you in"}</h1>
-          <p>{message ?? "Please wait while LTE verifies your SkillPassport session."}</p>
-        </section>
-      </main>
-    );
-  }
-
-  return <Outlet />;
-};
+/**
+ * MainLayout — top-level route shell.
+ *
+ * Authentication initialization and SSO callback exchange are handled
+ * by AuthInitializer (app/providers/AuthInitializer) before any route renders.
+ *
+ * This layout is a pure pass-through. Add global chrome here
+ * (e.g. a toast container or a top progress bar) if needed.
+ */
+export const MainLayout: React.FC = () => <Outlet />;

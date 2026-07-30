@@ -129,7 +129,24 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
   ]);
 
   if (isPending) {
-    return <PageLoader message="Initializing learning path..." />;
+    return (
+      <div
+        className="bg-surface-primary border border-line-default rounded-2xl p-8 flex flex-col items-center justify-center text-center space-y-4 max-w-lg mx-auto shadow-sm animate-pulse mb-6"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-indigo-200 border-t-indigo-600" />
+        <div>
+          <p className="text-sm font-semibold text-content-primary">
+            Initializing learning path...
+          </p>
+          <p className="text-xs text-content-secondary mt-1">
+            Please wait while we provision your course progress state.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return null;

@@ -1,12 +1,13 @@
 import type React from "react";
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 import { MainLayout } from "@/app/layouts/MainLayout";
 import { GuestGuard } from "@/app/router/guards";
-import { PageLoader } from "@/shared/ui";
+import { RouteLoadingBoundary } from "@/shared/ui";
+import { DashboardSkeleton } from "@/widgets/dashboard";
 
-// Lazy loaded page components
+// Lazy loaded page components — must be declared at module scope (workspace rule)
 const HomePage = lazy(() => import("@/pages/home").then((m) => ({ default: m.HomePage })));
 const LoginPage = lazy(() => import("@/pages/login").then((m) => ({ default: m.LoginPage })));
 const Dashboard = lazy(() => import("@/pages/dashboard").then((m) => ({ default: m.Dashboard })));
@@ -23,19 +24,19 @@ export const AppRouter: React.FC = () => {
         <Route
           path="/"
           element={
-            <Suspense fallback={<PageLoader message="Loading Homepage..." />}>
+            <RouteLoadingBoundary>
               <HomePage />
-            </Suspense>
+            </RouteLoadingBoundary>
           }
         />
         <Route
           path="/login"
           element={
-            <Suspense fallback={<PageLoader message="Loading Sign In..." />}>
+            <RouteLoadingBoundary>
               <GuestGuard>
                 <LoginPage />
               </GuestGuard>
-            </Suspense>
+            </RouteLoadingBoundary>
           }
         />
         <Route path="/auth/callback" element={null} />
@@ -43,25 +44,25 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/dashboard"
             element={
-              <Suspense fallback={<PageLoader message="Loading Dashboard..." />}>
+              <RouteLoadingBoundary fallback={<DashboardSkeleton />}>
                 <Dashboard />
-              </Suspense>
+              </RouteLoadingBoundary>
             }
           />
           <Route
             path="/my-courses"
             element={
-              <Suspense fallback={<PageLoader message="Loading Courses..." />}>
+              <RouteLoadingBoundary>
                 <Courses />
-              </Suspense>
+              </RouteLoadingBoundary>
             }
           />
           <Route
             path="/my-courses/:capabilityCode"
             element={
-              <Suspense fallback={<PageLoader message="Loading Course..." />}>
+              <RouteLoadingBoundary>
                 <CourseDetail />
-              </Suspense>
+              </RouteLoadingBoundary>
             }
           />
         </Route>
@@ -69,9 +70,9 @@ export const AppRouter: React.FC = () => {
       <Route
         path="*"
         element={
-          <Suspense fallback={<PageLoader message="Loading Page..." />}>
+          <RouteLoadingBoundary>
             <NotFound />
-          </Suspense>
+          </RouteLoadingBoundary>
         }
       />
     </Routes>

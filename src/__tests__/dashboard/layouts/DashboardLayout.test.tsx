@@ -43,15 +43,13 @@ describe("DashboardLayout", () => {
     vi.stubEnv("VITE_SKILLPASSPORT_URL", "http://127.0.0.1:8788");
   });
 
-  it("shows loading state when initializing", () => {
-    useAuthStore.setState({ initialized: false, loading: true });
-    const { container } = render(
-      <MemoryRouter initialEntries={["/dashboard"]}>
-        <DashboardLayout />
-      </MemoryRouter>,
-    );
-    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
-  });
+  /**
+   * Loading state skeleton is no longer rendered by DashboardLayout.
+   * It is now handled by AuthInitializer (app/providers/AuthInitializer)
+   * which shows ApplicationLoader before any route/layout renders.
+   * See AuthInitializer.test.tsx for bootstrap loading tests.
+   */
+  it.skip("loading state is handled by AuthInitializer, not DashboardLayout", () => {});
 
   it("shows access required card when entitlement error occurs", () => {
     useAuthStore.setState({
