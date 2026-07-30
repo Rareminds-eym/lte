@@ -28,7 +28,7 @@ const UserCapabilitiesResponseSchema = z.object({
 type UserCapabilityResponse = z.infer<typeof UserCapabilitySchema>;
 
 async function fetchUserCapabilities(): Promise<UserCapabilityResponse[]> {
-  const raw = await apiFetch<unknown>("/api/v1/capabilities/user", {
+  const raw = await apiFetch("/api/v1/capabilities/user", {
     method: "GET",
   });
 

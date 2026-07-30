@@ -16,7 +16,7 @@ export const initializeLearningPath = async ({
   payload: InitializeLearningPathPayload;
   signal?: AbortSignal;
 }): Promise<InitializeLearningPathResponse> => {
-  const raw = await apiFetch<unknown>("/api/v1/learning-paths/initialize", {
+  const raw = await apiFetch("/api/v1/learning-paths/initialize", {
     method: "POST",
     body: JSON.stringify(payload),
     signal,

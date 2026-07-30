@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchUserCourses } from "../api/courseApi";
 
-export const useCourses = (options?: { enabled?: boolean }) => {
+export const useCourses = (userId?: string, options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: ["userCourses"],
+    queryKey: ["userCourses", userId],
     queryFn: () => fetchUserCourses(),
     staleTime: 1000 * 60 * 5,
     retry: (failureCount, error) => {

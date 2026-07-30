@@ -49,7 +49,7 @@ describe("LearningPathInitializer Feature", () => {
         logout: vi.fn(),
         setAccessToken: vi.fn(),
       };
-      return typeof selector === "function" ? selector(state) : (state as unknown as T);
+      return selector ? selector(state) : (state as T);
     });
 
     // Default mock implementation for useInitializeLearningPath
@@ -141,10 +141,10 @@ describe("LearningPathInitializer Feature", () => {
     });
 
     it("triggers mutation and shows page loader when query params are valid", async () => {
-      (useInitializeLearningPath as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      vi.mocked(useInitializeLearningPath).mockReturnValue({
         mutate: mockMutate,
         isPending: true,
-      });
+      } as unknown as ReturnType<typeof useInitializeLearningPath>);
 
       const params = [
         "fit=High",
