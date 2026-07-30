@@ -13,7 +13,7 @@ const hasInitError = (state: unknown): state is InitErrorState => {
     typeof state === "object" &&
     state !== null &&
     "initializationError" in state &&
-    typeof (state as { initializationError: unknown })["initializationError"] === "string"
+    typeof (state as { initializationError: unknown }).initializationError === "string"
   );
 };
 

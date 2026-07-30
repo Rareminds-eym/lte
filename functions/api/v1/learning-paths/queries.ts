@@ -225,7 +225,8 @@ export async function syncUserCapabilities(
     const requiredLevelNum = levelMap[seq.required_level as string] || 1;
     const currentLevelNum = existingMap.get(seq.id) || 0;
     const gap = Math.max(0, requiredLevelNum - currentLevelNum);
-    const gapScore = requiredLevelNum > 0 ? Math.round((currentLevelNum / requiredLevelNum) * 100) : 0;
+    const gapScore =
+      requiredLevelNum > 0 ? Math.round((currentLevelNum / requiredLevelNum) * 100) : 0;
 
     return {
       user_id: params.userId,
@@ -250,4 +251,3 @@ export async function syncUserCapabilities(
     throw new Error(`Failed to upsert user capabilities: ${upsertError.message}`);
   }
 }
-

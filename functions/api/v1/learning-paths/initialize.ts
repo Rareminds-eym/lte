@@ -6,9 +6,9 @@ import type { LteEnv, PagesContext } from "@functions/lib/types";
 import {
   checkRoleExists,
   deactivateOtherPaths,
+  syncUserCapabilities,
   upsertLearningPath,
   upsertLearningTrack,
-  syncUserCapabilities,
 } from "./queries";
 import { InitializeLearningPathSchema } from "./schemas";
 

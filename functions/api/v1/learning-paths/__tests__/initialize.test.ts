@@ -20,6 +20,7 @@ interface MockQueryChain {
   select: () => MockQueryChain;
   update: (payload?: unknown) => MockQueryChain;
   insert: () => MockQueryChain;
+  upsert: (rows: unknown) => MockQueryChain;
   eq: (col: string, val: unknown) => MockQueryChain;
   neq: (col: string, val: unknown) => MockQueryChain;
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
@@ -31,6 +32,7 @@ function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): Mo
     select: vi.fn().mockImplementation(() => chain),
     update: vi.fn().mockImplementation(() => chain),
     insert: vi.fn().mockImplementation(() => chain),
+    upsert: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
     neq: vi.fn().mockImplementation(() => chain),
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
