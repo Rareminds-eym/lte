@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { ApiError, getLogger } from "@/shared";
+import { getLogger } from "@/shared";
+import { ApiError, apiFetch } from "@/shared/api";
 import type { Course } from "../model/types";
 
 const apiLogger = getLogger("api");
@@ -26,26 +27,11 @@ const UserCapabilitiesResponseSchema = z.object({
 
 type UserCapabilityResponse = z.infer<typeof UserCapabilitySchema>;
 
-async function fetchUserCapabilities(accessToken: string): Promise<UserCapabilityResponse[]> {
-  const response = await fetch("/api/v1/capabilities/user", {
+async function fetchUserCapabilities(): Promise<UserCapabilityResponse[]> {
+  const raw = await apiFetch<unknown>("/api/v1/capabilities/user", {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
   });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new ApiError(
-      (errorData as { error?: { message?: string } })?.error?.message ??
-        `Request failed with status ${response.status}`,
-      response.status,
-    );
-  }
-
-  const raw = await response.json().catch(() => {
-    throw new ApiError("Invalid JSON response from server");
-  });
   const parsed = UserCapabilitiesResponseSchema.safeParse(raw);
   if (!parsed.success) {
     throw new ApiError("Invalid response format from server");
@@ -78,8 +64,8 @@ function mapCapabilityToCourse(cap: UserCapabilityResponse, index: number): Cour
   };
 }
 
-export async function fetchUserCourses(accessToken: string): Promise<Course[]> {
+export async function fetchUserCourses(): Promise<Course[]> {
   apiLogger.info("fetching user courses");
-  const capabilities = await fetchUserCapabilities(accessToken);
+  const capabilities = await fetchUserCapabilities();
   return capabilities.map((cap, i) => mapCapabilityToCourse(cap, i));
 }

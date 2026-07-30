@@ -1,6 +1,5 @@
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as activeLearningPathApi from "@/entities/active-learning-path";
 import { useAuthStore } from "@/entities/session";
 import * as authApi from "@/shared/api/authApi";
 import type { AuthUser } from "@/shared/types/auth";
@@ -10,11 +9,6 @@ vi.mock("@/shared/api/authApi", () => ({
   fetchMe: vi.fn(),
   exchangeSsoCode: vi.fn(),
   logoutSession: vi.fn(),
-}));
-
-vi.mock("@/entities/active-learning-path", () => ({
-  fetchActiveLearningPath: vi.fn(),
-  ApiError: vi.fn(),
 }));
 
 const mockAuthUser: AuthUser = {
@@ -36,13 +30,10 @@ beforeEach(() => {
     loading: true,
     initialized: false,
     error: null,
-    activeLearningPath: null,
-    activeLearningPathLoading: false,
     initialize: useAuthStore.getState().initialize,
     exchangeCode: useAuthStore.getState().exchangeCode,
     logout: useAuthStore.getState().logout,
     setAccessToken: useAuthStore.getState().setAccessToken,
-    fetchAndSetActiveLearningPath: useAuthStore.getState().fetchAndSetActiveLearningPath,
   });
   vi.clearAllMocks();
 });
@@ -145,47 +136,6 @@ describe("authStore", () => {
     });
   });
 
-  describe("fetchAndSetActiveLearningPath", () => {
-    it("fetches and stores active learning path", async () => {
-      useAuthStore.setState({ accessToken: "token" });
-      (activeLearningPathApi.fetchActiveLearningPath as Mock).mockResolvedValue({
-        learningPathId: "lp-1",
-        learningTrackId: "lt-1",
-        roleId: "role-1",
-        track: "Frontend",
-        fit: "Strong",
-        matchScore: 85,
-      });
-      await useAuthStore.getState().fetchAndSetActiveLearningPath();
-      expect(useAuthStore.getState().activeLearningPath?.roleId).toBe("role-1");
-      expect(useAuthStore.getState().activeLearningPathLoading).toBe(false);
-    });
-
-    it("sets null when no active path exists", async () => {
-      useAuthStore.setState({ accessToken: "token" });
-      (activeLearningPathApi.fetchActiveLearningPath as Mock).mockResolvedValue(null);
-      await useAuthStore.getState().fetchAndSetActiveLearningPath();
-      expect(useAuthStore.getState().activeLearningPath).toBeNull();
-    });
-
-    it("skips fetch when no access token", async () => {
-      useAuthStore.setState({ accessToken: null });
-      await useAuthStore.getState().fetchAndSetActiveLearningPath();
-      expect(activeLearningPathApi.fetchActiveLearningPath).not.toHaveBeenCalled();
-      expect(useAuthStore.getState().activeLearningPath).toBeNull();
-    });
-
-    it("handles fetch failure gracefully", async () => {
-      useAuthStore.setState({ accessToken: "token" });
-      (activeLearningPathApi.fetchActiveLearningPath as Mock).mockRejectedValue(
-        new Error("Network error"),
-      );
-      await useAuthStore.getState().fetchAndSetActiveLearningPath();
-      expect(useAuthStore.getState().activeLearningPath).toBeNull();
-      expect(useAuthStore.getState().activeLearningPathLoading).toBe(false);
-    });
-  });
-
   describe("logout", () => {
     it("clears auth state on logout", async () => {
       useAuthStore.setState({
@@ -200,28 +150,6 @@ describe("authStore", () => {
       expect(useAuthStore.getState().accessToken).toBeNull();
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
-    });
-
-    it("clears activeLearningPath on logout", async () => {
-      useAuthStore.setState({
-        accessToken: "token",
-        user: mockAuthUser,
-        isAuthenticated: true,
-        activeLearningPath: {
-          learningPathId: "lp-1",
-          learningTrackId: "lt-1",
-          roleId: "r-1",
-          track: "",
-          fit: "",
-          matchScore: 0,
-        },
-      });
-      (authApi.logoutSession as Mock).mockResolvedValue({ success: true });
-
-      await useAuthStore.getState().logout();
-
-      expect(useAuthStore.getState().activeLearningPath).toBeNull();
-      expect(useAuthStore.getState().activeLearningPathLoading).toBe(false);
     });
 
     it("handles logout API failure gracefully", async () => {

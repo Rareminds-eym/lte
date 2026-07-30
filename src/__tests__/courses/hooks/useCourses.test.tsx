@@ -8,13 +8,6 @@ vi.mock("@/entities/course/api/courseApi", () => ({
   fetchUserCourses: (...args: unknown[]) => mockFetchUserCourses(...args),
 }));
 
-vi.mock("@/entities/session", () => ({
-  useAuthStore: vi.fn((selector?: unknown) => {
-    const state = { accessToken: "mock-token" };
-    return typeof selector === "function" ? selector(state) : state;
-  }),
-}));
-
 import { useCourses } from "@/entities/course";
 
 function createWrapper() {
