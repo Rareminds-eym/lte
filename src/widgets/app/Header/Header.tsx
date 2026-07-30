@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/app/store";
+import { useAuthStore } from "@/entities/session";
 import { IconButton } from "@/shared/ui";
 import { UserProfileBadge } from "./components/UserProfileBadge";
 import { UserProfileDropdown } from "./components/UserProfileDropdown";

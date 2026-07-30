@@ -1,8 +1,8 @@
 # LTE 3-Week MVP — Technical Requirements Document (TRD)
 
-**Version**: 1.0  
-**Status**: Draft for Technical Lead Review  
-**Date**: 2026-07-24  
+**Version**: 1.0 (Industrial-Grade Production Specification)  
+**Status**: Draft for Final Technical Lead Review (Pending Approval)  
+**Date**: 2026-07-28  
 **Company**: Rareminds Pvt. Ltd.  
 **Parent PRD**: [LTE_3_Week_MVP_PRD_v.1.md](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/LTE_3_Week_MVP_PRD_v.1.md)
 
@@ -24,10 +24,10 @@
 
 ## Table of Contents
 
-1. [Executive Summary](#1-executive-summary)
+1. [Executive Summary & Document Control](#1-executive-summary--document-control)
 2. [System Architecture](#2-system-architecture)
 3. [Cross-Ecosystem Integration Map](#3-cross-ecosystem-integration-map)
-4. [Database Schema Design](#4-database-schema-design)
+4. [Database Schema Design & Naming Standards](#4-database-schema-design--naming-standards)
 5. [API Specification](#5-api-specification)
 6. [Frontend Architecture](#6-frontend-architecture)
 7. [6E Learning Engine](#7-6e-learning-engine)
@@ -51,17 +51,22 @@
 25. [Learner Dashboard UX Specification](#25-learner-dashboard-ux-specification)
 26. [Product Decisions Freeze Register](#26-product-decisions-freeze-register)
 27. [Out-of-Scope Engineering Boundary](#27-out-of-scope-engineering-boundary)
-28. [Updated Requirement Traceability Matrix (Complete)](#28-updated-requirement-traceability-matrix-complete)
-29. [Cross-Ecosystem Alignment & Compatibility Matrix](#29-cross-ecosystem-alignment--compatibility-matrix)
-30. [Architecture Decision Records (ADR Registry)](#30-architecture-decision-records-adr-registry)
+28. [Cross-Ecosystem Alignment & Compatibility Matrix](#28-cross-ecosystem-alignment--compatibility-matrix)
+29. [Architecture Decision Records (ADR Registry)](#29-architecture-decision-records-adr-registry)
 
 ---
 
-## 1. Executive Summary
+## 1. Executive Summary & Document Control
 
 This TRD translates the [LTE 3-Week MVP PRD](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/LTE_3_Week_MVP_PRD_v.1.md) into implementable engineering specifications. The LTE is **not a traditional LMS** — it is a deterministic, role-readiness engine that transforms Skill Ecosystem assessment outputs into a learning execution journey with evidence-based mastery, XP allocation, readiness scoring, and marketplace eligibility.
 
-### Design Principles
+### 1.1 Document Revision History
+
+| Version | Date | Author / Owner | Summary of Changes |
+|---|---|---|---|
+| **v1.0** | 2026-07-28 | Lead Architect & Tech Lead | Industrial-grade baseline TRD specification aligned 1:1 with parent PRD v1.0, integrating all 25-point technical review fixes, multi-tenancy `org_id`, durable R2 storage, P0 file parsing, zero data retention PD-013, readiness gate PD-012, post-upload magic-byte timing, quarantined file safety boundary, and sequential 15-day sprint execution plan. |
+
+### 1.2 Design Principles
 
 1. **Engine-First**: Build the deterministic pipeline (6E → Artifact → AI Review → XP → Readiness → Marketplace) before scaling content.
 2. **Two-Database Split**: LTE DB owns learning catalog + learner progress. SkillPassport DB owns assessment data (RIASEC, aptitude, Big5, roles). Bridge via deterministic UUIDv5 shadow `roles` table.
@@ -69,7 +74,7 @@ This TRD translates the [LTE 3-Week MVP PRD](file:///mnt/E230EB0F30EAEA0D/Raremi
 4. **Immutable Evidence Trail**: Every XP event, artifact submission, AI review, and readiness calculation is append-only with version tracking.
 5. **AI Recommends, System Decides**: AI generates evaluation scores and feedback; the system deterministically applies status, XP, readiness, and marketplace rules.
 
-### 1.2 Non-Functional Requirements (NFR) Summary Matrix
+### 1.3 Non-Functional Requirements (NFR) Summary Matrix
 
 | NFR Category | Technical Target / Threshold | Measurement / Standard | Enforcement Point |
 |---|---|---|---|
@@ -203,12 +208,16 @@ graph LR
         LTE_MA["module_artifacts"]
         LTE_AQ["artifact_questions"]
         LTE_AT["artifact_templates"]
-        LTE_PROGRESS["user_* progress tables (NEW)"]
+        LTE_CAPS["user_capabilities (NEW)"]
+        LTE_LEVEL["user_capability_level_progress (NEW)"]
+        LTE_MOD_PROG["user_module_progress (NEW)"]
         LTE_SUBMISSIONS["artifact_submissions (NEW)"]
-        LTE_REVIEWS["ai_reviews (NEW)"]
+        LTE_SUB_FILES["artifact_submission_files (NEW)"]
+        LTE_EVAL["artifact_evaluation_flows (NEW)"]
         LTE_XP["xp_events (NEW)"]
-        LTE_READINESS["readiness_snapshots (NEW)"]
-        LTE_CONSENT["marketplace_consent (NEW)"]
+        LTE_SKILL_GAP["skill_gap (NEW)"]
+        LTE_PROFILE_SNAP["profile_snapshot (NEW)"]
+        LTE_TRACK_EV["learning_track_evidence (NEW)"]
     end
 
     SP_RFR -->|"UUIDv5 bridge"| LTE_ROLES
@@ -225,260 +234,413 @@ graph LR
 | embedding-worker → LTE | Inbound | Direct DB write (Hyperdrive) | Review results & embeddings |
 | LTE → Email Worker | Outbound | Queue (future) | Notifications (P2) |
 
----
+## 4. Database Schema Design & Naming Standards
 
-## 4. Database Schema Design
+### 4.1 Architecture Naming Convention Standard
 
-### 4.1 Existing Catalog Tables (Already Migrated)
+> [!NOTE]
+> **Strict Boundary Naming Rules**:
+> 1. **Database Tier (SQL DDL & Postgres Queries)**: Enforces PostgreSQL `snake_case` column and table identifiers (`user_id`, `module_id`, `attempt_no`, `artifact_id`).
+> 2. **Application & API Tier (TypeScript, React, & JSON Payloads)**: Enforces JavaScript `camelCase` properties (`userId`, `moduleId`, `attemptNo`, `artifactId`).
+> 3. **Queue Messages & xAPI Statements**: Enforces JSON `camelCase` properties (`userId`, `submissionId`) mapped via Data Access Layer transformers.
 
-The following tables already exist in the LTE DB via migration [20260716092555_lte_learning_catalog.sql](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/supabase/migrations/20260716092555_lte_learning_catalog.sql):
+### 4.2 Existing Catalog & Core Mirror Tables (Migrated)
 
-| Table | Purpose | Key Constraints |
-|---|---|---|
-| `roles` | Shadow of SkillPassport `role_family_roles` | PK: id (UUIDv5 mirror), UQ: (role_name, role_family_name, domain_name) |
-| `capabilities` | Reusable capability catalog | UQ: code |
-| `level_scale` | L1–L5 proficiency levels | CHK: level_no BETWEEN 1 AND 5 |
-| `role_capability_sequence` | Learning path per role context | UQ: (role_id, sequence_step), (role_id, capability_id) |
-| `skills` | Reusable skill catalog | UQ: code |
-| `courses` | One course per capability per level | UQ: course_code, (capability_id, level_id) |
-| `course_skills` | Course ↔ Skill junction | UQ: (course_id, skill_id) |
-| `modules` | Course modules | UQ: (course_id, module_no) |
-| `modules_content` | 6E stages per module | UQ: (module_id, stage_name), CHK: stage_order 1–6 |
-| `e_content` | Content items within 6E stages | Carries xp_reward |
-| `module_artifacts` | Artifact requirements per 6E stage | CHK: total_score > 0 |
-| `artifact_questions` | Questions within artifacts | UQ: (artifact_id, question_order) |
-| `artifact_templates` | Downloadable templates | FK: artifact_id, question_id |
+The following core catalog, identity mirror, and learning path tables exist in the LTE DB via migrations in [`lte/supabase/migrations`](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/supabase/migrations):
 
-### 4.2 New Tables Required (User Progress Domain)
+| Table | Migration File | Purpose | Key Constraints / Field Updates |
+|---|---|---|---|
+| `users` | `20260718000000_create_users.sql` | Minimal LTE user mirror matching SSO ID | PK: id (SSO UUID), UQ: email, status enum |
+| `user_profiles` | `20260727112321_create_user_profiles.sql` | 1-to-1 user profile state | PK: id, UQ: user_id, auto-provision trigger |
+| `learning_tracks` | `20260727112352_create_learning_tracks.sql` | Assessment-recommended learning tracks | FK: user_id, CHK: fit IN ('High', 'Medium', 'Explore'), match_score 0..100 |
+| `learning_paths` | `20260727112414_create_learning_paths.sql` | Personalized versioned learning paths | UQ: (user_id, learning_track_id, role_id), partial index uq_learning_paths_one_active_per_user |
+| `subscription_cache` | `20260718093100_create_subscription_cache.sql` | Local shadow of SSO subscription entitlements | PK: id, FK: user_id, product_code DEFAULT 'lte' |
+| `roles` | `20260716092555_lte_learning_catalog.sql` | Shadow of SkillPassport `role_family_roles` | PK: id (UUIDv5 mirror), UQ: (role_name, role_family_name, domain_name) |
+| `capabilities` | `20260727000000_add_lte_catalog_slug...sql` | Reusable capability catalog | UQ: code, UQ: slug (partial) |
+| `level_scale` | `20260716092555_lte_learning_catalog.sql` | L1–L5 proficiency levels | CHK: level_no BETWEEN 1 AND 5 |
+| `levels` | `20260727000100_change_course_...sql` | Level definitions | Added `problem_statement`, `observable_behavior` (jsonb array), `example_outputs` (jsonb array) |
+| `level_skills` | `20260716092555_lte_learning_catalog.sql` | Level ↔ Skill junction | UQ: (level_id, skill_id), FK: level_id → levels, skill_id → skills |
+| `role_capability_sequence` | `20260716092555_lte_learning_catalog.sql` | Learning path per role context | UQ: (role_id, sequence_step), (role_id, capability_id) |
+| `skills` | `20260716092555_lte_learning_catalog.sql` | Reusable skill catalog | UQ: code |
+| `courses` | `20260716092555_lte_learning_catalog.sql` | One course per capability per level | UQ: course_code, (capability_id, level_id) |
+| `course_skills` | `20260716092555_lte_learning_catalog.sql` | Course ↔ Skill junction | UQ: (course_id, skill_id) |
+| `modules` | `20260728000000_change_module_...sql` | Course modules | Added `module_problem_statement`, `pressure_points` (jsonb), `user_confusion` (jsonb), `prerequisites` (jsonb), `what_youll_learn` (jsonb) |
+| `modules_content` | `20260724000000_add_course_...sql` | 6E stages per module | Added `stage_description`, `module_context`, `curriculum_reference` (jsonb) |
+| `e_content` | `20260716092555_lte_learning_catalog.sql` | Content items within 6E stages | Carries xp_reward |
+| `module_artifacts` | `20260716092555_lte_learning_catalog.sql` | Artifact requirements per 6E stage | CHK: total_score > 0 |
+| `artifact_questions` | `20260724000100_change_artifact_...sql` | Questions within artifacts | UQ: (artifact_id, question_order), `instructions` jsonb |
+| `artifact_templates` | `20260716092555_lte_learning_catalog.sql` | Downloadable templates | FK: artifact_id, question_id |
 
-> [!IMPORTANT]
-> All new tables follow the Expand-Migrate-Contract migration pattern per [04-database-api-standards.md](file:///home/gokul/.gemini/antigravity-ide/knowledge/kiro_steering_skill_echosystem/artifacts/04-database-api-standards.md). Every table enforces institutional multi-tenancy via `org_id` mapped from JWT claims.
+### 4.3 User Progress, Capability & Evaluation Domain Tables
 
-#### TRD-DB-001: `user_role_assignments`
+The following 15 tables constitute the active user progress, capability breakdown, artifact submission/evaluation, and XP ledger schema, matching the migration scripts in [`lte/supabase/migrations`](file:///mnt/E230EB0F30EAEA0D/Rareminds/skill-echosystem/lte/supabase/migrations).
 
-Tracks which role a user is pursuing. Restricted to a single active role per learner in MVP.
+#### TRD-DB-001: `users` (Identity Mirror)
+
+Minimal user identity mirror table matching SSO ID.
 
 ```sql
-CREATE TABLE public.user_role_assignments (
-  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id         uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id          uuid NOT NULL,                  -- Institutional multi-tenancy
-  role_id         uuid NOT NULL REFERENCES public.roles(id) ON DELETE RESTRICT,
-  assignment_type varchar(20) NOT NULL CHECK (assignment_type IN ('self_selected', 'admin_assigned')),
-  assigned_by     uuid REFERENCES public.users(id),  -- admin user_id if admin_assigned
-  assignment_reason text,                  -- traceable reason for admin override
-  is_active       boolean DEFAULT true NOT NULL,
-  started_at      timestamptz DEFAULT now() NOT NULL,
-  completed_at    timestamptz,
-  created_at      timestamptz DEFAULT now() NOT NULL,
-  updated_at      timestamptz DEFAULT now() NOT NULL
+CREATE TYPE public.lte_user_status AS ENUM ('active', 'inactive', 'suspended', 'deleted');
+
+CREATE TABLE public.users (
+  id               uuid NOT NULL PRIMARY KEY,
+  email            text NOT NULL UNIQUE,
+  first_name       varchar(255),
+  last_name        varchar(255),
+  phone            varchar(50),
+  status           public.lte_user_status DEFAULT 'active' NOT NULL,
+  deleted_at       timestamptz,
+  last_activity_at timestamptz,
+  metadata         jsonb DEFAULT '{}'::jsonb NOT NULL,
+  created_at       timestamptz DEFAULT now() NOT NULL,
+  updated_at       timestamptz DEFAULT now() NOT NULL
 );
-
-CREATE INDEX idx_ura_user_id ON public.user_role_assignments(user_id);
-CREATE INDEX idx_ura_org_user ON public.user_role_assignments(org_id, user_id);
-CREATE INDEX idx_ura_role_id ON public.user_role_assignments(role_id);
-
--- Enforce single active role per learner via valid Postgres partial unique index
-CREATE UNIQUE INDEX uq_user_single_active_role 
-  ON public.user_role_assignments(user_id) 
-  WHERE is_active = true;
 ```
 
-#### TRD-DB-002: `user_stage_progress`
+#### TRD-DB-002: `user_profiles`
 
-Tracks 6E stage completion per module per user.
+Main user profile information table linked one-to-one with `users`. Automatically provisioned via DB trigger upon user creation.
 
 ```sql
-CREATE TYPE public.stage_completion_status AS ENUM (
-  'not_started', 'in_progress', 'completed'
+CREATE TABLE public.user_profiles (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL UNIQUE REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  is_active  boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.user_stage_progress (
-  id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id            uuid NOT NULL,
-  modules_content_id uuid NOT NULL REFERENCES public.modules_content(id) ON DELETE CASCADE,
-  status            public.stage_completion_status DEFAULT 'not_started' NOT NULL,
-  started_at        timestamptz,
-  completed_at      timestamptz,
-  time_spent_seconds integer DEFAULT 0 NOT NULL,
-  created_at        timestamptz DEFAULT now() NOT NULL,
-  updated_at        timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT uq_user_stage UNIQUE (user_id, modules_content_id),
-  CONSTRAINT chk_time_spent CHECK (time_spent_seconds >= 0)
-);
+CREATE UNIQUE INDEX idx_user_profiles_user_id ON public.user_profiles (user_id);
+CREATE INDEX idx_user_profiles_is_active ON public.user_profiles (is_active);
 
-CREATE INDEX idx_usp_user_module ON public.user_stage_progress(user_id, modules_content_id);
-CREATE INDEX idx_usp_org_user ON public.user_stage_progress(org_id, user_id);
+-- Auto-provisioning trigger for new users
+CREATE OR REPLACE FUNCTION public.handle_new_user_profile()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.user_profiles (user_id, is_active)
+  VALUES (NEW.id, true)
+  ON CONFLICT (user_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trg_create_user_profile
+AFTER INSERT ON public.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_profile();
 ```
 
-#### TRD-DB-003: `user_module_status`
+#### TRD-DB-003: `learning_tracks`
 
-Tracks learning-complete vs mastered per module per user.
+Learning track recommendations generated for learners from SkillPassport assessment results.
 
 ```sql
-CREATE TYPE public.module_mastery_status AS ENUM (
-  'not_started', 'in_progress', 'learning_complete', 'mastered'
+CREATE TABLE public.learning_tracks (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  assessment_id  uuid NOT NULL,
+  fit            varchar NOT NULL CHECK (fit IN ('High', 'Medium', 'Explore')),
+  track          varchar NOT NULL,
+  match_score    integer NOT NULL CHECK (match_score BETWEEN 0 AND 100),
+  topics         jsonb NOT NULL DEFAULT '[]'::jsonb,
+  duration       varchar NOT NULL,
+  why_it_fits    text NOT NULL,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  updated_at     timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.user_module_status (
-  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id         uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id          uuid NOT NULL,
-  module_id       uuid NOT NULL REFERENCES public.modules(id) ON DELETE CASCADE,
-  status          public.module_mastery_status DEFAULT 'not_started' NOT NULL,
-  stages_completed smallint DEFAULT 0 NOT NULL CHECK (stages_completed BETWEEN 0 AND 6),
-  learning_completed_at timestamptz,
-  mastered_at     timestamptz,
-  created_at      timestamptz DEFAULT now() NOT NULL,
-  updated_at      timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT uq_user_module UNIQUE (user_id, module_id)
-);
-
-CREATE INDEX idx_ums_org_user ON public.user_module_status(org_id, user_id);
+CREATE INDEX idx_learning_tracks_user_id ON public.learning_tracks (user_id);
+CREATE INDEX idx_learning_tracks_fit ON public.learning_tracks (fit);
+CREATE INDEX idx_learning_tracks_match_score ON public.learning_tracks (match_score);
+CREATE INDEX idx_learning_tracks_assessment_id ON public.learning_tracks (assessment_id);
+CREATE INDEX idx_learning_tracks_user_fit ON public.learning_tracks (user_id, fit);
 ```
 
-#### TRD-DB-004: `artifact_submissions`
+#### TRD-DB-004: `learning_paths`
 
-Tracks user evidence submissions with durable storage references and malware scanning lifecycle.
+Personalized and versioned learning paths for users and their selected learning tracks.
 
 ```sql
-CREATE TYPE public.artifact_submission_status AS ENUM (
-  'draft', 'submitted', 'under_review', 'resubmission_required',
-  'manual_review', 'accepted'
+CREATE TABLE public.learning_paths (
+  id                        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  learning_track_id         uuid NOT NULL REFERENCES public.learning_tracks(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  user_id                   uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  role_id                   uuid NOT NULL REFERENCES public.roles(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  role_readiness_percentage  numeric(5, 2) NOT NULL DEFAULT 0.00 CHECK (role_readiness_percentage BETWEEN 0.00 AND 100.00),
+  badge                     varchar NULL CHECK (badge IS NULL OR badge IN ('developing', 'skilled', 'mastery')),
+  level                     integer NOT NULL CHECK (level IN (1, 2, 3, 4, 5)),
+  status                    varchar NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed', 'paused')),
+  is_active                 boolean NOT NULL DEFAULT true,
+  version_no                integer NOT NULL DEFAULT 1 CHECK (version_no > 0),
+  is_latest                 boolean NOT NULL DEFAULT true,
+  started_at                timestamptz NULL,
+  completed_at              timestamptz NULL,
+  created_at                timestamptz NOT NULL DEFAULT now(),
+  updated_at                timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_learning_paths_user_track UNIQUE (user_id, learning_track_id, role_id)
 );
 
-CREATE TYPE public.artifact_scan_status AS ENUM (
-  'draft', 'uploaded', 'scanning', 'passed', 'quarantined', 'scan_failed'
-);
-
-CREATE TABLE public.artifact_submissions (
-  id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id            uuid NOT NULL,
-  module_artifact_id uuid NOT NULL REFERENCES public.module_artifacts(id) ON DELETE RESTRICT,
-  attempt_number    smallint NOT NULL CHECK (attempt_number >= 1),
-  status            public.artifact_submission_status DEFAULT 'draft' NOT NULL,
-  scan_status       public.artifact_scan_status DEFAULT 'draft' NOT NULL,
-  -- Durable storage references (Signed GET URLs are generated dynamically at runtime)
-  bucket_name       varchar(100) DEFAULT 'lte-artifacts' NOT NULL,
-  storage_key       varchar(500),          -- R2 object key
-  etag              varchar(100),          -- Object entity tag
-  file_name         varchar(255),
-  file_type         varchar(100),
-  file_size_bytes   bigint CHECK (file_size_bytes IS NULL OR file_size_bytes > 0),
-  -- Text/link submissions
-  text_content      text,
-  link_url          varchar(1000),
-  -- Metadata
-  submitted_at      timestamptz,
-  reviewed_at       timestamptz,
-  metadata          jsonb DEFAULT '{}'::jsonb NOT NULL,
-  created_at        timestamptz DEFAULT now() NOT NULL,
-  updated_at        timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT uq_submission_attempt UNIQUE (user_id, module_artifact_id, attempt_number),
-  CONSTRAINT chk_has_content CHECK (
-    storage_key IS NOT NULL OR text_content IS NOT NULL OR link_url IS NOT NULL
-  )
-);
-
-CREATE INDEX idx_as_user_artifact ON public.artifact_submissions(user_id, module_artifact_id);
-CREATE INDEX idx_as_org_user ON public.artifact_submissions(org_id, user_id);
-CREATE INDEX idx_as_status ON public.artifact_submissions(status);
-CREATE INDEX idx_as_pending_review ON public.artifact_submissions(status)
-  WHERE status IN ('submitted', 'under_review', 'manual_review');
+CREATE UNIQUE INDEX idx_learning_paths_user_track_role ON public.learning_paths (user_id, learning_track_id, role_id);
+CREATE UNIQUE INDEX uq_learning_paths_one_active_per_user ON public.learning_paths (user_id) WHERE is_active = true;
+CREATE INDEX idx_learning_paths_user_is_active ON public.learning_paths (user_id, is_active);
+CREATE INDEX idx_learning_paths_status ON public.learning_paths (status);
+CREATE INDEX idx_learning_paths_user_status ON public.learning_paths (user_id, status);
+CREATE INDEX idx_learning_paths_user_latest ON public.learning_paths (user_id, is_latest);
+CREATE INDEX idx_learning_paths_role_id ON public.learning_paths (role_id);
+CREATE INDEX idx_learning_paths_level ON public.learning_paths (level);
+CREATE INDEX idx_learning_paths_user_badge ON public.learning_paths (user_id, badge);
 ```
 
-#### TRD-DB-005: `ai_reviews`
+#### TRD-DB-005: `user_capabilities`
 
-Stores AI evaluation results. Strictly immutable — one row per evaluation attempt.
+Tracks capability gap analysis per user, learning path, and role sequence step.
 
 ```sql
-CREATE TABLE public.ai_reviews (
-  id                  uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  submission_id       uuid NOT NULL REFERENCES public.artifact_submissions(id) ON DELETE RESTRICT,
-  org_id              uuid NOT NULL,
-  -- AI output
-  overall_score       numeric(5,2) NOT NULL CHECK (overall_score BETWEEN 0 AND 100),
-  criterion_scores    jsonb NOT NULL DEFAULT '[]'::jsonb,
-  confidence          numeric(3,2) NOT NULL CHECK (confidence BETWEEN 0 AND 1),
-  is_critical_failure boolean DEFAULT false NOT NULL,
-  -- Feedback
-  strengths           text[] DEFAULT '{}' NOT NULL,
-  improvement_areas   text[] DEFAULT '{}' NOT NULL,
-  evidence_found      text[] DEFAULT '{}' NOT NULL,
-  evidence_missing    text[] DEFAULT '{}' NOT NULL,
-  learner_feedback    text NOT NULL,        -- learner-safe summary
-  resubmission_guidance text,
-  -- Immutability & Superseding tracking
-  superseded_by_id    uuid REFERENCES public.ai_reviews(id),
-  -- Metadata
-  rubric_version      integer NOT NULL,
-  model_id            varchar(100) NOT NULL, -- AI model identifier
-  prompt_version      varchar(50) NOT NULL,
-  latency_ms          integer,
-  raw_response        jsonb,                -- full AI response for audit
-  created_at          timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT chk_criterion_scores CHECK (jsonb_typeof(criterion_scores) = 'array')
+CREATE TABLE public.user_capabilities (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  learning_path_id uuid NOT NULL REFERENCES public.learning_paths(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  role_sequence_id uuid NOT NULL REFERENCES public.role_capability_sequence(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  current_level    integer NOT NULL DEFAULT 0,
+  required_level   integer NOT NULL,
+  gap              integer NOT NULL,
+  has_gap          boolean NOT NULL DEFAULT true,
+  gap_score        integer NOT NULL,
+  badge            varchar NOT NULL DEFAULT 'none',
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_user_capabilities_user_role_sequence UNIQUE (user_id, role_sequence_id)
 );
 
-CREATE INDEX idx_ar_submission_id ON public.ai_reviews(submission_id);
-CREATE INDEX idx_ar_org ON public.ai_reviews(org_id);
-CREATE INDEX idx_ar_critical ON public.ai_reviews(is_critical_failure) WHERE is_critical_failure = true;
-CREATE INDEX idx_ar_low_confidence ON public.ai_reviews(confidence) WHERE confidence < 0.7;
+CREATE INDEX idx_user_capabilities_user_path ON public.user_capabilities(user_id, learning_path_id);
+CREATE INDEX idx_user_capabilities_role_sequence ON public.user_capabilities(role_sequence_id);
+CREATE INDEX idx_user_capabilities_user_gap ON public.user_capabilities(user_id, has_gap);
+CREATE INDEX idx_user_capabilities_user_badge ON public.user_capabilities(user_id, badge);
 ```
 
-#### TRD-DB-006: `manual_review_tasks` & `manual_review_decisions`
+#### TRD-DB-006: `user_capability_level_progress`
 
-Two-table model separating queued manual review tasks from completed human decisions. Fixes runtime NULL reviewer crashes on automated AI failure enqueueing.
+Tracks granular progress per capability proficiency level (L1 through L5).
 
 ```sql
-CREATE TYPE public.manual_review_trigger AS ENUM (
-  'low_confidence', 'unreadable', 'ambiguous', 'safety_concern',
-  'ai_retry_failure', 'learner_dispute', 'two_failed_resubmissions'
-);
-
-CREATE TYPE public.manual_task_status AS ENUM (
-  'queued', 'assigned', 'completed', 'cancelled'
-);
-
--- Table 1: Queued manual review task item (Reviewer ID is NULLABLE upon creation)
-CREATE TABLE public.manual_review_tasks (
-  id                    uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  submission_id         uuid NOT NULL REFERENCES public.artifact_submissions(id) ON DELETE RESTRICT,
-  org_id                uuid NOT NULL,
-  trigger_reason        public.manual_review_trigger NOT NULL,
-  status                public.manual_task_status DEFAULT 'queued' NOT NULL,
-  assigned_reviewer_id  uuid REFERENCES public.users(id), -- NULLABLE until claimed
-  queued_at             timestamptz DEFAULT now() NOT NULL,
-  assigned_at           timestamptz,
+CREATE TABLE public.user_capability_level_progress (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id               uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  learning_path_id      uuid NOT NULL REFERENCES public.learning_paths(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  level_id              uuid NOT NULL REFERENCES public.levels(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  sequence_no           integer NOT NULL,
+  from_level            integer NOT NULL,
+  to_level              integer NOT NULL,
+  current_score         integer NOT NULL,
+  current_level         integer NOT NULL,
+  required_level        integer NOT NULL,
+  gap                   integer NOT NULL,
+  has_gap               boolean NOT NULL DEFAULT false,
+  gap_score             integer NOT NULL,
+  priority_band         varchar NOT NULL DEFAULT 'none',
+  status                varchar NOT NULL DEFAULT 'not_started',
+  badge                 varchar NOT NULL DEFAULT 'none',
+  completion_percentage integer NOT NULL DEFAULT 0,
+  started_at            timestamptz,
   completed_at          timestamptz,
-  created_at            timestamptz DEFAULT now() NOT NULL,
-  updated_at            timestamptz DEFAULT now() NOT NULL
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_user_capability_level_progress UNIQUE (user_id, learning_path_id, level_id)
 );
 
-CREATE INDEX idx_mrt_submission ON public.manual_review_tasks(submission_id);
-CREATE INDEX idx_mrt_org_status ON public.manual_review_tasks(org_id, status);
-CREATE INDEX idx_mrt_reviewer ON public.manual_review_tasks(assigned_reviewer_id) WHERE status = 'assigned';
-
--- Table 2: Completed human review decision record
-CREATE TABLE public.manual_review_decisions (
-  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  task_id         uuid NOT NULL REFERENCES public.manual_review_tasks(id) ON DELETE RESTRICT,
-  submission_id   uuid NOT NULL REFERENCES public.artifact_submissions(id) ON DELETE RESTRICT,
-  reviewer_id     uuid NOT NULL REFERENCES public.users(id), -- MUST be non-null upon submission
-  override_score  numeric(5,2) CHECK (override_score IS NULL OR override_score BETWEEN 0 AND 100),
-  reviewer_feedback text NOT NULL,
-  decision        varchar(20) NOT NULL CHECK (decision IN ('accepted', 'resubmission_required')),
-  ai_review_id    uuid REFERENCES public.ai_reviews(id), -- which AI review this overrides
-  created_at      timestamptz DEFAULT now() NOT NULL
-);
-
-CREATE INDEX idx_mrd_task ON public.manual_review_decisions(task_id);
-CREATE INDEX idx_mrd_submission ON public.manual_review_decisions(submission_id);
+CREATE INDEX idx_user_capability_level_progress_user_path_level ON public.user_capability_level_progress(user_id, learning_path_id, level_id);
+CREATE INDEX idx_user_capability_level_progress_user_gap ON public.user_capability_level_progress(user_id, has_gap);
+CREATE INDEX idx_user_capability_level_progress_user_priority ON public.user_capability_level_progress(user_id, priority_band);
+CREATE INDEX idx_user_capability_level_progress_user_status ON public.user_capability_level_progress(user_id, status);
+CREATE INDEX idx_user_capability_level_progress_level ON public.user_capability_level_progress(level_id);
 ```
 
-#### TRD-DB-007: `xp_events`
+#### TRD-DB-007: `user_module_progress`
+
+Tracks module completion status, current 6E stage, stages completed count, and artifact submission state.
+
+```sql
+CREATE TABLE public.user_module_progress (
+  id                                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id                            uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  user_capability_level_progress_id  uuid NOT NULL REFERENCES public.user_capability_level_progress(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  module_id                          uuid NOT NULL REFERENCES public.modules(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  module_status                      varchar NOT NULL DEFAULT 'not_started',
+  current_stage                      varchar NOT NULL DEFAULT 'none',
+  stages_completed                   integer NOT NULL DEFAULT 0,
+  completion_percentage              integer NOT NULL DEFAULT 0,
+  artifact_submitted                 boolean NOT NULL DEFAULT false,
+  artifact_approval_status           varchar NOT NULL DEFAULT 'not_submitted',
+  last_activity_at                   timestamptz NOT NULL DEFAULT now(),
+  created_at                         timestamptz NOT NULL DEFAULT now(),
+  updated_at                         timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_user_module_progress UNIQUE (user_id, user_capability_level_progress_id, module_id)
+);
+
+CREATE INDEX idx_user_module_progress_user ON public.user_module_progress(user_id);
+CREATE INDEX idx_user_module_progress_capability_level ON public.user_module_progress(user_capability_level_progress_id);
+CREATE INDEX idx_user_module_progress_module ON public.user_module_progress(module_id);
+CREATE INDEX idx_user_module_progress_artifact_status ON public.user_module_progress(artifact_approval_status);
+```
+
+#### TRD-DB-008: `artifact_submissions`
+
+Tracks learner evidence artifact submissions per module progress and attempt number.
+
+```sql
+CREATE TABLE public.artifact_submissions (
+  id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  artifact_id             uuid NOT NULL REFERENCES public.module_artifacts(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  user_id                 uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  user_module_progress_id uuid NOT NULL REFERENCES public.user_module_progress(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  attempt_no              integer NOT NULL DEFAULT 1,
+  version_label           varchar NOT NULL,
+  is_latest               boolean NOT NULL DEFAULT true,
+  previous_submission_id  uuid REFERENCES public.artifact_submissions(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  submission_mode         varchar NOT NULL DEFAULT 'normal',
+  status                  varchar NOT NULL DEFAULT 'submitted',
+  submitted_at            timestamptz NOT NULL DEFAULT now(),
+  sealed_at               timestamptz,
+  created_at              timestamptz NOT NULL DEFAULT now(),
+  updated_at              timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_artifact_submission_attempt UNIQUE (artifact_id, user_id, attempt_no)
+);
+
+CREATE INDEX idx_artifact_submissions_artifact ON public.artifact_submissions(artifact_id);
+CREATE INDEX idx_artifact_submissions_user ON public.artifact_submissions(user_id);
+CREATE INDEX idx_artifact_submissions_progress ON public.artifact_submissions(user_module_progress_id);
+CREATE INDEX idx_artifact_submissions_latest ON public.artifact_submissions(artifact_id, user_id, is_latest);
+CREATE INDEX idx_artifact_submissions_status ON public.artifact_submissions(status);
+CREATE INDEX idx_artifact_submissions_previous ON public.artifact_submissions(previous_submission_id);
+```
+
+#### TRD-DB-009: `artifact_submission_files`
+
+Stores file attachments submitted per artifact submission and question.
+
+```sql
+CREATE TABLE public.artifact_submission_files (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  submission_id   uuid NOT NULL REFERENCES public.artifact_submissions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  question_id     uuid NOT NULL REFERENCES public.artifact_questions(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  file_name       varchar NOT NULL,
+  file_url        varchar NOT NULL,
+  file_type       varchar NOT NULL,
+  file_size_bytes bigint,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_artifact_submission_files_submission ON public.artifact_submission_files(submission_id);
+CREATE INDEX idx_artifact_submission_files_submission_question ON public.artifact_submission_files(submission_id, question_id);
+```
+
+#### TRD-DB-010: `artifact_evaluation_flows`
+
+Tracks evaluation stage execution, scores, feedback, decision, and current stage indicator for artifact evaluation.
+
+```sql
+CREATE TYPE public.artifact_evaluation_stage AS ENUM ('ai');
+
+CREATE TABLE public.artifact_evaluation_flows (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  submission_id         uuid NOT NULL REFERENCES public.artifact_submissions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  stage                 public.artifact_evaluation_stage NOT NULL DEFAULT 'ai',
+  stage_order           integer NOT NULL DEFAULT 1,
+  status                varchar NOT NULL DEFAULT 'pending',
+  evaluated_by          uuid REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+  score                 integer,
+  feedback              text,
+  improvements          text,
+  decision              varchar,
+  completed_at          timestamptz,
+  overall_status        varchar NOT NULL DEFAULT 'initiated',
+  is_current_stage      boolean NOT NULL DEFAULT false,
+  progression_triggered boolean NOT NULL DEFAULT false,
+  metadata              jsonb,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_artifact_evaluation_submission_stage UNIQUE (submission_id, stage)
+);
+
+CREATE INDEX idx_artifact_evaluation_submission ON public.artifact_evaluation_flows(submission_id);
+CREATE INDEX idx_artifact_evaluation_current_stage ON public.artifact_evaluation_flows(submission_id, is_current_stage);
+CREATE INDEX idx_artifact_evaluation_evaluated_by ON public.artifact_evaluation_flows(evaluated_by);
+CREATE INDEX idx_artifact_evaluation_overall_status ON public.artifact_evaluation_flows(overall_status);
+CREATE INDEX idx_artifact_evaluation_progression ON public.artifact_evaluation_flows(overall_status, progression_triggered);
+```
+
+#### TRD-DB-011: `skill_gap`
+
+Stores assessment-derived skill gap priorities, learning tracks, and current strengths per user.
+
+```sql
+CREATE TABLE public.skill_gap (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  assessment_id     uuid NOT NULL,
+  attempt_id        uuid,
+  priorities        jsonb NOT NULL DEFAULT '[]'::jsonb,
+  learning_tracks   jsonb NOT NULL DEFAULT '[]'::jsonb,
+  current_strengths jsonb NOT NULL DEFAULT '[]'::jsonb,
+  recommended_track varchar,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_skill_gap_user_assessment UNIQUE (user_id, assessment_id)
+);
+
+CREATE INDEX idx_skill_gap_user ON public.skill_gap(user_id);
+CREATE INDEX idx_skill_gap_assessment ON public.skill_gap(assessment_id);
+CREATE INDEX idx_skill_gap_recommended_track ON public.skill_gap(recommended_track);
+```
+
+#### TRD-DB-012: `profile_snapshot`
+
+Stores assessment-derived personality/aptitude profile snapshots per user and assessment attempt.
+
+```sql
+CREATE TABLE public.profile_snapshot (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id            uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  assessment_id      uuid NOT NULL,
+  attempt_id         uuid,
+  key_patterns       jsonb NOT NULL DEFAULT '[]'::jsonb,
+  aptitude_strengths jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_profile_snapshot_user_assessment UNIQUE (user_id, assessment_id)
+);
+
+CREATE INDEX idx_profile_snapshot_user ON public.profile_snapshot(user_id);
+CREATE INDEX idx_profile_snapshot_assessment ON public.profile_snapshot(assessment_id);
+```
+
+#### TRD-DB-013: `learning_track_evidence`
+
+Stores backing evidence dimensions (values, aptitude, interest, personality, employability, adaptive aptitude) per learning track.
+
+```sql
+CREATE TABLE public.learning_track_evidence (
+  id                           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  learning_track_id            uuid NOT NULL REFERENCES public.learning_tracks(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  user_id                      uuid NOT NULL REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  assessment_id                uuid NOT NULL,
+  evidence_values              text NOT NULL,
+  evidence_aptitude            text NOT NULL,
+  evidence_interest            text NOT NULL,
+  evidence_personality         text NOT NULL,
+  evidence_employability       text NOT NULL,
+  evidence_adaptive_aptitude   text NOT NULL,
+  created_at                   timestamptz NOT NULL DEFAULT now(),
+  updated_at                   timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_learning_track_evidence_track UNIQUE (learning_track_id)
+);
+
+CREATE INDEX idx_learning_track_evidence_user ON public.learning_track_evidence(user_id);
+CREATE INDEX idx_learning_track_evidence_assessment ON public.learning_track_evidence(assessment_id);
+CREATE INDEX idx_learning_track_evidence_user_assessment ON public.learning_track_evidence(user_id, assessment_id);
+```
+
+#### TRD-DB-014: `xp_events`
 
 Append-only XP ledger. Immutable after creation.
 
@@ -486,210 +648,80 @@ Append-only XP ledger. Immutable after creation.
 CREATE TYPE public.xp_category AS ENUM ('evidence', 'engagement');
 
 CREATE TYPE public.xp_event_type AS ENUM (
-  -- Evidence-Bearing Events (Contributes to Readiness)
-  'stage_completed',             -- +1
-  'practice_artifact_accepted',   -- +2
-  'final_artifact_accepted_1',    -- +20 (1st attempt)
-  'final_artifact_accepted_2',    -- +15 (2nd attempt)
-  'final_artifact_accepted_3',    -- +10 (3rd attempt)
-  'manual_eval_accepted',         -- +5 (operational metadata)
-  'course_completed_on_time',     -- +10
-  'fast_track_capability',        -- +15
-  'capstone_completed',           -- configured value
-  -- Engagement & Consistency Events (Excluded from Readiness)
-  'daily_login',                  -- +1/day
-  'profile_completed',            -- +50
-  'streak_7_day',                 -- +5
-  'consistency_30_day',           -- +30
-  'readiness_milestone_25',       -- +10
-  'readiness_milestone_50',       -- +20
-  'readiness_milestone_75',       -- +30
-  'readiness_milestone_100',      -- +100
-  'legacy_consistency_bonus',     -- +20
-  'promotional_xp',               -- as configured
-  'practice_artifact_failed',     -- +1 (engagement)
-  'fallback_eval_failed',        -- +1 (engagement)
-  'final_artifact_failed'         -- +1 per attempt (engagement)
+  'stage_completed',
+  'practice_artifact_accepted',
+  'final_artifact_accepted_1',
+  'final_artifact_accepted_2',
+  'final_artifact_accepted_3',
+  'manual_eval_accepted',
+  'course_completed_on_time',
+  'fast_track_capability',
+  'capstone_completed',
+  'daily_login',
+  'profile_completed',
+  'streak_7_day',
+  'consistency_30_day',
+  'readiness_milestone_25',
+  'readiness_milestone_50',
+  'readiness_milestone_75',
+  'readiness_milestone_100',
+  'legacy_consistency_bonus',
+  'promotional_xp',
+  'practice_artifact_failed',
+  'fallback_eval_failed',
+  'final_artifact_failed'
 );
 
 CREATE TABLE public.xp_events (
   id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id         uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id          uuid NOT NULL,
   event_type      public.xp_event_type NOT NULL,
   xp_category     public.xp_category NOT NULL,
   xp_amount       integer NOT NULL CHECK (xp_amount >= 0),
-  -- Source references (polymorphic)
-  source_type     varchar(50) NOT NULL,    -- 'stage', 'submission', 'course', 'capability', 'profile'
-  source_id       uuid NOT NULL,           -- id of the source entity
-  -- Deduplication
-  idempotency_key varchar(200) NOT NULL,   -- e.g., "stage:{user_id}:{modules_content_id}"
-  -- Audit
+  source_type     varchar(50) NOT NULL,
+  source_id       uuid NOT NULL,
+  idempotency_key varchar(200) NOT NULL,
   metadata        jsonb DEFAULT '{}'::jsonb NOT NULL,
   created_at      timestamptz DEFAULT now() NOT NULL,
   CONSTRAINT uq_xp_idempotency UNIQUE (idempotency_key)
 );
 
 CREATE INDEX idx_xp_user ON public.xp_events(user_id);
-CREATE INDEX idx_xp_org_user ON public.xp_events(org_id, user_id);
 CREATE INDEX idx_xp_user_category ON public.xp_events(user_id, xp_category);
-CREATE INDEX idx_xp_user_evidence ON public.xp_events(user_id)
-  WHERE xp_category = 'evidence';
+CREATE INDEX idx_xp_user_evidence ON public.xp_events(user_id) WHERE xp_category = 'evidence';
 ```
 
-#### TRD-DB-008: `readiness_snapshots`
+#### TRD-DB-015: `subscription_cache`
 
-Point-in-time readiness calculations. Immutable.
+Read-only local shadow of SSO subscription/product entitlement for LTE feature access.
 
 ```sql
-CREATE TABLE public.readiness_snapshots (
-  id                    uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id               uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id                uuid NOT NULL,
-  role_id               uuid NOT NULL REFERENCES public.roles(id),
-  -- Five-component breakdown
-  course_completion_pct numeric(5,2) NOT NULL CHECK (course_completion_pct BETWEEN 0 AND 100),
-  artifact_completion_pct numeric(5,2) NOT NULL CHECK (artifact_completion_pct BETWEEN 0 AND 100),
-  ai_average_score      numeric(5,2) NOT NULL CHECK (ai_average_score BETWEEN 0 AND 100),
-  xp_achievement_pct    numeric(5,2) NOT NULL CHECK (xp_achievement_pct BETWEEN 0 AND 100),
-  profile_completion_pct numeric(5,2) NOT NULL CHECK (profile_completion_pct BETWEEN 0 AND 100),
-  -- Weighted result
-  readiness_score       numeric(5,2) NOT NULL CHECK (readiness_score BETWEEN 0 AND 100),
-  readiness_band        varchar(30) NOT NULL CHECK (readiness_band IN (
-    'Not Ready', 'Learning in Progress', 'Internship Ready', 'Job Ready'
-  )),
-  -- Context
-  missing_evidence      text[] DEFAULT '{}' NOT NULL,
-  config_warnings       text[] DEFAULT '{}' NOT NULL,
-  improvement_actions   text[] DEFAULT '{}' NOT NULL,
-  -- Metadata
-  calculation_version   varchar(20) NOT NULL DEFAULT 'v1.0',
-  calculated_at         timestamptz DEFAULT now() NOT NULL
+CREATE TABLE public.subscription_cache (
+  id                      uuid PRIMARY KEY,
+  user_id                 uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  organization_id         uuid,
+  plan_id                 uuid,
+  plan_code               text,
+  plan_name               text,
+  plan_type               text,
+  plan_amount             numeric,
+  billing_cycle           text,
+  status                  text NOT NULL,
+  features                jsonb NOT NULL DEFAULT '[]'::jsonb,
+  product_code            text NOT NULL DEFAULT 'lte',
+  product_id              uuid,
+  subscription_start_date timestamptz,
+  subscription_end_date   timestamptz,
+  synced_at               timestamptz NOT NULL DEFAULT now(),
+  auth_updated_at         timestamptz
 );
 
-CREATE INDEX idx_rs_user_role ON public.readiness_snapshots(user_id, role_id);
-CREATE INDEX idx_rs_org_user ON public.readiness_snapshots(org_id, user_id);
-CREATE INDEX idx_rs_latest ON public.readiness_snapshots(user_id, role_id, calculated_at DESC);
+CREATE INDEX idx_subscription_cache_user ON public.subscription_cache (user_id);
+CREATE INDEX idx_subscription_cache_status ON public.subscription_cache (status);
+CREATE INDEX idx_subscription_cache_product_code ON public.subscription_cache (product_code);
 ```
 
-#### TRD-DB-010: `user_course_status`
-
-Tracks course-level completion, required for readiness formula ("Module Mastery & Course Completion" component) and "course completed on time" XP award.
-
-```sql
-CREATE TYPE public.course_completion_status AS ENUM (
-  'not_started', 'in_progress', 'completed'
-);
-
-CREATE TABLE public.user_course_status (
-  id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id           uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id            uuid NOT NULL,
-  course_id         uuid NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
-  status            public.course_completion_status DEFAULT 'not_started' NOT NULL,
-  modules_total     smallint NOT NULL CHECK (modules_total >= 0),
-  modules_mastered  smallint DEFAULT 0 NOT NULL CHECK (modules_mastered >= 0),
-  started_at        timestamptz,
-  target_completion timestamptz,         -- for "on-time" XP calculation
-  completed_at      timestamptz,
-  created_at        timestamptz DEFAULT now() NOT NULL,
-  updated_at        timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT uq_user_course UNIQUE (user_id, course_id),
-  CONSTRAINT chk_mastered_lte_total CHECK (modules_mastered <= modules_total)
-);
-
-CREATE INDEX idx_ucs_user ON public.user_course_status(user_id);
-CREATE INDEX idx_ucs_org_user ON public.user_course_status(org_id, user_id);
-CREATE INDEX idx_ucs_status ON public.user_course_status(status);
-```
-
-#### TRD-DB-011: `user_assessment_links`
-
-Stores per-user assessment-to-role context for FR2.
-
-```sql
-CREATE TABLE public.user_assessment_links (
-  id                 uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id            uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id             uuid NOT NULL,
-  -- Assessment reference (from SkillPassport)
-  assessment_type    varchar(50) NOT NULL CHECK (assessment_type IN (
-    'riasec', 'aptitude', 'big5', 'three_track', 'combined'
-  )),
-  assessment_id      uuid,                 -- SkillPassport assessment ID (reference only, no FK)
-  assessment_date    timestamptz,
-  -- Recommended tracks/roles
-  recommended_tracks jsonb NOT NULL DEFAULT '[]'::jsonb,
-  selected_role_id   uuid REFERENCES public.roles(id),
-  -- Metadata
-  report_url         varchar(1000),
-  metadata           jsonb DEFAULT '{}'::jsonb NOT NULL,
-  created_at         timestamptz DEFAULT now() NOT NULL,
-  updated_at         timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT uq_user_assessment UNIQUE (user_id, assessment_type)
-);
-
-CREATE INDEX idx_ual_user ON public.user_assessment_links(user_id);
-CREATE INDEX idx_ual_org_user ON public.user_assessment_links(org_id, user_id);
-```
-
-#### TRD-DB-009: `marketplace_consent`
-
-Versioned consent for marketplace visibility and privacy processing.
-
-```sql
-CREATE TABLE public.marketplace_consent (
-  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id         uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  org_id          uuid NOT NULL,
-  consent_purpose varchar(50) DEFAULT 'marketplace_visibility' NOT NULL CHECK (
-    consent_purpose IN ('marketplace_visibility', 'ai_processing', 'platform_terms')
-  ),
-  consent_version varchar(20) NOT NULL,
-  visibility_scope varchar(50)[] NOT NULL DEFAULT '{}', -- internship, job, project, recruiter
-  consented_at    timestamptz NOT NULL,
-  withdrawn_at    timestamptz,
-  is_active       boolean DEFAULT true NOT NULL,
-  metadata        jsonb DEFAULT '{}'::jsonb NOT NULL,
-  created_at      timestamptz DEFAULT now() NOT NULL,
-  updated_at      timestamptz DEFAULT now() NOT NULL
-);
-
-CREATE INDEX idx_mc_user ON public.marketplace_consent(user_id);
-CREATE INDEX idx_mc_org_user ON public.marketplace_consent(org_id, user_id);
-
--- Enforce active consent uniqueness per user per purpose via valid Postgres partial index
-CREATE UNIQUE INDEX uq_consent_active 
-  ON public.marketplace_consent(user_id, consent_purpose) 
-  WHERE is_active = true;
-```
-
-#### TRD-DB-012: `audit_events`
-
-Dedicated immutable audit log table for system security, compliance, and institutional administrative oversight.
-
-```sql
-CREATE TABLE public.audit_events (
-  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id         uuid REFERENCES public.users(id),  -- acting user or target user
-  org_id          uuid NOT NULL,                     -- institutional tenant
-  action          varchar(100) NOT NULL,             -- e.g., 'role_assigned', 'score_override', 'consent_withdrawn'
-  entity_type     varchar(50) NOT NULL,              -- 'user_role_assignment', 'manual_review', 'marketplace_consent'
-  entity_id       uuid NOT NULL,                     -- target entity ID
-  prior_value     jsonb,                             -- previous state snapshot
-  new_value       jsonb,                             -- updated state snapshot
-  ip_address      varchar(45),                       -- client IP address
-  user_agent      text,                              -- client browser user agent
-  created_at      timestamptz DEFAULT now() NOT NULL
-);
-
-CREATE INDEX idx_ae_org ON public.audit_events(org_id);
-CREATE INDEX idx_ae_user ON public.audit_events(user_id);
-CREATE INDEX idx_ae_action ON public.audit_events(action);
-CREATE INDEX idx_ae_created ON public.audit_events(created_at DESC);
-```
-
-### 4.3 Identity Model Contract & User Authority
+### 4.4 Identity Model Contract & User Authority
 
 1. **Identity Source of Truth**: The `sso-worker` service (`sso-api`) is the sole system identity authority for authentication, credentials, and session token generation.
 2. **User Shadow Table**: The LTE DB maintains a local shadow table `public.users(id)` where `id` matches `jwt.sub` (UUID) issued by `sso-worker`.
@@ -716,29 +748,26 @@ export async function getLearnerProgress(ctx: AuthorizationContext, db: Supabase
   }
   
   return db
-    .from('user_stage_progress')
+    .from('user_module_progress')
     .select('*')
-    .eq('user_id', ctx.userId)      // Strict user scoping
-    .eq('org_id', ctx.orgId);        // Strict tenant scoping
+    .eq('user_id', ctx.userId);      // Strict user scoping
 }
 ```
 
----
-
-## 5. API Specification
+### 4.5 Row-Level Security Policy
 
 All user-facing tables enforce RLS:
 
 ```sql
 -- Pattern: Users can only read/write their own data
-ALTER TABLE public.user_stage_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_module_progress ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY user_own_data ON public.user_stage_progress
+CREATE POLICY user_own_data ON public.user_module_progress
   FOR ALL USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
 -- Admin bypass via role check
-CREATE POLICY admin_all_data ON public.user_stage_progress
+CREATE POLICY admin_all_data ON public.user_module_progress
   FOR ALL USING (
     EXISTS (SELECT 1 FROM auth.users WHERE id = auth.uid() AND raw_user_meta_data->>'role' = 'admin')
   );
@@ -864,10 +893,10 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 **Request Payload:**
 ```json
 {
-  "module_artifact_id": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
-  "file_name": "capstone_project_v1.pdf",
-  "file_type": "application/pdf",
-  "file_size_bytes": 14285700
+  "artifactId": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+  "fileName": "capstone_project_v1.pdf",
+  "fileType": "application/pdf",
+  "fileSizeBytes": 14285700
 }
 ```
 
@@ -875,10 +904,10 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 ```json
 {
   "data": {
-    "submission_id": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
-    "upload_url": "https://lte-artifacts.r2.cloudflarestorage.com/artifacts/user_123/art_456/1784965200_capstone_project_v1.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&...",
-    "expires_at": "2026-07-25T10:36:24Z",
-    "storage_key": "artifacts/user_123/art_456/1784965200_capstone_project_v1.pdf"
+    "submissionId": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
+    "uploadUrl": "https://lte-artifacts.r2.cloudflarestorage.com/artifacts/user_123/art_456/1784965200_capstone_project_v1.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&...",
+    "expiresAt": "2026-07-25T10:36:24Z",
+    "storageKey": "artifacts/user_123/art_456/1784965200_capstone_project_v1.pdf"
   }
 }
 ```
@@ -888,9 +917,11 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 **Request Payload:**
 ```json
 {
-  "submission_id": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
-  "module_artifact_id": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
-  "submission_type": "file"
+  "data": {
+    "submissionId": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
+    "artifactId": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+    "submissionMode": "normal"
+  }
 }
 ```
 
@@ -898,11 +929,11 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 ```json
 {
   "data": {
-    "submission_id": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
+    "submissionId": "7a6b5c4d-3e2f-1a0b-9c8d-7e6f5a4b3c2d",
     "status": "submitted",
-    "attempt_number": 1,
-    "submitted_at": "2026-07-25T10:31:30Z",
-    "review_status": "queued_for_ai"
+    "attemptNo": 1,
+    "submittedAt": "2026-07-25T10:31:30Z",
+    "reviewStatus": "queued_for_ai"
   }
 }
 ```
@@ -913,30 +944,30 @@ CREATE POLICY admin_all_data ON public.user_stage_progress
 ```json
 {
   "data": {
-    "next_action": {
+    "nextAction": {
       "action": "submit_artifact",
       "label": "Submit evidence artifact for Data Engineering Module 2",
-      "target_id": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c"
+      "targetId": "8f3b2a1c-4d5e-6f7a-8b9c-0d1e2f3a4b5c"
     },
-    "active_role": {
+    "activeRole": {
       "id": "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
       "name": "Senior Data Engineer",
       "family": "Data & AI",
       "domain": "Enterprise Software"
     },
-    "progress_summary": {
-      "courses_completed": 2,
-      "courses_total": 6,
-      "modules_mastered": 5,
-      "modules_total": 18,
-      "evidence_xp": 45,
-      "engagement_xp": 12,
-      "total_xp": 57
+    "progressSummary": {
+      "coursesCompleted": 2,
+      "coursesTotal": 6,
+      "modulesMastered": 5,
+      "modulesTotal": 18,
+      "evidenceXp": 45,
+      "engagementXp": 12,
+      "totalXp": 57
     },
     "readiness": {
       "score": 74,
       "band": "Internship Ready",
-      "last_calculated": "2026-07-25T08:15:00Z"
+      "lastCalculated": "2026-07-25T08:15:00Z"
     },
     "marketplace": {
       "eligible": true,
@@ -1057,7 +1088,7 @@ stateDiagram-v2
 |---|---|---|
 | **No stage skipping** | `StageGuard` component + API validation | Frontend guard + backend check on stage_complete |
 | **Sequential only** | `stage_order` column in `modules_content` | API returns 403 if prerequisite stage not completed |
-| **Learning-complete ≠ Mastered** | Separate `module_mastery_status` enum | Status transitions enforced in `user_module_status` |
+| **Learning-complete ≠ Mastered** | `module_status` / `artifact_approval_status` fields | Status transitions enforced in `user_module_progress` |
 | **XP per stage** | +1 evidence XP on stage completion | Idempotency key prevents duplicate awards |
 
 ### 7.3 Stage Completion API Logic
@@ -1117,7 +1148,7 @@ sequenceDiagram
     participant DB as LTE DB
 
     L->>API: POST /api/v1/artifacts/upload-url<br/>{fileName, fileType, artifactId}
-    API->>API: Validate auth + file constraints + magic bytes
+    API->>API: Validate auth + metadata file constraints
     API->>R2: Generate presigned PUT URL<br/>(key: artifacts/{userId}/{artifactId}/{timestamp}_{fileName})
     R2-->>API: Presigned URL (5min TTL)
     API->>DB: Create submission (status: draft, scan_status: draft)
@@ -1125,7 +1156,7 @@ sequenceDiagram
     L->>R2: PUT file directly to R2
     R2-->>L: 200 OK
     L->>API: POST /api/v1/artifacts/submit<br/>{submissionId}
-    API->>SCAN: Async malware & magic-byte check
+    API->>SCAN: Inspect magic-bytes (first 512 bytes from R2) & malware scan
     alt Scan Passed
         SCAN-->>API: scan_status = passed
         API->>DB: Update status → submitted, scan_status → passed
@@ -1133,8 +1164,9 @@ sequenceDiagram
         API-->>L: {status: "submitted", scan_status: "passed"}
     else Scan Failed / Quarantined
         SCAN-->>API: scan_status = quarantined
-        API->>DB: Update status → manual_review, scan_status → quarantined
-        API-->>L: {status: "manual_review", scan_status: "quarantined", error: "File failed security scan"}
+        API->>DB: Update status → draft, scan_status → quarantined
+        API-->>L: {status: "draft", scan_status: "quarantined", error: "File failed security scan. Please upload a clean file."}
+        Note over API,DB: Quarantined files are ISOLATED and PROHIBITED from AI evaluation pipeline
     end
 ```
 
@@ -1143,8 +1175,8 @@ sequenceDiagram
 | Constraint | Value | Enforcement |
 |---|---|---|
 | Max file size | 50 MB | R2 presigned URL content-length condition |
-| Allowed MIME types | PDF, DOC/DOCX, PPT/PPTX, XLS/XLSX, JPEG, PNG, ZIP | Validated in upload-url endpoint + magic-bytes check |
-| Max attempts per artifact | 3 (then manual review) | `attempt_number` check in submit endpoint |
+| Allowed MIME types | PDF, DOC/DOCX, PPT/PPTX, XLS/XLSX, JPEG, PNG, ZIP | Validated in upload-url metadata + post-upload magic-bytes check |
+| Max attempts per artifact | 3 (then manual review) | `attempt_no` check in submit endpoint |
 | R2 key pattern | `artifacts/{userId}/{artifactId}/{timestamp}_{fileName}` | Server-generated, not client-controlled |
 | Durable DB references | `bucket_name`, `storage_key`, `etag`, `scan_status` | `storage_url` generated dynamically at runtime (5-min GET TTL) |
 
@@ -1155,7 +1187,7 @@ For non-file submissions (text responses, Google Drive links, code links):
 ```typescript
 // POST /api/v1/artifacts/submit
 {
-  module_artifact_id: "uuid",
+  artifact_id: "uuid",
   submission_type: "text" | "link" | "file",
   text_content?: "string",        // for text submissions
   link_url?: "https://...",       // for link submissions  
@@ -1170,18 +1202,19 @@ Per review finding 2.6, the AI evaluation pipeline requires explicit text extrac
 | Artifact Format | P0 Scope & Extraction Engine | Truncation & Token Budget | Fallback / Error Handling |
 |---|---|---|---|
 | **Plain Text** | Direct string validation | Max 50,000 chars (~12,500 tokens) | Reject empty strings |
-| **PDF (Extractable)** | Native Worker `pdf-parse` / WASM text extraction | Max 50,000 chars; extract first 15 pages | Scanned/Unreadable PDF $\rightarrow$ Route to `manual_review_tasks` |
-| **JPEG / PNG** | Multi-modal Vision LLM (e.g. Workers AI Vision / LLaVA) | Max 4 MB image size | Low OCR confidence ($<0.7$) $\rightarrow$ Route to `manual_review_tasks` |
-| **URL Submissions** | SSRF-safe HTTP fetch + DOM text extraction | Max 50,000 chars of main body text | Private IPs/Localhost blocked; unreachable URL $\rightarrow$ `manual_review_tasks` |
-| **Office (DOCX/XLSX/PPTX)** | P1 Scope (stored immutably, plain text preview if converted) | Deferred to P1 | Default to `manual_review_tasks` if unparsed |
-| **ZIP Archives** | P1 Scope (security quarantine check only) | Deferred to P1 | Default to `manual_review_tasks` for code verification |
+| **PDF (Extractable)** | Native Worker `pdf-parse` / WASM text extraction | Max 50,000 chars; extract first 15 pages | Scanned/Unreadable PDF $\rightarrow$ Route to manual review |
+| **JPEG / PNG** | Multi-modal Vision LLM (e.g. Workers AI Vision / LLaVA) | Max 4 MB image size | Low OCR confidence ($<0.7$) $\rightarrow$ Route to manual review |
+| **URL Submissions** | SSRF-safe HTTP fetch + DOM text extraction | Max 50,000 chars of main body text | Private IPs/Localhost blocked; unreachable URL $\rightarrow$ manual review |
+| **Office (DOCX/XLSX/PPTX)** | P1 Scope (stored immutably, plain text preview if converted) | Deferred to P1 | Default to manual review if unparsed |
+| **ZIP Archives** | P1 Scope (security quarantine check only) | Deferred to P1 | Default to manual review for code verification |
 
 ### 8.5 Upload Security & Malware Controls
 
-1. **Magic-Byte Signature Verification**: MIME type provided by the browser is untrusted. Pages Functions inspect file headers (magic bytes) during presigned URL generation.
-2. **SSRF Protection**: Submitted URLs (`link_url`) are validated to prohibit private IP ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.1`, `metadata.google.internal`).
-3. **Executable & Macro Prohibition**: Executable binaries (`.exe`, `.sh`, `.bat`) and macro-enabled documents (`.docm`, `.xlsm`) are blocked automatically.
-4. **Dynamic Presigned GET URLs**: Download links for reviewers are generated dynamically with a 5-minute expiration (`R2.getSignedUrl()`). Raw R2 storage paths are never publicly exposed.
+1. **Magic-Byte Signature Verification**: MIME type provided by the browser is untrusted. After file upload, the backend reads the initial 512 bytes from R2 to inspect magic bytes before passing `scan_status`.
+2. **Quarantined File Safety Isolation**: Quarantined or infected files are marked with quarantined status, isolated in storage, and **strictly prohibited** from being enqueued for AI evaluation or human review.
+3. **SSRF Protection**: Submitted URLs (`link_url`) are validated to prohibit private IP ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.1`, `metadata.google.internal`).
+4. **Executable & Macro Prohibition**: Executable binaries (`.exe`, `.sh`, `.bat`) and macro-enabled documents (`.docm`, `.xlsm`) are blocked automatically.
+5. **Dynamic Presigned GET URLs**: Download links for reviewers are generated dynamically with a 5-minute expiration (`R2.getSignedUrl()`). Raw R2 storage paths are never publicly exposed.
 
 ---
 
@@ -1204,13 +1237,13 @@ sequenceDiagram
     AI->>LLM: Evaluate with structured output
     LLM-->>AI: JSON response {scores, feedback, confidence}
     AI->>AI: Validate response against schema
-    AI->>DB: INSERT ai_reviews
+    AI->>DB: INSERT artifact_evaluation_flows
     AI->>AI: Apply outcome rules
     
     alt confidence >= 0.7 AND NOT critical_failure AND score >= passing
         AI->>DB: UPDATE submission status → accepted
         AI->>DB: INSERT xp_events (evidence XP)
-        AI->>DB: UPDATE user_module_status → mastered (if applicable)
+        AI->>DB: UPDATE user_module_progress.module_status → mastered (if applicable)
     else confidence >= 0.7 AND NOT critical_failure AND score < passing
         AI->>DB: UPDATE submission status → resubmission_required
     else confidence < 0.7 OR critical_failure OR manual trigger
@@ -1277,7 +1310,7 @@ Per PRD §10.2, manual review is **mandatory** when:
 | Safety/compliance concern | AI flags safety in `critical_failure_reason` | Status → `manual_review` + alert |
 | AI retry failure | Queue consumer fails 3 times | Status → `manual_review` |
 | Learner dispute | Learner raises dispute (future P1) | Status → `manual_review` |
-| Two failed resubmissions | `attempt_number >= 3` with no acceptance | Status → `manual_review` |
+| Two failed resubmissions | `attempt_no >= 3` with no acceptance | Status → `manual_review` |
 
 ### 9.5 Production RAR (Retrieval-Augmented Reasoning) LLM Prompt Template
 
@@ -1339,7 +1372,9 @@ Per review finding 2.9 and Product Decision **PD-013**, the LLM provider evaluat
 1. **Zero Data Retention Contract**: The LLM API vendor MUST operate under an enterprise contract prohibiting retention, caching, or logging of learner artifact content for model training or vendor analytics.
 2. **Edge PII Scrubbing**: Cloudflare Pages Functions perform regex and pattern-based PII scrubbing (emails, phone numbers, student IDs) on `artifact_extracted_content` prior to prompt assembly.
 3. **Data Residency**: Artifact text and prompt contents are evaluated strictly within approved geographical regions (EU/US enterprise endpoints) matching institutional compliance policies.
-4. **Prompt & Raw Response Audit**: Raw prompt structures and vendor responses are recorded securely in `ai_reviews.raw_response` with access restricted exclusively to system administrators.
+4. **Audit Provenance & Hash-Based Verification**: The primary, permanent audit record consists of the **SHA-256 hash** of the assembled prompt structure alongside structured scoring metadata (`criterion_scores`, `evidence_found`, `evidence_missing`).
+5. **Raw Prompt Retention & Purge Policy**: Full raw prompt structures and vendor responses stored in `artifact_evaluation_flows.metadata` are retained for a maximum **30-day window** (matching the learner evaluation dispute window). After 30 days, a Cloudflare Cron Worker automatically truncates metadata to null, preserving only the SHA-256 hash and structured scoring JSON.
+6. **Encryption & RBAC**: Prompt logs and review payloads are encrypted at rest using Supabase KMS/AES-256 and accessible exclusively through authenticated admin audit roles.
 
 ---
 
@@ -1391,17 +1426,17 @@ Per PRD Removed Content §9.2.3, §9.3.3, §13.2 & §18.4:
   - **Attempt 2 Acceptance**: **+15 Evidence XP** (`final_artifact_accepted_2`)
   - **Attempt 3 Acceptance**: **+10 Evidence XP** (`final_artifact_accepted_3`)
 - **Single Acceptance Award**: A given artifact submission can yield at most **ONE** acceptance XP award. The `idempotency_key` (pattern: `final:{userId}:{moduleArtifactId}`) prevents multi-attempt double-awarding.
-- **Mastery Transition**: Upon artifact acceptance, the system automatically transitions the corresponding module status in `user_module_status` from `learning_complete` to `mastered`.
+- **Mastery Transition**: Upon artifact acceptance, the system automatically transitions the corresponding `user_module_progress.module_status` to `mastered`.
 
 #### 2. Authorised Manual Evaluation Flow & Determinism
-- **Mandatory Triggers**: AI confidence score $< 0.70$, unreadable/corrupted files (`scan_status = 'scan_failed'`), safety concerns, learner disputes, or 2 failed resubmissions (`attempt_number >= 3`).
+- **Mandatory Triggers**: AI confidence score $< 0.70$, unreadable/corrupted files, safety concerns, learner disputes, or 2 failed resubmissions (`attempt_no >= 3`).
 - **Authorization & RBAC**: Task claiming and decision submission are restricted to authenticated users holding `reviewer`, `faculty`, or `admin` roles verified via `@rareminds-eym/auth-core` JWT claims.
 - **Deterministic XP Equity**: Manual review functions solely as a review channel. An accepted artifact yields the exact attempt-tier Evidence XP (+20 / +15 / +10) based on attempt number, regardless of whether acceptance originated from AI or human evaluation. `manual_eval_accepted` (+5) is recorded strictly as operational metadata under `xp_category = 'engagement'` to ensure readiness calculation parity.
-- **Audit Persistence**: Decisions create an immutable row in `manual_review_decisions` linked to `manual_review_tasks`.
+- **Audit Persistence**: Decisions are recorded in `artifact_evaluation_flows` with `evaluated_by` referencing the reviewer's user ID.
 
 #### 3. Authorised Admin Correction & Governance Controls
-- **Full Audit Logging**: Every admin override (e.g. role re-assignment, artifact score correction, manual dispute resolution) MUST log prior value, new value, acting admin user ID, timestamp, and justification text in `audit_events`.
-- **Historical Outcome Immunity & Superseding Reviews**: Admin score corrections create a superseding review entry (`ai_reviews.superseded_by_id`) or human decision record (`manual_review_decisions`). Historical `ai_reviews` and `xp_events` rows remain 100% immutable to preserve historical auditability.
+- **Full Audit Logging**: Every admin override (e.g. role re-assignment, artifact score correction, manual dispute resolution) MUST log prior value, new value, acting admin user ID, timestamp, and justification text.
+- **Historical Outcome Immunity & Superseding Reviews**: Admin score corrections create a new `artifact_evaluation_flows` entry. Historical `artifact_evaluation_flows` and `xp_events` rows remain 100% immutable to preserve historical auditability.
 
 ### 10.4 XP Integrity and Separation Rules
 
@@ -1473,13 +1508,13 @@ function getReadinessBand(score: number): string {
 |---|---|---|
 | **Module Mastery & Course Completion (30%)** | `(mastered_modules / required_modules) * 100` | 0 if no modules mastered |
 | **Artifact Completion (25%)** | `(accepted_mandatory_artifacts / required_mandatory_artifacts) * 100` | 0 if no artifacts submitted |
-| **AI Authoritative Score (25%)** | `AVG(latest_accepted_score) FROM ai_reviews WHERE submission.status = 'accepted'` per required artifact | 0 if no accepted AI scores |
+| **AI Authoritative Score (25%)** | `AVG(latest_accepted_score) FROM artifact_evaluation_flows WHERE submission.status = 'accepted'` per required artifact | 0 if no accepted AI scores |
 | **XP Achievement (10%)** | `MIN(evidence_xp_earned / expected_evidence_xp * 100, 100)` | 0 if no expected XP configured (+ warning) |
 | **Profile Completion (10%)** | `completed_required_fields / total_required_fields * 100` | Use actual percentage |
 
 ### 11.3 Readiness Recalculation Triggers & Event Coalescing
 
-A new point-in-time readiness snapshot (`readiness_snapshots`) is generated deterministically whenever any of the 8 core events occur. To prevent snapshot explosion during multi-event operations, the engine enforces **transactional event coalescing**: multiple XP or stage events within a single HTTP request or queue batch trigger at most **ONE** readiness recalculation at transaction commit (`userId:roleId:stateVersion`).
+A new point-in-time readiness calculation is generated deterministically whenever any of the 8 core events occur. To prevent recalculation explosion during multi-event operations, the engine enforces **transactional event coalescing**: multiple XP or stage events within a single HTTP request or queue batch trigger at most **ONE** readiness recalculation at transaction commit (`userId:roleId:stateVersion`).
 
 The public endpoint `POST /api/v1/readiness/calculate` (TRD-API-023) is strictly rate-limited to **5 calls/minute per user** to prevent snapshot database bloat.
 
@@ -1490,13 +1525,13 @@ The public endpoint `POST /api/v1/readiness/calculate` (TRD-API-023) is strictly
 
 | Field | Source | Format |
 |---|---|---|
-| **Readiness Score** | `readiness_snapshots.readiness_score` | Whole-number (no decimals — avoid false precision) |
-| **Readiness Band** | `readiness_snapshots.readiness_band` | "Not Ready" / "Learning in Progress" / "Internship Ready" / "Job Ready" |
-| **Last Calculated Date** | `readiness_snapshots.calculated_at` | Relative ("2 hours ago") + absolute tooltip |
-| **Current Role/Path** | `user_role_assignments` → `roles` | Role name + domain + role family |
-| **Missing Evidence** | `readiness_snapshots.missing_evidence` | List of unmet requirements (e.g., "Module 3 artifact not submitted") |
-| **Configuration Warnings** | `readiness_snapshots.config_warnings` | Warnings for missing config (e.g., "Expected XP target not configured") |
-| **Improvement Actions** | `readiness_snapshots.improvement_actions` | Ordered list of what improves the score most (e.g., "Submit artifact for Module 2 → +8 points") |
+| **Readiness Score** | `learning_paths.role_readiness_percentage` | Whole-number (no decimals — avoid false precision) |
+| **Readiness Band** | Derived from `role_readiness_percentage` thresholds | "Not Ready" / "Learning in Progress" / "Internship Ready" / "Job Ready" |
+| **Last Calculated Date** | `learning_paths.updated_at` | Relative ("2 hours ago") + absolute tooltip |
+| **Current Role/Path** | `learning_paths` → `roles` | Role name + domain + role family |
+| **Missing Evidence** | Computed from `user_module_progress` + `artifact_submissions` | List of unmet requirements (e.g., "Module 3 artifact not submitted") |
+| **Configuration Warnings** | Computed from catalog completeness checks | Warnings for missing config (e.g., "Expected XP target not configured") |
+| **Improvement Actions** | Computed from gap analysis | Ordered list of what improves the score most (e.g., "Submit artifact for Module 2 → +8 points") |
 | **Component Breakdown** | Five individual percentages | Visual bar chart showing each component vs. its weight |
 
 ```typescript
@@ -1625,7 +1660,7 @@ Per [03-event-driven-architecture.md](file:///home/gokul/.gemini/antigravity-ide
 | `CONSENT_GRANTED` | `{userId, orgId, version, scope, purpose}` | Consent API | Marketplace |
 | `CONSENT_WITHDRAWN` | `{userId, orgId, purpose}` | Consent API | Marketplace |
 
-### 13.3 Queue Configuration & Consumer Idempotency (TRD-DB-013)
+### 13.3 Queue Configuration & Consumer Idempotency
 
 ```toml
 # Cloudflare Queue
@@ -1655,7 +1690,7 @@ CREATE TABLE public.event_processing_log (
 
 ### 13.4 xAPI 2.0 (IEEE 9274.1.1-2023) Event Statement Specification
 
-All domain events emitted to `lte-events` queue conform to IEEE 9274.1.1-2023 (xAPI 2.0) standard statements for auditability and ecosystem interoperability:
+As specified in Section 13.1, internal micro-events on the `lte-events` queue use compact domain payloads for high edge performance. The async **xAPI Projection Adapter** consumes internal queue events and generates standard IEEE 9274.1.1-2023 (xAPI 2.0) statements for external Learning Record Store (LRS) streaming, analytics, and institutional audit persistence:
 
 ```json
 {
@@ -1720,7 +1755,7 @@ Per [01-security-compliance.md](file:///home/gokul/.gemini/antigravity-ide/knowl
 | AI review results | Sensitive | RLS, audit trail, no PII in logs |
 | XP events | Internal | Append-only, immutable |
 | Marketplace consent | PII (GDPR consent record) | Versioned, timestamped, withdrawal preserves history |
-| AI raw responses | Internal/Debug | Stored in `ai_reviews.raw_response`, excluded from learner API |
+| AI raw responses | Internal/Debug | Stored in `artifact_evaluation_flows.metadata`, excluded from learner API |
 
 ### 14.4 Input Validation
 
@@ -1729,17 +1764,11 @@ All API inputs validated with Zod schemas (server-side, per OWASP):
 ```typescript
 // Example: Artifact submission validation
 const SubmitArtifactSchema = z.object({
-  module_artifact_id: z.string().uuid(),
-  submission_type: z.enum(['file', 'text', 'link']),
-  text_content: z.string().max(50000).optional(),
-  link_url: z.string().url().max(1000).optional(),
-  submission_id: z.string().uuid().optional(), // for file submissions
-}).refine(data => {
-  if (data.submission_type === 'text') return !!data.text_content;
-  if (data.submission_type === 'link') return !!data.link_url;
-  if (data.submission_type === 'file') return !!data.submission_id;
-  return false;
-}, { message: 'Content required for submission type' });
+  artifact_id: z.string().uuid(),
+  user_module_progress_id: z.string().uuid(),
+  version_label: z.string(),
+  submission_mode: z.enum(['normal', 'resubmission']).default('normal'),
+});
 ```
 
 ---
@@ -1796,7 +1825,7 @@ const PaginationSchema = z.object({
 | Unit Tests | 80%+ | XP engine rules, readiness formula, eligibility gate, stage sequencing |
 | Integration Tests | Critical paths | API endpoints, DB queries, queue consumer |
 | E2E Tests | Full learner loop | Login → role → course → 6E → artifact → review → XP → readiness |
-| Property Tests | Invariants | "Failed artifacts never produce XP", "Readiness never exceeds 100" |
+| Property Tests | Invariants | "Failed artifacts never produce Evidence XP and never increase readiness", "Readiness never exceeds 100" |
 
 ### 16.2 Critical Test Cases
 
@@ -1953,7 +1982,7 @@ sequenceDiagram
         CB->>LLM: HTTP POST /evaluate
         LLM-->>CB: 200 OK + Valid JSON
         CB-->>AI: Scores & Feedback
-        AI->>DB: Save ai_reviews & award XP
+        AI->>DB: Save artifact_evaluation_flows & award XP
     else LLM Timeout / 5xx / Rate Limit
         CB->>LLM: HTTP POST /evaluate (Attempt 1..3)
         LLM-->>CB: 503 Service Unavailable / Timeout
@@ -1961,7 +1990,7 @@ sequenceDiagram
         CB->>CB: Transition to OPEN State
         CB-->>AI: CircuitBreakerOpenException
         AI->>DB: UPDATE artifact_submissions status → manual_review
-        AI->>DB: INSERT manual_reviews (trigger: ai_retry_failure)
+        AI->>DB: INSERT artifact_evaluation_flows (stage: 'ai', status: 'failed')
         AI->>DLQ: Move failed message to lte-events-dlq
     end
 ```
@@ -2049,10 +2078,9 @@ All multi-table progress mutations MUST execute within explicit database transac
 ```sql
 -- Atomic Stage Completion Transaction
 BEGIN;
-  UPDATE public.user_stage_progress SET status = 'completed' WHERE user_id = $1 AND modules_content_id = $2;
-  INSERT INTO public.xp_events (user_id, org_id, event_type, xp_category, xp_amount, source_type, source_id, idempotency_key)
-    VALUES ($1, $3, 'stage_completed', 'evidence', 1, 'stage', $2, $4) ON CONFLICT DO NOTHING;
-  UPDATE public.user_module_status SET stages_completed = stages_completed + 1 WHERE user_id = $1 AND module_id = $5;
+  UPDATE public.user_module_progress SET stages_completed = stages_completed + 1, current_stage = 'explore' WHERE user_id = $1 AND module_id = $2;
+  INSERT INTO public.xp_events (user_id, event_type, xp_category, xp_amount, source_type, source_id, idempotency_key)
+    VALUES ($1, 'stage_completed', 'evidence', 1, 'stage', $2, $3) ON CONFLICT DO NOTHING;
 COMMIT;
 ```
 
@@ -2060,24 +2088,31 @@ COMMIT;
 
 ## 20. Requirement Traceability Matrix
 
-| PRD FR | TRD Requirement | API | DB Table | Test |
-|---|---|---|---|---|
-| FR1 (Login/Profile) | Reuse SSO Worker + auth packages | AUTH-001..004 | (SSO DB) | T-012 |
-| FR2 (Assessment Entry) | Read from SkillPassport via shadow roles | TRD-API-001 | `roles` | T-012 |
-| FR3 (Role Selection) | Learner/admin role assignment | TRD-API-003..004 | `user_role_assignments` | T-012 |
-| FR4 (6-Month Roadmap) | Role → capability sequence → courses | TRD-API-005 | `role_capability_sequence` | T-012 |
-| FR5 (Role-Based Course) | Course listing by role | TRD-API-006..007 | `courses`, `user_course_status` | T-012 |
-| FR6 (6E Module Delivery) | Sequential stage delivery + guards | TRD-API-008..011 | `modules_content`, `user_stage_progress` | T-001 |
-| FR7 (Problem Statement) | Problem + rubric in module content | TRD-API-009 | `artifact_questions` | T-012 |
-| FR8 (Artifact Upload) | R2 presigned upload + submission | TRD-API-013..014 | `artifact_submissions` | T-012 |
-| FR9 (AI/Rubric Review) | Async queue → embedding-worker → structured output | TRD-API-017 | `ai_reviews`, `manual_reviews` | T-007, T-008 |
-| FR10 (XP Allocation) | Deterministic XP engine + idempotency | TRD-API-020..021 | `xp_events` | T-004, T-005 |
-| FR11 (Learner Dashboard) | Aggregated dashboard endpoint | TRD-API-024 | All progress tables | T-012 |
-| FR12 (Readiness Score) | Five-component formula + snapshots | TRD-API-022..023 | `readiness_snapshots` | T-006 |
-| FR13 (Marketplace) | Eligibility gate + versioned consent | TRD-API-025..027 | `marketplace_consent` | T-009, T-010 |
-| FR14 (Admin Tracking) | Admin endpoints + manual review queue | TRD-API-028..030 | All tables (admin scope) | T-012 |
-| FR15 (Completion ≠ Mastery) | Separate enum states | — | `user_module_status` | T-002, T-003 |
-| FR16 (Governance) | Version columns + immutable event logs | — | `version_no`, `calculation_version` | T-011 |
+| PRD Section | PRD Requirement | TRD Section | API | DB Table | Test |
+|---|---|---|---|---|---|
+| FR1 | Login and Profile Reuse | §14.1 | AUTH-001..004 | `users`, `user_profiles` | T-012 |
+| FR2 | Assessment Output / Track Entry | §4.3 | TRD-API-001 | `skill_gap`, `profile_snapshot`, `learning_tracks` | T-012 |
+| FR3 | Learning Track & Path Selection | §4.3 | TRD-API-003..004 | `learning_paths` | T-012 |
+| FR4 | Capability Roadmap | §4.3 | TRD-API-005 | `user_capabilities`, `role_capability_sequence` | T-012 |
+| FR5 | Level Progress | §4.3 | TRD-API-006..007 | `user_capability_level_progress`, `courses` | T-012 |
+| FR6 | Module Delivery | §4.3 | TRD-API-008..012 | `user_module_progress`, `modules_content` | T-001 |
+| FR7 | Problem Statement Workflow | §4.2 | TRD-API-009 | `artifact_questions`, `artifact_templates` | T-012 |
+| FR8 | Artifact Upload | §4.3 | TRD-API-013..016 | `artifact_submissions`, `artifact_submission_files` | T-012 |
+| FR9 | Evaluation Pipeline | §4.3, §9 | TRD-API-017..019 | `artifact_evaluation_flows` | T-007, T-008 |
+| FR10 | XP Allocation | §4.3, §10 | TRD-API-020..021 | `xp_events` | T-004, T-005 |
+| FR11 | Learner Dashboard | §25 | TRD-API-024 | All progress tables | T-012 |
+| FR12 | Readiness Score + Display | §11, §11.4 | TRD-API-022..023 | `learning_paths` | T-006 |
+| FR13 | Subscription & Entitlements | §4.3 | TRD-API-025..027 | `subscription_cache` | T-009, T-010 |
+| FR14 | Admin Tracking | §4.3 | TRD-API-028..030 | All tables (admin scope) | T-012 |
+| FR15 | Completion ≠ Mastery | §7.1 | — | `user_module_progress` | T-002, T-003 |
+| FR16 | Product Governance | §26 | — | `version_no`, `is_latest` | T-011 |
+| §9 | 6E Learning Design | §7 | — | `modules_content` | T-001 |
+| §12.4 | Readiness Display | §11.4 | TRD-API-022 | `learning_paths` | T-012 |
+| §13 | Dashboard UX | §25 | TRD-API-024 | All tables | T-012 |
+| §15 | Content Architecture | §24 | — | Seed scripts | — |
+| §16 | Entitlement & Access | §14.3 | TRD-API-025..027 | `subscription_cache` | T-009, T-010 |
+| §18 | Out-of-Scope | §27 | — | — | — |
+| §20 | Product Decisions Freeze | §26 | — | — | — |
 
 ---
 
@@ -2125,13 +2160,11 @@ The PRD mandates a 3-week build. This section maps TRD deliverables to weekly sp
 
 | Day | Deliverable | TRD Reference |
 |---|---|---|
-| D1–D2 | DB migrations: all 11 new tables + RLS policies | TRD-DB-001..011 |
-| D2–D3 | Auth integration: SSO RPC binding, auth middleware | §14.1, AUTH-001..004 |
-| D3–D4 | Roles & Roadmap API: listing, detail, assignment | TRD-API-001..005 |
-| D4–D5 | Course & Module API: listing, detail, 6E content | TRD-API-006..009 |
-| D5 | 6E Stage Progress API + StageGuard | TRD-API-010..012, §7 |
-| D5 | R2 bucket setup + presigned upload API | TRD-API-013 |
-| D5 | Health check endpoint | §18.2 |
+| **Day 1** | DB migrations: all 28 tables + RLS policies | §4.2, TRD-DB-001..015 |
+| **Day 2** | Auth integration: SSO RPC binding, auth middleware | §14.1, AUTH-001..004 |
+| **Day 3** | Roles & Roadmap API: listing, detail, assignment | TRD-API-001..005 |
+| **Day 4** | Course & Module API: listing, detail, 6E content | TRD-API-006..009 |
+| **Day 5** | 6E Stage Progress API + StageGuard, R2 bucket setup, health check endpoint | TRD-API-010..013, §7, §18.2 |
 
 **Week 1 Exit Criteria**: Learner can log in → see roles → select role → view roadmap → view course/module → navigate 6E stages sequentially. All catalog data seeded.
 
@@ -2139,12 +2172,11 @@ The PRD mandates a 3-week build. This section maps TRD deliverables to weekly sp
 
 | Day | Deliverable | TRD Reference |
 |---|---|---|
-| D6–D7 | Artifact submission API (file + text + link) | TRD-API-013..016 |
-| D7–D8 | embedding-worker enhancement: queue consumer, prompt, structured output | §9, embedding-worker |
-| D8–D9 | AI review → outcome rules → XP award pipeline | TRD-API-017, §10 |
-| D9 | Manual review API + queue | TRD-API-018..019 |
-| D9–D10 | Readiness calculator + snapshot creation | TRD-API-022..023, §11 |
-| D10 | Marketplace eligibility + consent API | TRD-API-025..027, §12 |
+| **Day 6** | Artifact submission API (file + text + link) | TRD-API-013..016 |
+| **Day 7** | embedding-worker enhancement: queue consumer, prompt, structured output | §9, embedding-worker |
+| **Day 8** | AI review → outcome rules → XP award pipeline | TRD-API-017, §10 |
+| **Day 9** | Manual review API + queue | TRD-API-018..019 |
+| **Day 10** | Readiness calculator + snapshot creation, Marketplace eligibility + consent API | TRD-API-022..027, §11, §12 |
 
 **Week 2 Exit Criteria**: Full engine loop works — artifact submitted → AI reviews → XP awarded → readiness calculated → marketplace eligibility shown. Content/rubrics frozen for priority courses.
 
@@ -2152,13 +2184,11 @@ The PRD mandates a 3-week build. This section maps TRD deliverables to weekly sp
 
 | Day | Deliverable | TRD Reference |
 |---|---|---|
-| D11–D12 | Learner Dashboard page (all fields from §25) | TRD-FE-001, TRD-API-024 |
-| D12–D13 | Admin Dashboard + Learner Detail + Analytics | TRD-FE-008..010, TRD-API-028..030 |
-| D13 | Manual Review UI | TRD-FE-009 |
-| D13–D14 | XP display, Readiness gauge, Marketplace status UI | TRD-FE-005..007 |
-| D14 | E2E tests: full learner loop | T-012 |
-| D14–D15 | Bug fixes, performance validation, staging deploy | §15, §17 |
-| D15 | Demo rehearsal + sign-off | §17.3 |
+| **Day 11** | Learner Dashboard page (all fields from §25) | TRD-FE-001, TRD-API-024 |
+| **Day 12** | Admin Dashboard + Learner Detail + Analytics | TRD-FE-008..010, TRD-API-028..030 |
+| **Day 13** | Manual Review UI, XP display, Readiness gauge, Marketplace status UI | TRD-FE-005..009 |
+| **Day 14** | E2E tests: full learner loop | T-012 |
+| **Day 15** | Bug fixes, performance validation, staging deploy, demo rehearsal & sign-off | §15, §17, §17.3 |
 
 **Week 3 Exit Criteria**: Complete learner demo loop. All P0 features working. 80%+ test coverage. Staging deployed.
 
@@ -2242,19 +2272,16 @@ Per PRD Removed Content §9.4, §11.2, §12.5, §13.3 & §13.4:
 #### 3. Governance Immutability & Non-Mutation Invariant
 - **No Retroactive Mutation**: A governance-version update (e.g. upgrading a rubric version from `v1` to `v2`, or modifying a course version) MUST NEVER retroactively alter:
   - Published learning content
-  - Previously completed learner 6E stage records (`user_stage_progress`)
-  - Previously mastered module statuses (`user_module_status`)
+  - Previously completed learner module progress records (`user_module_progress`)
   - Previously awarded XP ledger entries (`xp_events`)
-  - Historical readiness snapshots (`readiness_snapshots`)
+  - Historical learning path status and readiness entries (`learning_paths`)
 - **Forward-Only Scope**: New governance versions apply strictly forward to newly initiated learning runs and future submission evaluations.
 
 #### 4. Version Traceability Register
 Version tracking is mandatory across all data entities:
-- `courses.version_no` — Tracks course structure and module ordering version.
-- `ai_reviews.rubric_version` — Tracks the exact rubric version used during LLM evaluation.
-- `ai_reviews.prompt_version` — Tracks the prompt engineering template version.
-- `readiness_snapshots.calculation_version` — Tracks the mathematical formula version (`v1.0`).
-- `marketplace_consent.consent_version` — Tracks the versioned terms of consent granted by the learner.
+- `learning_paths.version_no` — Tracks personalized learning path version.
+- `artifact_evaluation_flows.metadata` — Tracks rubric/prompt engineering version in evaluation metadata.
+- `learning_paths.role_readiness_percentage` — Tracks calculated role readiness score.
 
 ---
 
@@ -2267,15 +2294,15 @@ Per PRD §13, the dashboard must be **action-first** and reduce confusion.
 | Section | Data Source | PRD Requirement |
 |---|---|---|
 | **Next Action** | Computed from progress state | "Start course", "Continue module", "Submit artifact", "Review feedback", "Resubmit", or "Improve readiness" |
-| **Current Role** | `user_role_assignments` + `roles` | Role name, industry, domain, selected track |
-| **Roadmap Progress** | `role_capability_sequence` + `user_course_status` | 6-month roadmap with current milestone highlighted |
-| **Course Progress** | `user_course_status` + `user_module_status` | Current course, module progress bars, locked/unlocked, learning-complete vs mastered indicators |
-| **6E Progress** | `user_stage_progress` | Current stage with visual indicator + locked future stages |
-| **Artifact Status** | `artifact_submissions` | Latest submission status badge: Draft / Submitted / Under Review / Resubmission Required / Manual Review / Accepted |
-| **AI Feedback** | `ai_reviews` | Latest score, confidence indicator, evidence found/missing, learner-safe feedback summary |
+| **Current Role** | `learning_paths` + `roles` | Role name, industry, domain, selected track |
+| **Roadmap Progress** | `role_capability_sequence` + `user_capabilities` | Capability roadmap with current sequence step highlighted |
+| **Course Progress** | `user_capability_level_progress` + `user_module_progress` | Level progress, module status, locked/unlocked, learning-complete vs mastered indicators |
+| **6E Progress** | `user_module_progress` | Current stage with visual indicator + locked future stages |
+| **Artifact Status** | `artifact_submissions` | Latest submission status badge: Submitted / Under Review / Resubmission Required / Accepted |
+| **AI Feedback** | `artifact_evaluation_flows` | Latest score, feedback text, improvements, decision |
 | **XP Display** | `xp_events` aggregated | Evidence XP, Engagement XP, Total XP, next milestone |
-| **Readiness** | `readiness_snapshots` (latest) | Score (whole number), band, component breakdown, missing evidence, warnings, improvement actions |
-| **Marketplace** | `marketplace_consent` + eligibility check | Eligibility status, consent status, blocked reason (if any) |
+| **Readiness** | `learning_paths` (latest) | Score (whole number), band, component breakdown |
+| **Subscription** | `subscription_cache` + entitlement check | Entitlement status, plan details, feature access |
 
 ### 25.2 Next Action Engine
 
@@ -2396,43 +2423,11 @@ Per PRD §18, these items are explicitly excluded from this TRD and must not be 
 
 ---
 
-## 28. Updated Requirement Traceability Matrix (Complete)
-
-This supersedes §20 with the gap-filled requirements:
-
-| PRD Section | PRD Requirement | TRD Section | API | DB Table | Test |
-|---|---|---|---|---|---|
-| FR1 | Login and Profile Reuse | §14.1 | AUTH-001..004 | (SSO DB) | T-012 |
-| FR2 | Assessment Output / 3-Track Entry | §4.2 (DB-011) | TRD-API-001 | `user_assessment_links`, `roles` | T-012 |
-| FR3 | Role Selection / Admin Assignment | §5.3 | TRD-API-003..004 | `user_role_assignments` | T-012 |
-| FR4 | 6-Month Roadmap | §5.3, §25 | TRD-API-005 | `role_capability_sequence` | T-012 |
-| FR5 | Role-Based Course | §5.3 | TRD-API-006..007 | `courses`, `user_course_status` | T-012 |
-| FR6 | 6E Module Delivery | §7 | TRD-API-008..012 | `modules_content`, `user_stage_progress` | T-001 |
-| FR7 | Problem Statement Workflow | §5.3 | TRD-API-009 | `artifact_questions`, `artifact_templates` | T-012 |
-| FR8 | Artifact Upload | §8 | TRD-API-013..016 | `artifact_submissions` | T-012 |
-| FR9 | AI/Rubric Evaluation | §9 | TRD-API-017..019 | `ai_reviews`, `manual_reviews` | T-007, T-008 |
-| FR10 | XP Allocation | §10 | TRD-API-020..021 | `xp_events` | T-004, T-005 |
-| FR11 | Learner Dashboard | §25 | TRD-API-024 | All progress tables | T-012 |
-| FR12 | Readiness Score + Display | §11, §11.4 | TRD-API-022..023 | `readiness_snapshots` | T-006 |
-| FR13 | Marketplace Eligibility | §12 | TRD-API-025..027 | `marketplace_consent` | T-009, T-010 |
-| FR14 | Admin Tracking | §5.3 | TRD-API-028..030 | All tables (admin scope) | T-012 |
-| FR15 | Completion ≠ Mastery | §7.1 | — | `user_module_status` | T-002, T-003 |
-| FR16 | Product Governance | §26 | — | `version_no`, `calculation_version` | T-011 |
-| §9 | 6E Learning Design | §7 | — | `modules_content` | T-001 |
-| §12.4 | Readiness Display | §11.4 | TRD-API-022 | `readiness_snapshots` | T-012 |
-| §13 | Dashboard UX | §25 | TRD-API-024 | All tables | T-012 |
-| §15 | Content Architecture | §24 | — | Seed scripts | — |
-| §16 | Consent, Privacy | §12, §14.3 | TRD-API-025..027 | `marketplace_consent` | T-009, T-010 |
-| §18 | Out-of-Scope | §27 | — | — | — |
-| §20 | Product Decisions Freeze | §26 | — | — | — |
-
----
-
-## 29. Cross-Ecosystem Alignment & Compatibility Matrix
+## 28. Cross-Ecosystem Alignment & Compatibility Matrix
 
 This section explicitly verifies alignment between the LTE TRD and all connected applications within the `skill-echosystem` workspace.
 
-### 29.1 Ecosystem Compatibility Audit
+### 28.1 Ecosystem Compatibility Audit
 
 | Ecosystem Component | Protocol / Standard | LTE Integration Mechanism | Verified Status |
 |---|---|---|---|
@@ -2445,7 +2440,7 @@ This section explicitly verifies alignment between the LTE TRD and all connected
 | **Cloudflare R2 (`lte-artifacts`)** | Direct S3 Presigned URL PUT | Presigned upload URL generation in Pages Functions | ✅ FULLY ALIGNED |
 | **Cloudflare Queues** | Event Bus (`lte-events`, `auth-db-sync-queue`) | Async event producer/consumer for AI review & sync | ✅ FULLY ALIGNED |
 
-### 29.2 JWT Claims & Identity Mapping
+### 28.2 JWT Claims & Identity Mapping
 
 The JWT payload issued by `sso-worker` and decoded by `@rareminds-eym/auth-core` is directly mapped in LTE Functions:
 
@@ -2462,7 +2457,7 @@ export interface LTEAuthUser {
 
 ---
 
-## 30. Architecture Decision Records (ADR Registry)
+## 29. Architecture Decision Records (ADR Registry)
 
 This registry records key technical architectural decisions, context, and trade-offs made for the LTE 3-Week MVP.
 
@@ -2515,7 +2510,7 @@ This registry records key technical architectural decisions, context, and trade-
 
 - **Status**: **ACCEPTED**
 - **Context**: Mutating learner totals directly in user summary rows makes auditing impossible and introduces concurrency race conditions.
-- **Decision**: Store all XP grants as immutable append-only rows in `xp_events` with unique `idempotency_key` strings. Compute readiness as point-in-time immutable snapshots in `readiness_snapshots`.
+- **Decision**: Store all XP grants as immutable append-only rows in `xp_events` with unique `idempotency_key` strings. Compute readiness as point-in-time scores stored in `learning_paths.role_readiness_percentage`.
 - **Consequences**:
   - *Positive*: Full audit trail, zero duplicate XP risk, historical reproducibility.
   - *Negative*: Requires database aggregation queries or cached snapshot strategy for high-frequency reads.

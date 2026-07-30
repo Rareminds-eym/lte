@@ -1,6 +1,6 @@
 import type React from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/app/store";
+import { useAuthStore } from "@/entities/session";
 import { getLogger, getSkillpassportUrl, useUIStore } from "@/shared";
 import { Header, NavigationDrawer } from "@/widgets";
 

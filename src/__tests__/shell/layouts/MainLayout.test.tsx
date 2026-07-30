@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MainLayout } from "@/app/layouts/MainLayout";
-import { useAuthStore } from "@/app/store";
+import { useAuthStore } from "@/entities/session";
 
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {

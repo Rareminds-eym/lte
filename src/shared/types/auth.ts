@@ -29,3 +29,17 @@ export interface RefreshResponse {
 export interface LogoutResponse {
   success: boolean;
 }
+
+export interface ActiveLearningPath {
+  learningPathId: string;
+  learningTrackId: string;
+  roleId: string;
+  track: string;
+  fit: string;
+  matchScore: number;
+}
+
+export interface ActiveLearningPathResponse {
+  success: boolean;
+  data: ActiveLearningPath | null;
+}

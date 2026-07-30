@@ -5,9 +5,11 @@ import { CourseCard } from "@/entities/course";
 
 const baseCourse: Course = {
   id: "test-1",
+  capabilityId: "test-1",
+  capabilityCode: "TEST-CAP-01",
   title: "Test Course",
   description: "A test course description for verification purposes.",
-  category: "Backend Engineer",
+  category: "Core",
   level: "Intermediate",
   imageUrl: "https://picsum.photos/seed/test/400/220",
   tags: ["Testing", "Engineering"],
@@ -19,7 +21,7 @@ const baseCourse: Course = {
   durationHours: 40,
   xp: 500,
   badge: "TST-L2",
-  role: "backend",
+  priority: "Core",
 };
 
 describe("CourseCard", () => {
@@ -33,7 +35,7 @@ describe("CourseCard", () => {
 
   it("renders category and level", () => {
     render(<CourseCard course={baseCourse} />);
-    expect(screen.getByText("Backend Engineer")).toBeInTheDocument();
+    expect(screen.getByText("Core")).toBeInTheDocument();
     expect(screen.getByText("Intermediate")).toBeInTheDocument();
   });
 

@@ -1,209 +1,82 @@
-import { useMemo, useState } from "react";
-import { type Course, CourseCard } from "@/entities/course";
+import { useState } from "react";
+import { CourseCard, useCourses } from "@/entities/course";
+import { getLogger } from "@/shared";
 import { cn } from "@/shared/lib";
-import { Button } from "@/shared/ui";
+import { Button, PageLoader } from "@/shared/ui";
 import { Pagination } from "@/widgets";
 import {
   COURSE_PAGE_SIZE,
-  filterCoursesByRole,
+  filterCoursesByPriority,
   getSafeCoursePage,
   paginateCourses,
 } from "../model/courseFilters";
 
-// ponytail: mock data, replace with TanStack Query + entities/course/api/ when backend exists
-const MOCK_COURSES: Course[] = [
-  {
-    id: "1",
-    title: "Observability: Logging, Monitoring & Debugging",
-    description:
-      "Learn how to debug and monitor backend systems for better performance and stability.",
-    category: "Backend Engineer",
-    level: "Intermediate",
-    role: "backend",
-    status: "in_progress",
-    progress: 20,
-    currentLevel: 1,
-    totalLevels: 5,
-    targetLevel: "L3",
-    durationHours: 45,
-    xp: 500,
-    badge: "OBS-L2",
-    imageUrl: "https://picsum.photos/seed/obs-logging/400/220",
-    tags: ["Observability & Debugging", "Software Engineering", "Applied Skill"],
-  },
-  {
-    id: "2",
-    title: "React: Advanced Patterns & Performance Optimization",
-    description:
-      "Deep dive into scalable React patterns, code splitting, and performance optimization.",
-    category: "Frontend Engineer",
-    level: "Advanced",
-    role: "frontend",
-    status: "in_progress",
-    progress: 20,
-    currentLevel: 1,
-    totalLevels: 5,
-    targetLevel: "L3",
-    durationHours: 45,
-    xp: 240,
-    badge: "OBS-L2",
-    imageUrl: "https://picsum.photos/seed/react-patterns/400/220",
-    tags: ["Frontend Frameworks (React)", "Software Engineering", "Applied Skill"],
-  },
-  {
-    id: "3",
-    title: "API Design: REST, GraphQL & Scalability",
-    description: "Design production-ready REST and GraphQL APIs following industry best practices.",
-    category: "Backend Engineer",
-    level: "Intermediate",
-    role: "backend",
-    status: "in_progress",
-    progress: 60,
-    currentLevel: 3,
-    totalLevels: 5,
-    targetLevel: "L3",
-    durationHours: 45,
-    xp: 320,
-    badge: "OBS-L2",
-    imageUrl: "https://picsum.photos/seed/api-design/400/220",
-    tags: ["API Design & Implementation", "Software Engineering", "Applied Skill"],
-    qualified: true,
-  },
-  {
-    id: "4",
-    title: "Database Design: Schema & Query Optimization",
-    description: "Design efficient database schemas and master query optimization techniques.",
-    category: "Backend Engineer",
-    level: "Intermediate",
-    role: "backend",
-    status: "in_progress",
-    progress: 40,
-    currentLevel: 2,
-    totalLevels: 5,
-    targetLevel: "L3",
-    durationHours: 45,
-    xp: 250,
-    badge: "OBS-L2",
-    imageUrl: "https://picsum.photos/seed/db-design/400/220",
-    tags: ["Security & Authentication", "Software Engineering", "Applied Skill"],
-  },
-  {
-    id: "5",
-    title: "Security: Authentication & Authorization Patterns",
-    description: "Implement secure auth flows, JWT, OAuth2, and RBAC in backend services.",
-    category: "Backend Engineer",
-    level: "Intermediate",
-    role: "backend",
-    status: "not_started",
-    progress: 0,
-    currentLevel: 0,
-    totalLevels: 5,
-    targetLevel: "L3",
-    durationHours: 45,
-    xp: 500,
-    badge: "OBS-L2",
-    imageUrl: "https://picsum.photos/seed/security-auth/400/220",
-    tags: ["Observability & Debugging", "Software Engineering", "Applied Skill"],
-  },
-  {
-    id: "6",
-    title: "DevOps Fundamentals: CI/CD & Deployment",
-    description:
-      "Build deployment pipelines and ship applications reliably to production environments.",
-    category: "Backend Engineer",
-    level: "Intermediate",
-    role: "backend",
-    status: "completed",
-    progress: 100,
-    currentLevel: 5,
-    totalLevels: 5,
-    targetLevel: "L3",
-    durationHours: 45,
-    xp: 300,
-    badge: "OBS-L2",
-    imageUrl: "https://picsum.photos/seed/devops-cicd/400/220",
-    tags: ["Observability & Debugging", "Software Engineering", "Applied Skill"],
-    qualified: true,
-  },
-  {
-    id: "7",
-    title: "TypeScript Advanced Patterns",
-    description:
-      "Master advanced TypeScript features including conditional types, template literals, and mapped types for real-world codebases.",
-    category: "Frontend Engineer",
-    level: "Advanced",
-    role: "frontend",
-    status: "completed",
-    progress: 100,
-    currentLevel: 5,
-    totalLevels: 5,
-    targetLevel: "L4",
-    durationHours: 40,
-    xp: 550,
-    imageUrl: "https://picsum.photos/seed/course-7/400/220",
-    tags: ["TypeScript", "Patterns", "Engineering"],
-    qualified: true,
-  },
-  {
-    id: "8",
-    title: "Modern CSS Architecture",
-    description:
-      "Learn modern CSS techniques including container queries, cascade layers, and utility-first design workflows.",
-    category: "Frontend Engineer",
-    level: "Intermediate",
-    role: "frontend",
-    status: "not_started",
-    progress: 0,
-    currentLevel: 0,
-    totalLevels: 4,
-    targetLevel: "L3",
-    durationHours: 25,
-    xp: 350,
-    imageUrl: "https://picsum.photos/seed/course-8/400/220",
-    tags: ["CSS", "Architecture", "Frontend"],
-  },
+const PRIORITIES = ["Core", "Important", "Supporting"] as const;
+type Priority = (typeof PRIORITIES)[number];
+
+const PRIORITY_TABS = [
+  { id: null as Priority | null, label: "All" },
+  ...PRIORITIES.map((p) => ({ id: p as Priority, label: p })),
 ];
 
-const STATS = {
-  enrolled: MOCK_COURSES.length,
-  completed: MOCK_COURSES.filter((c) => c.status === "completed").length,
-  inProgress: MOCK_COURSES.filter((c) => c.status === "in_progress").length,
-};
-
-const ROLE_COUNTS = {
-  all: MOCK_COURSES.length,
-  backend: MOCK_COURSES.filter((c) => c.role === "backend").length,
-  frontend: MOCK_COURSES.filter((c) => c.role === "frontend").length,
-};
-
-const ROLE_TABS = [
-  { id: null as string | null, label: "All Roles" },
-  { id: "backend" as const, label: "Backend Engineer" },
-  { id: "frontend" as const, label: "Frontend Engineer" },
-] as const;
+const STATS_PILL_STYLES = {
+  enrolled: "bg-brand-50 border-brand-100 text-brand-700 [&_svg]:text-brand-500",
+  completed: "bg-success-50 border-success-200 text-success-700 [&_svg]:text-success-600",
+  inProgress: "bg-warning-50 border-warning-200 text-warning-700 [&_svg]:text-warning-600",
+} as const;
 
 export const CoursesPage = () => {
-  const [activeRole, setActiveRole] = useState<string | null>(null);
+  const [activePriority, setActivePriority] = useState<Priority | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const filteredCourses = useMemo(
-    () => filterCoursesByRole(MOCK_COURSES, activeRole),
-    [activeRole],
-  );
+  const { data: courses, isLoading, error } = useCourses();
 
+  const filteredCourses = filterCoursesByPriority(courses ?? [], activePriority);
   const totalPages = Math.ceil(filteredCourses.length / COURSE_PAGE_SIZE);
-
   const safePage = getSafeCoursePage(currentPage, totalPages);
+  const paginatedCourses = paginateCourses(filteredCourses, safePage);
 
-  const paginatedCourses = useMemo(
-    () => paginateCourses(filteredCourses, safePage),
-    [filteredCourses, safePage],
-  );
+  const total = courses?.length ?? 0;
+  const completed = courses?.filter((c) => c.status === "completed").length ?? 0;
+  const inProgress = courses?.filter((c) => c.status === "in_progress").length ?? 0;
+
+  const priorityCounts: Record<string, number> = {};
+  if (courses) {
+    for (const p of PRIORITIES) {
+      priorityCounts[p] = courses.filter((c) => c.priority === p).length;
+    }
+  }
+
+  if (isLoading) {
+    return <PageLoader message="Loading courses..." />;
+  }
+
+  if (error) {
+    getLogger("CoursesPage").error(
+      "Failed to load courses",
+      error instanceof Error ? error : new Error("unknown"),
+    );
+    return (
+      <div className="mx-auto max-w-[1440px] py-16 text-center" role="alert">
+        <p className="text-danger-600 font-semibold">Failed to load courses.</p>
+        <p className="text-sm text-content-secondary mt-1">{error.message}</p>
+      </div>
+    );
+  }
+
+  if (!courses || courses.length === 0) {
+    return (
+      <div className="mx-auto max-w-[1440px] space-y-6">
+        <div className="text-center py-16 text-content-secondary">
+          No courses found. Complete an assessment to get started.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      {/* Page Header */}
       <header>
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-start gap-3">
@@ -221,40 +94,34 @@ export const CoursesPage = () => {
           <div className="flex items-center gap-3 shrink-0 flex-wrap">
             <StatsPill
               icon={<LayersIconSmall />}
-              count={STATS.enrolled}
+              count={total}
               label="Enrolled"
-              className="bg-brand-50 border-brand-100 text-brand-700 [&_svg]:text-brand-500"
+              className={STATS_PILL_STYLES.enrolled}
             />
             <StatsPill
               icon={<CheckIconSmall />}
-              count={STATS.completed}
+              count={completed}
               label="Completed"
-              className="bg-success-50 border-success-200 text-success-700 [&_svg]:text-success-600"
+              className={STATS_PILL_STYLES.completed}
             />
             <StatsPill
               icon={<ClockIconSmall />}
-              count={STATS.inProgress}
+              count={inProgress}
               label="In Progress"
-              className="bg-warning-50 border-warning-200 text-warning-700 [&_svg]:text-warning-600"
+              className={STATS_PILL_STYLES.inProgress}
             />
           </div>
         </div>
       </header>
 
-      {/* Role Tabs */}
       <div
         role="tablist"
-        aria-label="Course roles"
+        aria-label="Course priority"
         className="flex items-center gap-6 border-b border-line-default"
       >
-        {ROLE_TABS.map((tab) => {
-          const count =
-            tab.id === null
-              ? ROLE_COUNTS.all
-              : tab.id === "backend"
-                ? ROLE_COUNTS.backend
-                : ROLE_COUNTS.frontend;
-          const isActive = activeRole === tab.id;
+        {PRIORITY_TABS.map((tab) => {
+          const count = tab.id === null ? total : (priorityCounts[tab.id] ?? 0);
+          const isActive = activePriority === tab.id;
           return (
             <button
               key={tab.label}
@@ -262,7 +129,7 @@ export const CoursesPage = () => {
               type="button"
               aria-selected={isActive}
               onClick={() => {
-                setActiveRole(tab.id);
+                setActivePriority(tab.id);
                 setCurrentPage(1);
               }}
               className={cn(
@@ -289,7 +156,6 @@ export const CoursesPage = () => {
         })}
       </div>
 
-      {/* Toolbar */}
       <div className="flex items-center justify-between">
         <Button variant="outline" size="sm" icon={<FilterIcon />} className="rounded-full">
           Filter
@@ -330,7 +196,6 @@ export const CoursesPage = () => {
         </div>
       </div>
 
-      {/* Course Grid */}
       {paginatedCourses.length > 0 ? (
         <div
           className={
@@ -349,7 +214,6 @@ export const CoursesPage = () => {
         </div>
       )}
 
-      {/* Pagination */}
       <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
@@ -377,7 +241,7 @@ const StatsPill: React.FC<{
 const BookIcon: React.FC = () => (
   <svg
     aria-hidden="true"
-    className="w-5 h-5 text-purple-600"
+    className="w-5 h-5 text-accent-purple-600"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
