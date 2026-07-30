@@ -21,7 +21,7 @@ const ActiveLearningPathResponseSchema = z.object({
  * Token authorization is implicitly handled by the shared apiFetch client.
  */
 export async function fetchActiveLearningPath(): Promise<ActiveLearningPath | null> {
-  const raw = await apiFetch<unknown>("/api/v1/learning-paths/active", {
+  const raw = await apiFetch("/api/v1/learning-paths/active", {
     method: "GET",
   });
 

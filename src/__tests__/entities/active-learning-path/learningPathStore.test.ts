@@ -7,16 +7,15 @@ vi.mock("@/entities/active-learning-path/api/learningPathApi", () => ({
   fetchActiveLearningPath: vi.fn(),
 }));
 
-beforeEach(() => {
-  useLearningPathStore.setState({
-    activeLearningPath: null,
-    activeLearningPathLoading: false,
-    error: null,
-  });
-  vi.clearAllMocks();
-});
-
 describe("learningPathStore", () => {
+  beforeEach(() => {
+    useLearningPathStore.setState({
+      activeLearningPath: null,
+      activeLearningPathLoading: false,
+      error: null,
+    });
+    vi.clearAllMocks();
+  });
   describe("fetchAndSetActiveLearningPath", () => {
     it("fetches and stores active learning path on success", async () => {
       const mockPath = {

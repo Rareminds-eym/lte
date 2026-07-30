@@ -17,6 +17,7 @@ describe("learningPathApi", () => {
   });
 
   afterEach(() => {
+    registerTokenGetter(() => null);
     vi.restoreAllMocks();
   });
 

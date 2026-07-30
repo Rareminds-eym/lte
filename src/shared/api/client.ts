@@ -20,7 +20,7 @@ export const registerTokenGetter = (getter: TokenGetter): void => {
  * Generic API Fetch client designed for LTE domain requests.
  * Automatically injects authorization headers, logs queries, and handles errors.
  */
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiFetch<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers = new Headers(options.headers);
 
@@ -70,7 +70,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   // Handle empty responses or 204 No Content
   if (response.status === 204) {
-    return null as unknown as T;
+    return undefined as unknown as T;
   }
 
   return (await response.json()) as T;

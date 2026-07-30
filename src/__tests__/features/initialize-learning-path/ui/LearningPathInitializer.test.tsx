@@ -6,24 +6,11 @@ import { initializeLearningPathSchema } from "@/features/initialize-learning-pat
 import { useInitializeLearningPath } from "@/features/initialize-learning-path/model/useInitializeLearningPath";
 import { LearningPathInitializer } from "@/features/initialize-learning-path/ui/LearningPathInitializer";
 
-interface MockAuthState {
-  accessToken: string | null;
-  loading: boolean;
-  initialized: boolean;
-  isAuthenticated: boolean;
-}
+type StoreState = ReturnType<typeof useAuthStore.getState>;
 
 // Mock auth store
 vi.mock("@/entities/session", () => ({
-  useAuthStore: vi.fn(<T,>(selector?: (s: MockAuthState) => T) => {
-    const state: MockAuthState = {
-      accessToken: "mock-token",
-      loading: false,
-      initialized: true,
-      isAuthenticated: true,
-    };
-    return typeof selector === "function" ? selector(state) : (state as unknown as T);
-  }),
+  useAuthStore: vi.fn(),
 }));
 
 // Mock useInitializeLearningPath hook
@@ -49,23 +36,27 @@ describe("LearningPathInitializer Feature", () => {
     vi.clearAllMocks();
 
     // Default mock implementation for useAuthStore selector calls
-    (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      <T,>(selector?: (s: MockAuthState) => T) => {
-        const state: MockAuthState = {
-          accessToken: "mock-token",
-          loading: false,
-          initialized: true,
-          isAuthenticated: true,
-        };
-        return typeof selector === "function" ? selector(state) : (state as unknown as T);
-      },
-    );
+    vi.mocked(useAuthStore).mockImplementation(<T,>(selector?: (s: StoreState) => T) => {
+      const state: StoreState = {
+        accessToken: "mock-token",
+        loading: false,
+        initialized: true,
+        isAuthenticated: true,
+        user: null,
+        error: null,
+        initialize: vi.fn(),
+        exchangeCode: vi.fn(),
+        logout: vi.fn(),
+        setAccessToken: vi.fn(),
+      };
+      return typeof selector === "function" ? selector(state) : (state as unknown as T);
+    });
 
     // Default mock implementation for useInitializeLearningPath
-    (useInitializeLearningPath as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    vi.mocked(useInitializeLearningPath).mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    });
+    } as unknown as ReturnType<typeof useInitializeLearningPath>);
   });
 
   describe("initializeLearningPathSchema (Validation)", () => {

@@ -18,6 +18,7 @@ describe("courseApi", () => {
   });
 
   afterEach(() => {
+    registerTokenGetter(() => null);
     vi.restoreAllMocks();
   });
 

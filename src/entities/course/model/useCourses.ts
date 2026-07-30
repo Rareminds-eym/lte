@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchUserCourses } from "../api/courseApi";
 
-export const useCourses = () => {
+export const useCourses = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["userCourses"],
     queryFn: () => fetchUserCourses(),
@@ -19,5 +19,6 @@ export const useCourses = () => {
       return failureCount < 2;
     },
     retryDelay: (attemptIndex) => Math.min(1_000 * 2 ** attemptIndex, 4_000),
+    ...options,
   });
 };
