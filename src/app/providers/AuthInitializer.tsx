@@ -123,6 +123,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
   if (callbackParams || location.pathname.startsWith("/auth/callback")) {
     if (!callbackParams) {
       // Bare /auth/callback with no params — bounce to landing
+      navigate("/", { replace: true });
       return null;
     }
     const message = callbackError ?? authError;

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { ZodIssue } from "zod";
 import { useAuthStore } from "@/entities/session";
-import { PageLoader } from "@/shared/ui";
 import { initializeLearningPathSchema } from "../model/initializeLearningPath.schema";
 import { useInitializeLearningPath } from "../model/useInitializeLearningPath";
 

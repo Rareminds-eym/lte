@@ -147,7 +147,7 @@ describe("AuthInitializer", () => {
     expect(screen.getByRole("button", { name: /return to login/i })).toBeInTheDocument();
   });
 
-  it("shows children for bare /auth/callback with no params (returns null)", () => {
+  it("redirects to landing page when bare /auth/callback is visited without parameters", () => {
     useAuthStore.setState({ loading: false, initialized: true });
     render(
       <MemoryRouter initialEntries={["/auth/callback"]}>
@@ -163,6 +163,6 @@ describe("AuthInitializer", () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.queryByTestId("application-loader")).not.toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true });
   });
 });
