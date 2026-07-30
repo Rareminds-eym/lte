@@ -57,7 +57,12 @@ jobs:
 
       - name: Biome CI (changed files only)
         if: steps.changed.outputs.count != '0'
-        run: npx biome ci --changed --since="origin/${{ github.base_ref }}" .
+        run: |
+          if grep -qE '^(src/.*\.(js|ts|tsx)|functions/.*\.ts|test/.*\.(js|ts))$' /tmp/changed_files.txt; then
+            npx biome ci --changed --since="origin/${{ github.base_ref }}" .
+          else
+            echo "No Biome-covered files changed. Skipping Biome."
+          fi
 
       - name: ESLint (changed TS/TSX files only)
         if: steps.changed.outputs.count != '0'
