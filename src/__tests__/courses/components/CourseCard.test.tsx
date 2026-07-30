@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Course } from "@/entities/course";
 import { CourseCard } from "@/entities/course";
 
@@ -10,7 +10,11 @@ vi.mock("react-router-dom", async () => ({
   useNavigate: () => mockNavigate,
 }));
 
-function renderWithRouter(ui: React.ReactElement) {
+afterEach(() => {
+  mockNavigate.mockClear();
+});
+
+function renderWithRouter(ui: React.ReactElement): ReturnType<typeof render> {
   return render(<MemoryRouter>{ui}</MemoryRouter>);
 }
 
@@ -112,28 +116,24 @@ describe("CourseCard", () => {
   });
 
   it("navigates to course detail on Start click", () => {
-    mockNavigate.mockClear();
     renderWithRouter(<CourseCard course={{ ...baseCourse, status: "not_started", progress: 0 }} />);
     fireEvent.click(screen.getByText("Start"));
     expect(mockNavigate).toHaveBeenCalledWith("/my-courses/TEST-CAP-01");
   });
 
   it("navigates to course detail on Continue click", () => {
-    mockNavigate.mockClear();
     renderWithRouter(<CourseCard course={baseCourse} />);
     fireEvent.click(screen.getByText("Continue"));
     expect(mockNavigate).toHaveBeenCalledWith("/my-courses/TEST-CAP-01");
   });
 
   it("navigates to course detail on Review click", () => {
-    mockNavigate.mockClear();
     renderWithRouter(<CourseCard course={{ ...baseCourse, status: "completed", progress: 100 }} />);
     fireEvent.click(screen.getByText("Review"));
     expect(mockNavigate).toHaveBeenCalledWith("/my-courses/TEST-CAP-01");
   });
 
   it("encodes special characters in capabilityCode", () => {
-    mockNavigate.mockClear();
     renderWithRouter(
       <CourseCard
         course={{
