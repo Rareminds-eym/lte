@@ -8,6 +8,7 @@ import {
   deactivateOtherPaths,
   upsertLearningPath,
   upsertLearningTrack,
+  syncUserCapabilities,
 } from "./queries";
 import { InitializeLearningPathSchema } from "./schemas";
 
@@ -63,6 +64,13 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     const pathId = await upsertLearningPath(supabase, {
       userId,
       trackId,
+      roleId,
+    });
+
+    // Synchronize user capabilities for this new learning path
+    await syncUserCapabilities(supabase, {
+      userId,
+      learningPathId: pathId,
       roleId,
     });
 
