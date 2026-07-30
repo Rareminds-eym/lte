@@ -1,13 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAuthStore } from "@/app/store/authStore";
+import { useAuthStore } from "@/entities/session";
 import { initializeLearningPathSchema } from "@/features/initialize-learning-path/model/initializeLearningPath.schema";
 import { useInitializeLearningPath } from "@/features/initialize-learning-path/model/useInitializeLearningPath";
 import { LearningPathInitializer } from "@/features/initialize-learning-path/ui/LearningPathInitializer";
 
 // Mock auth store
-vi.mock("@/app/store/authStore", () => ({
+vi.mock("@/entities/session", () => ({
   useAuthStore: vi.fn(),
 }));
 

@@ -98,6 +98,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
   if (variant === "list") {
     return (
       <article
+        data-testid="course-card"
         className={cn(
           "bg-surface-primary rounded-2xl border border-line-subtle shadow-xs hover:shadow-md transition-all duration-200 flex overflow-hidden",
           className,
@@ -165,6 +166,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
   /* ── Grid variant (default) ── */
   return (
     <article
+      data-testid="course-card"
       className={cn(
         "bg-surface-primary rounded-2xl border border-line-subtle shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden",
         className,

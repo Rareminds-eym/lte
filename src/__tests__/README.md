@@ -110,7 +110,7 @@ If a module is reused by multiple features and lives under `src/shared`, place i
 
 ## Import Guidelines
 
-- Prefer project aliases such as `@/shared/ui`, `@/app/store`, or `@/entities/dashboard`.
+- Prefer project aliases such as `@/shared/ui`, `@/entities/session`, or `@/entities/dashboard`.
 - Avoid deep relative imports like `../../../app/...`.
 - Avoid importing from another test folder unless it is a deliberate shared test helper.
 - Keep one-off mocks inside the test file that needs them.

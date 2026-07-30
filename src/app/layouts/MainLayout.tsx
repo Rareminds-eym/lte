@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "@/app/store";
+import { useAuthStore } from "@/entities/session";
 import { getLogger } from "@/shared";
 
 const logger = getLogger("MainLayout");

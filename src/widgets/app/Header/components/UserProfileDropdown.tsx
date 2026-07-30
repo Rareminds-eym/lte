@@ -65,11 +65,11 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             onLogoutClick?.();
             onClose();
           }}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer border-none bg-transparent"
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-danger-500 hover:text-danger-600 hover:bg-danger-50 rounded-xl transition-colors cursor-pointer border-none bg-transparent"
         >
           <svg
             aria-hidden="true"
-            className="w-4 h-4 text-red-500 shrink-0"
+            className="w-4 h-4 text-danger-500 shrink-0"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

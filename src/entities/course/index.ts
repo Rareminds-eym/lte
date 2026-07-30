@@ -1,2 +1,3 @@
-export type { Course, CourseRole, CourseStatus } from "./model/types";
+export type { Course, CourseStatus } from "./model/types";
+export { useCourses } from "./model/useCourses";
 export { CourseCard, type CourseCardProps, CourseGridSkeleton, CourseSkeleton } from "./ui";

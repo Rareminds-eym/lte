@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardLayout } from "@/app/layouts/DashboardLayout";
-import { useAuthStore } from "@/app/store/authStore";
+import { useAuthStore } from "@/entities/session";
 import { useUIStore } from "@/shared/store/uiStore";
 
 vi.mock("@/widgets/app/NavigationDrawer", () => ({

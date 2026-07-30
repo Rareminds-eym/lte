@@ -2,8 +2,8 @@ import type { AuthUser, MembershipStatus } from "@rareminds-eym/auth-core";
 
 export interface LteEnv {
   SSO_SERVICE: SsoRpcService;
-  SUPABASE_URL?: string;
-  SUPABASE_SERVICE_ROLE_KEY?: string;
+  SUPABASE_URL: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
   COOKIE_DOMAIN?: string;
 }
 
@@ -88,5 +88,8 @@ export interface AuthSuccessResponse {
 }
 
 export interface ErrorResponse {
-  error: string;
+  success: false;
+  error: { message: string; code?: string; details?: unknown };
+  error_string?: string;
+  requestId?: string;
 }

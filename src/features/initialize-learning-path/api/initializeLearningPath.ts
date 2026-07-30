@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getLogger } from "@/shared";
+import { ApiError, getLogger } from "@/shared";
 import type { InitializeLearningPathPayload } from "../model/initializeLearningPath.schema";
 
 const apiLogger = getLogger("api");
@@ -16,16 +16,6 @@ type ApiErrorResponse = {
     message?: string;
   };
 };
-
-export class InitializeLearningPathError extends Error {
-  constructor(
-    message: string,
-    public readonly status?: number,
-  ) {
-    super(message);
-    this.name = "InitializeLearningPathError";
-  }
-}
 
 export const initializeLearningPath = async ({
   payload,
@@ -52,7 +42,7 @@ export const initializeLearningPath = async ({
       return null;
     });
 
-    throw new InitializeLearningPathError(
+    throw new ApiError(
       errorData?.error?.message || `Request failed with status ${response.status}.`,
       response.status,
     );
@@ -61,7 +51,7 @@ export const initializeLearningPath = async ({
   const data = await response.json();
   const parsed = initializeLearningPathResponseSchema.safeParse(data);
   if (!parsed.success) {
-    throw new InitializeLearningPathError("Invalid response format from server");
+    throw new ApiError("Invalid response format from server");
   }
 
   return parsed.data;

@@ -2,8 +2,8 @@ import type { Course } from "@/entities/course";
 
 export const COURSE_PAGE_SIZE = 6;
 
-export function filterCoursesByRole(courses: Course[], role: string | null): Course[] {
-  return role ? courses.filter((course) => course.role === role) : courses;
+export function filterCoursesByPriority(courses: Course[], priority: string | null): Course[] {
+  return priority ? courses.filter((course) => course.priority === priority) : courses;
 }
 
 export function getSafeCoursePage(currentPage: number, totalPages: number): number {

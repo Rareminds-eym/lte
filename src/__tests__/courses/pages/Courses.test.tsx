@@ -1,13 +1,174 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Courses } from "@/pages/courses";
 
-vi.mock("@/entities/course", () => ({
-  CourseCard: ({ course }: { course: { title: string } }) => (
-    <div data-testid="course-card">{course.title}</div>
-  ),
-}));
+const mockCourses = vi.hoisted(() => [
+  {
+    id: "1",
+    capabilityId: "1",
+    capabilityCode: "CAP-01",
+    title: "Course 1",
+    description: "Desc 1",
+    category: "Core",
+    level: "L2",
+    imageUrl: "",
+    tags: [],
+    status: "in_progress" as const,
+    progress: 20,
+    currentLevel: 1,
+    totalLevels: 5,
+    targetLevel: "L3",
+    durationHours: 45,
+    xp: 500,
+    priority: "Core",
+  },
+  {
+    id: "2",
+    capabilityId: "2",
+    capabilityCode: "CAP-02",
+    title: "Course 2",
+    description: "Desc 2",
+    category: "Important",
+    level: "L2",
+    imageUrl: "",
+    tags: [],
+    status: "completed" as const,
+    progress: 100,
+    currentLevel: 5,
+    totalLevels: 5,
+    targetLevel: "L3",
+    durationHours: 40,
+    xp: 300,
+    priority: "Important",
+  },
+  {
+    id: "3",
+    capabilityId: "3",
+    capabilityCode: "CAP-03",
+    title: "Course 3",
+    description: "Desc 3",
+    category: "Supporting",
+    level: "L2",
+    imageUrl: "",
+    tags: [],
+    status: "not_started" as const,
+    progress: 0,
+    currentLevel: 0,
+    totalLevels: 4,
+    targetLevel: "L3",
+    durationHours: 25,
+    xp: 350,
+    priority: "Supporting",
+  },
+  {
+    id: "4",
+    capabilityId: "4",
+    capabilityCode: "CAP-04",
+    title: "Course 4",
+    description: "Desc 4",
+    category: "Core",
+    level: "L2",
+    imageUrl: "",
+    tags: [],
+    status: "in_progress" as const,
+    progress: 60,
+    currentLevel: 3,
+    totalLevels: 5,
+    targetLevel: "L3",
+    durationHours: 45,
+    xp: 320,
+    priority: "Core",
+  },
+  {
+    id: "5",
+    capabilityId: "5",
+    capabilityCode: "CAP-05",
+    title: "Course 5",
+    description: "Desc 5",
+    category: "Core",
+    level: "L2",
+    imageUrl: "",
+    tags: [],
+    status: "not_started" as const,
+    progress: 0,
+    currentLevel: 0,
+    totalLevels: 5,
+    targetLevel: "L3",
+    durationHours: 45,
+    xp: 500,
+    priority: "Core",
+  },
+  {
+    id: "6",
+    capabilityId: "6",
+    capabilityCode: "CAP-06",
+    title: "Course 6",
+    description: "Desc 6",
+    category: "Core",
+    level: "L2",
+    imageUrl: "",
+    tags: [],
+    status: "completed" as const,
+    progress: 100,
+    currentLevel: 5,
+    totalLevels: 5,
+    targetLevel: "L3",
+    durationHours: 45,
+    xp: 300,
+    priority: "Core",
+  },
+  {
+    id: "7",
+    capabilityId: "7",
+    capabilityCode: "CAP-07",
+    title: "Course 7",
+    description: "Desc 7",
+    category: "Important",
+    level: "L2",
+    imageUrl: "",
+    tags: [],
+    status: "completed" as const,
+    progress: 100,
+    currentLevel: 5,
+    totalLevels: 5,
+    targetLevel: "L4",
+    durationHours: 40,
+    xp: 550,
+    priority: "Important",
+  },
+  {
+    id: "8",
+    capabilityId: "8",
+    capabilityCode: "CAP-08",
+    title: "Course 8",
+    description: "Desc 8",
+    category: "Supporting",
+    level: "L2",
+    imageUrl: "",
+    tags: [],
+    status: "not_started" as const,
+    progress: 0,
+    currentLevel: 0,
+    totalLevels: 4,
+    targetLevel: "L3",
+    durationHours: 25,
+    xp: 350,
+    priority: "Supporting",
+  },
+]);
+
+vi.mock("@/entities/course", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/entities/course")>();
+  return {
+    ...actual,
+    useCourses: vi.fn().mockReturnValue({
+      data: mockCourses,
+      isLoading: false,
+      error: null,
+    }),
+  };
+});
 
 describe("Courses", () => {
   const renderCourses = () =>
@@ -25,11 +186,14 @@ describe("Courses", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders role tabs", () => {
+  it("renders priority tabs", () => {
     renderCourses();
-    expect(screen.getByText("All Roles")).toBeInTheDocument();
-    expect(screen.getByText("Backend Engineer")).toBeInTheDocument();
-    expect(screen.getByText("Frontend Engineer")).toBeInTheDocument();
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(4);
+    expect(tabs[0]).toHaveTextContent("All");
+    expect(tabs[1]).toHaveTextContent("Core");
+    expect(tabs[2]).toHaveTextContent("Important");
+    expect(tabs[3]).toHaveTextContent("Supporting");
   });
 
   it("shows 6 course cards on page 1 (PAGE_SIZE)", () => {
@@ -45,33 +209,37 @@ describe("Courses", () => {
     expect(cards.length).toBe(2);
   });
 
-  it("shows 5 backend courses after filtering", () => {
+  it("shows 4 Core courses after filtering", () => {
     renderCourses();
-    fireEvent.click(screen.getByText("Backend Engineer"));
+    const tabs = screen.getAllByRole("tab");
+    fireEvent.click(tabs[1]!);
     const cards = screen.getAllByTestId("course-card");
-    expect(cards.length).toBe(5);
+    expect(cards.length).toBe(4);
   });
 
-  it("shows 3 frontend courses after filtering", () => {
+  it("shows 2 Supporting courses after filtering", () => {
     renderCourses();
-    fireEvent.click(screen.getByText("Frontend Engineer"));
+    const tabs = screen.getAllByRole("tab");
+    fireEvent.click(tabs[3]!);
     const cards = screen.getAllByTestId("course-card");
-    expect(cards.length).toBe(3);
+    expect(cards.length).toBe(2);
   });
 
-  it("resets to page 1 when filtering by role", () => {
+  it("resets to page 1 when filtering by priority", () => {
     renderCourses();
     fireEvent.click(screen.getByLabelText("Next page"));
     expect(screen.getAllByTestId("course-card").length).toBe(2);
-    fireEvent.click(screen.getByText("Backend Engineer"));
-    expect(screen.getAllByTestId("course-card").length).toBe(5);
+    const tabs = screen.getAllByRole("tab");
+    fireEvent.click(tabs[1]!);
+    expect(screen.getAllByTestId("course-card").length).toBe(4);
   });
 
   it("updates course count text when filtering", () => {
     renderCourses();
     expect(screen.getByText("8 courses")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Frontend Engineer"));
-    expect(screen.getByText("3 courses")).toBeInTheDocument();
+    const tabs = screen.getAllByRole("tab");
+    fireEvent.click(tabs[3]!);
+    expect(screen.getByText("2 courses")).toBeInTheDocument();
   });
 
   it("shows Filter button", () => {

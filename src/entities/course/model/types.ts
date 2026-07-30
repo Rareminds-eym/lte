@@ -1,8 +1,9 @@
 export type CourseStatus = "not_started" | "in_progress" | "completed";
-export type CourseRole = "backend" | "frontend";
 
 export interface Course {
   id: string;
+  capabilityId: string;
+  capabilityCode: string;
   title: string;
   description: string;
   category: string;
@@ -17,6 +18,6 @@ export interface Course {
   durationHours: number;
   xp: number;
   badge?: string;
-  role: CourseRole;
+  priority: string;
   qualified?: boolean;
 }

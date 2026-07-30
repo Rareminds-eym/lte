@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { InitializeLearningPathError, initializeLearningPath } from "../api/initializeLearningPath";
+import { ApiError } from "@/shared";
+import { initializeLearningPath } from "../api/initializeLearningPath";
 import type { InitializeLearningPathPayload } from "./initializeLearningPath.schema";
 
 export const useInitializeLearningPath = () => {
@@ -27,7 +28,7 @@ export const useInitializeLearningPath = () => {
 
       // Do not retry on client-side errors (400-499)
       if (
-        error instanceof InitializeLearningPathError &&
+        error instanceof ApiError &&
         error.status !== undefined &&
         error.status >= 400 &&
         error.status < 500

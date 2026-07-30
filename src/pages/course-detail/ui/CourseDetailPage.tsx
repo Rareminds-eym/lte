@@ -25,7 +25,7 @@ export const CourseDetailPage: React.FC = () => {
 
   if (!capabilityCode) {
     return (
-      <section role="alert" aria-live="assertive" className="p-8 text-red-600 font-semibold">
+      <section role="alert" aria-live="assertive" className="p-8 text-danger-600 font-semibold">
         Invalid course URL.
       </section>
     );
@@ -43,7 +43,7 @@ export const CourseDetailPage: React.FC = () => {
         <section
           role="alert"
           aria-live="assertive"
-          className="mt-4 p-4 bg-red-50 text-red-700 rounded-md border border-red-200"
+          className="mt-4 p-4 bg-danger-50 text-danger-700 rounded-md border border-danger-200"
           data-testid="init-error-message"
         >
           <p className="font-semibold">Initialization Error:</p>

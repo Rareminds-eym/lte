@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 import { GuestGuard } from "@/app/router/guards/GuestGuard";
-import { useAuthStore } from "@/app/store";
+import { useAuthStore } from "@/entities/session";
 
 beforeEach(() => {
   useAuthStore.setState({

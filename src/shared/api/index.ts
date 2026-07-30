@@ -1,4 +1,4 @@
-// Shared API utilities and configurations
+export { ApiError } from "./ApiError";
 
 export async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);

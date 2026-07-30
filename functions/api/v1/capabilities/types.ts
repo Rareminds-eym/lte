@@ -42,6 +42,27 @@ export interface GetCapabilitiesBatchRequest {
   roleIds: string[];
 }
 
+export interface UserCapability {
+  id: string;
+  name: string;
+  description: string;
+  code?: string;
+  level?: string;
+  priority?: string;
+  step?: number;
+  totalLevels: number;
+  currentLevel: number;
+  status: string;
+  progress: number;
+}
+
+export interface UserCapabilitiesResponse {
+  success: boolean;
+  capabilities: UserCapability[];
+  count?: number;
+  error?: string;
+}
+
 export interface GetCapabilitiesBatchResponse {
   success: boolean;
   capabilities: Record<string, Capability[]>;
