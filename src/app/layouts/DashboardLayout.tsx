@@ -10,42 +10,12 @@ export const DashboardLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const loading = useAuthStore((state) => state.loading);
-  const initialized = useAuthStore((state) => state.initialized);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authError = useAuthStore((state) => state.error);
   const isCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 
-  // Case 1: Loading / Initializing state (page content skeleton)
-  if (loading || !initialized) {
-    return (
-      <div className="flex h-screen bg-surface-secondary">
-        <aside className="w-64 bg-white border-r border-line-subtle p-3.5 shrink-0">
-          <div className="h-14 w-full bg-surface-muted rounded-lg animate-pulse mb-6" />
-          <div className="space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-10 w-full bg-surface-muted rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        </aside>
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-16 bg-white border-b border-line-subtle px-6 flex items-center">
-            <div className="h-8 w-48 bg-surface-muted rounded-full animate-pulse" />
-          </header>
-          <main className="flex-1 p-6">
-            <div className="space-y-4">
-              <div className="h-8 w-64 bg-surface-muted rounded animate-pulse" />
-              <div className="h-4 w-full bg-surface-muted rounded animate-pulse" />
-              <div className="h-4 w-3/4 bg-surface-muted rounded animate-pulse" />
-            </div>
-          </main>
-        </div>
-      </div>
-    );
-  }
-
-  // Case 2: User is authenticated in SSO, but lacks LTE product entitlement
+  // Case 1: User is authenticated in SSO but lacks LTE product entitlement
   if (
     authError &&
     (authError.includes("Access denied") || authError.includes("LTE access is required"))
@@ -69,7 +39,7 @@ export const DashboardLayout: React.FC = () => {
     );
   }
 
-  // Case 3: Unauthenticated users on protected routes immediately land on LTE login page
+  // Case 2: Unauthenticated — redirect to login
   if (!isAuthenticated) {
     logger.info("User is not authenticated. Redirecting to LTE login page.");
     return <Navigate to="/login" replace />;

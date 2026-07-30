@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { CourseCard, useCourses } from "@/entities/course";
+import { CourseCard, CourseCardGridSkeleton, useCourses } from "@/entities/course";
 import { getLogger } from "@/shared";
 import { cn } from "@/shared/lib";
-import { Button, PageLoader } from "@/shared/ui";
+import { Button } from "@/shared/ui";
 import { Pagination } from "@/widgets";
 import {
   COURSE_PAGE_SIZE,
@@ -30,7 +30,7 @@ export const CoursesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const { data: courses, isLoading, error } = useCourses();
+  const { data: courses, isPending, error } = useCourses();
 
   const filteredCourses = filterCoursesByPriority(courses ?? [], activePriority);
   const totalPages = Math.ceil(filteredCourses.length / COURSE_PAGE_SIZE);
@@ -48,8 +48,27 @@ export const CoursesPage = () => {
     }
   }
 
-  if (isLoading) {
-    return <PageLoader message="Loading courses..." />;
+  if (isPending) {
+    return (
+      <div className="mx-auto max-w-[1440px] space-y-6">
+        <header className="flex items-start justify-between gap-6 animate-pulse">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-surface-muted shrink-0 mt-1" />
+            <div className="space-y-2">
+              <div className="h-6 w-32 bg-surface-muted rounded" />
+              <div className="h-4 w-64 bg-surface-muted rounded" />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-24 h-10 bg-surface-muted rounded-full" />
+            <div className="w-24 h-10 bg-surface-muted rounded-full" />
+            <div className="w-24 h-10 bg-surface-muted rounded-full" />
+          </div>
+        </header>
+        <div className="h-px bg-line-default w-full" />
+        <CourseCardGridSkeleton />
+      </div>
+    );
   }
 
   if (error) {

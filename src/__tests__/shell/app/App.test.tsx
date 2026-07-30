@@ -8,6 +8,10 @@ vi.mock("@/app/providers/AppProviders", () => ({
   ),
 }));
 
+vi.mock("@/app/providers/AuthInitializer", () => ({
+  AuthInitializer: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock("@/app/router/AppRouter", () => ({
   AppRouter: () => <div data-testid="app-router" />,
 }));

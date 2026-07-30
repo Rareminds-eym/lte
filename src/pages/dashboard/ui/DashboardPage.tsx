@@ -1,37 +1,13 @@
 import type React from "react";
 import { useDashboardData } from "@/entities/dashboard";
-import {
-  Achievements,
-  CapabilityGapMap,
-  CareerPaths,
-  CareerTargetBanner,
-  JourneyHero,
-  TodaysPriorities,
-  UpcomingFeedback,
-} from "@/widgets";
+import { DashboardContent, DashboardSkeleton } from "@/widgets/dashboard";
 
 export const DashboardPage: React.FC = () => {
-  const { data, isLoading, isError } = useDashboardData();
+  const { data, isPending, isError } = useDashboardData();
 
-  // Loading state using Skeleton (Page Content Loading) as per .codereview.yml rules
-  if (isLoading || !data) {
-    return (
-      <div className="space-y-6 max-w-[1440px] mx-auto animate-pulse">
-        <div className="h-32 bg-surface-muted rounded-2xl w-full" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-80 bg-surface-muted rounded-2xl" />
-          <div className="h-80 bg-surface-muted rounded-2xl" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-80 bg-surface-muted rounded-2xl" />
-          <div className="h-80 bg-surface-muted rounded-2xl" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-80 bg-surface-muted rounded-2xl" />
-          <div className="h-80 bg-surface-muted rounded-2xl" />
-        </div>
-      </div>
-    );
+  // Loading state: use the structured DashboardSkeleton to prevent layout shift
+  if (isPending) {
+    return <DashboardSkeleton />;
   }
 
   if (isError) {
@@ -52,51 +28,5 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  return (
-    <div className="space-y-6 max-w-[1440px] mx-auto">
-      {/* Top Banner: Career Target & Overview */}
-      <section aria-label="Career Target Summary">
-        <CareerTargetBanner data={data.careerTarget} />
-      </section>
-
-      {/* Row 1: Journey Hero Banner + Today's Priorities */}
-      <section
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch"
-        aria-label="Journey and Priorities"
-      >
-        <div className="lg:col-span-2 h-full">
-          <JourneyHero data={data.journey} />
-        </div>
-        <div className="h-full">
-          <TodaysPriorities data={data.priorities} />
-        </div>
-      </section>
-
-      {/* Row 2: Capability Gap Map + Upcoming & Feedback */}
-      <section
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch"
-        aria-label="Capabilities and Upcoming Events"
-      >
-        <div className="h-full">
-          <CapabilityGapMap data={data.capabilityGaps} />
-        </div>
-        <div className="h-full">
-          <UpcomingFeedback data={data.upcomingFeedback} />
-        </div>
-      </section>
-
-      {/* Row 3: Recommended Career Paths + Achievements */}
-      <section
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch"
-        aria-label="Career Paths and Achievements"
-      >
-        <div className="lg:col-span-2 h-full">
-          <CareerPaths data={data.careerPaths} />
-        </div>
-        <div className="h-full">
-          <Achievements data={data.achievements} />
-        </div>
-      </section>
-    </div>
-  );
+  return <DashboardContent data={data} />;
 };

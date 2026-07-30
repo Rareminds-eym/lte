@@ -1780,6 +1780,7 @@ primary_rule: |
       imported dynamically using `React.lazy()` and dynamic `import()`
       expressions.
       Lazy declarations must reside at the TOP of `AppRouter.tsx`, outside any
+      Lazy declarations must reside at the TOP of `AppRouter.tsx`, outside any
       rendering component. Static imports of page components at the router level
       are a violation — they bloat the initial JS bundle downloaded by every user.
     severity: high
@@ -1829,4 +1830,22 @@ primary_rule: |
       Synchronous `screen.getByTestId()` calls on lazy-loaded elements will throw
       before Suspense resolves. This is the most common testing bug after introducing
       React.lazy() — enforce it in every review touching AppRouter or page tests.
+    severity: high
+
+  - category: structure
+    title: "Enforce kebab-casing for directories and camelCasing/PascalCasing for components/files"
+    description: |
+      All folders inside `src/` (e.g. layers, slices, segments, tests, styles) must use lowercase kebab-case naming.
+      React components and source code files must use standard PascalCase or camelCase based on their specific FSD roles
+      (e.g., `CourseCard.tsx`, `AuthInitializer.tsx`, `useDashboardData.ts`).
+      Uppercase or space-separated folder structures are strict rule violations.
+    severity: high
+
+  - category: ui
+    title: "Use unified global Toaster notifications"
+    description: |
+      All user feedback alerts, operation statuses, and auth/network error messages must use the global `toast` system.
+      Always import `toast` from `@/shared/ui` (re-exported from `react-hot-toast`).
+      Mounting local `<Toaster>` components in layouts, pages, features, or widgets is a rule violation. The global
+      `<Toaster />` must remain registered only at the root provider layer (`AppProviders.tsx`).
     severity: high
