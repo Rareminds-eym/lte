@@ -1,4 +1,5 @@
 import type React from "react";
+import { SegmentedProgressBar } from "@/shared/ui";
 import { ArtifactsIcon, CertificateIcon, DurationIcon, ModulesIcon } from "@/shared/ui/icons";
 
 interface LevelStatsBarProps {
@@ -82,16 +83,15 @@ export const LevelStatsBar: React.FC<LevelStatsBarProps> = ({
           </div>
 
           {/* Segmented Track Indicator Bar */}
-          <div className="grid grid-cols-5 gap-1.5 w-full">
-            {Array.from({ length: totalLevelsNo }).map((_, idx) => (
-              <div
-                key={`level-seg-${idx + 1}`}
-                className={`h-2.5 rounded-full transition-colors ${
-                  idx + 1 <= currentLevelNo ? "bg-brand-600" : "bg-surface-emphasis"
-                }`}
-              />
-            ))}
-          </div>
+          <SegmentedProgressBar
+            currentLevel={currentLevelNo}
+            totalLevels={totalLevelsNo}
+            heightClassName="h-2.5"
+            gapClassName="gap-1.5"
+            barColor="bg-brand-600"
+            emptyColor="bg-surface-emphasis"
+            ariaLabel={`Level progress: ${currentLevelNo} of ${totalLevelsNo}`}
+          />
         </div>
       </div>
     </div>

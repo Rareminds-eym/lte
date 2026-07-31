@@ -379,12 +379,16 @@ export const LevelContentPage: React.FC = () => {
     const progressPercentage = isCurrentModule
       ? (levelModule.progressPercentage ?? m.progressPercentage ?? 0)
       : (m.progressPercentage ?? 0);
+    const isCompleted = isCurrentModule
+      ? (levelModule.progressPercentage === 100 || m.isCompleted || false)
+      : (m.progressPercentage === 100 || m.isCompleted || false);
 
     return {
       id: m.id,
       moduleNo: m.moduleNo,
       title: m.title,
       progressPercentage,
+      isCompleted,
       stageProgressDots: isCurrentModule
         ? levelModule.stages.map((stage) => {
             const name = stage.stageName.toLowerCase();

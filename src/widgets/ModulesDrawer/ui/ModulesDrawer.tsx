@@ -91,7 +91,9 @@ export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
           const dots = getModuleDots(module.stageProgressDots, progressPercentage);
           const progressColor = getProgressColor(progressPercentage, isActive);
 
-          const isLocked = index > 0 && !modules[index - 1]?.isCompleted;
+          const isPrevCompleted = index > 0 && 
+            (modules[index - 1]?.isCompleted || (modules[index - 1]?.progressPercentage ?? 0) >= 100);
+          const isLocked = index > 0 && !isPrevCompleted;
 
           if (isLocked) {
             return (

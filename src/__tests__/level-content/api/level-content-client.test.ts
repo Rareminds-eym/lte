@@ -21,6 +21,7 @@ const levelPayload = {
     difficultyLevel: "intermediate",
     levelStatus: "published",
     versionNo: 1,
+    artifactsCount: 2,
     modules: [
       {
         id: "module-1",

@@ -1,7 +1,8 @@
 import type React from "react";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useLevelDetails, useStartLevelProgress } from "@/entities/course";
+import { useLevelDetails, useStartLevelProgress, useCourses } from "@/entities/course";
+import { useAuthStore } from "@/entities/session";
 import { PageLoader } from "@/shared/ui";
 import {
   LevelHeroBanner,
@@ -17,6 +18,8 @@ export const LevelModulesPage: React.FC = () => {
     levelId?: string;
   }>();
 
+  const userId = useAuthStore((s) => s.user?.id);
+  const { data: courses } = useCourses(userId);
   const { data: levelData, isLoading, error } = useLevelDetails(levelId, capabilityCode);
   const { mutate: startLevel } = useStartLevelProgress();
 
@@ -100,6 +103,17 @@ export const LevelModulesPage: React.FC = () => {
     ? `${Math.round(levelData.durationMinutes / 60)} hrs`
     : undefined;
 
+  // Find active course from user's course list to get totalLevels & targetLevel
+  const activeCourse = courses?.find(
+    (c) =>
+      c.capabilityCode.toLowerCase() === (levelData.capabilityCode || capabilityCode || "").toLowerCase() ||
+      c.capabilityId === (levelData.capabilityCode || capabilityCode) ||
+      c.id === (levelData.capabilityCode || capabilityCode),
+  );
+
+  const dynamicTotalLevels = activeCourse?.totalLevels ?? 5;
+  const dynamicTargetLevel = activeCourse?.targetLevel ?? "TARGET: L3";
+
   return (
     <div className="-mx-4 md:-mx-6 -mt-4 md:-mt-6 pb-12">
       {/* Level Hero Banner */}
@@ -126,8 +140,8 @@ export const LevelModulesPage: React.FC = () => {
             artifactsCount={levelData.artifactsCount}
             hasCertificate={true}
             currentLevelNo={levelData.levelNo}
-            totalLevelsNo={5}
-            targetLevel="TARGET: L3"
+            totalLevelsNo={dynamicTotalLevels}
+            targetLevel={dynamicTargetLevel}
           />
         </div>
 
