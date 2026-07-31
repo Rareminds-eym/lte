@@ -1,7 +1,7 @@
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/shared/lib";
-import { Button, Image } from "@/shared/ui";
+import { Button, Image, SegmentedProgressBar } from "@/shared/ui";
 import type { Course } from "../model/types";
 
 export interface CourseCardProps {
@@ -65,17 +65,13 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
   );
 
   const progressSegments = (
-    <div className="flex gap-1">
-      {Array.from({ length: course.totalLevels }, (_, i) => (
-        <div
-          key={i}
-          className={cn(
-            "h-[6px] flex-1 rounded-full",
-            i < course.currentLevel ? barColor : "bg-surface-muted",
-          )}
-        />
-      ))}
-    </div>
+    <SegmentedProgressBar
+      currentLevel={course.currentLevel}
+      totalLevels={course.totalLevels}
+      barColor={barColor}
+      emptyColor="bg-surface-muted"
+      heightClassName="h-[6px]"
+    />
   );
 
   const metaFooter = (

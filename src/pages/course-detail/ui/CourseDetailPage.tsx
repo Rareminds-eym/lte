@@ -7,7 +7,7 @@ import { LearningPathInitializer } from "@/features/initialize-learning-path";
 import { getLogger } from "@/shared";
 import { ErrorFallback, SegmentedControl, toast } from "@/shared/ui";
 
-import { buildDynamicLevelCards, mapApiLevelsToCards } from "../model/dynamicLevels";
+import { mapApiLevelsToCards } from "../model/dynamicLevels";
 import { CourseDetailSkeleton } from "./CourseDetailSkeleton";
 import { CourseHeroBanner } from "./CourseHeroBanner";
 import { CourseLevelCard } from "./CourseLevelCard";
@@ -54,20 +54,14 @@ export const CourseDetailPage: React.FC = () => {
         c.capabilityCode.toLowerCase() === capabilityCode.toLowerCase() ||
         c.capabilityId === capabilityCode ||
         c.id === capabilityCode,
-    ) ??
-    courses?.[0] ??
-    null;
+    ) ?? null;
 
-  // Dynamically computed metadata from API course object or URL parameter
-  const title = activeCourse?.title ?? "Observability: Logging, Monitoring & Debugging";
-  const description =
-    activeCourse?.description ??
-    "Build guided capability to verify system health through logs, metrics, and traces — moving from guided log reading to independent observability architecture, without crossing role authority.";
+  // Metadata strictly coming from active course DB object
+  const title = activeCourse?.title ?? activeCourse?.capabilityCode ?? capabilityCode;
+  const description = activeCourse?.description ?? "";
 
-  const roleTitle = activeCourse?.priority
-    ? `${activeCourse.priority} ENGINEER`
-    : "BACKEND ENGINEER";
-  const heroCode = activeCourse?.badge ?? activeCourse?.capabilityCode ?? "OBS-L2";
+  const roleTitle = activeCourse?.priority ? `${activeCourse.priority} ENGINEER` : "";
+  const heroCode = activeCourse?.badge ?? activeCourse?.capabilityCode ?? capabilityCode;
 
   const statusLabel =
     activeCourse?.status === "completed"
@@ -76,32 +70,28 @@ export const CourseDetailPage: React.FC = () => {
         ? "In Progress"
         : "Not Started";
 
-  const durationHours = activeCourse?.durationHours || 225;
-  const totalDurationStr = `${durationHours} hrs`;
+  const totalDurationMinutes =
+    apiLevels?.reduce((sum, lvl) => sum + (lvl.durationMinutes || 0), 0) ?? 0;
+  const durationHours =
+    activeCourse?.durationHours ||
+    (totalDurationMinutes > 0 ? Math.round(totalDurationMinutes / 60) : 0);
+  const totalDurationStr = durationHours > 0 ? `${durationHours} hrs` : "N/A";
 
-  const xpValue = activeCourse?.xp || 1850;
-  const xpAvailableStr = `${xpValue.toLocaleString()} XP`;
+  const xpValue = activeCourse?.xp || 0;
+  const xpAvailableStr = xpValue > 0 ? `${xpValue.toLocaleString()} XP` : "0 XP";
 
-  const totalLevels = activeCourse?.totalLevels || 5;
-  const currentUnlockedLevel = activeCourse?.currentLevel || 2;
-  const targetLevelStr = activeCourse?.targetLevel || "L3";
+  const totalLevels = activeCourse?.totalLevels || apiLevels?.length || 0;
+  const currentUnlockedLevel = activeCourse?.currentLevel || 1;
+  const targetLevelStr = activeCourse?.targetLevel || "L1";
 
-  const parsedTargetLevelNum = parseInt(targetLevelStr.match(/\d+/)?.[0] ?? "3", 10);
+  const parsedTargetLevelNum = parseInt(targetLevelStr.match(/\d+/)?.[0] ?? "1", 10);
 
-  // Dynamically compute level cards: real API levels when available,
-  // generated templates otherwise
-  // ponytail: levels table is sparsely seeded (1 draft row) — delete
-  // buildDynamicLevelCards + this fallback once levels exist for all capabilities
-  const dynamicLevelCards =
-    apiLevels && apiLevels.length > 0
-      ? mapApiLevelsToCards(apiLevels, currentUnlockedLevel, parsedTargetLevelNum)
-      : buildDynamicLevelCards(
-          capabilityCode,
-          title,
-          currentUnlockedLevel,
-          parsedTargetLevelNum,
-          totalLevels,
-        );
+  // Strictly map real DB levels
+  const dynamicLevelCards = mapApiLevelsToCards(
+    apiLevels ?? [],
+    currentUnlockedLevel,
+    parsedTargetLevelNum,
+  );
 
   const handleLevelAction = (levelNumber: number, levelTitle: string, status: string) => {
     if (status === "completed") {
@@ -242,23 +232,29 @@ export const CourseDetailPage: React.FC = () => {
           </div>
 
           {/* Level Cards */}
-          <div
-            className={
-              displayType === "card"
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                : "space-y-2"
-            }
-          >
-            {dynamicLevelCards.map((level, idx) => (
-              <CourseLevelCard
-                key={level.code}
-                {...level}
-                variant={displayType}
-                onAction={() => handleLevelAction(level.levelNumber, level.title, level.status)}
-                isLast={idx === dynamicLevelCards.length - 1}
-              />
-            ))}
-          </div>
+          {dynamicLevelCards.length === 0 ? (
+            <div className="text-center py-12 text-content-secondary bg-surface-primary rounded-2xl border border-line-default">
+              No published levels found for this capability in the database.
+            </div>
+          ) : (
+            <div
+              className={
+                displayType === "card"
+                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  : "space-y-2"
+              }
+            >
+              {dynamicLevelCards.map((level, idx) => (
+                <CourseLevelCard
+                  key={level.code}
+                  {...level}
+                  variant={displayType}
+                  onAction={() => handleLevelAction(level.levelNumber, level.title, level.status)}
+                  isLast={idx === dynamicLevelCards.length - 1}
+                />
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </main>

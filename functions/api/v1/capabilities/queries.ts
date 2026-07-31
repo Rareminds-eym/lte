@@ -97,18 +97,6 @@ export async function getUserCapabilities(
   }));
 }
 
-interface CapabilityLevelRow {
-  id: string;
-  level_code: string;
-  title: string;
-  description: string;
-  example_outputs: string[] | null;
-  duration_minutes: number | null;
-  difficulty_level: string;
-  status: string;
-  level_scale: { level_no: number } | { level_no: number }[] | null;
-}
-
 export async function getLevelsForCapability(
   supabase: SupabaseClient,
   capabilityId: string,
@@ -116,28 +104,39 @@ export async function getLevelsForCapability(
   const { data, error } = await supabase
     .from("levels")
     .select(
-      "id, level_code, title, description, example_outputs, duration_minutes, difficulty_level, status, level_scale(level_no)",
+      "id, level_code, title, description, example_outputs, duration_minutes, difficulty_level, status",
     )
     .eq("capability_id", capabilityId)
-    .eq("is_active", true)
-    .eq("status", "published");
+    .eq("is_active", true);
 
   if (error) {
     throw new Error(`Failed to fetch capability levels: ${error.message}`);
   }
 
-  return ((data as CapabilityLevelRow[] | null) ?? [])
+  return (data ?? [])
     .map((row) => {
-      const scale = Array.isArray(row.level_scale) ? row.level_scale[0] : row.level_scale;
+      let deliverables: string[] = [];
+      if (Array.isArray(row.example_outputs)) {
+        deliverables = row.example_outputs;
+      } else if (typeof row.example_outputs === "string") {
+        try {
+          deliverables = JSON.parse(row.example_outputs);
+        } catch {
+          deliverables = [row.example_outputs];
+        }
+      }
+
+      const parsedLevelNo = parseInt(row.level_code.match(/L(\d+)/i)?.[1] ?? "1", 10);
+
       return {
         id: row.id,
-        levelNumber: scale?.level_no ?? 0,
+        levelNumber: parsedLevelNo,
         code: row.level_code,
         title: row.title,
         description: row.description,
-        deliverables: row.example_outputs ?? [],
+        deliverables,
         durationMinutes: row.duration_minutes ?? 0,
-        difficulty: row.difficulty_level,
+        difficulty: row.difficulty_level ?? "intermediate",
         status: row.status,
       };
     })

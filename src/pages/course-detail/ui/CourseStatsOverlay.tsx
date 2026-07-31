@@ -1,4 +1,5 @@
 import type React from "react";
+import { SegmentedProgressBar } from "@/shared/ui";
 
 export interface CourseStatsOverlayProps {
   totalDuration: string;
@@ -71,26 +72,14 @@ export const CourseStatsOverlay: React.FC<CourseStatsOverlayProps> = ({
           </div>
 
           {/* Segmented progress bar */}
-          <div
-            className="grid grid-cols-5 gap-1.5"
-            role="progressbar"
-            aria-valuenow={unlockedLevels}
-            aria-valuemin={0}
-            aria-valuemax={totalLevels}
-            aria-label={`Progress: Level ${unlockedLevels} of ${totalLevels}`}
-          >
-            {Array.from({ length: totalLevels }).map((_, idx) => {
-              const isFilled = idx < unlockedLevels;
-              return (
-                <div
-                  key={`segment-${idx + 1}`}
-                  className={`h-2 rounded-full transition-colors ${
-                    isFilled ? "bg-brand-600" : "bg-line-default"
-                  }`}
-                />
-              );
-            })}
-          </div>
+          <SegmentedProgressBar
+            currentLevel={unlockedLevels}
+            totalLevels={totalLevels}
+            heightClassName="h-2"
+            gapClassName="gap-1.5"
+            barColor="bg-brand-600"
+            emptyColor="bg-line-default"
+          />
         </div>
       </div>
     </div>

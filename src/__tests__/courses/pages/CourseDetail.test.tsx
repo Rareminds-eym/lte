@@ -22,6 +22,64 @@ vi.mock("@/features/initialize-learning-path", () => ({
   LearningPathInitializer: () => <div data-testid="learning-path-initializer" />,
 }));
 
+const mockDbLevels = [
+  {
+    id: "lvl-1",
+    levelNumber: 1,
+    code: "TEST_L1_CL001",
+    title: "Guided Observability & Core Foundations",
+    description: "Identify key parameters and establish foundation dashboards.",
+    deliverables: ["Observability Setup Worksheet", "Foundations Checklist"],
+    durationMinutes: 2700,
+    difficulty: "beginner",
+    status: "published",
+  },
+  {
+    id: "lvl-2",
+    levelNumber: 2,
+    code: "TEST_L2_CL001",
+    title: "Applied Observability & Implementation",
+    description: "Configure operational parameters and define threshold rules.",
+    deliverables: ["Observability Config Sheet"],
+    durationMinutes: 2700,
+    difficulty: "beginner",
+    status: "published",
+  },
+  {
+    id: "lvl-3",
+    levelNumber: 3,
+    code: "TEST_L3_CL001",
+    title: "Advanced Observability & Root Cause Analysis",
+    description: "Perform end-to-end analysis across distributed environments.",
+    deliverables: ["Observability Correlation Map"],
+    durationMinutes: 2700,
+    difficulty: "intermediate",
+    status: "published",
+  },
+  {
+    id: "lvl-4",
+    levelNumber: 4,
+    code: "TEST_L4_CL001",
+    title: "Operational Practices & Incident Management for Observability",
+    description: "Lead resolution processes and manage technical mitigations.",
+    deliverables: ["Observability Incident Timeline"],
+    durationMinutes: 2700,
+    difficulty: "advanced",
+    status: "published",
+  },
+  {
+    id: "lvl-5",
+    levelNumber: 5,
+    code: "TEST_L5_CL001",
+    title: "Observability Architecture & Systems Design",
+    description: "Architect end-to-end enterprise strategies and production designs.",
+    deliverables: ["Observability Architecture Blueprint"],
+    durationMinutes: 2700,
+    difficulty: "advanced",
+    status: "published",
+  },
+];
+
 vi.mock("@/entities/course", async () => {
   const actual = await vi.importActual<typeof import("@/entities/course")>("@/entities/course");
   return {
@@ -54,7 +112,7 @@ vi.mock("@/entities/course", async () => {
       error: null,
     })),
     useCapabilityLevels: vi.fn(() => ({
-      data: [],
+      data: mockDbLevels,
       isPending: false,
       error: null,
     })),

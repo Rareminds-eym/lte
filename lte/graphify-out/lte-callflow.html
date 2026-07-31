@@ -60,7 +60,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="container">
 
 <h1>lte — Complete Call Flow &amp; Architecture Documentation</h1>
-<p class="subtitle">Generated from graphify knowledge graph: 1589 nodes, 2271 edges, 126 communities. Commit: unknown</p>
+<p class="subtitle">Generated from graphify knowledge graph: 1589 nodes, 2277 edges, 128 communities. Commit: unknown</p>
 
 <div class="nav">
     <a href="#overview">Architecture Overview</a>
@@ -94,15 +94,15 @@ flowchart LR
     class ANALYSIS_CLUSTERING_C79796DA module;
     OUTPUTS_DOCS_ED82387C("Outputs &amp; Docs<br/><small>16 nodes</small>")
     class OUTPUTS_DOCS_ED82387C module;
-    CLI_SKILLS_9964CBB8("CLI &amp; Skill Installers<br/><small>128 nodes</small>")
+    CLI_SKILLS_9964CBB8("CLI &amp; Skill Installers<br/><small>109 nodes</small>")
     class CLI_SKILLS_9964CBB8 module;
     INGEST_CACHE_UPDATE_FF457338("Ingestion &amp; Updates<br/><small>16 nodes</small>")
     class INGEST_CACHE_UPDATE_FF457338 module;
-    SERVE_API_35EC8E86("Serving API<br/><small>248 nodes</small>")
+    SERVE_API_35EC8E86("Serving API<br/><small>281 nodes</small>")
     class SERVE_API_35EC8E86 module;
     SECURITY_GLOBAL_5B9C6A04("Security &amp; Global Graph<br/><small>13 nodes</small>")
     class SECURITY_GLOBAL_5B9C6A04 module;
-    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>337 nodes</small>")
+    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>335 nodes</small>")
     class TESTS_FIXTURES_B84B1DCC module;
     CROSS_DOMAIN_SSO_IMPLEMENTATION_SKILLPASSPORT_LT_7FC0F446("Cross-Domain SSO Implementation: SkillPassport → LTE<br/><small>30 nodes</small>")
     class CROSS_DOMAIN_SSO_IMPLEMENTATION_SKILLPASSPORT_LT_7FC0F446 module;
@@ -116,20 +116,20 @@ flowchart LR
     class SSORPCSERVICE_942332A0 module;
     ENTITIES_LAYER_824C7880("Entities Layer<br/><small>17 nodes</small>")
     class ENTITIES_LAYER_824C7880 module;
-    OTHER_D0941E68("Other<br/><small>417 nodes</small>")
+    OTHER_D0941E68("Other<br/><small>405 nodes</small>")
     class OTHER_D0941E68 module;
-    SERVE_API_35EC8E86 -->|imports x28| TESTS_FIXTURES_B84B1DCC
-    OTHER_D0941E68 -->|imports x18| TESTS_FIXTURES_B84B1DCC
-    TESTS_FIXTURES_B84B1DCC -->|imports x16| OTHER_D0941E68
-    TESTS_FIXTURES_B84B1DCC -->|imports x12| SERVE_API_35EC8E86
-    SERVE_API_35EC8E86 -->|contains x9| OTHER_D0941E68
-    ANALYSIS_CLUSTERING_C79796DA -->|imports x5| TESTS_FIXTURES_B84B1DCC
+    SERVE_API_35EC8E86 -->|imports x32| TESTS_FIXTURES_B84B1DCC
+    TESTS_FIXTURES_B84B1DCC -->|imports x15| SERVE_API_35EC8E86
+    TESTS_FIXTURES_B84B1DCC -->|imports x8| OTHER_D0941E68
+    OTHER_D0941E68 -->|re exports x8| TESTS_FIXTURES_B84B1DCC
+    ANALYSIS_CLUSTERING_C79796DA -->|imports x7| TESTS_FIXTURES_B84B1DCC
     OTHER_D0941E68 -->|contains x4| SERVE_API_35EC8E86
+    SERVE_API_35EC8E86 -->|contains x4| OTHER_D0941E68
     TESTS_FIXTURES_B84B1DCC -->|imports x3| ANALYSIS_CLUSTERING_C79796DA
     ANALYSIS_CLUSTERING_C79796DA -->|imports x2| SERVE_API_35EC8E86
-    ANALYSIS_CLUSTERING_C79796DA -->|imports x2| OTHER_D0941E68
     OTHER_D0941E68 -->|contains x2| CLI_SKILLS_9964CBB8
     SERVE_API_35EC8E86 -->|imports| BUILD_GRAPH_321CBB04
+    SECURITY_GLOBAL_5B9C6A04 -->|contains| OTHER_D0941E68
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -146,19 +146,19 @@ flowchart LR
     <h4>Architecture Layers</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>Layer</th><th>Nodes</th><th>Communities</th></tr>
-      <tr><td>Graph Build</td><td>260</td><td><code>7, 4, 2, 6, 13, 8, 15, 20, 47</code></td></tr><tr><td>Analysis &amp; Clustering</td><td>20</td><td><code>5</code></td></tr><tr><td>Outputs &amp; Docs</td><td>16</td><td><code>91, 92</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>128</td><td><code>32, 49, 73, 75</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>16</td><td><code>110, 22</code></td></tr><tr><td>Serving API</td><td>248</td><td><code>0, 3, 16, 26, 97, 74, 114, 94, 44, 98, 95</code></td></tr><tr><td>Security &amp; Global Graph</td><td>13</td><td><code>109, 46</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>337</td><td><code>51, 72, 67, 21, 10, 1, 35, 9, 23, 36, 105, 111, 18, 25, 117, 118, 120, 122, 106, 19</code></td></tr><tr><td>Cross-Domain SSO Implementation: SkillPassport → LTE</td><td>30</td><td><code>71</code></td></tr><tr><td>Source Code Architecture</td><td>23</td><td><code>76</code></td></tr><tr><td>4.2 New Tables Required (User Progress Domain)</td><td>22</td><td><code>14</code></td></tr><tr><td>Architecture Structure</td><td>22</td><td><code>86</code></td></tr><tr><td>SsoRpcService</td><td>20</td><td><code>30</code></td></tr><tr><td>Entities Layer</td><td>17</td><td><code>77</code></td></tr><tr><td>Other</td><td>417</td><td><code>31, 79, 84, 88, 89, 12, 78, 82, 83, 85, 113, 115, 11, 116, 37, 87, 17, 38, 39, 40, 41, 29, 24, 42, 100, 119, 27, 28, 43, 96, 45, 48, 50, 52, 93, 101, 102, 103, 104, 121, 125, 33, 34, 66, 69, 80, 81, 90, 99, 107, 108, 123, 124, 53, 54, 55, 56, 57, 58, 59, 112, 60, 61, 62, 63, 64, 65, 68, 70</code></td></tr>
+      <tr><td>Graph Build</td><td>260</td><td><code>7, 4, 2, 6, 13, 8, 15, 20, 47</code></td></tr><tr><td>Analysis &amp; Clustering</td><td>20</td><td><code>5</code></td></tr><tr><td>Outputs &amp; Docs</td><td>16</td><td><code>91, 92</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>109</td><td><code>32, 49, 75, 111</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>16</td><td><code>110, 22</code></td></tr><tr><td>Serving API</td><td>281</td><td><code>0, 21, 3, 74, 16, 26, 97, 94, 44, 98, 115, 95</code></td></tr><tr><td>Security &amp; Global Graph</td><td>13</td><td><code>109, 46</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>335</td><td><code>51, 72, 1, 35, 10, 29, 113, 67, 23, 105, 106, 116, 125, 18, 9, 117, 118, 119, 25, 121, 127, 19</code></td></tr><tr><td>Cross-Domain SSO Implementation: SkillPassport → LTE</td><td>30</td><td><code>71</code></td></tr><tr><td>Source Code Architecture</td><td>23</td><td><code>76</code></td></tr><tr><td>4.2 New Tables Required (User Progress Domain)</td><td>22</td><td><code>14</code></td></tr><tr><td>Architecture Structure</td><td>22</td><td><code>86</code></td></tr><tr><td>SsoRpcService</td><td>20</td><td><code>30</code></td></tr><tr><td>Entities Layer</td><td>17</td><td><code>77</code></td></tr><tr><td>Other</td><td>405</td><td><code>31, 79, 85, 73, 88, 12, 78, 82, 83, 84, 89, 11, 37, 87, 17, 36, 38, 39, 40, 41, 100, 24, 42, 114, 27, 28, 43, 96, 45, 48, 50, 52, 93, 101, 102, 103, 104, 108, 120, 122, 33, 34, 66, 69, 80, 81, 90, 99, 107, 123, 124, 126, 53, 54, 55, 56, 57, 58, 59, 112, 60, 61, 62, 63, 64, 65, 68, 70</code></td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Core Flow</h4>
-    <div class="arrow-chain">Cross-Domain SSO Implementation: SkillPassport → LTE -&gt; Graph Build -&gt; Analysis &amp; Clustering -&gt; Tests &amp; Fixtures -&gt; Other -&gt; Serving API -&gt; Outputs &amp; Docs</div>
+    <div class="arrow-chain">Cross-Domain SSO Implementation: SkillPassport → LTE -&gt; Graph Build -&gt; Analysis &amp; Clustering -&gt; Tests &amp; Fixtures -&gt; Serving API -&gt; Other -&gt; CLI &amp; Skill Installers</div>
   </div>
 </div>
 <div class="grid">
   <div class="card">
     <h4>Graph Report Highlights</h4>
     <ul>
-      <li>1589 nodes · 2271 edges · 126 communities (113 shown, 13 thin omitted)</li>
+      <li>1589 nodes · 2277 edges · 128 communities (112 shown, 16 thin omitted)</li>
       <li>Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.8)</li>
       <li>Token cost: 0 input · 0 output</li>
       <li>1. `compilerOptions` - 31 edges</li>
@@ -1006,12 +1006,12 @@ flowchart LR
 
 <!-- ====== 5. CLI & Skill Installers ====== -->
 <h2 id="cli-skills">5. CLI &amp; Skill Installers</h2>
-<p>CLI &amp; Skill Installers groups implementation around kiro, fix, audit, lte, mostly in .kiro/plans/2026-07-30_lte-audit-fix_plan.md, docs/testing/CONFIGURATION_PROTECTION.md, src/shared/README.md. This section covers 128 nodes and 124 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>CLI &amp; Skill Installers groups implementation around kiro, fix, audit, lte, mostly in .kiro/plans/2026-07-30_lte-audit-fix_plan.md, docs/testing/CONFIGURATION_PROTECTION.md, skills/graphify/SKILL.md. This section covers 109 nodes and 105 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: CLI &amp; Skill Installers (128 nodes, 124 edges)
+    %% Section: CLI &amp; Skill Installers (109 nodes, 105 edges)
     subgraph cli_skills_kiro_plans_2026_07_30_lte_audit_fix_p_3bee923d[".kiro/plans/2026-07-30_lte-audit-fix_plan.md"]
         kiro_plans_2026_07_30_lte_audit_fix_plan_missed_1de82462("Missed in First Round — 6 Additional Is...<br/><small>.kiro/plans/2026-07-30_lte-audit-fix_plan.md</small>")
         kiro_plans_2026_07_30_lte_audit_fix_plan_plan_fi_eb438243("Plan: Fix Audit Violations in lte/ Chan...<br/><small>.kiro/plans/2026-07-30_lte-audit-fix_plan.md</small>")
@@ -1019,6 +1019,8 @@ flowchart LR
         kiro_plans_2026_07_30_lte_audit_fix_plan_phase_1_019354a6("Phase 1: FSD Violations (CRITICAL)<br/><small>.kiro/plans/2026-07-30_lte-audit-fix_plan.md</small>")
         kiro_plans_2026_07_30_lte_audit_fix_plan_phase_3_6c50383f("Phase 3: Styling Violations (HIGH)<br/><small>.kiro/plans/2026-07-30_lte-audit-fix_plan.md</small>")
         kiro_plans_2026_07_30_lte_audit_fix_plan_phase_0_db84f423("Phase 0: Infrastructure (must land first)<br/><small>.kiro/plans/2026-07-30_lte-audit-fix_plan.md</small>")
+        kiro_plans_2026_07_30_lte_audit_fix_plan_phase_2_f991b699("Phase 2: Error Handling Regression (HIGH)<br/><small>.kiro/plans/2026-07-30_lte-audit-fix_plan.md</small>")
+        kiro_plans_2026_07_30_lte_audit_fix_plan_phase_5_8796196f("Phase 5: Environment Validation (HIGH)<br/><small>.kiro/plans/2026-07-30_lte-audit-fix_plan.md</small>")
     end
     subgraph cli_skills_docs_testing_CONFIGURATION_PROTECTION_0d88496c["docs/testing/CONFIGURATION_PROTECTION.md"]
         docs_testing_configuration_protection_configurat_6a796e64("Configuration Protection Guide<br/><small>docs/testing/CONFIGURATION_PROTECTION.md</small>")
@@ -1033,16 +1035,14 @@ flowchart LR
         kiro_skills_graphify_skill_graphify_73309e08("/graphify<br/><small>skills/graphify/SKILL.md</small>")
         kiro_skills_graphify_skill_step_3_extract_entiti_7a71e20d("Step 3 - Extract entities and relations...<br/><small>skills/graphify/SKILL.md</small>")
     end
-    subgraph cli_skills_src_shared_README_md_9cbcd2f9["src/shared/README.md"]
-        src_shared_readme_shared_layer_202a3570("Shared Layer<br/><small>src/shared/README.md</small>")
-        src_shared_readme_usage_examples_d256c115("Usage Examples<br/><small>src/shared/README.md</small>")
-        src_shared_readme_fsd_rules_c0d70863("FSD Rules<br/><small>src/shared/README.md</small>")
-    end
+    src_shared_readme_usage_examples_d256c115("Usage Examples<br/><small>src/shared/README.md</small>")
     kiro_plans_2026_07_30_lte_audit_fix_plan_plan_fi_eb438243 -->|contains| kiro_plans_2026_07_30_lte_audit_fix_plan_missed_1de82462
     kiro_plans_2026_07_30_lte_audit_fix_plan_plan_fi_eb438243 -->|contains| kiro_plans_2026_07_30_lte_audit_fix_plan_phase_0_db84f423
     kiro_plans_2026_07_30_lte_audit_fix_plan_plan_fi_eb438243 -->|contains| kiro_plans_2026_07_30_lte_audit_fix_plan_phase_1_019354a6
+    kiro_plans_2026_07_30_lte_audit_fix_plan_plan_fi_eb438243 -->|contains| kiro_plans_2026_07_30_lte_audit_fix_plan_phase_2_f991b699
     kiro_plans_2026_07_30_lte_audit_fix_plan_plan_fi_eb438243 -->|contains| kiro_plans_2026_07_30_lte_audit_fix_plan_phase_3_6c50383f
     kiro_plans_2026_07_30_lte_audit_fix_plan_plan_fi_eb438243 -->|contains| kiro_plans_2026_07_30_lte_audit_fix_plan_phase_4_29fdf745
+    kiro_plans_2026_07_30_lte_audit_fix_plan_plan_fi_eb438243 -->|contains| kiro_plans_2026_07_30_lte_audit_fix_plan_phase_5_8796196f
     kiro_skills_graphify_skill_graphify_73309e08 -->|contains| kiro_skills_graphify_skill_what_you_must_do_when_a6ce3921
     kiro_skills_graphify_skill_what_you_must_do_when_a6ce3921 -->|contains| kiro_skills_graphify_skill_step_3_extract_entiti_7a71e20d
     docs_testing_configuration_protection_configurat_6a796e64 -->|contains| docs_testing_configuration_protection_common_sce_d5ec72a0
@@ -1050,15 +1050,15 @@ flowchart LR
     docs_testing_configuration_protection_configurat_6a796e64 -->|contains| docs_testing_configuration_protection_monitoring_02b97180
     docs_testing_configuration_protection_configurat_6a796e64 -->|contains| docs_testing_configuration_protection_protection_3674ba79
     docs_testing_configuration_protection_configurat_6a796e64 -->|contains| docs_testing_configuration_protection_what_happe_4da41ae5
-    src_shared_readme_shared_layer_202a3570 -->|contains| src_shared_readme_fsd_rules_c0d70863
-    src_shared_readme_shared_layer_202a3570 -->|contains| src_shared_readme_usage_examples_d256c115
-    %% Omitted for readability: 110 nodes, 0 edges
+    %% Omitted for readability: 91 nodes, 0 edges
     class kiro_plans_2026_07_30_lte_audit_fix_plan_missed_1de82462 concept;
     class kiro_plans_2026_07_30_lte_audit_fix_plan_plan_fi_eb438243 concept;
     class kiro_plans_2026_07_30_lte_audit_fix_plan_phase_4_29fdf745 concept;
     class kiro_plans_2026_07_30_lte_audit_fix_plan_phase_1_019354a6 concept;
     class kiro_plans_2026_07_30_lte_audit_fix_plan_phase_3_6c50383f concept;
     class kiro_plans_2026_07_30_lte_audit_fix_plan_phase_0_db84f423 concept;
+    class kiro_plans_2026_07_30_lte_audit_fix_plan_phase_2_f991b699 concept;
+    class kiro_plans_2026_07_30_lte_audit_fix_plan_phase_5_8796196f concept;
     class docs_testing_configuration_protection_configurat_6a796e64 concept;
     class docs_testing_configuration_protection_how_to_mod_d7c7a735 concept;
     class docs_testing_configuration_protection_protection_3674ba79 concept;
@@ -1068,9 +1068,7 @@ flowchart LR
     class kiro_skills_graphify_skill_what_you_must_do_when_a6ce3921 concept;
     class kiro_skills_graphify_skill_graphify_73309e08 concept;
     class kiro_skills_graphify_skill_step_3_extract_entiti_7a71e20d concept;
-    class src_shared_readme_shared_layer_202a3570 concept;
     class src_shared_readme_usage_examples_d256c115 concept;
-    class src_shared_readme_fsd_rules_c0d70863 concept;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -1341,13 +1339,13 @@ flowchart LR
       <tr><th>File</th><th>Coverage</th></tr>
       <tr><td><code>.kiro/plans/2026-07-30_lte-audit-fix_plan.md</code></td><td>43 nodes</td></tr>
 <tr><td><code>docs/testing/CONFIGURATION_PROTECTION.md</code></td><td>33 nodes</td></tr>
-<tr><td><code>src/shared/README.md</code></td><td>27 nodes</td></tr>
 <tr><td><code>skills/graphify/SKILL.md</code></td><td>25 nodes</td></tr>
+<tr><td><code>src/shared/README.md</code></td><td>8 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x124. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x105. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -1579,12 +1577,12 @@ flowchart LR
 
 <!-- ====== 7. Serving API ====== -->
 <h2 id="serve-api">7. Serving API</h2>
-<p>Serving API groups implementation around functions, api, dashboard, capabilities, mostly in LTE_3_Week_MVP_TRD_v.1.md, DASHBOARD_API_PLAN.md, functions/lib/logger.ts. This section covers 248 nodes and 543 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Serving API groups implementation around functions, api, dashboard, capabilities, mostly in LTE_3_Week_MVP_TRD_v.1.md, DASHBOARD_API_PLAN.md, functions/README.md. This section covers 281 nodes and 600 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Serving API (248 nodes, 543 edges)
+    %% Section: Serving API (281 nodes, 600 edges)
     subgraph serve_api_functions_lib_http_ts_75ebd3b6["functions/lib/http.ts"]
         functions_lib_http_getclientip_c7b37866("getClientIp()<br/><small>functions/lib/http.ts</small>")
         functions_lib_http_getuseragent_d2b5ba7e("getUserAgent()<br/><small>functions/lib/http.ts</small>")
@@ -1633,7 +1631,7 @@ flowchart LR
     functions_api_v1_auth_sso_exchange_43122f87 -->|imports| functions_lib_http_jsonerror_b565a24e
     functions_api_v1_auth_sso_exchange_43122f87 -->|imports| functions_lib_http_jsonresponse_9a93f1b0
     functions_api_v1_auth_sso_exchange_43122f87 -->|imports| functions_lib_supabase_createservicesupabase_46f8cedc
-    %% Omitted for readability: 230 nodes, 15 edges
+    %% Omitted for readability: 263 nodes, 15 edges
     class functions_lib_http_getclientip_c7b37866 entry;
     class functions_lib_http_getuseragent_d2b5ba7e function;
     class functions_lib_http_jsonresponse_9a93f1b0 function;
@@ -1922,7 +1920,7 @@ flowchart LR
       <tr><th>File</th><th>Coverage</th></tr>
       <tr><td><code>LTE_3_Week_MVP_TRD_v.1.md</code></td><td>27 nodes</td></tr>
 <tr><td><code>DASHBOARD_API_PLAN.md</code></td><td>26 nodes</td></tr>
-<tr><td><code>functions/README.md</code></td><td>14 nodes</td></tr>
+<tr><td><code>functions/README.md</code></td><td>25 nodes</td></tr>
 <tr><td><code>functions/lib/logger.ts</code></td><td>14 nodes</td></tr>
 <tr><td><code>v1/capabilities/types.ts</code></td><td>12 nodes</td></tr>
 <tr><td><code>functions/lib/sso-client.ts</code></td><td>11 nodes</td></tr>
@@ -1932,7 +1930,7 @@ flowchart LR
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x188, imports x147, imports x91, calls x88. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x217, imports x163, imports x97, calls x92. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -2131,12 +2129,12 @@ flowchart LR
 
 <!-- ====== 9. Tests & Fixtures ====== -->
 <h2 id="tests-fixtures">9. Tests &amp; Fixtures</h2>
-<p>Tests &amp; Fixtures groups implementation around shared, indexts, dashboard, pages, mostly in docs/deployment/SETUP_PROTECTION.md, shared/config/logging.ts, dashboard/model/types.ts. This section covers 337 nodes and 636 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Tests &amp; Fixtures groups implementation around shared, indexts, dashboard, tests, mostly in docs/deployment/SETUP_PROTECTION.md, shared/config/logging.ts, dashboard/model/types.ts. This section covers 335 nodes and 637 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Tests &amp; Fixtures (337 nodes, 636 edges)
+    %% Section: Tests &amp; Fixtures (335 nodes, 637 edges)
     subgraph tests_fixtures_app_layouts_DashboardLayout_tsx_c896bb88["app/layouts/DashboardLayout.tsx"]
         src_app_layouts_dashboardlayout_8f63a3a5("DashboardLayout.tsx")
         src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4("DashboardLayout()<br/><small>app/layouts/DashboardLayout.tsx</small>")
@@ -2145,18 +2143,16 @@ flowchart LR
         src_pages_course_detail_ui_coursedetailpage_3b93d5e2("CourseDetailPage.tsx")
         src_pages_course_detail_ui_coursedetailpage_cour_092bf19a("CourseDetailPage()<br/><small>course-detail/ui/CourseDetailPage.tsx</small>")
     end
-    subgraph tests_fixtures_session_model_authStore_ts_32df3f71["session/model/authStore.ts"]
-        src_entities_session_model_authstore_8c1559cb("authStore.ts")
-        src_entities_session_model_authstore_useauthstor_8b6ef9df("useAuthStore<br/><small>session/model/authStore.ts</small>")
-    end
     src_app_providers_authinitializer_authinitialize_0699bab5("AuthInitializer()<br/><small>app/providers/AuthInitializer.tsx</small>")
     src_entities_course_model_usecapabilitylevels_us_942c5fd6("useCapabilityLevels()<br/><small>course/model/useCapabilityLevels.ts</small>")
     src_entities_course_model_usecourses_usecourses_3ab380c6("useCourses()<br/><small>course/model/useCourses.ts</small>")
     src_entities_course_ui_coursecard_coursecard_28e5cfc1("CourseCard()<br/><small>course/ui/CourseCard.tsx</small>")
     src_pages_courses_ui_coursespage_coursespage_b9ffea82("CoursesPage()<br/><small>courses/ui/CoursesPage.tsx</small>")
+    src_entities_dashboard_model_usedashboarddata_us_7f2e615a("useDashboardData()<br/><small>dashboard/model/useDashboardData.ts</small>")
     src_tests_dashboard_widgets_dashboardwidgets_tes_fbd9be31("DashboardWidgets.test.tsx")
     src_entities_dashboard_index_b864ca96("index.ts")
     src_app_router_guards_guestguard_guestguard_9dbfb75a("GuestGuard()<br/><small>router/guards/GuestGuard.tsx</small>")
+    src_entities_session_model_authstore_useauthstor_8b6ef9df("useAuthStore<br/><small>session/model/authStore.ts</small>")
     src_shared_config_index_getskillpassporturl_db5ef9bf("getSkillpassportUrl()<br/><small>shared/config/index.ts</small>")
     src_shared_config_logging_logger_4f59283f("Logger<br/><small>shared/config/logging.ts</small>")
     src_shared_lib_index_cn_15d20340("cn()<br/><small>shared/lib/index.ts</small>")
@@ -2178,21 +2174,21 @@ flowchart LR
     src_app_layouts_dashboardlayout_8f63a3a5 -->|imports| src_shared_store_uistore_useuistore_235c41f6
     src_entities_course_model_usecapabilitylevels_us_942c5fd6 -->|imports| src_pages_course_detail_ui_coursedetailpage_3b93d5e2
     src_entities_course_model_usecourses_usecourses_3ab380c6 -->|imports| src_pages_course_detail_ui_coursedetailpage_3b93d5e2
-    %% Omitted for readability: 319 nodes, 0 edges
+    %% Omitted for readability: 317 nodes, 0 edges
     class src_app_layouts_dashboardlayout_8f63a3a5 ui;
     class src_app_layouts_dashboardlayout_dashboardlayout_2446d8c4 ui;
     class src_pages_course_detail_ui_coursedetailpage_3b93d5e2 ui;
     class src_pages_course_detail_ui_coursedetailpage_cour_092bf19a ui;
-    class src_entities_session_model_authstore_8c1559cb ui;
-    class src_entities_session_model_authstore_useauthstor_8b6ef9df ui;
     class src_app_providers_authinitializer_authinitialize_0699bab5 ui;
     class src_entities_course_model_usecapabilitylevels_us_942c5fd6 ui;
     class src_entities_course_model_usecourses_usecourses_3ab380c6 ui;
     class src_entities_course_ui_coursecard_coursecard_28e5cfc1 ui;
     class src_pages_courses_ui_coursespage_coursespage_b9ffea82 ui;
+    class src_entities_dashboard_model_usedashboarddata_us_7f2e615a ui;
     class src_tests_dashboard_widgets_dashboardwidgets_tes_fbd9be31 test;
     class src_entities_dashboard_index_b864ca96 module;
     class src_app_router_guards_guestguard_guestguard_9dbfb75a ui;
+    class src_entities_session_model_authstore_useauthstor_8b6ef9df ui;
     class src_shared_config_index_getskillpassporturl_db5ef9bf function;
     class src_shared_config_logging_logger_4f59283f klass;
     class src_shared_lib_index_cn_15d20340 function;
@@ -2471,13 +2467,13 @@ flowchart LR
 <tr><td><code>courses/ui/CoursesPage.tsx</code></td><td>14 nodes</td></tr>
 <tr><td><code>src/__tests__/README.md</code></td><td>10 nodes</td></tr>
 <tr><td><code>course/ui/CourseCard.tsx</code></td><td>9 nodes</td></tr>
-<tr><td><code>shared/types/auth.ts</code></td><td>9 nodes</td></tr>
-<tr><td><code>session/model/authStore.ts</code></td><td>6 nodes</td></tr>
+<tr><td><code>app/providers/AuthInitializer.tsx</code></td><td>5 nodes</td></tr>
+<tr><td><code>course-detail/ui/CourseDetailPage.tsx</code></td><td>5 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x204, imports x153, re exports x122, imports x99. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x196, imports x143, re exports x137, imports x108. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -4152,12 +4148,12 @@ flowchart LR
 
 <!-- ====== 16. Other ====== -->
 <h2 id="other">16. Other</h2>
-<p>Other groups implementation around lte, week, mvp, readmemd, mostly in LTE_3_Week_MVP_TRD_v.1.md, docs/testing/CODECOV_SETUP.md, docs/getting-started/README.md. This section covers 417 nodes and 397 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Other groups implementation around lte, week, mvp, readmemd, mostly in LTE_3_Week_MVP_TRD_v.1.md, docs/testing/CODECOV_SETUP.md, src/shared/README.md. This section covers 405 nodes and 380 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Other (417 nodes, 397 edges)
+    %% Section: Other (405 nodes, 380 edges)
     subgraph other_functions_shared_types_ts_9607132a["functions/shared/types.ts"]
         functions_shared_types_ssorpcservice_6c100098("SsoRpcService<br/><small>functions/shared/types.ts</small>")
         functions_shared_types_ssorpcservice_exchangeaut_fc812cd8("exchangeAuthorizationCode()<br/><small>functions/shared/types.ts</small>")
@@ -4165,10 +4161,14 @@ flowchart LR
         functions_shared_types_ssorpcservice_logoutsessi_f137ae79("logoutSession()<br/><small>functions/shared/types.ts</small>")
         functions_shared_types_ssorpcservice_refreshsess_44041780("refreshSession()<br/><small>functions/shared/types.ts</small>")
     end
+    subgraph other_course_detail_ui_CourseLevelCard_tsx_14d2931e["course-detail/ui/CourseLevelCard.tsx"]
+        src_pages_course_detail_ui_courselevelcard_602b56a7("CourseLevelCard.tsx")
+        src_pages_course_detail_ui_courselevelcard_cours_943db327("CourseLevelCardProps<br/><small>course-detail/ui/CourseLevelCard.tsx</small>")
+        src_pages_course_detail_ui_courselevelcard_clock_86866695("ClockIcon()<br/><small>course-detail/ui/CourseLevelCard.tsx</small>")
+    end
     subgraph other_course_detail_model_dynamicLevels_ts_8d5dbde7["course-detail/model/dynamicLevels.ts"]
-        src_pages_course_detail_model_dynamiclevels_leve_fec48c38("LEVEL_META()<br/><small>course-detail/model/dynamicLevels.ts</small>")
-        src_pages_course_detail_model_dynamiclevels_buil_3eccd63d("buildDynamicLevelCards()<br/><small>course-detail/model/dynamicLevels.ts</small>")
         src_pages_course_detail_model_dynamiclevels_61d64b1f("dynamicLevels.ts")
+        src_pages_course_detail_model_dynamiclevels_dura_bf7991e6("durationLabel()<br/><small>course-detail/model/dynamicLevels.ts</small>")
     end
     subgraph other_scripts_detect_console_usage_js_5accd1a0["scripts/detect-console-usage.js"]
         scripts_detect_console_usage_checkdirectory_b32601b4("checkDirectory()<br/><small>scripts/detect-console-usage.js</small>")
@@ -4182,10 +4182,8 @@ flowchart LR
         scripts_validate_file_types_validatedirectory_e739b690("validateDirectory()<br/><small>scripts/validate-file-types.js</small>")
         scripts_validate_file_types_main_63aa4a86("main()<br/><small>scripts/validate-file-types.js</small>")
     end
+    commitlint_config_a39be182("commitlint.config.js")
     src_entities_course_api_courseapi_capabilityleve_123ba2a2("CapabilityLevel<br/><small>course/api/courseApi.ts</small>")
-    src_widgets_shared_pagination_pagination_aee0f524("Pagination.tsx")
-    src_shared_lib_index_2c6d272a("index.ts")
-    src_shared_ui_routeloadingboundary_routecontents_1da20176("RouteContentSkeleton.tsx")
     functions_shared_types_ssorpcservice_6c100098 -->|method| functions_shared_types_ssorpcservice_exchangeaut_fc812cd8
     functions_shared_types_ssorpcservice_6c100098 -->|method| functions_shared_types_ssorpcservice_getme_e46b5b39
     functions_shared_types_ssorpcservice_6c100098 -->|method| functions_shared_types_ssorpcservice_logoutsessi_f137ae79
@@ -4193,28 +4191,28 @@ flowchart LR
     scripts_detect_console_usage_checkdirectory_b32601b4 -->|calls| scripts_detect_console_usage_main_1e233e97
     scripts_validate_file_lengths_validatedirectory_dcf148e3 -->|calls| scripts_validate_file_lengths_main_9a38227f
     scripts_validate_file_types_validatedirectory_e739b690 -->|calls| scripts_validate_file_types_main_63aa4a86
-    src_pages_course_detail_model_dynamiclevels_leve_fec48c38 -->|calls| src_pages_course_detail_model_dynamiclevels_buil_3eccd63d
     src_entities_course_api_courseapi_capabilityleve_123ba2a2 -->|imports| src_pages_course_detail_model_dynamiclevels_61d64b1f
-    src_shared_lib_index_2c6d272a -->|imports| src_widgets_shared_pagination_pagination_aee0f524
-    %% Omitted for readability: 399 nodes, 0 edges
+    src_pages_course_detail_model_dynamiclevels_61d64b1f -->|imports| src_pages_course_detail_ui_courselevelcard_602b56a7
+    src_pages_course_detail_model_dynamiclevels_61d64b1f -->|imports| src_pages_course_detail_ui_courselevelcard_cours_943db327
+    %% Omitted for readability: 387 nodes, 0 edges
     class functions_shared_types_ssorpcservice_6c100098 klass;
     class functions_shared_types_ssorpcservice_exchangeaut_fc812cd8 function;
     class functions_shared_types_ssorpcservice_getme_e46b5b39 function;
     class functions_shared_types_ssorpcservice_logoutsessi_f137ae79 function;
     class functions_shared_types_ssorpcservice_refreshsess_44041780 function;
-    class src_pages_course_detail_model_dynamiclevels_leve_fec48c38 function;
-    class src_pages_course_detail_model_dynamiclevels_buil_3eccd63d function;
+    class src_pages_course_detail_ui_courselevelcard_602b56a7 ui;
+    class src_pages_course_detail_ui_courselevelcard_cours_943db327 ui;
+    class src_pages_course_detail_ui_courselevelcard_clock_86866695 ui;
     class src_pages_course_detail_model_dynamiclevels_61d64b1f module;
+    class src_pages_course_detail_model_dynamiclevels_dura_bf7991e6 function;
     class scripts_detect_console_usage_checkdirectory_b32601b4 function;
     class scripts_detect_console_usage_main_1e233e97 function;
     class scripts_validate_file_lengths_validatedirectory_dcf148e3 function;
     class scripts_validate_file_lengths_main_9a38227f function;
     class scripts_validate_file_types_validatedirectory_e739b690 function;
     class scripts_validate_file_types_main_63aa4a86 function;
+    class commitlint_config_a39be182 module;
     class src_entities_course_api_courseapi_capabilityleve_123ba2a2 klass;
-    class src_widgets_shared_pagination_pagination_aee0f524 ui;
-    class src_shared_lib_index_2c6d272a module;
-    class src_shared_ui_routeloadingboundary_routecontents_1da20176 api;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -4485,17 +4483,17 @@ flowchart LR
       <tr><th>File</th><th>Coverage</th></tr>
       <tr><td><code>LTE_3_Week_MVP_TRD_v.1.md</code></td><td>112 nodes</td></tr>
 <tr><td><code>docs/testing/CODECOV_SETUP.md</code></td><td>41 nodes</td></tr>
+<tr><td><code>src/shared/README.md</code></td><td>20 nodes</td></tr>
 <tr><td><code>docs/getting-started/README.md</code></td><td>19 nodes</td></tr>
 <tr><td><code>src/app/README.md</code></td><td>17 nodes</td></tr>
 <tr><td><code>src/features/README.md</code></td><td>17 nodes</td></tr>
 <tr><td><code>src/widgets/README.md</code></td><td>17 nodes</td></tr>
 <tr><td><code>docs/authentication/LTE_SSO_IMPLEMENTATION_PLAN.md</code></td><td>16 nodes</td></tr>
-<tr><td><code>LTE_3_Week_MVP_PRD_Removed_Content.md</code></td><td>14 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x355, re exports x15, references x15, method x4. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x352, references x15, method x4, calls x3. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -4507,16 +4505,16 @@ flowchart LR
     <h4>Graph</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><td>Nodes</td><td>1589</td></tr>
-      <tr><td>Edges</td><td>2271</td></tr>
+      <tr><td>Edges</td><td>2277</td></tr>
       <tr><td>Hyperedges</td><td>0</td></tr>
-      <tr><td>Communities</td><td>126</td></tr>
+      <tr><td>Communities</td><td>128</td></tr>
       <tr><td>Documented Sections</td><td>15</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Edge Confidence</h4>
     <table style="width:100%;font-size:0.85rem;">
-      <tr><td>EXTRACTED</td><td>2265</td></tr>
+      <tr><td>EXTRACTED</td><td>2271</td></tr>
       <tr><td>INFERRED</td><td>6</td></tr>
       <tr><td>AMBIGUOUS</td><td>0</td></tr>
     </table>
@@ -4525,7 +4523,7 @@ flowchart LR
 
 <div style="text-align:center; padding:40px 0; color: var(--muted); font-size:0.9rem;">
   <p>lte — Architecture Documentation</p>
-  <p>Generated: 2026-07-31 06:39 UTC · graphify callflow-html</p>
+  <p>Generated: 2026-07-31 07:25 UTC · graphify callflow-html</p>
 </div>
 
 </div><!-- .container -->
