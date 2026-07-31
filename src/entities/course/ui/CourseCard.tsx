@@ -103,11 +103,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
           className,
         )}
       >
-        <div className="relative w-full sm:w-[220px] md:w-[240px] shrink-0 overflow-hidden bg-surface-muted">
+        <div className="relative w-full sm:w-[220px] md:w-[240px] shrink-0 overflow-hidden bg-surface-muted flex">
           <Image
             src={course.imageUrl}
             alt={course.title}
-            aspectRatio="16/9"
+            wrapperClassName="w-full h-48 sm:h-full aspect-video sm:aspect-auto"
             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
           >
             {badges}

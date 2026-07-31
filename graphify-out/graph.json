@@ -3750,7 +3750,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tests_auth_pages_loginpage_test",
-      "community": 16,
+      "community": 113,
       "norm_label": "loginpage.test.tsx"
     },
     {
@@ -4250,7 +4250,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tests_shared_ui_image_test",
-      "community": 123,
+      "community": 35,
       "norm_label": "image.test.tsx"
     },
     {
@@ -4280,7 +4280,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tests_shared_ui_segmentedprogressbar_test",
-      "community": 35,
+      "community": 116,
       "norm_label": "segmentedprogressbar.test.tsx"
     },
     {
@@ -4290,7 +4290,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tests_shared_ui_skeleton_test",
-      "community": 116,
+      "community": 128,
       "norm_label": "skeleton.test.tsx"
     },
     {
@@ -5350,7 +5350,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_entities_course_model_usecapabilitylevels",
-      "community": 105,
+      "community": 114,
       "norm_label": "usecapabilitylevels.ts"
     },
     {
@@ -6360,7 +6360,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_entities_session_model_index",
-      "community": 21,
+      "community": 114,
       "norm_label": "index.ts"
     },
     {
@@ -6650,7 +6650,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_pages_course_detail_ui_coursedetailskeleton",
-      "community": 116,
+      "community": 128,
       "norm_label": "coursedetailskeleton.tsx"
     },
     {
@@ -6660,7 +6660,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_pages_course_detail_ui_coursedetailskeleton_coursedetailskeleton",
-      "community": 67,
+      "community": 128,
       "norm_label": "coursedetailskeleton()"
     },
     {
@@ -7220,7 +7220,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_pages_login_index",
-      "community": 16,
+      "community": 113,
       "norm_label": "index.ts"
     },
     {
@@ -7230,7 +7230,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_pages_login_ui_loginpage",
-      "community": 16,
+      "community": 113,
       "norm_label": "loginpage.tsx"
     },
     {
@@ -7240,7 +7240,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_pages_login_ui_loginpage_loginpage",
-      "community": 16,
+      "community": 113,
       "norm_label": "loginpage()"
     },
     {
@@ -7290,7 +7290,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_api_apierror",
-      "community": 115,
+      "community": 105,
       "norm_label": "apierror.ts"
     },
     {
@@ -7300,7 +7300,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_api_apierror_apierror",
-      "community": 115,
+      "community": 105,
       "norm_label": "apierror"
     },
     {
@@ -7310,7 +7310,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "src_shared_api_apierror_apierror_constructor",
-      "community": 115,
+      "community": 105,
       "norm_label": ".constructor()"
     },
     {
@@ -7380,7 +7380,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_api_client",
-      "community": 115,
+      "community": 105,
       "norm_label": "client.ts"
     },
     {
@@ -7390,7 +7390,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_api_client_logger",
-      "community": 115,
+      "community": 105,
       "norm_label": "logger"
     },
     {
@@ -7400,7 +7400,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_shared_api_client_tokengetter",
-      "community": 115,
+      "community": 105,
       "norm_label": "tokengetter"
     },
     {
@@ -7410,7 +7410,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_shared_api_client_gettoken",
-      "community": 115,
+      "community": 105,
       "norm_label": "gettoken()"
     },
     {
@@ -7420,7 +7420,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_shared_api_client_registertokengetter",
-      "community": 115,
+      "community": 105,
       "norm_label": "registertokengetter()"
     },
     {
@@ -7430,7 +7430,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_shared_api_client_apifetch",
-      "community": 115,
+      "community": 105,
       "norm_label": "apifetch()"
     },
     {
@@ -7440,7 +7440,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_api_index",
-      "community": 115,
+      "community": 105,
       "norm_label": "index.ts"
     },
     {
@@ -7450,7 +7450,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_api_index_apierrorpayload",
-      "community": 115,
+      "community": 105,
       "norm_label": "apierrorpayload"
     },
     {
@@ -7460,7 +7460,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_shared_api_index_parsejsonresponse",
-      "community": 115,
+      "community": 105,
       "norm_label": "parsejsonresponse()"
     },
     {
@@ -7470,7 +7470,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_shared_api_index_apiget",
-      "community": 115,
+      "community": 105,
       "norm_label": "apiget()"
     },
     {
@@ -8170,7 +8170,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_shared_ui_image_image",
-      "community": 123,
+      "community": 116,
       "norm_label": "image()"
     },
     {
@@ -8230,7 +8230,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_pageloader",
-      "community": 123,
+      "community": 116,
       "norm_label": "pageloader.tsx"
     },
     {
@@ -8240,7 +8240,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_ui_pageloader_pageloaderprops",
-      "community": 123,
+      "community": 116,
       "norm_label": "pageloaderprops"
     },
     {
@@ -8250,7 +8250,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_shared_ui_pageloader_pageloader",
-      "community": 123,
+      "community": 116,
       "norm_label": "pageloader()"
     },
     {
@@ -8360,7 +8360,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_segmentedprogressbar",
-      "community": 35,
+      "community": 116,
       "norm_label": "segmentedprogressbar.tsx"
     },
     {
@@ -8370,7 +8370,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_ui_segmentedprogressbar_segmentedprogressbarprops",
-      "community": 35,
+      "community": 116,
       "norm_label": "segmentedprogressbarprops"
     },
     {
@@ -8380,7 +8380,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_shared_ui_segmentedprogressbar_segmentedprogressbar",
-      "community": 35,
+      "community": 116,
       "norm_label": "segmentedprogressbar()"
     },
     {
@@ -8390,7 +8390,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_skeleton_skeleton",
-      "community": 116,
+      "community": 128,
       "norm_label": "skeleton.tsx"
     },
     {
@@ -8400,7 +8400,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_ui_skeleton_skeleton_skeletonprops",
-      "community": 116,
+      "community": 128,
       "norm_label": "skeletonprops"
     },
     {
@@ -8410,7 +8410,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_shared_ui_skeleton_skeleton_skeleton",
-      "community": 116,
+      "community": 128,
       "norm_label": "skeleton()"
     },
     {
@@ -8420,7 +8420,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_shared_ui_skeleton_skeleton_skeletongroupprops",
-      "community": 116,
+      "community": 128,
       "norm_label": "skeletongroupprops"
     },
     {
@@ -8430,7 +8430,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_shared_ui_skeleton_skeleton_skeletongroup",
-      "community": 116,
+      "community": 128,
       "norm_label": "skeletongroup()"
     },
     {
@@ -8440,7 +8440,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_skeleton_index",
-      "community": 116,
+      "community": 128,
       "norm_label": "index.ts"
     },
     {
@@ -8530,7 +8530,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_icons_beakericon",
-      "community": 111,
+      "community": 25,
       "norm_label": "beakericon.tsx"
     },
     {
@@ -8540,7 +8540,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_ui_icons_beakericon_beakericon",
-      "community": 111,
+      "community": 25,
       "norm_label": "beakericon()"
     },
     {
@@ -8570,7 +8570,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_icons_checkicon",
-      "community": 52,
+      "community": 121,
       "norm_label": "checkicon.tsx"
     },
     {
@@ -8580,7 +8580,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_ui_icons_checkicon_checkicon",
-      "community": 52,
+      "community": 121,
       "norm_label": "checkicon()"
     },
     {
@@ -8650,7 +8650,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_icons_closeicon",
-      "community": 25,
+      "community": 126,
       "norm_label": "closeicon.tsx"
     },
     {
@@ -8660,7 +8660,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_ui_icons_closeicon_closeicon",
-      "community": 25,
+      "community": 126,
       "norm_label": "closeicon()"
     },
     {
@@ -8890,7 +8890,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_icons_layerstackicon",
-      "community": 121,
+      "community": 111,
       "norm_label": "layerstackicon.tsx"
     },
     {
@@ -8900,7 +8900,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_ui_icons_layerstackicon_layerstackicon",
-      "community": 121,
+      "community": 111,
       "norm_label": "layerstackicon()"
     },
     {
@@ -9110,7 +9110,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shared_ui_icons_sidebaricon",
-      "community": 122,
+      "community": 25,
       "norm_label": "sidebaricon.tsx"
     },
     {
@@ -9120,7 +9120,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_shared_ui_icons_sidebaricon_sidebaricon",
-      "community": 122,
+      "community": 25,
       "norm_label": "sidebaricon()"
     },
     {
@@ -10264,10 +10264,20 @@
       "norm_label": "noemit"
     },
     {
-      "label": "jsx",
+      "label": "tsBuildInfoFile",
       "file_type": "code",
       "source_file": "tsconfig.json",
       "source_location": "L14",
+      "_origin": "ast",
+      "id": "tsconfig_compileroptions_tsbuildinfofile",
+      "community": 6,
+      "norm_label": "tsbuildinfofile"
+    },
+    {
+      "label": "jsx",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L15",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_jsx",
       "community": 6,
@@ -10277,7 +10287,7 @@
       "label": "baseUrl",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L16",
+      "source_location": "L17",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_baseurl",
       "community": 6,
@@ -10287,7 +10297,7 @@
       "label": "paths",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L17",
+      "source_location": "L18",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_paths",
       "community": 6,
@@ -10297,7 +10307,7 @@
       "label": "@/*",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L18",
+      "source_location": "L19",
       "_origin": "ast",
       "id": "tsconfig_paths",
       "community": 6,
@@ -10307,7 +10317,7 @@
       "label": "@functions/*",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L19",
+      "source_location": "L20",
       "_origin": "ast",
       "id": "tsconfig_paths_functions",
       "community": 6,
@@ -10317,7 +10327,7 @@
       "label": "strict",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L22",
+      "source_location": "L23",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_strict",
       "community": 6,
@@ -10327,7 +10337,7 @@
       "label": "noUnusedLocals",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L23",
+      "source_location": "L24",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_nounusedlocals",
       "community": 6,
@@ -10337,7 +10347,7 @@
       "label": "noUnusedParameters",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L24",
+      "source_location": "L25",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_nounusedparameters",
       "community": 6,
@@ -10347,7 +10357,7 @@
       "label": "noFallthroughCasesInSwitch",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L25",
+      "source_location": "L26",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_nofallthroughcasesinswitch",
       "community": 6,
@@ -10357,7 +10367,7 @@
       "label": "forceConsistentCasingInFileNames",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L26",
+      "source_location": "L27",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_forceconsistentcasinginfilenames",
       "community": 6,
@@ -10367,7 +10377,7 @@
       "label": "noImplicitAny",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L28",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_noimplicitany",
       "community": 6,
@@ -10377,7 +10387,7 @@
       "label": "strictNullChecks",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L29",
+      "source_location": "L30",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_strictnullchecks",
       "community": 6,
@@ -10387,7 +10397,7 @@
       "label": "strictFunctionTypes",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L30",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_strictfunctiontypes",
       "community": 6,
@@ -10397,7 +10407,7 @@
       "label": "strictBindCallApply",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L31",
+      "source_location": "L32",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_strictbindcallapply",
       "community": 6,
@@ -10407,7 +10417,7 @@
       "label": "strictPropertyInitialization",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L32",
+      "source_location": "L33",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_strictpropertyinitialization",
       "community": 6,
@@ -10417,7 +10427,7 @@
       "label": "noImplicitThis",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L33",
+      "source_location": "L34",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_noimplicitthis",
       "community": 6,
@@ -10427,7 +10437,7 @@
       "label": "alwaysStrict",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L34",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_alwaysstrict",
       "community": 6,
@@ -10437,7 +10447,7 @@
       "label": "noImplicitReturns",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L35",
+      "source_location": "L36",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_noimplicitreturns",
       "community": 6,
@@ -10447,7 +10457,7 @@
       "label": "noUncheckedIndexedAccess",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L36",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_nouncheckedindexedaccess",
       "community": 6,
@@ -10457,7 +10467,7 @@
       "label": "noPropertyAccessFromIndexSignature",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L37",
+      "source_location": "L38",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_nopropertyaccessfromindexsignature",
       "community": 6,
@@ -10467,7 +10477,7 @@
       "label": "noImplicitOverride",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L38",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_noimplicitoverride",
       "community": 6,
@@ -10477,7 +10487,7 @@
       "label": "types",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L40",
+      "source_location": "L41",
       "_origin": "ast",
       "id": "tsconfig_compileroptions_types",
       "community": 6,
@@ -10487,7 +10497,7 @@
       "label": "include",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L42",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "tsconfig_include",
       "community": 6,
@@ -10497,7 +10507,7 @@
       "label": "exclude",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L43",
+      "source_location": "L44",
       "_origin": "ast",
       "id": "tsconfig_exclude",
       "community": 6,
@@ -10507,7 +10517,7 @@
       "label": "references",
       "file_type": "code",
       "source_file": "tsconfig.json",
-      "source_location": "L44",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "tsconfig_references",
       "community": 6,
@@ -10564,10 +10574,30 @@
       "norm_label": "lib"
     },
     {
-      "label": "skipLibCheck",
+      "label": "outDir",
       "file_type": "code",
       "source_file": "tsconfig.node.json",
       "source_location": "L6",
+      "_origin": "ast",
+      "id": "tsconfig_node_compileroptions_outdir",
+      "community": 20,
+      "norm_label": "outdir"
+    },
+    {
+      "label": "tsBuildInfoFile",
+      "file_type": "code",
+      "source_file": "tsconfig.node.json",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "tsconfig_node_compileroptions_tsbuildinfofile",
+      "community": 20,
+      "norm_label": "tsbuildinfofile"
+    },
+    {
+      "label": "skipLibCheck",
+      "file_type": "code",
+      "source_file": "tsconfig.node.json",
+      "source_location": "L8",
       "_origin": "ast",
       "id": "tsconfig_node_compileroptions_skiplibcheck",
       "community": 20,
@@ -10577,7 +10607,7 @@
       "label": "module",
       "file_type": "code",
       "source_file": "tsconfig.node.json",
-      "source_location": "L7",
+      "source_location": "L9",
       "_origin": "ast",
       "id": "tsconfig_node_compileroptions_module",
       "community": 20,
@@ -10587,7 +10617,7 @@
       "label": "moduleResolution",
       "file_type": "code",
       "source_file": "tsconfig.node.json",
-      "source_location": "L8",
+      "source_location": "L10",
       "_origin": "ast",
       "id": "tsconfig_node_compileroptions_moduleresolution",
       "community": 20,
@@ -10597,7 +10627,7 @@
       "label": "allowSyntheticDefaultImports",
       "file_type": "code",
       "source_file": "tsconfig.node.json",
-      "source_location": "L9",
+      "source_location": "L11",
       "_origin": "ast",
       "id": "tsconfig_node_compileroptions_allowsyntheticdefaultimports",
       "community": 20,
@@ -10607,7 +10637,7 @@
       "label": "strict",
       "file_type": "code",
       "source_file": "tsconfig.node.json",
-      "source_location": "L10",
+      "source_location": "L12",
       "_origin": "ast",
       "id": "tsconfig_node_compileroptions_strict",
       "community": 20,
@@ -10617,41 +10647,11 @@
       "label": "include",
       "file_type": "code",
       "source_file": "tsconfig.node.json",
-      "source_location": "L12",
+      "source_location": "L14",
       "_origin": "ast",
       "id": "tsconfig_node_include",
       "community": 20,
       "norm_label": "include"
-    },
-    {
-      "label": "vite.config.d.ts",
-      "file_type": "code",
-      "source_file": "vite.config.d.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "vite_config_d",
-      "community": 138,
-      "norm_label": "vite.config.d.ts"
-    },
-    {
-      "label": "vite.config.js",
-      "file_type": "code",
-      "source_file": "vite.config.js",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "vite_config_js_vite_config",
-      "community": 141,
-      "norm_label": "vite.config.js"
-    },
-    {
-      "label": "manualChunks()",
-      "file_type": "code",
-      "source_file": "vite.config.js",
-      "source_location": "L51",
-      "_origin": "ast",
-      "id": "vite_config_js_vite_config_manualchunks",
-      "community": 141,
-      "norm_label": "manualchunks()"
     },
     {
       "label": "vite.config.ts",
@@ -10659,7 +10659,7 @@
       "source_file": "vite.config.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "vite_config_ts_vite_config",
+      "id": "vite_config",
       "community": 59,
       "norm_label": "vite.config.ts"
     },
@@ -10669,7 +10669,7 @@
       "source_file": "vite.config.ts",
       "source_location": "L52",
       "_origin": "ast",
-      "id": "vite_config_ts_vite_config_manualchunks",
+      "id": "vite_config_manualchunks",
       "community": 59,
       "norm_label": "manualchunks()"
     },
@@ -17250,7 +17250,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "src_readme_layer_descriptions",
-      "community": 136,
+      "community": 76,
       "norm_label": "layer descriptions"
     },
     {
@@ -17260,7 +17260,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "src_readme_app_layer",
-      "community": 136,
+      "community": 76,
       "norm_label": "\ud83d\ude80 app layer"
     },
     {
@@ -17270,7 +17270,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "src_readme_pages_layer",
-      "community": 136,
+      "community": 76,
       "norm_label": "\ud83d\udcc4 pages layer"
     },
     {
@@ -17280,7 +17280,7 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "src_readme_widgets_layer",
-      "community": 136,
+      "community": 76,
       "norm_label": "\ud83e\udde9 widgets layer"
     },
     {
@@ -17290,7 +17290,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "src_readme_features_layer",
-      "community": 136,
+      "community": 76,
       "norm_label": "\u26a1 features layer"
     },
     {
@@ -17300,7 +17300,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "src_readme_entities_layer",
-      "community": 136,
+      "community": 76,
       "norm_label": "\ud83c\udfaf entities layer"
     },
     {
@@ -17310,7 +17310,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "src_readme_shared_layer",
-      "community": 136,
+      "community": 76,
       "norm_label": "\ud83d\udd27 shared layer"
     },
     {
@@ -17320,7 +17320,7 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "src_readme_key_fsd_principles",
-      "community": 144,
+      "community": 76,
       "norm_label": "key fsd principles"
     },
     {
@@ -17330,7 +17330,7 @@
       "source_location": "L153",
       "_origin": "ast",
       "id": "src_readme_1_layered_architecture",
-      "community": 144,
+      "community": 76,
       "norm_label": "1. **layered architecture**"
     },
     {
@@ -17340,7 +17340,7 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "src_readme_2_feature_isolation",
-      "community": 144,
+      "community": 76,
       "norm_label": "2. **feature isolation**"
     },
     {
@@ -17350,7 +17350,7 @@
       "source_location": "L168",
       "_origin": "ast",
       "id": "src_readme_3_entity_independence",
-      "community": 144,
+      "community": 76,
       "norm_label": "3. **entity independence**"
     },
     {
@@ -17360,7 +17360,7 @@
       "source_location": "L176",
       "_origin": "ast",
       "id": "src_readme_4_shared_foundation",
-      "community": 144,
+      "community": 76,
       "norm_label": "4. **shared foundation**"
     },
     {
@@ -41591,7 +41591,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0,
       "source": "tsconfig",
       "target": "tsconfig_exclude",
@@ -41601,7 +41601,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0,
       "source": "tsconfig",
       "target": "tsconfig_include",
@@ -41611,7 +41611,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0,
       "source": "tsconfig",
       "target": "tsconfig_references",
@@ -41631,7 +41631,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L34",
+      "source_location": "L35",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_alwaysstrict",
@@ -41641,7 +41641,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L16",
+      "source_location": "L17",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_baseurl",
@@ -41651,7 +41651,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_forceconsistentcasinginfilenames",
@@ -41671,7 +41671,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L14",
+      "source_location": "L15",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_jsx",
@@ -41721,7 +41721,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L25",
+      "source_location": "L26",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_nofallthroughcasesinswitch",
@@ -41731,7 +41731,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_noimplicitany",
@@ -41741,7 +41741,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L38",
+      "source_location": "L39",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_noimplicitoverride",
@@ -41751,7 +41751,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L35",
+      "source_location": "L36",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_noimplicitreturns",
@@ -41761,7 +41761,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L33",
+      "source_location": "L34",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_noimplicitthis",
@@ -41771,7 +41771,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_nopropertyaccessfromindexsignature",
@@ -41781,7 +41781,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L36",
+      "source_location": "L37",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_nouncheckedindexedaccess",
@@ -41791,7 +41791,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_nounusedlocals",
@@ -41801,7 +41801,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_nounusedparameters",
@@ -41811,7 +41811,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L17",
+      "source_location": "L18",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_paths",
@@ -41841,7 +41841,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_strict",
@@ -41851,7 +41851,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_strictbindcallapply",
@@ -41861,7 +41861,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_strictfunctiontypes",
@@ -41871,7 +41871,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L29",
+      "source_location": "L30",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_strictnullchecks",
@@ -41881,7 +41881,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_strictpropertyinitialization",
@@ -41901,7 +41901,17 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L40",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_tsbuildinfofile",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L41",
       "weight": 1.0,
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_types",
@@ -41921,7 +41931,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L18",
+      "source_location": "L19",
       "weight": 1.0,
       "source": "tsconfig_compileroptions_paths",
       "target": "tsconfig_paths",
@@ -41931,7 +41941,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.json",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0,
       "source": "tsconfig_compileroptions_paths",
       "target": "tsconfig_paths_functions",
@@ -41951,7 +41961,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.node.json",
-      "source_location": "L12",
+      "source_location": "L14",
       "weight": 1.0,
       "source": "tsconfig_node",
       "target": "tsconfig_node_include",
@@ -41961,7 +41971,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.node.json",
-      "source_location": "L9",
+      "source_location": "L11",
       "weight": 1.0,
       "source": "tsconfig_node_compileroptions",
       "target": "tsconfig_node_compileroptions_allowsyntheticdefaultimports",
@@ -41991,7 +42001,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.node.json",
-      "source_location": "L7",
+      "source_location": "L9",
       "weight": 1.0,
       "source": "tsconfig_node_compileroptions",
       "target": "tsconfig_node_compileroptions_module",
@@ -42001,7 +42011,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.node.json",
-      "source_location": "L8",
+      "source_location": "L10",
       "weight": 1.0,
       "source": "tsconfig_node_compileroptions",
       "target": "tsconfig_node_compileroptions_moduleresolution",
@@ -42014,6 +42024,16 @@
       "source_location": "L6",
       "weight": 1.0,
       "source": "tsconfig_node_compileroptions",
+      "target": "tsconfig_node_compileroptions_outdir",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.node.json",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "tsconfig_node_compileroptions",
       "target": "tsconfig_node_compileroptions_skiplibcheck",
       "confidence_score": 1.0
     },
@@ -42021,7 +42041,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tsconfig.node.json",
-      "source_location": "L10",
+      "source_location": "L12",
       "weight": 1.0,
       "source": "tsconfig_node_compileroptions",
       "target": "tsconfig_node_compileroptions_strict",
@@ -42040,11 +42060,11 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "vite.config.js",
-      "source_location": "L51",
+      "source_file": "tsconfig.node.json",
+      "source_location": "L7",
       "weight": 1.0,
-      "source": "vite_config_js_vite_config",
-      "target": "vite_config_js_vite_config_manualchunks",
+      "source": "tsconfig_node_compileroptions",
+      "target": "tsconfig_node_compileroptions_tsbuildinfofile",
       "confidence_score": 1.0
     },
     {
@@ -42053,8 +42073,8 @@
       "source_file": "vite.config.ts",
       "source_location": "L52",
       "weight": 1.0,
-      "source": "vite_config_ts_vite_config",
-      "target": "vite_config_ts_vite_config_manualchunks",
+      "source": "vite_config",
+      "target": "vite_config_manualchunks",
       "confidence_score": 1.0
     },
     {
