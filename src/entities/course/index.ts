@@ -41,8 +41,6 @@ export {
   CourseCardSkeleton,
   CourseGridSkeleton,
   CourseSkeleton,
-  PptxContentViewer,
-  type PptxContentViewerProps,
   ResourceContentViewer,
   type ResourceContentViewerProps,
 } from "./ui";

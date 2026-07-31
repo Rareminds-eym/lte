@@ -1,12 +1,26 @@
 import type React from "react";
-import { PptxContentViewer } from "../PptxContentViewer";
-import { DocxContentViewer } from "./DocxContentViewer";
+import { lazy, Suspense } from "react";
 import { ImageContentViewer } from "./ImageContentViewer";
-import { PdfContentViewer } from "./PdfContentViewer";
 import { ResourceViewerState } from "./ResourceViewerState";
-import { SpreadsheetContentViewer } from "./SpreadsheetContentViewer";
 import { getResourceFileKind, type ResourceRendererProps } from "./types";
 import { VideoContentViewer } from "./VideoContentViewer";
+
+const PptxContentViewer = lazy(() =>
+  import("../PptxContentViewer").then((m) => ({ default: m.PptxContentViewer })),
+);
+const PdfContentViewer = lazy(() =>
+  import("./PdfContentViewer").then((m) => ({ default: m.PdfContentViewer })),
+);
+const DocxContentViewer = lazy(() =>
+  import("./DocxContentViewer").then((m) => ({ default: m.DocxContentViewer })),
+);
+const SpreadsheetContentViewer = lazy(() =>
+  import("./SpreadsheetContentViewer").then((m) => ({ default: m.SpreadsheetContentViewer })),
+);
+
+const ViewerFallback = ({ title }: { title: string }) => (
+  <ResourceViewerState title={title} message="Loading preview..." />
+);
 
 export type ResourceContentViewerProps = ResourceRendererProps;
 
@@ -15,10 +29,34 @@ export const ResourceContentViewer: React.FC<ResourceContentViewerProps> = ({ it
 
   if (fileKind === "video") return <VideoContentViewer item={item} />;
   if (fileKind === "image") return <ImageContentViewer item={item} />;
-  if (fileKind === "pptx") return <PptxContentViewer title={item.title} url={item.url} />;
-  if (fileKind === "pdf") return <PdfContentViewer item={item} />;
-  if (fileKind === "docx") return <DocxContentViewer item={item} />;
-  if (fileKind === "xlsx") return <SpreadsheetContentViewer item={item} />;
+
+  if (fileKind === "pptx")
+    return (
+      <Suspense fallback={<ViewerFallback title={item.title} />}>
+        <PptxContentViewer title={item.title} url={item.url} />
+      </Suspense>
+    );
+
+  if (fileKind === "pdf")
+    return (
+      <Suspense fallback={<ViewerFallback title={item.title} />}>
+        <PdfContentViewer item={item} />
+      </Suspense>
+    );
+
+  if (fileKind === "docx")
+    return (
+      <Suspense fallback={<ViewerFallback title={item.title} />}>
+        <DocxContentViewer item={item} />
+      </Suspense>
+    );
+
+  if (fileKind === "xlsx")
+    return (
+      <Suspense fallback={<ViewerFallback title={item.title} />}>
+        <SpreadsheetContentViewer item={item} />
+      </Suspense>
+    );
 
   if (fileKind === "audio") {
     return (
