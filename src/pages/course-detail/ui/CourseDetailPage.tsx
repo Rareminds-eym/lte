@@ -108,7 +108,9 @@ export const CourseDetailPage: React.FC = () => {
       return;
     }
     if (capabilityCode && levelId) {
-      navigate(`/courses/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`);
+      navigate(
+        `/courses/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
+      );
     } else {
       toast.error("Unable to navigate to level modules: level ID is missing.");
     }

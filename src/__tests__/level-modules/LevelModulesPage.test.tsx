@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { LevelModulesPage } from "@/pages/level-modules";
 import * as courseExports from "@/entities/course";
+import { LevelModulesPage } from "@/pages/level-modules";
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -59,12 +59,11 @@ describe("LevelModulesPage", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={["/courses/HTT-IND-CAP-01/levels/0a010796-10c0-5287-b89a-6ab56bd71399"]}>
+        <MemoryRouter
+          initialEntries={["/courses/HTT-IND-CAP-01/levels/0a010796-10c0-5287-b89a-6ab56bd71399"]}
+        >
           <Routes>
-            <Route
-              path="/courses/:capabilityCode/levels/:levelId"
-              element={<LevelModulesPage />}
-            />
+            <Route path="/courses/:capabilityCode/levels/:levelId" element={<LevelModulesPage />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,

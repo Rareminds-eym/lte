@@ -82,7 +82,7 @@ export const AppRouter: React.FC = () => {
         </Route>
         <Route element={<LevelPlayerLayout />}>
           <Route
-            path="/courses/:levelId/modules/:moduleNo"
+            path="/my-courses/:levelId/modules/:moduleNo"
             element={
               <RouteLoadingBoundary fallback={<PageLoader message="Loading course content..." />}>
                 <LevelContent />

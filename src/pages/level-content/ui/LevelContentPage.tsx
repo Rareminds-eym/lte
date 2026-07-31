@@ -10,6 +10,8 @@ import {
   type ModuleStageContent,
   ResourceContentViewer,
   useLevelContentData,
+  useStartModuleProgress,
+  useUpdateStageProgress,
 } from "@/entities/course";
 import {
   BookOpenIcon,
@@ -33,6 +35,7 @@ import {
   MessageSquareIcon,
   PlayIcon,
   TargetIcon,
+  toast,
 } from "@/shared/ui";
 import {
   LevelHeader,
@@ -181,6 +184,37 @@ export const LevelContentPage: React.FC = () => {
     navigate("/my-courses");
   };
 
+  const { mutate: startModule } = useStartModuleProgress();
+  const { mutate: updateStage } = useUpdateStageProgress();
+
+  useEffect(() => {
+    if (levelId && Number.isInteger(moduleNumber)) {
+      startModule({ levelId, moduleNo: moduleNumber });
+    }
+  }, [levelId, moduleNumber, startModule]);
+
+  const levelModuleForSync = data?.module;
+  const activeStageContentForSync = levelModuleForSync?.stages.find(
+    (stage) => stage.stageName === activeStage,
+  );
+  const previewItemsForSync = activeStageContentForSync?.items ?? [];
+  const selectedContentForSync =
+    previewItemsForSync.find((item) => item.id === selectedContentId) ??
+    previewItemsForSync[0] ??
+    null;
+
+  useEffect(() => {
+    if (levelId && Number.isInteger(moduleNumber) && selectedContentForSync?.id) {
+      updateStage({
+        levelId,
+        moduleNo: moduleNumber,
+        eContentId: selectedContentForSync.id,
+        stageName: activeStage,
+        status: "in_progress",
+      });
+    }
+  }, [levelId, moduleNumber, selectedContentForSync?.id, activeStage, updateStage]);
+
   const handleStageSelect = (stage: LteStage) => {
     setSearchParams((prev) => {
       const updated = new URLSearchParams(prev);
@@ -191,7 +225,7 @@ export const LevelContentPage: React.FC = () => {
 
   const handleModuleSelect = (targetModuleNo: number) => {
     if (!levelId) return;
-    navigate(`/courses/${levelId}/modules/${targetModuleNo}?stage=engage`);
+    navigate(`/my-courses/${levelId}/modules/${targetModuleNo}?stage=engage`);
     setMobilePanelOpen(null);
   };
 
@@ -307,9 +341,7 @@ export const LevelContentPage: React.FC = () => {
     );
   }
 
-  const completedStages = levelModule.stages
-    .filter((stage) => stage.stageOrder < activeStageContent.stageOrder)
-    .map((stage) => stage.stageName);
+  const completedStages = levelModule.completedStages || [];
   const previewItems = activeStageContent.items;
   const stageSummary = getStageSummary(levelModule, activeStageContent);
   const stageDescription = activeStageContent.stageDescription;
@@ -344,18 +376,20 @@ export const LevelContentPage: React.FC = () => {
   }, {});
   const moduleDrawerItems: ModuleItem[] = level.modules.map((m) => {
     const isCurrentModule = m.moduleNo === moduleNumber;
-    const totalStages = Math.max(levelModule.stages.length, 1);
-    const activeStageProgress = Math.round((activeStageContent.stageOrder / totalStages) * 100);
+    const progressPercentage = isCurrentModule
+      ? (levelModule.progressPercentage ?? m.progressPercentage ?? 0)
+      : (m.progressPercentage ?? 0);
 
     return {
       id: m.id,
       moduleNo: m.moduleNo,
       title: m.title,
-      progressPercentage: m.progressPercentage ?? (isCurrentModule ? activeStageProgress : 0),
+      progressPercentage,
       stageProgressDots: isCurrentModule
         ? levelModule.stages.map((stage) => {
-            if (stage.stageOrder < activeStageContent.stageOrder) return "green";
-            if (stage.stageOrder === activeStageContent.stageOrder) return "blue";
+            const name = stage.stageName.toLowerCase();
+            if (name === activeStage) return "blue";
+            if (completedStages.includes(name)) return "green";
             return "gray";
           })
         : undefined,
@@ -366,6 +400,45 @@ export const LevelContentPage: React.FC = () => {
     if (!stage) return;
     setSelectedContentId(null);
     handleStageSelect(stage);
+  };
+
+  const handleMarkStageDone = () => {
+    if (!levelId) return;
+
+    if (selectedContent?.id) {
+      updateStage(
+        {
+          levelId,
+          moduleNo: moduleNumber,
+          eContentId: selectedContent.id,
+          stageName: activeStage,
+          status: "completed",
+        },
+        {
+          onSuccess: () => {
+            if (nextStage) {
+              handleStageNavigation(nextStage);
+            } else {
+              toast.success("Module completed successfully!");
+              navigate(
+                `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
+              );
+            }
+          },
+          onError: (err) => {
+            toast.error(`Failed to save progress: ${err.message}`);
+          },
+        },
+      );
+    } else {
+      if (nextStage) {
+        handleStageNavigation(nextStage);
+      } else {
+        navigate(
+          `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
+        );
+      }
+    }
   };
 
   const renderStageNavigationBar = () => (
@@ -396,12 +469,7 @@ export const LevelContentPage: React.FC = () => {
         ))}
       </div>
 
-      <Button
-        type="button"
-        size="sm"
-        className="justify-self-end"
-        onClick={() => handleStageNavigation(nextStage)}
-      >
+      <Button type="button" size="sm" className="justify-self-end" onClick={handleMarkStageDone}>
         <span className="inline-flex items-center gap-1.5">
           {nextStage ? "Mark Done & Next" : "Mark as Completed"}
           {nextStage ? <ChevronRightIcon size={16} /> : <CheckIcon size={16} />}

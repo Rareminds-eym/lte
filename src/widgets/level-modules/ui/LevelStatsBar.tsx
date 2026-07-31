@@ -23,10 +23,8 @@ export const LevelStatsBar: React.FC<LevelStatsBarProps> = ({
   return (
     <div className="w-full bg-white rounded-2xl border border-border-default p-4 sm:p-6 shadow-xl -mt-10 sm:-mt-12 relative z-20 mx-auto max-w-[96%] sm:max-w-[98%]">
       <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6">
-
         {/* Left Side: 4 Core Stat Metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 flex-1 sm:divide-x sm:divide-border-default">
-
           {/* Stat 1: Duration */}
           <div className="flex items-center gap-3 sm:gap-3.5 sm:px-4 sm:first:pl-0">
             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">

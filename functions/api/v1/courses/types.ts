@@ -132,14 +132,18 @@ export interface LevelRow {
   difficulty_level: string;
   status: string;
   version_no: number;
-  capabilities?: {
-    code: string;
-    name: string;
-  } | Array<{ code: string; name: string }>;
-  level_scale?: {
-    level_no: number;
-    level_label: string;
-  } | Array<{ level_no: number; level_label: string }>;
+  capabilities?:
+    | {
+        code: string;
+        name: string;
+      }
+    | Array<{ code: string; name: string }>;
+  level_scale?:
+    | {
+        level_no: number;
+        level_label: string;
+      }
+    | Array<{ level_no: number; level_label: string }>;
   modules?: Array<{
     id: string;
     module_no: number;

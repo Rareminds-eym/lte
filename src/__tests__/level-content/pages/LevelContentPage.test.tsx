@@ -178,11 +178,11 @@ const mockLevelContentData = {
   },
 };
 
-const renderPage = (path = `/courses/${levelId}/modules/1`) => {
+const renderPage = (path = `/my-courses/${levelId}/modules/1`) => {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/courses/:levelId/modules/:moduleNo" element={<LevelContentPage />} />
+        <Route path="/my-courses/:levelId/modules/:moduleNo" element={<LevelContentPage />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -218,7 +218,7 @@ describe("LevelContentPage", () => {
       error: null,
     });
 
-    renderPage(`/courses/${levelId}/modules/1?stage=explore`);
+    renderPage(`/my-courses/${levelId}/modules/1?stage=explore`);
 
     expect(screen.getAllByText("Explore")[0]).toBeInTheDocument();
     expect(
@@ -234,7 +234,7 @@ describe("LevelContentPage", () => {
       error: null,
     });
 
-    renderPage(`/courses/${levelId}/modules/1?stage=express`);
+    renderPage(`/my-courses/${levelId}/modules/1?stage=express`);
 
     expect(screen.getByRole("heading", { name: "Practice Artifact" })).toBeInTheDocument();
     expect(screen.getAllByText("Complete the Evidence Note").length).toBeGreaterThan(0);
@@ -252,7 +252,7 @@ describe("LevelContentPage", () => {
       error: null,
     });
 
-    renderPage(`/courses/${levelId}/modules/1?stage=evolve`);
+    renderPage(`/my-courses/${levelId}/modules/1?stage=evolve`);
 
     expect(screen.getByRole("heading", { name: "Final Artifact" })).toBeInTheDocument();
     expect(screen.getByText("Complete the Final Evidence Pack")).toBeInTheDocument();
@@ -269,7 +269,7 @@ describe("LevelContentPage", () => {
       error: new Error("Module 99 for level not found"),
     });
 
-    renderPage(`/courses/${levelId}/modules/99`);
+    renderPage(`/my-courses/${levelId}/modules/99`);
 
     expect(screen.getByText("Course Content Not Available")).toBeInTheDocument();
     expect(

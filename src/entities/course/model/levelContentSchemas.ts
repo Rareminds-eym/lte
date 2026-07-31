@@ -129,6 +129,8 @@ export const ModuleDetailsResponseSchema = z.object({
   tools: JsonRecordSchema,
   learningContent: JsonRecordSchema,
   stages: z.array(ModuleStageContentSchema),
+  progressPercentage: z.number().optional(),
+  completedStages: z.array(z.string()).optional(),
 });
 
 export const LevelDetailsPayloadSchema = z.object({

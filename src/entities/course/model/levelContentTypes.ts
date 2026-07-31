@@ -108,4 +108,6 @@ export interface ModuleDetailsResponse {
   tools: Record<string, unknown>;
   learningContent: Record<string, unknown>;
   stages: ModuleStageContent[];
+  progressPercentage?: number;
+  completedStages?: string[];
 }

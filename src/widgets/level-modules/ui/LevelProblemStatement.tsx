@@ -44,7 +44,9 @@ export const LevelProblemStatement: React.FC<LevelProblemStatementProps> = ({
             {completedModules ?? 0}
           </span>
           <div className="w-7 sm:w-8 h-[2px] bg-brand-500/40 my-2.5 sm:my-3 rounded-full" />
-          <span className="text-2xl sm:text-3xl font-bold text-white leading-none">{totalModules}</span>
+          <span className="text-2xl sm:text-3xl font-bold text-white leading-none">
+            {totalModules}
+          </span>
           <span className="text-xs text-brand-200/80 mt-2.5 font-medium tracking-wide">
             {completedModules === 0 ? "Not started" : "Submitted"}
           </span>
@@ -53,4 +55,3 @@ export const LevelProblemStatement: React.FC<LevelProblemStatementProps> = ({
     </div>
   );
 };
-

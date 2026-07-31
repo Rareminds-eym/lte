@@ -1,16 +1,12 @@
-/**
- * Get Module Details Endpoint (6E stages, e_content, artifacts)
- * GET /api/v1/courses/:levelId/modules/:moduleNo
- */
-
-import { getModuleDetails } from "@functions/api/v1/courses/queries";
-import { LevelModuleParamsSchema } from "@functions/api/v1/courses/schemas";
 import { AuthError, requireAuth } from "@functions/lib/auth";
-import { jsonError, jsonResponse } from "@functions/lib/http";
+import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
+import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { upsertModuleProgress } from "../../../queries";
+import { LevelModuleParamsSchema } from "../../../schemas";
 
-export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
+export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
   try {
     const user = await requireAuth(context.request, context.env);
@@ -26,20 +22,23 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     const { levelId, moduleNo } = parsedParams.data;
     const moduleNumber = parseInt(moduleNo, 10);
-    const supabase = createServiceSupabase(context.env);
 
-    const moduleDetails = await getModuleDetails(supabase, levelId, moduleNumber, userId);
-
-    if (!moduleDetails) {
-      return jsonError(`Module ${moduleNumber} for level '${levelId}' not found`, 404, {
-        code: "NOT_FOUND",
-        requestId,
-      });
+    let status = "in_progress";
+    try {
+      const body = (await readJsonObject(context.request)) as { status?: string };
+      if (body && typeof body.status === "string") {
+        status = body.status;
+      }
+    } catch {
+      // Body is optional, default to in_progress
     }
+
+    const supabase = createServiceSupabase(context.env);
+    const progressId = await upsertModuleProgress(supabase, userId, levelId, moduleNumber, status);
 
     return jsonResponse({
       success: true,
-      module: moduleDetails,
+      moduleProgressId: progressId,
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -48,6 +47,8 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
         requestId,
       });
     }
+
+    apiLogger.error("Failed to update module progress", error, { requestId });
     const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return jsonError(errorMessage, 500, { code: "SERVER_ERROR", requestId });
   }

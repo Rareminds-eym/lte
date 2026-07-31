@@ -41,6 +41,7 @@ const normalizeLevelProblemStatement = (
 export async function getLevelWithModules(
   supabase: SupabaseClient,
   levelId: string,
+  userId?: string,
 ): Promise<LevelDetailsResponse | null> {
   const { data, error } = await supabase
     .from("levels")
@@ -92,24 +93,56 @@ export async function getLevelWithModules(
     ? rawLevel.capabilities[0]
     : rawLevel.capabilities;
 
+  const moduleProgressMap: Record<string, { completionPercentage: number; isCompleted: boolean }> =
+    {};
+  if (userId) {
+    const { data: levelProgress } = await supabase
+      .from("user_capability_level_progress")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("level_id", levelId)
+      .maybeSingle();
+
+    if (levelProgress) {
+      const { data: progresses } = await supabase
+        .from("user_module_progress")
+        .select("module_id, completion_percentage, module_status")
+        .eq("user_id", userId)
+        .eq("user_capability_level_progress_id", levelProgress.id);
+
+      if (progresses) {
+        for (const p of progresses) {
+          moduleProgressMap[p.module_id] = {
+            completionPercentage: p.completion_percentage || 0,
+            isCompleted: p.module_status === "completed",
+          };
+        }
+      }
+    }
+  }
+
   const moduleSummaries: LevelModuleSummary[] = (rawLevel.modules || [])
     .filter((m) => m.is_active === true)
     .sort((a, b) => a.module_no - b.module_no)
-    .map((m) => ({
-      id: m.id,
-      moduleNo: m.module_no,
-      title: m.title,
-      description: m.description,
-      isPublished: m.is_published,
-    }));
+    .map((m) => {
+      const prog = moduleProgressMap[m.id];
+      return {
+        id: m.id,
+        moduleNo: m.module_no,
+        title: m.title,
+        description: m.description,
+        isPublished: m.is_published,
+        progressPercentage: prog ? prog.completionPercentage : 0,
+        isCompleted: prog ? prog.isCompleted : false,
+      };
+    });
 
   // Count all active artifacts (practice + final) across all active modules
   const artifactsCount = (rawLevel.modules || [])
     .filter((m) => m.is_active === true)
     .flatMap((m) => m.modules_content || [])
     .flatMap((mc) => mc.module_artifacts || [])
-    .filter((a) => a.is_active === true)
-    .length;
+    .filter((a) => a.is_active === true).length;
 
   return {
     id: rawLevel.id,
@@ -143,7 +176,8 @@ export async function getModuleDetails(
   supabase: SupabaseClient,
   levelId: string,
   moduleNo: number,
-): Promise<ModuleDetailsResponse | null> {
+  userId?: string,
+): Promise<any> {
   // First locate the active level so the module query can use modules.level_id.
   const { data: levelData, error: levelError } = await supabase
     .from("levels")
@@ -314,6 +348,32 @@ export async function getModuleDetails(
     };
   });
 
+  let completedStages: string[] = [];
+  let progressPercentage = 0;
+
+  if (userId) {
+    const { data: moduleProgress } = await supabase
+      .from("user_module_progress")
+      .select("id, completion_percentage")
+      .eq("user_id", userId)
+      .eq("module_id", rawModule.id)
+      .maybeSingle();
+
+    if (moduleProgress) {
+      progressPercentage = moduleProgress.completion_percentage || 0;
+
+      const { data: stagesProg } = await supabase
+        .from("user_stage_progress")
+        .select("stage_name")
+        .eq("user_module_progress_id", moduleProgress.id)
+        .eq("status", "completed");
+
+      if (stagesProg) {
+        completedStages = stagesProg.map((s) => s.stage_name.toLowerCase());
+      }
+    }
+  }
+
   return {
     id: rawModule.id,
     levelId: rawModule.level_id,
@@ -334,5 +394,377 @@ export async function getModuleDetails(
     tools: rawModule.tools || {},
     learningContent: rawModule.learning_content || {},
     stages,
+    progressPercentage,
+    completedStages,
+  };
+}
+
+export async function upsertLevelProgress(
+  supabase: SupabaseClient,
+  userId: string,
+  levelId: string,
+  status: string = "in_progress",
+): Promise<string> {
+  // 1. Fetch active learning path
+  const { data: pathData, error: pathError } = await supabase
+    .from("learning_paths")
+    .select("id, role_id")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (pathError) {
+    throw new Error(`Failed to query active learning path: ${pathError.message}`);
+  }
+  if (!pathData) {
+    throw new Error("No active learning path found for this user");
+  }
+
+  const learningPathId = pathData.id;
+  const roleId = pathData.role_id;
+
+  // 2. Fetch level details to extract level number and capability
+  const { data: levelData, error: levelError } = await supabase
+    .from("levels")
+    .select("id, level_code, capability_id")
+    .eq("id", levelId)
+    .single();
+
+  if (levelError || !levelData) {
+    throw new Error(`Level with id '${levelId}' not found: ${levelError?.message}`);
+  }
+
+  const levelCodeMatch = levelData.level_code.match(/L(\d+)/i);
+  const sequenceNo = parseInt(levelCodeMatch?.[1] ?? "1", 10);
+  const capabilityId = levelData.capability_id;
+
+  // 3. Check for existing progress
+  const { data: existingProgress, error: fetchError } = await supabase
+    .from("user_capability_level_progress")
+    .select("id, status")
+    .eq("user_id", userId)
+    .eq("learning_path_id", learningPathId)
+    .eq("level_id", levelId)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(`Failed to query level progress: ${fetchError.message}`);
+  }
+
+  if (existingProgress) {
+    if (existingProgress.status === "not_started" && status === "in_progress") {
+      const { error: updateError } = await supabase
+        .from("user_capability_level_progress")
+        .update({
+          status: "in_progress",
+          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingProgress.id);
+
+      if (updateError) {
+        throw new Error(`Failed to update level progress status: ${updateError.message}`);
+      }
+    }
+    return existingProgress.id;
+  }
+
+  // 4. Fetch capability priority, current level, and required level for computations
+  const { data: seqData, error: seqError } = await supabase
+    .from("role_capability_sequence")
+    .select("id, required_level, capability_priority")
+    .eq("role_id", roleId)
+    .eq("capability_id", capabilityId)
+    .maybeSingle();
+
+  let priorityBand = "none";
+  let requiredLevelNum = 1;
+  let currentLevelNum = 0;
+
+  if (seqError) {
+    throw new Error(`Failed to query role capability sequence: ${seqError.message}`);
+  }
+
+  if (seqData) {
+    priorityBand = seqData.capability_priority ?? "none";
+    const levelMap: Record<string, number> = { L1: 1, L2: 2, L3: 3, L4: 4, L5: 5 };
+    requiredLevelNum = levelMap[seqData.required_level as string] || 1;
+
+    // fetch current capability level
+    const { data: capData, error: capQueryError } = await supabase
+      .from("user_capabilities")
+      .select("current_level")
+      .eq("user_id", userId)
+      .eq("role_sequence_id", seqData.id)
+      .maybeSingle();
+
+    if (capQueryError) {
+      throw new Error(`Failed to query user capabilities: ${capQueryError.message}`);
+    }
+
+    if (capData) {
+      currentLevelNum = capData.current_level;
+    }
+  }
+
+  const gap = Math.max(0, requiredLevelNum - currentLevelNum);
+  const hasGap = gap > 0;
+  const gapScore =
+    requiredLevelNum > 0 ? Math.round((currentLevelNum / requiredLevelNum) * 100) : 0;
+
+  // 5. Insert new level progress
+  const { data: inserted, error: insertError } = await supabase
+    .from("user_capability_level_progress")
+    .insert({
+      user_id: userId,
+      learning_path_id: learningPathId,
+      level_id: levelId,
+      sequence_no: sequenceNo,
+      from_level: Math.max(0, sequenceNo - 1),
+      to_level: sequenceNo,
+      current_score: 0,
+      current_level: currentLevelNum,
+      required_level: requiredLevelNum,
+      gap,
+      has_gap: hasGap,
+      gap_score: gapScore,
+      priority_band: priorityBand,
+      status: status,
+      badge: "none",
+      completion_percentage: 0,
+      started_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed to insert level progress: ${insertError.message}`);
+  }
+
+  return inserted.id;
+}
+
+export async function upsertModuleProgress(
+  supabase: SupabaseClient,
+  userId: string,
+  levelId: string,
+  moduleNo: number,
+  status: string = "in_progress",
+): Promise<string> {
+  // 1. Ensure level progress exists
+  const levelProgressId = await upsertLevelProgress(supabase, userId, levelId, "in_progress");
+
+  // 2. Fetch module_id
+  const { data: moduleData, error: moduleError } = await supabase
+    .from("modules")
+    .select("id")
+    .eq("level_id", levelId)
+    .eq("module_no", moduleNo)
+    .eq("is_active", true)
+    .single();
+
+  if (moduleError || !moduleData) {
+    throw new Error(`Module ${moduleNo} for level '${levelId}' not found: ${moduleError?.message}`);
+  }
+
+  const moduleId = moduleData.id;
+
+  // 3. Check for existing progress
+  const { data: existingProgress, error: fetchError } = await supabase
+    .from("user_module_progress")
+    .select("id, module_status")
+    .eq("user_id", userId)
+    .eq("user_capability_level_progress_id", levelProgressId)
+    .eq("module_id", moduleId)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(`Failed to query module progress: ${fetchError.message}`);
+  }
+
+  if (existingProgress) {
+    if (existingProgress.module_status === "not_started" && status === "in_progress") {
+      const { error: updateError } = await supabase
+        .from("user_module_progress")
+        .update({
+          module_status: "in_progress",
+          last_activity_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingProgress.id);
+
+      if (updateError) {
+        throw new Error(`Failed to update module progress status: ${updateError.message}`);
+      }
+    }
+    return existingProgress.id;
+  }
+
+  // 4. Insert new module progress
+  const { data: inserted, error: insertError } = await supabase
+    .from("user_module_progress")
+    .insert({
+      user_id: userId,
+      user_capability_level_progress_id: levelProgressId,
+      module_id: moduleId,
+      module_status: status,
+      current_stage: "engage",
+      stages_completed: 0,
+      completion_percentage: 0,
+      artifact_submitted: false,
+      artifact_approval_status: "not_submitted",
+      last_activity_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed to insert module progress: ${insertError.message}`);
+  }
+
+  return inserted.id;
+}
+
+export async function upsertStageProgress(
+  supabase: SupabaseClient,
+  userId: string,
+  levelId: string,
+  moduleNo: number,
+  eContentId: string,
+  stageName: string,
+  status: string = "in_progress",
+): Promise<{ stageProgressId: string; stagesCompleted: number; completionPercentage: number }> {
+  // 1. Ensure module progress exists
+  const moduleProgressId = await upsertModuleProgress(
+    supabase,
+    userId,
+    levelId,
+    moduleNo,
+    "in_progress",
+  );
+
+  // 2. Validate stage name and get stage order
+  const stageOrders: Record<string, number> = {
+    engage: 1,
+    explore: 2,
+    explain: 3,
+    express: 4,
+    empower: 5,
+    evolve: 6,
+  };
+
+  const stageOrder = stageOrders[stageName.toLowerCase()];
+  if (!stageOrder) {
+    throw new Error(`Invalid stage name: ${stageName}`);
+  }
+
+  // 3. Upsert stage progress
+  const { data: existingProgress } = await supabase
+    .from("user_stage_progress")
+    .select("id, status")
+    .eq("user_module_progress_id", moduleProgressId)
+    .eq("user_id", userId)
+    .eq("e_content_id", eContentId)
+    .eq("stage_name", stageName.toLowerCase())
+    .maybeSingle();
+
+  let stageProgressId = "";
+
+  if (existingProgress) {
+    stageProgressId = existingProgress.id;
+    // Only transition status if moving to completed
+    if (existingProgress.status !== "completed" && status === "completed") {
+      const { error: updateError } = await supabase
+        .from("user_stage_progress")
+        .update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingProgress.id);
+
+      if (updateError) {
+        throw new Error(`Failed to update stage progress to completed: ${updateError.message}`);
+      }
+    }
+  } else {
+    const { data: inserted, error: insertError } = await supabase
+      .from("user_stage_progress")
+      .insert({
+        user_module_progress_id: moduleProgressId,
+        user_id: userId,
+        e_content_id: eContentId,
+        stage_name: stageName.toLowerCase(),
+        stage_order: stageOrder,
+        status: status,
+        started_at: new Date().toISOString(),
+        completed_at: status === "completed" ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      throw new Error(`Failed to insert stage progress: ${insertError.message}`);
+    }
+    stageProgressId = inserted.id;
+  }
+
+  // 4. Recalculate module progress completion stats
+  const { data: completedItems, error: completedError } = await supabase
+    .from("user_stage_progress")
+    .select("stage_name")
+    .eq("user_module_progress_id", moduleProgressId)
+    .eq("status", "completed");
+
+  if (completedError) {
+    throw new Error(
+      `Failed to fetch completed stages for module recalculation: ${completedError.message}`,
+    );
+  }
+
+  const completedStagesSet = new Set(
+    completedItems?.map((item) => item.stage_name.toLowerCase()) ?? [],
+  );
+  const stagesCompleted = completedStagesSet.size;
+  const completionPercentage = Math.round((stagesCompleted / 6) * 100);
+
+  // 5. Update user_module_progress
+  const { error: modUpdateError } = await supabase
+    .from("user_module_progress")
+    .update({
+      current_stage: stageName.toLowerCase(),
+      stages_completed: stagesCompleted,
+      completion_percentage: completionPercentage,
+      last_activity_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", moduleProgressId);
+
+  if (modUpdateError) {
+    throw new Error(`Failed to update module progress stats: ${modUpdateError.message}`);
+  }
+
+  // 6. If all stages completed, set module status to completed
+  if (stagesCompleted === 6) {
+    const { error: finalModError } = await supabase
+      .from("user_module_progress")
+      .update({
+        module_status: "completed",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", moduleProgressId);
+
+    if (finalModError) {
+      throw new Error(`Failed to finalize module status to completed: ${finalModError.message}`);
+    }
+  }
+
+  return {
+    stageProgressId,
+    stagesCompleted,
+    completionPercentage,
   };
 }

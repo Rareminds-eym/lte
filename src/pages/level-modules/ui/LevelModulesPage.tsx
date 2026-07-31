@@ -1,12 +1,13 @@
 import type React from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useLevelDetails } from "@/entities/course";
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useLevelDetails, useStartLevelProgress } from "@/entities/course";
 import { PageLoader } from "@/shared/ui";
 import {
   LevelHeroBanner,
-  LevelStatsBar,
-  LevelProblemStatement,
   LevelModuleList,
+  LevelProblemStatement,
+  LevelStatsBar,
 } from "@/widgets/level-modules";
 
 export const LevelModulesPage: React.FC = () => {
@@ -17,10 +18,17 @@ export const LevelModulesPage: React.FC = () => {
   }>();
 
   const { data: levelData, isLoading, error } = useLevelDetails(levelId, capabilityCode);
+  const { mutate: startLevel } = useStartLevelProgress();
+
+  useEffect(() => {
+    if (levelId) {
+      startLevel(levelId);
+    }
+  }, [levelId, startLevel]);
 
   const handleContinueLearning = () => {
     if (levelId) {
-      navigate(`/courses/${encodeURIComponent(levelId)}/modules/1`);
+      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/1`);
     }
   };
 
@@ -40,7 +48,8 @@ export const LevelModulesPage: React.FC = () => {
             Course Content Not Available
           </h3>
           <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-            This course content is not available right now. Please go back to your courses and try again.
+            This course content is not available right now. Please go back to your courses and try
+            again.
           </p>
           <button
             type="button"
@@ -75,9 +84,10 @@ export const LevelModulesPage: React.FC = () => {
   const submittedCount = 0;
 
   // Level badge from DB data only
-  const levelBadge = levelData.levelNo && (levelData.levelLabel || levelData.difficultyLevel)
-    ? `LEVEL ${levelData.levelNo} · ${(levelData.levelLabel || levelData.difficultyLevel).toUpperCase()}`
-    : undefined;
+  const levelBadge =
+    levelData.levelNo && (levelData.levelLabel || levelData.difficultyLevel)
+      ? `LEVEL ${levelData.levelNo} · ${(levelData.levelLabel || levelData.difficultyLevel).toUpperCase()}`
+      : undefined;
 
   // Next up: first unpublished module, or first module overall
   const nextUpModule = modulesList.find((m) => !m.isPublished) ?? modulesList[0];
@@ -137,7 +147,7 @@ export const LevelModulesPage: React.FC = () => {
           levelId={levelId}
           onSelectModule={(moduleNo) => {
             if (levelId) {
-              navigate(`/courses/${encodeURIComponent(levelId)}/modules/${moduleNo}`);
+              navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${moduleNo}`);
             }
           }}
         />

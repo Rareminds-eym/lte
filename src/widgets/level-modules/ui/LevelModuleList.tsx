@@ -194,39 +194,58 @@ export interface LevelModuleListProps {
   onSelectModule?: (moduleNo: number) => void;
 }
 
-export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, levelId, onSelectModule }) => {
+export const LevelModuleList: React.FC<LevelModuleListProps> = ({
+  modules,
+  levelId,
+  onSelectModule,
+}) => {
   const navigate = useNavigate();
 
   const displayModules: ModuleItem[] =
     modules && modules.length > 0
       ? modules.map((m, index) => {
-          const defaultMock = mockModules.find((mock) => mock.moduleNumber === m.moduleNo) ?? mockModules[index % mockModules.length];
+          const defaultMock =
+            mockModules.find((mock) => mock.moduleNumber === m.moduleNo) ??
+            mockModules[index % mockModules.length];
 
-            // Status: module 0 (or published) is active, all subsequent unpublished modules are locked
-            let status: "completed" | "active" | "locked";
-            if (index === 0) {
-              status = "active";
-            } else if (m.isPublished) {
+          // Resolve status dynamically based on progress and completeness of preceding modules
+          let status: "completed" | "active" | "locked";
+          const isCompleted =
+            m.isCompleted || (m.progressPercentage !== undefined && m.progressPercentage >= 100);
+
+          if (isCompleted) {
+            status = "completed";
+          } else if (index === 0) {
+            status = "active";
+          } else {
+            const prevModule = modules[index - 1];
+            const isPrevCompleted =
+              prevModule &&
+              (prevModule.isCompleted ||
+                (prevModule.progressPercentage !== undefined &&
+                  prevModule.progressPercentage >= 100));
+            if (isPrevCompleted) {
               status = "active";
             } else {
               status = "locked";
             }
+          }
 
-            // Progress only for active modules (no completion without user progress)
-            const progressPercentage = m.isPublished ? 0 : undefined;
+          // Bind real progress percentage from database summary
+          const progressPercentage = m.progressPercentage;
 
-            return {
-              id: m.id,
-              moduleNumber: m.moduleNo,
-              duration: defaultMock?.duration ?? "2.5 hrs",
-              title: m.title,
-              description: m.description,
-              status,
-              progressPercentage,
-              details: defaultMock?.details ?? mockModules[0]?.details,
-              stages: defaultMock?.stages,
-            };
-          })
+          return {
+            id: m.id,
+            moduleNumber: m.moduleNo,
+            duration: defaultMock?.duration ?? "2.5 hrs",
+            title: m.title,
+            description: m.description,
+            status,
+            progressPercentage,
+            details: defaultMock?.details ?? mockModules[0]?.details,
+            stages: defaultMock?.stages,
+          };
+        })
       : mockModules;
 
   return (
@@ -279,8 +298,8 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                     isCompleted
                       ? "bg-brand-600 text-white ring-4 ring-brand-100"
                       : isActive
-                      ? "bg-brand-500 text-white ring-4 ring-brand-200"
-                      : "bg-slate-200 text-slate-500 border border-slate-300"
+                        ? "bg-brand-500 text-white ring-4 ring-brand-200"
+                        : "bg-slate-200 text-slate-500 border border-slate-300"
                   }`}
                 >
                   {isCompleted ? (
@@ -294,9 +313,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
 
                 {/* Vertical Connector Line */}
                 <div
-                  className={`w-0.5 flex-1 my-1 ${
-                    isCompleted ? "bg-brand-500" : "bg-slate-200"
-                  }`}
+                  className={`w-0.5 flex-1 my-1 ${isCompleted ? "bg-brand-500" : "bg-slate-200"}`}
                 />
               </div>
 
@@ -307,8 +324,8 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                     isActive
                       ? "bg-white border-brand-500 shadow-md ring-1 ring-brand-500/20"
                       : isCompleted
-                      ? "bg-white border-emerald-300 shadow-xs"
-                      : "bg-white border-slate-200 opacity-90"
+                        ? "bg-white border-emerald-300 shadow-xs"
+                        : "bg-white border-slate-200 opacity-90"
                   }`}
                 >
                   {/* Card Header Bar */}
@@ -319,14 +336,19 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                           isActive
                             ? "bg-brand-50 text-brand-700 border border-brand-200"
                             : isCompleted
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-slate-200 text-slate-600"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-slate-200 text-slate-600"
                         }`}
                       >
                         MODULE - {item.moduleNumber}
                       </span>
                       <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -358,12 +380,8 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
 
                   {/* Card Title & Description */}
                   <div className="p-5 sm:p-6 space-y-3 bg-white">
-                    <h4 className="text-lg sm:text-xl font-bold text-slate-900">
-                      {item.title}
-                    </h4>
-                    <p className="text-sm text-slate-600 leading-relaxed">
-                      {item.description}
-                    </p>
+                    <h4 className="text-lg sm:text-xl font-bold text-slate-900">{item.title}</h4>
+                    <p className="text-sm text-slate-600 leading-relaxed">{item.description}</p>
 
                     {/* Detailed 6E Learning Grid matching reference image */}
                     {item.details && (
@@ -394,7 +412,9 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                               ? item.details.prerequisites
                               : item.details.prerequisites.split(/(?<=\.)\s+/).filter(Boolean)
                             ).map((pt, i) => (
-                              <li key={i} className="leading-snug">{pt}</li>
+                              <li key={i} className="leading-snug">
+                                {pt}
+                              </li>
                             ))}
                           </ul>
                         </div>
@@ -412,7 +432,9 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                               ? item.details.commonConfusion
                               : item.details.commonConfusion.split(/(?<=\.)\s+/).filter(Boolean)
                             ).map((pt, i) => (
-                              <li key={i} className="leading-snug">{pt}</li>
+                              <li key={i} className="leading-snug">
+                                {pt}
+                              </li>
                             ))}
                           </ul>
                         </div>
@@ -443,7 +465,9 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                               ? item.details.whatYoullLearn
                               : item.details.whatYoullLearn.split(/(?<=\.)\s+/).filter(Boolean)
                             ).map((pt, i) => (
-                              <li key={i} className="leading-snug">{pt}</li>
+                              <li key={i} className="leading-snug">
+                                {pt}
+                              </li>
                             ))}
                           </ul>
                         </div>
@@ -466,17 +490,45 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                     {/* 6E Framework Stage Tags matching exact Figma design */}
                     {(() => {
                       const defaultStages: StageTag[] = [
-                        { name: "Engage", status: item.status === "completed" ? "completed" : item.status === "active" ? "active" : "locked", duration: "1h 0m" },
-                        { name: "Explore", status: item.status === "completed" ? "completed" : "locked", duration: "45m" },
-                        { name: "Explain", status: item.status === "completed" ? "completed" : "locked", duration: "20m" },
-                        { name: "Express", status: item.status === "completed" ? "completed" : "locked" },
-                        { name: "Empower", status: item.status === "completed" ? "completed" : "locked" },
-                        { name: "Evolve", status: item.status === "completed" ? "completed" : "locked" },
+                        {
+                          name: "Engage",
+                          status:
+                            item.status === "completed"
+                              ? "completed"
+                              : item.status === "active"
+                                ? "active"
+                                : "locked",
+                          duration: "1h 0m",
+                        },
+                        {
+                          name: "Explore",
+                          status: item.status === "completed" ? "completed" : "locked",
+                          duration: "45m",
+                        },
+                        {
+                          name: "Explain",
+                          status: item.status === "completed" ? "completed" : "locked",
+                          duration: "20m",
+                        },
+                        {
+                          name: "Express",
+                          status: item.status === "completed" ? "completed" : "locked",
+                        },
+                        {
+                          name: "Empower",
+                          status: item.status === "completed" ? "completed" : "locked",
+                        },
+                        {
+                          name: "Evolve",
+                          status: item.status === "completed" ? "completed" : "locked",
+                        },
                       ];
-                      const rawStages = item.stages && item.stages.length > 0 ? item.stages : defaultStages;
-                      const stages = item.status === "locked"
-                        ? rawStages.map((s) => ({ ...s, status: "locked" as const }))
-                        : rawStages;
+                      const rawStages =
+                        item.stages && item.stages.length > 0 ? item.stages : defaultStages;
+                      const stages =
+                        item.status === "locked"
+                          ? rawStages.map((s) => ({ ...s, status: "locked" as const }))
+                          : rawStages;
 
                       return (
                         <div className="pt-4 flex flex-wrap gap-2.5">
@@ -503,11 +555,15 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                                   isDone
                                     ? "bg-success-50 text-success-600 border border-success-200 font-medium"
                                     : isActive
-                                    ? "bg-brand-50 text-brand-600 border border-brand-200 font-semibold"
-                                    : "bg-surface-subtle text-content-muted border border-border-default font-normal"
+                                      ? "bg-brand-50 text-brand-600 border border-brand-200 font-semibold"
+                                      : "bg-surface-subtle text-content-muted border border-border-default font-normal"
                                 }`}
                               >
-                                {isDone ? <CheckIcon className="w-3.5 h-3.5 stroke-[2.5]" /> : stageIcon}
+                                {isDone ? (
+                                  <CheckIcon className="w-3.5 h-3.5 stroke-[2.5]" />
+                                ) : (
+                                  stageIcon
+                                )}
                                 <span>{stage.name}</span>
                                 {stage.duration && (
                                   <span
@@ -515,8 +571,8 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                                       isDone
                                         ? "bg-success-100/60 text-success-700"
                                         : isActive
-                                        ? "bg-brand-100 text-brand-700"
-                                        : "bg-surface-muted text-content-muted"
+                                          ? "bg-brand-100 text-brand-700"
+                                          : "bg-surface-muted text-content-muted"
                                     }`}
                                   >
                                     {stage.duration}
@@ -542,7 +598,9 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                               if (onSelectModule) {
                                 onSelectModule(item.moduleNumber);
                               } else if (levelId) {
-                                navigate(`/courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}`);
+                                navigate(
+                                  `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}`,
+                                );
                               }
                             }}
                             className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2 cursor-pointer"
@@ -556,8 +614,18 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                             className="!bg-success-600 hover:!bg-success-700 !text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2"
                           >
                             <span>Submit Artifact</span>
-                            <svg className="w-4 h-4 text-white rotate-[30deg]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            <svg
+                              className="w-4 h-4 text-white rotate-[30deg]"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                              />
                             </svg>
                           </Button>
                         </>
@@ -577,8 +645,18 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
                             className="!bg-success-600 hover:!bg-success-700 !text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2"
                           >
                             <span>Submitted</span>
-                            <svg className="w-4 h-4 text-white rotate-[30deg]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            <svg
+                              className="w-4 h-4 text-white rotate-[30deg]"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                              />
                             </svg>
                           </Button>
                         </>
