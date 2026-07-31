@@ -15,6 +15,7 @@ vi.mock("react-router-dom", async () => {
       state: null,
       key: "default",
     }),
+    useNavigate: () => vi.fn(),
   };
 });
 
