@@ -71,15 +71,20 @@ export interface LevelModuleSummary {
 export interface LevelDetailsResponse {
   id: string;
   levelCode: string;
+  capabilityName?: string;
+  capabilityCode?: string;
   title: string;
   description: string;
   levelProblemStatement: LevelProblemStatement;
   observableBehavior: unknown;
   exampleOutputs: unknown;
   durationMinutes: number;
+  levelNo?: number;
+  levelLabel?: string;
   difficultyLevel: string;
   levelStatus: string;
   versionNo: number;
+  artifactsCount: number;
   modules: LevelModuleSummary[];
 }
 

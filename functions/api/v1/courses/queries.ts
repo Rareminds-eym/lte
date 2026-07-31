@@ -56,13 +56,24 @@ export async function getLevelWithModules(
       difficulty_level,
       status,
       version_no,
+      capabilities (
+        code,
+        name
+      ),
       modules (
         id,
         module_no,
         title,
         description,
         is_published,
-        is_active
+        is_active,
+        modules_content (
+          id,
+          module_artifacts (
+            artifact_type,
+            is_active
+          )
+        )
       )
     `)
     .eq("id", levelId)
@@ -77,6 +88,10 @@ export async function getLevelWithModules(
   }
 
   const rawLevel = data as LevelRow;
+  const capData = Array.isArray(rawLevel.capabilities)
+    ? rawLevel.capabilities[0]
+    : rawLevel.capabilities;
+
   const moduleSummaries: LevelModuleSummary[] = (rawLevel.modules || [])
     .filter((m) => m.is_active === true)
     .sort((a, b) => a.module_no - b.module_no)
@@ -88,9 +103,21 @@ export async function getLevelWithModules(
       isPublished: m.is_published,
     }));
 
+  // Count all active artifacts (practice + final) across all active modules
+  const artifactsCount = (rawLevel.modules || [])
+    .filter((m) => m.is_active === true)
+    .flatMap((m) => m.modules_content || [])
+    .flatMap((mc) => mc.module_artifacts || [])
+    .filter((a) => a.is_active === true)
+    .length;
+
   return {
     id: rawLevel.id,
     levelCode: rawLevel.level_code,
+    capabilityCode: capData?.code,
+    capabilityName: capData?.name,
+    levelNo: 1,
+    levelLabel: rawLevel.difficulty_level,
     title: rawLevel.title,
     description: rawLevel.description,
     levelProblemStatement: normalizeLevelProblemStatement(
@@ -104,6 +131,7 @@ export async function getLevelWithModules(
     difficultyLevel: rawLevel.difficulty_level,
     levelStatus: rawLevel.status,
     versionNo: rawLevel.version_no,
+    artifactsCount,
     modules: moduleSummaries,
   };
 }

@@ -1,5 +1,9 @@
 import { getLevelWithModules, getModuleDetails } from "@functions/api/v1/courses/queries";
-import { LevelIdParamsSchema, LevelModuleParamsSchema } from "@functions/api/v1/courses/schemas";
+import {
+  CapabilityLevelParamsSchema,
+  LevelIdParamsSchema,
+  LevelModuleParamsSchema,
+} from "@functions/api/v1/courses/schemas";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 
@@ -18,6 +22,18 @@ describe("Level Content API Schemas & Queries", () => {
     it("rejects empty level id params", () => {
       const res = LevelIdParamsSchema.safeParse({ levelId: "" });
       expect(res.success).toBe(false);
+    });
+
+    it("validates capabilityCode and levelId params", () => {
+      const res = CapabilityLevelParamsSchema.safeParse({
+        capabilityCode: "backend-engineering",
+        levelId,
+      });
+      expect(res.success).toBe(true);
+      if (res.success) {
+        expect(res.data.levelId).toBe(levelId);
+        expect(res.data.capabilityCode).toBe("backend-engineering");
+      }
     });
 
     it("validates valid level and module params", () => {

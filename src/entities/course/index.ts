@@ -31,8 +31,11 @@ export { useCapabilityLevels } from "./model/useCapabilityLevels";
 export { useCourses } from "./model/useCourses";
 export {
   getLevelContentQueryKey,
+  getLevelDetailsQueryKey,
   LEVEL_CONTENT_QUERY_KEY,
+  LEVEL_DETAILS_QUERY_KEY,
   useLevelContentData,
+  useLevelDetails,
 } from "./model/useLevelContentData";
 export {
   CourseCard,

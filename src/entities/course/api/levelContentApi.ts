@@ -7,8 +7,14 @@ import type { LevelDetailsResponse, ModuleDetailsResponse } from "../model/level
 
 const LEVEL_API_BASE = "/api/v1/courses";
 
-export async function fetchLevelDetails(levelId: string): Promise<LevelDetailsResponse> {
-  const payload = await apiGet<unknown>(`${LEVEL_API_BASE}/${encodeURIComponent(levelId)}`);
+export async function fetchLevelDetails(
+  levelId: string,
+  capabilityCode: string,
+): Promise<LevelDetailsResponse> {
+  const url = capabilityCode
+    ? `${LEVEL_API_BASE}/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`
+    : `${LEVEL_API_BASE}/${encodeURIComponent(levelId)}`;
+  const payload = await apiGet<unknown>(url);
   const parsedPayload = LevelDetailsPayloadSchema.parse(payload);
   return parsedPayload.level;
 }

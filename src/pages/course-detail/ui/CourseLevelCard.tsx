@@ -2,6 +2,7 @@ import type React from "react";
 import { Button } from "@/shared/ui";
 
 export interface CourseLevelCardProps {
+  id?: string;
   levelNumber: number;
   code: string;
   title: string;

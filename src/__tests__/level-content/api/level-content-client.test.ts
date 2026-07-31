@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchLevelDetails, fetchLevelModuleDetails } from "@/entities/course";
 
 const levelId = "0a010796-10c0-5287-b89a-6ab56bd71399";
+const capabilityCode = "HTT-IND-CAP-01";
 
 const levelPayload = {
   success: true,
@@ -80,8 +81,8 @@ describe("level content client API", () => {
       }),
     );
 
-    await expect(fetchLevelDetails(levelId)).resolves.toEqual(levelPayload.level);
-    expect(fetchMock).toHaveBeenCalledWith(`/api/v1/courses/${levelId}`, {
+    await expect(fetchLevelDetails(levelId, capabilityCode)).resolves.toEqual(levelPayload.level);
+    expect(fetchMock).toHaveBeenCalledWith(`/api/v1/courses/${capabilityCode}/levels/${levelId}`, {
       credentials: "include",
       method: "GET",
     });
@@ -110,6 +111,6 @@ describe("level content client API", () => {
       }),
     );
 
-    await expect(fetchLevelDetails(levelId)).rejects.toThrow();
+    await expect(fetchLevelDetails(levelId, capabilityCode)).rejects.toThrow();
   });
 });

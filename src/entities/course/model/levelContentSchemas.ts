@@ -92,15 +92,20 @@ export const LevelModuleSummarySchema = z.object({
 export const LevelDetailsResponseSchema = z.object({
   id: z.string(),
   levelCode: z.string(),
+  capabilityName: z.string().optional(),
+  capabilityCode: z.string().optional(),
   title: z.string(),
   description: z.string(),
   levelProblemStatement: LevelProblemStatementSchema,
   observableBehavior: z.unknown(),
   exampleOutputs: z.unknown(),
   durationMinutes: z.number(),
+  levelNo: z.number().optional(),
+  levelLabel: z.string().optional(),
   difficultyLevel: z.string(),
   levelStatus: z.string(),
   versionNo: z.number(),
+  artifactsCount: z.number(),
   modules: z.array(LevelModuleSummarySchema),
 });
 
