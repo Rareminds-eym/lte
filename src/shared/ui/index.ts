@@ -11,6 +11,15 @@ export { InlineSpinner } from "./InlineSpinner";
 export * from "./icons";
 export { PageLoader } from "./PageLoader";
 export { RouteContentSkeleton, RouteLoadingBoundary } from "./RouteLoadingBoundary";
+export {
+  SegmentedControl,
+  type SegmentedControlProps,
+  type SegmentedOption,
+} from "./SegmentedControl";
+export {
+  SegmentedProgressBar,
+  type SegmentedProgressBarProps,
+} from "./SegmentedProgressBar";
 export { Skeleton, SkeletonGroup } from "./Skeleton";
 // Toast notifications
 export { Toaster, toast } from "./Toast";

@@ -27,6 +27,32 @@ const UserCapabilitiesResponseSchema = z.object({
 
 type UserCapabilityResponse = z.infer<typeof UserCapabilitySchema>;
 
+export const CapabilityLevelSchema = z
+  .object({
+    id: z.string(),
+    levelNumber: z.number(),
+    code: z.string(),
+    title: z.string(),
+    description: z.array(z.string()).or(z.string()),
+    deliverables: z.array(z.string()),
+    durationMinutes: z.number(),
+    difficulty: z.string(),
+    status: z.string(),
+  })
+  .transform((val) => ({
+    ...val,
+    description: Array.isArray(val.description) ? val.description.join(" ") : val.description,
+  }));
+
+export type CapabilityLevel = z.infer<typeof CapabilityLevelSchema>;
+
+const CapabilityLevelsResponseSchema = z.object({
+  success: z.literal(true),
+  capability: z.object({ id: z.string(), code: z.string(), name: z.string() }),
+  levels: z.array(CapabilityLevelSchema),
+  count: z.number().optional(),
+});
+
 async function fetchUserCapabilities(): Promise<UserCapabilityResponse[]> {
   const raw = await apiFetch("/api/v1/capabilities/user", {
     method: "GET",
@@ -68,4 +94,17 @@ export async function fetchUserCourses(): Promise<Course[]> {
   apiLogger.info("fetching user courses");
   const capabilities = await fetchUserCapabilities();
   return capabilities.map((cap, i) => mapCapabilityToCourse(cap, i));
+}
+
+export async function fetchCapabilityLevels(capabilityCode: string): Promise<CapabilityLevel[]> {
+  const raw = await apiFetch(`/api/v1/capabilities/${encodeURIComponent(capabilityCode)}/levels`, {
+    method: "GET",
+  });
+
+  const parsed = CapabilityLevelsResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new ApiError("Invalid response format from server");
+  }
+
+  return parsed.data.levels;
 }

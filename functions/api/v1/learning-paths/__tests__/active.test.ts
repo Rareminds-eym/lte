@@ -1,6 +1,7 @@
 import { AuthError, requireAuth } from "@functions/lib/auth";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import type { AuthUser } from "@rareminds-eym/auth-core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestGet } from "../active";
@@ -30,11 +31,14 @@ function chainable(terminal: Record<string, unknown> = {}) {
 }
 
 describe("GET /api/v1/learning-paths/active", () => {
-  const mockUser = {
+  const mockUser: AuthUser = {
     sub: "user-uuid-1234",
     email: "learner@rareminds.com",
-    products: ["lte"],
+    org_id: "org-1",
     roles: ["learner"],
+    products: ["lte"],
+    membership_status: "active",
+    is_email_verified: true,
   };
 
   beforeEach(() => {
@@ -53,7 +57,7 @@ describe("GET /api/v1/learning-paths/active", () => {
   });
 
   it("returns null data when no active path", async () => {
-    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser as never);
+    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const mockSupabase = {
       from: vi
         .fn()
@@ -72,7 +76,7 @@ describe("GET /api/v1/learning-paths/active", () => {
   });
 
   it("returns active path data when one exists", async () => {
-    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser as never);
+    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const mockSupabase = {
       from: vi.fn().mockImplementation((table: string) => {
         if (table === "learning_paths") {

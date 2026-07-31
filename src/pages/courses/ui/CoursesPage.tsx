@@ -3,7 +3,7 @@ import { CourseCard, CourseCardGridSkeleton, useCourses } from "@/entities/cours
 import { useAuthStore } from "@/entities/session";
 import { getLogger } from "@/shared";
 import { cn } from "@/shared/lib";
-import { Button } from "@/shared/ui";
+import { Button, SegmentedControl } from "@/shared/ui";
 import { Pagination } from "@/widgets";
 import {
   COURSE_PAGE_SIZE,
@@ -186,34 +186,23 @@ export const CoursesPage = () => {
           <span className="text-sm text-content-secondary font-medium">
             {filteredCourses.length} courses
           </span>
-          <div className="flex items-center border border-line-default rounded-lg overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setViewMode("grid")}
-              aria-label="Grid view"
-              className={cn(
-                "p-1.5 transition-colors cursor-pointer",
-                viewMode === "grid"
-                  ? "bg-surface-muted text-content-primary"
-                  : "text-content-muted hover:text-content-secondary",
-              )}
-            >
-              <GridIcon />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              aria-label="List view"
-              className={cn(
-                "p-1.5 transition-colors cursor-pointer",
-                viewMode === "list"
-                  ? "bg-surface-muted text-content-primary"
-                  : "text-content-muted hover:text-content-secondary",
-              )}
-            >
-              <ListIcon />
-            </button>
-          </div>
+          <SegmentedControl
+            value={viewMode}
+            onChange={(v) => setViewMode(v as "grid" | "list")}
+            ariaLabel="Display type"
+            options={[
+              {
+                value: "grid",
+                label: "Grid view",
+                icon: <GridIcon />,
+              },
+              {
+                value: "list",
+                label: "List view",
+                icon: <ListIcon />,
+              },
+            ]}
+          />
         </div>
       </div>
 
@@ -345,14 +334,14 @@ const GridIcon: React.FC = () => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2"
+    strokeWidth="2.5"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <rect x="3" y="3" width="7" height="7" />
-    <rect x="14" y="3" width="7" height="7" />
-    <rect x="14" y="14" width="7" height="7" />
-    <rect x="3" y="14" width="7" height="7" />
+    <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.5" />
+    <rect x="14" y="3.5" width="6.5" height="6.5" rx="1.5" />
+    <rect x="14" y="14" width="6.5" height="6.5" rx="1.5" />
+    <rect x="3.5" y="14" width="6.5" height="6.5" rx="1.5" />
   </svg>
 );
 
@@ -363,15 +352,15 @@ const ListIcon: React.FC = () => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2"
+    strokeWidth="2.5"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <line x1="8" y1="6" x2="21" y2="6" />
-    <line x1="8" y1="12" x2="21" y2="12" />
-    <line x1="8" y1="18" x2="21" y2="18" />
-    <line x1="3" y1="6" x2="3.01" y2="6" />
-    <line x1="3" y1="12" x2="3.01" y2="12" />
-    <line x1="3" y1="18" x2="3.01" y2="18" />
+    <line x1="9" y1="6" x2="20" y2="6" />
+    <line x1="9" y1="12" x2="20" y2="12" />
+    <line x1="9" y1="18" x2="20" y2="18" />
+    <circle cx="4.5" cy="6" r="1" fill="currentColor" />
+    <circle cx="4.5" cy="12" r="1" fill="currentColor" />
+    <circle cx="4.5" cy="18" r="1" fill="currentColor" />
   </svg>
 );

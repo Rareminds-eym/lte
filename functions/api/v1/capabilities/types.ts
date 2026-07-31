@@ -68,3 +68,23 @@ export interface GetCapabilitiesBatchResponse {
   capabilities: Record<string, Capability[]>;
   error?: string;
 }
+
+export interface CapabilityLevel {
+  id: string;
+  levelNumber: number;
+  code: string;
+  title: string;
+  description: string;
+  deliverables: string[];
+  durationMinutes: number;
+  difficulty: string;
+  status: string;
+}
+
+export interface CapabilityLevelsResponse {
+  success: boolean;
+  capability: { id: string; code: string; name: string };
+  levels: CapabilityLevel[];
+  count?: number;
+  error?: string;
+}

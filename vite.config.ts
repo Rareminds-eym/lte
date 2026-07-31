@@ -1,3 +1,4 @@
+import path from "node:path";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
@@ -15,7 +16,17 @@ export default defineConfig({
 	],
 	resolve: {
 		tsconfigPaths: true,
-  },
+		...(process.env.VITEST
+			? {
+					alias: {
+						"@file-viewer/pptx": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						"docx-preview": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						"pdfjs-dist": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						xlsx: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+				}
+			: {}),
+	},
   optimizeDeps: {
     exclude: ["@file-viewer/pptx"],
   },
@@ -35,6 +46,7 @@ export default defineConfig({
 	build: {
 		outDir: "dist",
 		sourcemap: "hidden",
+		chunkSizeWarningLimit: 2500,
 		rollupOptions: {
 			output: {
 				manualChunks(id) {
@@ -46,6 +58,29 @@ export default defineConfig({
 						normalized.includes("node_modules/react-router-dom/")
 					) {
 						return "framework";
+					}
+					if (normalized.includes("node_modules/pdfjs-dist/")) {
+						return "pdf-vendor";
+					}
+					if (
+						normalized.includes("node_modules/xlsx/")
+					) {
+						return "spreadsheet-vendor";
+					}
+					if (
+						normalized.includes("node_modules/docx-preview/")
+					) {
+						return "docx-vendor";
+					}
+					if (
+						normalized.includes("node_modules/@file-viewer/") ||
+						normalized.includes("node_modules/billboard.js/") ||
+						normalized.includes("node_modules/d3-")
+					) {
+						return "pptx-vendor";
+					}
+					if (normalized.includes("node_modules/@tanstack/react-query/")) {
+						return "query-vendor";
 					}
 				},
 			},

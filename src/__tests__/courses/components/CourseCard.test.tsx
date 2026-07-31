@@ -115,25 +115,19 @@ describe("CourseCard", () => {
     expect(screen.queryByText("TST-L2")).not.toBeInTheDocument();
   });
 
-  it("navigates to course detail on Start click", () => {
-    renderWithRouter(<CourseCard course={{ ...baseCourse, status: "not_started", progress: 0 }} />);
-    fireEvent.click(screen.getByText("Start"));
-    expect(mockNavigate).toHaveBeenCalledWith("/my-courses/TEST-CAP-01");
-  });
-
-  it("navigates to course detail on Continue click", () => {
-    renderWithRouter(<CourseCard course={baseCourse} />);
-    fireEvent.click(screen.getByText("Continue"));
-    expect(mockNavigate).toHaveBeenCalledWith("/my-courses/TEST-CAP-01");
-  });
-
-  it("navigates to course detail on Review click", () => {
-    renderWithRouter(<CourseCard course={{ ...baseCourse, status: "completed", progress: 100 }} />);
-    fireEvent.click(screen.getByText("Review"));
+  it.each([
+    ["Start", "not_started", 0],
+    ["Continue", "in_progress", 50],
+    ["Review", "completed", 100],
+  ] as const)("navigates to detail page when %s is clicked", (label, status, progress) => {
+    mockNavigate.mockClear();
+    renderWithRouter(<CourseCard course={{ ...baseCourse, status, progress }} />);
+    fireEvent.click(screen.getByText(label));
     expect(mockNavigate).toHaveBeenCalledWith("/my-courses/TEST-CAP-01");
   });
 
   it("encodes special characters in capabilityCode", () => {
+    mockNavigate.mockClear();
     renderWithRouter(
       <CourseCard
         course={{

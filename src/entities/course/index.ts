@@ -27,6 +27,7 @@ export type {
   ModuleStageContent,
 } from "./model/levelContentTypes";
 export type { Course, CourseStatus } from "./model/types";
+export { useCapabilityLevels } from "./model/useCapabilityLevels";
 export { useCourses } from "./model/useCourses";
 export {
   getLevelContentQueryKey,
@@ -40,8 +41,6 @@ export {
   CourseCardSkeleton,
   CourseGridSkeleton,
   CourseSkeleton,
-  PptxContentViewer,
-  type PptxContentViewerProps,
   ResourceContentViewer,
   type ResourceContentViewerProps,
 } from "./ui";
