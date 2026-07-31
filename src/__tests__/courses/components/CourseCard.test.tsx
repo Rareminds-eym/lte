@@ -141,4 +141,12 @@ describe("CourseCard", () => {
     fireEvent.click(screen.getByText("Start"));
     expect(mockNavigate).toHaveBeenCalledWith("/my-courses/CAP%2F123%26test");
   });
+
+  it("renders correctly in list variant", () => {
+    renderWithRouter(<CourseCard course={baseCourse} variant="list" />);
+    expect(screen.getByText("Test Course")).toBeInTheDocument();
+    const img = screen.getByRole("img");
+    expect(img).toHaveAttribute("alt", "Test Course");
+    expect(img).toHaveAttribute("loading", "lazy");
+  });
 });
