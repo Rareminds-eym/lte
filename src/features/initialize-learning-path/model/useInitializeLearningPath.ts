@@ -1,13 +1,20 @@
 import { useMutation } from "@tanstack/react-query";
-import { ApiError } from "@/shared/api";
+import { ApiError } from "@/shared";
 import { initializeLearningPath } from "../api/initializeLearningPath";
 import type { InitializeLearningPathPayload } from "./initializeLearningPath.schema";
 
 export const useInitializeLearningPath = () => {
   return useMutation({
-    mutationFn: ({ payload }: { payload: InitializeLearningPathPayload }) =>
+    mutationFn: ({
+      payload,
+      accessToken,
+    }: {
+      payload: InitializeLearningPathPayload;
+      accessToken: string;
+    }) =>
       initializeLearningPath({
         payload,
+        accessToken,
       }),
 
     retry: (failureCount, error) => {

@@ -1,7 +1,8 @@
 import { create } from "zustand";
+import { fetchActiveLearningPath } from "@/entities/active-learning-path";
 import { getLogger } from "@/shared";
 import { exchangeSsoCode, fetchMe, logoutSession, refreshSession } from "@/shared/api/authApi";
-import type { AuthUser } from "@/shared/types/auth";
+import type { ActiveLearningPath, AuthUser } from "@/shared/types/auth";
 
 const logger = getLogger("authStore");
 
@@ -12,6 +13,8 @@ interface AuthState {
   loading: boolean;
   initialized: boolean;
   error: string | null;
+  activeLearningPath: ActiveLearningPath | null;
+  activeLearningPathLoading: boolean;
   initialize: () => Promise<void>;
   exchangeCode: (params: {
     code: string;
@@ -21,6 +24,7 @@ interface AuthState {
   }) => Promise<void>;
   logout: () => Promise<void>;
   setAccessToken: (accessToken: string | null) => void;
+  fetchAndSetActiveLearningPath: () => Promise<void>;
 }
 
 function buildAuthenticatedState(accessToken: string, user: AuthUser): Partial<AuthState> {
@@ -31,17 +35,38 @@ function buildSignedOutState(error: string | null = null): Partial<AuthState> {
   return { accessToken: null, user: null, isAuthenticated: false, error };
 }
 
-export const useAuthStore = create<AuthState>((set, _get) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   user: null,
   isAuthenticated: false,
   loading: true,
   initialized: false,
   error: null,
+  activeLearningPath: null,
+  activeLearningPathLoading: false,
 
   setAccessToken: (accessToken) => {
     logger.info("setAccessToken", { accessToken: accessToken ? "SET" : "NULL" });
     set({ accessToken });
+  },
+
+  fetchAndSetActiveLearningPath: async () => {
+    set({ activeLearningPathLoading: true });
+    try {
+      const { accessToken } = get();
+      if (!accessToken) {
+        set({ activeLearningPath: null, activeLearningPathLoading: false });
+        return;
+      }
+      const path = await fetchActiveLearningPath(accessToken);
+      set({ activeLearningPath: path, activeLearningPathLoading: false });
+      logger.info("fetchAndSetActiveLearningPath", { hasPath: !!path });
+    } catch (error) {
+      logger.warn("fetchAndSetActiveLearningPath failed", {
+        message: error instanceof Error ? error.message : "unknown",
+      });
+      set({ activeLearningPath: null, activeLearningPathLoading: false });
+    }
   },
 
   initialize: async () => {
@@ -68,6 +93,7 @@ export const useAuthStore = create<AuthState>((set, _get) => ({
         initialized: true,
       });
       logger.info("initialize succeeded");
+      await get().fetchAndSetActiveLearningPath();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Session initialization failed";
       logger.info("initialize failed", { message });
@@ -105,6 +131,7 @@ export const useAuthStore = create<AuthState>((set, _get) => ({
         initialized: true,
         userEmail: exchanged.user?.email,
       });
+      await get().fetchAndSetActiveLearningPath();
     } catch (error) {
       const message = error instanceof Error ? error.message : "SSO exchange failed";
       logger.error("Exchange failed", error instanceof Error ? error : new Error(message));
@@ -119,6 +146,8 @@ export const useAuthStore = create<AuthState>((set, _get) => ({
       ...buildSignedOutState(null),
       loading: false,
       initialized: true,
+      activeLearningPath: null,
+      activeLearningPathLoading: false,
     });
   },
 }));
@@ -132,6 +161,8 @@ if (import.meta.env.DEV) {
       hasAccessToken: !!state.accessToken,
       loading: state.loading,
       error: state.error,
+      hasActiveLearningPath: !!state.activeLearningPath,
+      activeLearningPathLoading: state.activeLearningPathLoading,
     });
   });
 }

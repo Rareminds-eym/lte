@@ -1,10 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "@/entities/session";
 import { fetchUserCourses } from "../api/courseApi";
 
-export const useCourses = (userId?: string, options?: { enabled?: boolean }) => {
+export const useCourses = () => {
+  const accessToken = useAuthStore((s) => s.accessToken);
+
   return useQuery({
-    queryKey: ["userCourses", userId],
-    queryFn: () => fetchUserCourses(),
+    queryKey: ["userCourses", accessToken],
+    queryFn: ({ queryKey }) => fetchUserCourses(queryKey[1] as string),
+    enabled: !!accessToken,
     staleTime: 1000 * 60 * 5,
     retry: (failureCount, error) => {
       if (
@@ -19,6 +23,5 @@ export const useCourses = (userId?: string, options?: { enabled?: boolean }) => 
       return failureCount < 2;
     },
     retryDelay: (attemptIndex) => Math.min(1_000 * 2 ** attemptIndex, 4_000),
-    ...options,
   });
 };

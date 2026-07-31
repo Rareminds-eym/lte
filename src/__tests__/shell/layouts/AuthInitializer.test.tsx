@@ -4,16 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthInitializer } from "@/app/providers/AuthInitializer";
 import { useAuthStore } from "@/entities/session";
 
-// Mock the active learning path store to isolate auth testing
-vi.mock("@/entities/active-learning-path", () => ({
-  useLearningPathStore: {
-    getState: () => ({
-      fetchAndSetActiveLearningPath: vi.fn().mockResolvedValue(undefined),
-      clearActiveLearningPath: vi.fn(),
-    }),
-  },
-}));
-
 // Mock the shared Image component used by ApplicationLoader
 vi.mock("@/shared/ui/Image", () => ({
   Image: ({ alt }: { alt: string }) => <img alt={alt} />,
@@ -58,57 +48,95 @@ beforeEach(() => {
 });
 
 describe("AuthInitializer", () => {
-  it("renders loader during silent refresh on startup", () => {
+  it("shows ApplicationLoader when loading=true and initialized=false", () => {
+    useAuthStore.setState({ loading: true, initialized: false });
     renderAuthInitializer("/");
     expect(screen.getByTestId("application-loader")).toBeInTheDocument();
-    expect(screen.getByText("Initializing application state…")).toBeInTheDocument();
     expect(screen.queryByText(CHILD_CONTENT)).not.toBeInTheDocument();
   });
 
-  it("renders children once initialize completes successfully", async () => {
-    const { rerender } = renderAuthInitializer("/");
-    expect(screen.getByTestId("application-loader")).toBeInTheDocument();
-
-    useAuthStore.setState({ loading: false, initialized: true, isAuthenticated: true });
-
-    rerender(
-      <MemoryRouter initialEntries={["/"]}>
-        <AuthInitializer>
-          <div>{CHILD_CONTENT}</div>
-        </AuthInitializer>
-      </MemoryRouter>,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(CHILD_CONTENT)).toBeInTheDocument();
-    });
+  it("renders children once auth is initialized", () => {
+    useAuthStore.setState({ loading: false, initialized: true });
+    renderAuthInitializer("/");
+    expect(screen.getByText(CHILD_CONTENT)).toBeInTheDocument();
     expect(screen.queryByTestId("application-loader")).not.toBeInTheDocument();
   });
 
-  it("exchanges sso code on callback path", async () => {
-    useAuthStore.setState({ loading: false, initialized: false });
-    renderAuthInitializer("/auth/callback?code=abc&state=def");
-
-    expect(screen.getByTestId("application-loader")).toBeInTheDocument();
-    expect(screen.getByText("Completing sign in…")).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(useAuthStore.getState().exchangeCode).toHaveBeenCalledWith(
-        expect.objectContaining({
-          code: "abc",
-          state: "def",
-          redirectUri: expect.stringContaining("/auth/callback"),
-        }),
-      );
-    });
-  });
-
-  it("displays callback exchange error status on failure", async () => {
-    const exchangeSpy = vi.fn().mockRejectedValue(new Error("SSO failed"));
+  it("calls initialize on mount when not authenticated and not initialized", () => {
+    const initializeSpy = vi.fn().mockResolvedValue(undefined);
     useAuthStore.setState({
       loading: false,
       initialized: false,
-      exchangeCode: exchangeSpy,
+      isAuthenticated: false,
+      initialize: initializeSpy,
+    });
+    renderAuthInitializer("/dashboard");
+    expect(initializeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call initialize when already authenticated and initialized", () => {
+    const initializeSpy = vi.fn().mockResolvedValue(undefined);
+    useAuthStore.setState({
+      loading: false,
+      initialized: true,
+      isAuthenticated: true,
+      initialize: initializeSpy,
+    });
+    renderAuthInitializer("/dashboard");
+    expect(initializeSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not call initialize during callback exchange phase", () => {
+    const initializeSpy = vi.fn().mockResolvedValue(undefined);
+    useAuthStore.setState({
+      initialized: false,
+      isAuthenticated: false,
+      initialize: initializeSpy,
+      exchangeCode: vi.fn(() => new Promise<void>(() => {})),
+    });
+    renderAuthInitializer("/auth/callback?code=abc&state=def");
+    expect(screen.getByTestId("application-loader")).toBeInTheDocument();
+    expect(initializeSpy).not.toHaveBeenCalled();
+  });
+
+  it("navigates to /dashboard after a successful SSO code exchange", async () => {
+    useAuthStore.setState({
+      exchangeCode: vi.fn().mockResolvedValue(undefined),
+    });
+    renderAuthInitializer("/auth/callback?code=abc&state=def");
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+    });
+  });
+
+  it("navigates to custom `next` param URL after a successful exchange", async () => {
+    const exchangeCodeSpy = vi.fn().mockResolvedValue(undefined);
+    useAuthStore.setState({ exchangeCode: exchangeCodeSpy });
+    renderAuthInitializer("/auth/callback?code=abc&state=def&next=%2Fmy-courses%2FSEC-OPS-01");
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/my-courses/SEC-OPS-01", { replace: true });
+    });
+    expect(exchangeCodeSpy).toHaveBeenCalledWith({
+      code: "abc",
+      state: "def",
+      redirectUri: `${window.location.origin}/auth/callback`,
+      targetNext: "/my-courses/SEC-OPS-01",
+    });
+  });
+
+  it("rejects protocol-relative next values and falls back to /dashboard", async () => {
+    useAuthStore.setState({
+      exchangeCode: vi.fn().mockResolvedValue(undefined),
+    });
+    renderAuthInitializer("/auth/callback?code=abc&state=def&next=.//example.com");
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+    });
+  });
+
+  it("shows an error message and action buttons when SSO exchange fails", async () => {
+    useAuthStore.setState({
+      exchangeCode: vi.fn().mockRejectedValue(new Error("SSO failed")),
     });
     renderAuthInitializer("/auth/callback?code=abc&state=def");
     await waitFor(() => {
