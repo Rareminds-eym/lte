@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Course } from "@/entities/course";
 import { fetchUserCourses } from "@/entities/course/api/courseApi";
+import { registerTokenGetter } from "@/shared/api";
 
 function mockFetch(status: number, body: unknown): void {
   globalThis.fetch = vi.fn().mockResolvedValue({
@@ -12,7 +13,14 @@ function mockFetch(status: number, body: unknown): void {
 }
 
 describe("courseApi", () => {
-  afterEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    registerTokenGetter(() => "token");
+  });
+
+  afterEach(() => {
+    registerTokenGetter(() => null);
+    vi.restoreAllMocks();
+  });
 
   describe("fetchUserCourses", () => {
     const cap = {
@@ -31,7 +39,7 @@ describe("courseApi", () => {
 
     it("maps capability to course shape", async () => {
       mockFetch(200, { success: true, capabilities: [cap] });
-      const courses: Course[] = await fetchUserCourses("token");
+      const courses: Course[] = await fetchUserCourses();
       expect(courses).toHaveLength(1);
       expect(courses[0]).toMatchObject({
         id: "cap-1",
@@ -61,28 +69,27 @@ describe("courseApi", () => {
           },
         ],
       });
-      const courses = await fetchUserCourses("token");
-      const course = courses[0]!;
-      expect(course.capabilityCode).toMatch(/^CAP-/);
-      expect(course.priority).toBe("");
+      const courses = await fetchUserCourses();
+      expect(courses[0]?.capabilityCode).toBe("CAP-1");
     });
 
-    it("returns empty array when no capabilities", async () => {
-      mockFetch(200, { success: true, capabilities: [] });
-      const courses = await fetchUserCourses("token");
-      expect(courses).toEqual([]);
+    it("throws on non-ok status with backend error message", async () => {
+      mockFetch(400, { error: { message: "Invalid request" } });
+      await expect(fetchUserCourses()).rejects.toThrow("Invalid request");
     });
 
-    it("throws on non-ok response", async () => {
-      mockFetch(401, { success: false, error: { message: "Unauthorized" } });
-      await expect(fetchUserCourses("bad-token")).rejects.toThrow("Unauthorized");
+    it("throws fallback error message when JSON body parse fails", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.reject(new Error("Parse fail")),
+      });
+      await expect(fetchUserCourses()).rejects.toThrow("Request failed with status 500");
     });
 
-    it("throws on failed success flag", async () => {
-      mockFetch(200, { success: false });
-      await expect(fetchUserCourses("token")).rejects.toThrow(
-        "Invalid response format from server",
-      );
+    it("throws error when ok response but JSON invalid format", async () => {
+      mockFetch(200, { success: false }); // schema safeParse fails
+      await expect(fetchUserCourses()).rejects.toThrow("Invalid response format from server");
     });
   });
 });
