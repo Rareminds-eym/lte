@@ -1,41 +1,7 @@
-import type React from "react";
 import { Fragment } from "react";
-import {
-  BeakerIcon,
-  Button,
-  CheckIcon,
-  CodeBracketsIcon,
-  type IconProps,
-  LayerStackIcon,
-  LightbulbIcon,
-  LightningBoltIcon,
-  TrendingArrowIcon,
-} from "@/shared/ui";
-import type { LteStage } from "@/widgets/LevelHeader";
-
-export interface StageStepInfo {
-  id: LteStage;
-  label: string;
-  subtitle: string;
-  icon: React.FC<IconProps>;
-}
-
-export const STAGE_STEPS: StageStepInfo[] = [
-  { id: "engage", label: "Engage", subtitle: "Hook & Context", icon: LightbulbIcon },
-  { id: "explore", label: "Explore", subtitle: "Investigate", icon: BeakerIcon },
-  { id: "explain", label: "Explain", subtitle: "Learn Concepts", icon: LayerStackIcon },
-  { id: "express", label: "Express", subtitle: "Practice", icon: CodeBracketsIcon },
-  { id: "empower", label: "Empower", subtitle: "Apply", icon: LightningBoltIcon },
-  { id: "evolve", label: "Evolve", subtitle: "Reflect & Grow", icon: TrendingArrowIcon },
-];
-
-export interface StageStepperBarProps {
-  activeStage?: LteStage;
-  completedStages?: LteStage[];
-  stageOverrides?: Partial<Record<LteStage, Pick<StageStepInfo, "subtitle" | "icon">>>;
-  onStageSelect?: (stage: LteStage) => void;
-  className?: string;
-}
+import { Button, CheckIcon } from "@/shared/ui";
+import { STAGE_STEPS } from "./constants";
+import type { StageStepperBarProps } from "./types";
 
 export const StageStepperBar: React.FC<StageStepperBarProps> = ({
   activeStage = "engage",
