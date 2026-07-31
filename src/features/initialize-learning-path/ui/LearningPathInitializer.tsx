@@ -115,9 +115,10 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
             .getState()
             .fetchAndSetActiveLearningPath()
             .catch((error: unknown) => {
-              logger.warn("Failed to fetch active learning path", {
-                error: error instanceof Error ? error.message : String(error),
-              });
+              logger.error(
+                "Failed to fetch active learning path",
+                error instanceof Error ? error : new Error(String(error)),
+              );
             });
           navigate(buildCourseDetailUrl(capabilityCode), {
             replace: true,
