@@ -2,10 +2,11 @@ import type React from "react";
 import { useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useLocation, useParams } from "react-router-dom";
-import { useCapabilityLevels, useCourses } from "@/entities/course";
+import { CourseCardGridSkeleton, useCapabilityLevels, useCourses } from "@/entities/course";
+import { useAuthStore } from "@/entities/session";
 import { LearningPathInitializer } from "@/features/initialize-learning-path";
 import { getLogger } from "@/shared";
-import { ErrorFallback, SegmentedControl, toast } from "@/shared/ui";
+import { Button, ErrorFallback, SegmentedControl, toast } from "@/shared/ui";
 
 import { mapApiLevelsToCards } from "../model/dynamicLevels";
 import { CourseDetailSkeleton } from "./CourseDetailSkeleton";
@@ -32,9 +33,16 @@ export const CourseDetailPage: React.FC = () => {
   const { capabilityCode } = useParams<{ capabilityCode: string }>();
   const location = useLocation();
 
+  const userId = useAuthStore((s) => s.user?.id);
   // Fetch remote user courses & capabilities state via TanStack Query
-  const { data: courses, isPending, error } = useCourses();
-  const { data: apiLevels } = useCapabilityLevels(capabilityCode ?? "");
+  const { data: courses, isPending, error } = useCourses(userId ?? undefined);
+  const {
+    data: apiLevels,
+    isPending: isLevelsPending,
+    isError: isLevelsError,
+    error: levelsError,
+    refetch: refetchLevels,
+  } = useCapabilityLevels(capabilityCode ?? "");
   const [displayType, setDisplayType] = useState<"card" | "list">("card");
 
   const initError = hasInitError(location.state) ? location.state.initializationError : undefined;
@@ -231,8 +239,31 @@ export const CourseDetailPage: React.FC = () => {
             />
           </div>
 
-          {/* Level Cards */}
-          {dynamicLevelCards.length === 0 ? (
+          {/* Level Cards Section Content with Loading, Error, Retry, and Empty States */}
+          {isLevelsPending ? (
+            <CourseCardGridSkeleton count={3} />
+          ) : isLevelsError ? (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="rounded-2xl border border-danger-200 bg-danger-50 p-8 text-center shadow-xs"
+            >
+              <p className="text-base font-bold text-danger-700">Failed to load course levels</p>
+              <p className="mt-1 text-xs text-danger-600">
+                {levelsError instanceof Error ? levelsError.message : "Network or server error"}
+              </p>
+              <div className="mt-4 flex justify-center">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void refetchLevels()}
+                >
+                  Retry Loading Levels
+                </Button>
+              </div>
+            </div>
+          ) : dynamicLevelCards.length === 0 ? (
             <div className="text-center py-12 text-content-secondary bg-surface-primary rounded-2xl border border-line-default">
               No published levels found for this capability in the database.
             </div>
