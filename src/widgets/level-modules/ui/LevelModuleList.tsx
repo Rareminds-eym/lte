@@ -229,6 +229,18 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
           })
       : mockModules;
 
+  // Find the first active module or the first one overall
+  const activeModule = displayModules.find((m) => m.status === "active");
+  const progressText = activeModule
+    ? `MOD-${activeModule.moduleNumber} In Progress`
+    : displayModules.some((m) => m.status === "completed")
+      ? "Course Completed"
+      : "No module in progress";
+
+  const progressBadgeColor = displayModules.some((m) => m.status === "completed")
+    ? "bg-success-50 text-success-600 border border-success-200/90"
+    : "bg-warning-50 text-warning-600 border border-warning-200/90";
+
   return (
     <div className="w-full mt-10 space-y-8">
       {/* Section Header Bar matching 2nd image */}
@@ -241,7 +253,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
           <div>
             <h3 className="text-xl font-bold text-slate-900 tracking-tight">Course Modules</h3>
             <p className="text-xs text-slate-400 font-medium mt-0.5">
-              6 modules · 6E Problem-Based Learning Framework
+              {displayModules.length} modules · 6E Problem-Based Learning Framework
             </p>
           </div>
         </div>
@@ -251,13 +263,17 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({ modules, level
           {/* Enrolled Badge */}
           <span className="px-3.5 py-1.5 bg-brand-50 text-brand-600 text-xs font-semibold rounded-full border border-brand-200/80 flex items-center gap-1.5 shadow-2xs">
             <LayersIcon className="w-3.5 h-3.5 text-brand-600" />
-            <span>1.6k Enrolled</span>
+            <span>Enrolled</span>
           </span>
 
-          {/* In Progress Badge */}
-          <span className="px-3.5 py-1.5 bg-warning-50 text-warning-600 text-xs font-semibold rounded-full border border-warning-200/90 flex items-center gap-1.5 shadow-2xs">
-            <ClockIcon className="w-3.5 h-3.5 text-warning-600" />
-            <span>MOD-1 In Progress</span>
+          {/* In Progress Badge - Dynamic */}
+          <span className={`px-3.5 py-1.5 text-xs font-semibold rounded-full flex items-center gap-1.5 shadow-2xs ${progressBadgeColor}`}>
+            {displayModules.some((m) => m.status === "completed") ? (
+              <CheckIcon className="w-3.5 h-3.5" />
+            ) : (
+              <ClockIcon className="w-3.5 h-3.5" />
+            )}
+            <span>{progressText}</span>
           </span>
         </div>
       </div>
