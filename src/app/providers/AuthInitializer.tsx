@@ -124,7 +124,11 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
       useLearningPathStore
         .getState()
         .fetchAndSetActiveLearningPath()
-        .catch(() => {});
+        .catch((error: unknown) => {
+          logger.warn("Failed to fetch active learning path", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
     } else if (initialized && !isAuthenticated) {
       useLearningPathStore.getState().clearActiveLearningPath();
     }

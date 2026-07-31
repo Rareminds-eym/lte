@@ -20,6 +20,5 @@ export const useCourses = (userId?: string, options?: { enabled?: boolean }) => 
       return failureCount < 2;
     },
     retryDelay: (attemptIndex) => Math.min(1_000 * 2 ** attemptIndex, 4_000),
-    ...options,
   });
 };

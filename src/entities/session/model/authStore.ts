@@ -31,7 +31,7 @@ function buildSignedOutState(error: string | null = null): Partial<AuthState> {
   return { accessToken: null, user: null, isAuthenticated: false, error };
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   user: null,
   isAuthenticated: false,
@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   initialize: async () => {
-    const currentState = useAuthStore.getState();
+    const currentState = get();
     logger.info("initialize starting", {
       initialized: currentState.initialized,
       isAuthenticated: currentState.isAuthenticated,

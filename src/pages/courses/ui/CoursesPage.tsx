@@ -32,7 +32,7 @@ export const CoursesPage = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const userId = useAuthStore((s) => s.user?.id);
-  const { data: courses, isPending, error } = useCourses(userId);
+  const { data: courses, isPending, error } = useCourses(userId ?? undefined);
 
   const filteredCourses = filterCoursesByPriority(courses ?? [], activePriority);
   const totalPages = Math.ceil(filteredCourses.length / COURSE_PAGE_SIZE);

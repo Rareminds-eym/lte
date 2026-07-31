@@ -11,7 +11,8 @@ export const App: React.FC = () => {
   // Register the dependency injection getter inside useEffect to prevent module side effects
   useEffect(() => {
     registerTokenGetter(() => useAuthStore.getState().accessToken);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registerTokenGetter]);
 
   return (
     <Router>

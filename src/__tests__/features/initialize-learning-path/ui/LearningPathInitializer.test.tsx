@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "@/entities/session";
 import { initializeLearningPathSchema } from "@/features/initialize-learning-path/model/initializeLearningPath.schema";
@@ -52,10 +53,10 @@ describe("LearningPathInitializer Feature", () => {
     });
 
     // Default mock implementation for useInitializeLearningPath
-    vi.mocked(useInitializeLearningPath).mockReturnValue({
+    (useInitializeLearningPath as Mock).mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as unknown as ReturnType<typeof useInitializeLearningPath>);
+    });
   });
 
   describe("initializeLearningPathSchema (Validation)", () => {
@@ -140,10 +141,10 @@ describe("LearningPathInitializer Feature", () => {
     });
 
     it("triggers mutation and shows page loader when query params are valid", async () => {
-      vi.mocked(useInitializeLearningPath).mockReturnValue({
+      (useInitializeLearningPath as Mock).mockReturnValue({
         mutate: mockMutate,
         isPending: true,
-      } as unknown as ReturnType<typeof useInitializeLearningPath>);
+      });
 
       const params = [
         "fit=High",

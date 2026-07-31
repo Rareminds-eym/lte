@@ -4,8 +4,11 @@ import type { ZodIssue } from "zod";
 import { useShallow } from "zustand/react/shallow";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useAuthStore } from "@/entities/session";
+import { getLogger } from "@/shared";
 import { initializeLearningPathSchema } from "../model/initializeLearningPath.schema";
 import { useInitializeLearningPath } from "../model/useInitializeLearningPath";
+
+const logger = getLogger("LearningPathInitializer");
 
 type LearningPathInitializerProps = {
   capabilityCode: string;
@@ -111,7 +114,11 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
           await useLearningPathStore
             .getState()
             .fetchAndSetActiveLearningPath()
-            .catch(() => {});
+            .catch((error: unknown) => {
+              logger.warn("Failed to fetch active learning path", {
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
           navigate(buildCourseDetailUrl(capabilityCode), {
             replace: true,
           });
