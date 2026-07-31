@@ -62,7 +62,10 @@ describe("courseApi", () => {
         ],
       });
       const courses = await fetchUserCourses("token");
-      const course = courses[0]!;
+      const course = courses[0];
+      if (!course) {
+        throw new Error("Expected one mapped course");
+      }
       expect(course.capabilityCode).toMatch(/^CAP-/);
       expect(course.priority).toBe("");
     });

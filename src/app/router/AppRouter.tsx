@@ -2,6 +2,7 @@ import type React from "react";
 import { lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 import { DashboardLayout } from "@/app/layouts/DashboardLayout";
+import { LevelPlayerLayout } from "@/app/layouts/LevelPlayerLayout";
 import { MainLayout } from "@/app/layouts/MainLayout";
 import { GuestGuard } from "@/app/router/guards";
 import { RouteLoadingBoundary } from "@/shared/ui";
@@ -15,8 +16,10 @@ const Courses = lazy(() => import("@/pages/courses").then((m) => ({ default: m.C
 const CourseDetail = lazy(() =>
   import("@/pages/course-detail").then((m) => ({ default: m.CourseDetail })),
 );
+const LevelContent = lazy(() =>
+  import("@/pages/level-content").then((m) => ({ default: m.LevelContent })),
+);
 const NotFound = lazy(() => import("@/pages/not-found").then((m) => ({ default: m.NotFound })));
-
 export const AppRouter: React.FC = () => {
   return (
     <Routes>
@@ -62,6 +65,16 @@ export const AppRouter: React.FC = () => {
             element={
               <RouteLoadingBoundary>
                 <CourseDetail />
+              </RouteLoadingBoundary>
+            }
+          />
+        </Route>
+        <Route element={<LevelPlayerLayout />}>
+          <Route
+            path="/courses/:levelId/modules/:moduleNo"
+            element={
+              <RouteLoadingBoundary>
+                <LevelContent />
               </RouteLoadingBoundary>
             }
           />

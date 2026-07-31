@@ -149,7 +149,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         type="button"
         onClick={handleToggle}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="w-8 h-8 rounded-full bg-white border border-line-default text-content-secondary shadow-md flex items-center justify-center -right-4 top-[2.875rem] absolute z-20 cursor-pointer hover:bg-surface-muted hover:text-content-primary transition-all active:scale-95"
+        className="hidden md:flex w-8 h-8 rounded-full bg-white border border-line-default text-content-secondary shadow-md items-center justify-center -right-4 top-[2.875rem] absolute z-20 cursor-pointer hover:bg-surface-muted hover:text-content-primary transition-all active:scale-95"
       >
         <svg
           aria-hidden="true"

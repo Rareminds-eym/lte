@@ -18,6 +18,14 @@ vi.mock("@/app/layouts/MainLayout", () => ({
   ),
 }));
 
+vi.mock("@/app/layouts/LevelPlayerLayout", () => ({
+  LevelPlayerLayout: () => (
+    <div data-testid="level-player-layout">
+      <Outlet />
+    </div>
+  ),
+}));
+
 vi.mock("@/pages/courses", () => ({
   Courses: () => <div data-testid="courses-page" />,
 }));
@@ -40,6 +48,10 @@ vi.mock("@/pages/not-found", () => ({
 
 vi.mock("@/pages/course-detail", () => ({
   CourseDetail: () => <div data-testid="course-detail-page" />,
+}));
+
+vi.mock("@/pages/level-content", () => ({
+  LevelContent: () => <div data-testid="level-content-page" />,
 }));
 
 vi.mock("@/app/router/guards/GuestGuard", () => ({
@@ -99,6 +111,16 @@ describe("AppRouter", () => {
     );
     expect(await screen.findByTestId("dashboard-layout")).toBeInTheDocument();
     expect(await screen.findByTestId("course-detail-page")).toBeInTheDocument();
+  });
+
+  it("renders level content at /courses/:levelId/modules/:moduleNo", async () => {
+    render(
+      <MemoryRouter initialEntries={["/courses/0a010796-10c0-5287-b89a-6ab56bd71399/modules/1"]}>
+        <AppRouter />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByTestId("level-player-layout")).toBeInTheDocument();
+    expect(await screen.findByTestId("level-content-page")).toBeInTheDocument();
   });
 
   it("renders 404 for unknown paths", async () => {

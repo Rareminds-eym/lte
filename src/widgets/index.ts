@@ -7,4 +7,12 @@ export { CareerTargetBanner, type CareerTargetBannerProps } from "./dashboard/Ca
 export { JourneyHero, type JourneyHeroProps } from "./dashboard/JourneyHero";
 export { TodaysPriorities, type TodaysPrioritiesProps } from "./dashboard/TodaysPriorities";
 export { UpcomingFeedback, type UpcomingFeedbackProps } from "./dashboard/UpcomingFeedback";
+export { LevelHeader, type LevelHeaderProps, type LteStage } from "./LevelHeader";
+export { type ModuleItem, ModulesDrawer, type ModulesDrawerProps } from "./ModulesDrawer";
+export {
+  STAGE_STEPS,
+  type StageStepInfo,
+  StageStepperBar,
+  type StageStepperBarProps,
+} from "./StageStepperBar";
 export { Pagination, type PaginationProps } from "./shared/Pagination";
