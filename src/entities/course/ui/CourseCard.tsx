@@ -103,63 +103,72 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
       <article
         data-testid="course-card"
         className={cn(
-          "bg-surface-primary rounded-2xl border border-line-subtle shadow-xs hover:shadow-md transition-all duration-200 flex overflow-hidden",
+          "group bg-surface-primary rounded-2xl border border-line-subtle shadow-2xs hover:shadow-md hover:border-brand-200/80 transition-all duration-200 flex flex-col sm:flex-row overflow-hidden",
           className,
         )}
       >
-        <Image
-          src={course.imageUrl}
-          alt={course.title}
-          aspectRatio="240/200"
-          wrapperClassName="w-[240px] shrink-0"
-        >
-          {badges}
-        </Image>
+        <div className="relative w-full sm:w-[220px] md:w-[240px] shrink-0 overflow-hidden bg-surface-muted">
+          <Image
+            src={course.imageUrl}
+            alt={course.title}
+            aspectRatio="16/9"
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+          >
+            {badges}
+          </Image>
+        </div>
 
-        <div className="flex flex-col flex-1 p-5 gap-2 min-w-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] font-semibold tracking-wide text-brand-600 uppercase">
+        <div className="flex flex-col flex-1 p-4 sm:p-5 gap-2.5 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold tracking-wider text-brand-600 uppercase bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-100/60">
                 {course.category}
               </span>
-              <span className="text-[11px] font-medium text-content-muted uppercase">
+              <span className="text-[11px] font-semibold text-content-secondary uppercase bg-surface-muted px-2.5 py-0.5 rounded-full">
                 {course.level}
               </span>
             </div>
-            {actionButton}
+            <div className="hidden sm:block">{actionButton}</div>
           </div>
 
-          <h3 className="text-[15px] font-bold text-content-primary line-clamp-1 leading-snug">
-            {course.title}
-          </h3>
-
-          <p className="text-[13px] text-content-secondary line-clamp-1 leading-relaxed">
-            {course.description}
-          </p>
-
-          <div className="flex flex-wrap gap-1.5">
-            {course.tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-[10px] font-medium text-content-secondary bg-surface-muted px-2 py-0.5 rounded-md"
-              >
-                {tag}
-              </span>
-            ))}
+          <div>
+            <h3 className="text-base font-bold text-content-primary line-clamp-1 leading-snug group-hover:text-brand-600 transition-colors">
+              {course.title}
+            </h3>
+            <p className="text-xs sm:text-sm text-content-secondary line-clamp-2 leading-relaxed mt-1">
+              {course.description}
+            </p>
           </div>
 
-          <div className="flex items-center gap-6 mt-auto pt-2 border-t border-border-subtle">
-            <div className="flex items-center gap-4 text-xs text-content-secondary shrink-0">
+          {course.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {course.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[10px] font-medium text-content-secondary bg-surface-muted px-2 py-0.5 rounded-md"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-auto pt-3 border-t border-border-subtle">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-content-secondary">
               <span className="inline-flex items-center gap-1 font-bold text-content-primary">
                 Level {course.currentLevel} of {course.totalLevels}
                 <InfoIcon />
               </span>
-              <span className="font-semibold text-content-primary">
+              <span className="font-semibold text-content-primary bg-surface-muted px-2 py-0.5 rounded text-[11px]">
                 TARGET: {course.targetLevel}
               </span>
+              <div className="w-24 sm:w-28 shrink-0">{progressSegments}</div>
             </div>
-            <div className="w-32 shrink-0">{progressSegments}</div>
-            {metaFooter}
+
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+              {metaFooter}
+              <div className="sm:hidden">{actionButton}</div>
+            </div>
           </div>
         </div>
       </article>

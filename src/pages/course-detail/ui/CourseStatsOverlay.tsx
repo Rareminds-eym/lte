@@ -1,0 +1,98 @@
+import type React from "react";
+
+export interface CourseStatsOverlayProps {
+  totalDuration: string;
+  xpAvailable: string;
+  unlockedLevels: number;
+  totalLevels: number;
+  targetLevel: string;
+}
+
+export const CourseStatsOverlay: React.FC<CourseStatsOverlayProps> = ({
+  totalDuration,
+  xpAvailable,
+  unlockedLevels,
+  totalLevels,
+  targetLevel,
+}) => {
+  return (
+    <div className="relative z-20 mx-3 sm:mx-6 md:mx-8 -mt-6 sm:-mt-8 rounded-2xl border border-border-default bg-surface-primary p-5 sm:p-6 shadow-xl shadow-slate-200/40">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between md:gap-8">
+        {/* Total Duration */}
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 shadow-sm">
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-content-primary leading-snug">{totalDuration}</p>
+            <p className="text-xs text-content-secondary">Total duration</p>
+          </div>
+        </div>
+
+        <div className="hidden h-10 w-px bg-line-default md:block" />
+
+        {/* XP Available */}
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-orange-50 text-accent-orange-500 shadow-sm">
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-content-primary leading-snug">{xpAvailable}</p>
+            <p className="text-xs text-content-secondary">Available</p>
+          </div>
+        </div>
+
+        <div className="hidden h-10 w-px bg-line-default md:block" />
+
+        {/* Progress Bar & Level Target */}
+        <div className="flex-1 max-w-md">
+          <div className="flex items-center justify-between gap-2 mb-2 text-xs">
+            <span className="font-semibold text-brand-600">
+              Level {unlockedLevels} of {totalLevels} unlocked
+            </span>
+            <span className="font-bold uppercase tracking-wider text-content-secondary">
+              TARGET: {targetLevel}
+            </span>
+          </div>
+
+          {/* Segmented progress bar */}
+          <div
+            className="grid grid-cols-5 gap-1.5"
+            role="progressbar"
+            aria-valuenow={unlockedLevels}
+            aria-valuemin={0}
+            aria-valuemax={totalLevels}
+            aria-label={`Progress: Level ${unlockedLevels} of ${totalLevels}`}
+          >
+            {Array.from({ length: totalLevels }).map((_, idx) => {
+              const isFilled = idx < unlockedLevels;
+              return (
+                <div
+                  key={`segment-${idx + 1}`}
+                  className={`h-2 rounded-full transition-colors ${
+                    isFilled ? "bg-brand-600" : "bg-line-default"
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

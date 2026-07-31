@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Capability, RoleCapabilitySequenceRow, UserCapability } from "./types";
+import type {
+  Capability,
+  CapabilityLevel,
+  RoleCapabilitySequenceRow,
+  UserCapability,
+} from "./types";
 
 export async function getCapabilitiesByRoleId(
   supabase: SupabaseClient,
@@ -90,4 +95,51 @@ export async function getUserCapabilities(
     status: "not_started",
     progress: 0,
   }));
+}
+
+interface CapabilityLevelRow {
+  id: string;
+  level_code: string;
+  title: string;
+  description: string;
+  example_outputs: string[] | null;
+  duration_minutes: number | null;
+  difficulty_level: string;
+  status: string;
+  level_scale: { level_no: number } | { level_no: number }[] | null;
+}
+
+export async function getLevelsForCapability(
+  supabase: SupabaseClient,
+  capabilityId: string,
+): Promise<CapabilityLevel[]> {
+  const { data, error } = await supabase
+    .from("levels")
+    .select(
+      "id, level_code, title, description, example_outputs, duration_minutes, difficulty_level, status, level_scale(level_no)",
+    )
+    .eq("capability_id", capabilityId)
+    .eq("is_active", true)
+    .eq("status", "published");
+
+  if (error) {
+    throw new Error(`Failed to fetch capability levels: ${error.message}`);
+  }
+
+  return ((data as CapabilityLevelRow[] | null) ?? [])
+    .map((row) => {
+      const scale = Array.isArray(row.level_scale) ? row.level_scale[0] : row.level_scale;
+      return {
+        id: row.id,
+        levelNumber: scale?.level_no ?? 0,
+        code: row.level_code,
+        title: row.title,
+        description: row.description,
+        deliverables: row.example_outputs ?? [],
+        durationMinutes: row.duration_minutes ?? 0,
+        difficulty: row.difficulty_level,
+        status: row.status,
+      };
+    })
+    .sort((a, b) => a.levelNumber - b.levelNumber);
 }
