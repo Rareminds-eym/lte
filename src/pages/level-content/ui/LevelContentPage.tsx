@@ -144,6 +144,10 @@ export const LevelContentPage: React.FC = () => {
   const contentViewerRef = useRef<HTMLDivElement>(null);
   const scenarioTextRef = useRef<HTMLParagraphElement>(null);
 
+  const [showXpModal, setShowXpModal] = useState(false);
+  const [xpAwardedAmount, setXpAwardedAmount] = useState(0);
+  const [pendingNextStage, setPendingNextStage] = useState<LteStage | null>(null);
+
   const moduleNumber = Number(moduleNo);
   const hasValidRouteParams = Boolean(levelId) && Number.isInteger(moduleNumber);
   const { data, isLoading, isError } = useLevelContentData(
@@ -400,6 +404,19 @@ export const LevelContentPage: React.FC = () => {
     };
   });
 
+  const handleCloseXpModal = () => {
+    setShowXpModal(false);
+    if (pendingNextStage) {
+      setSelectedContentId(null);
+      handleStageSelect(pendingNextStage);
+    } else {
+      toast.success("Module completed successfully!");
+      navigate(
+        `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId || "")}`,
+      );
+    }
+  };
+
   const handleStageNavigation = (stage: LteStage | null) => {
     if (!stage) return;
     setSelectedContentId(null);
@@ -419,14 +436,20 @@ export const LevelContentPage: React.FC = () => {
           status: "completed",
         },
         {
-          onSuccess: () => {
-            if (nextStage) {
-              handleStageNavigation(nextStage);
+          onSuccess: (data) => {
+            if (data?.xpAwarded && data.xpAwarded > 0) {
+              setXpAwardedAmount(data.xpAwarded);
+              setPendingNextStage(nextStage);
+              setShowXpModal(true);
             } else {
-              toast.success("Module completed successfully!");
-              navigate(
-                `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
-              );
+              if (nextStage) {
+                handleStageNavigation(nextStage);
+              } else {
+                toast.success("Module completed successfully!");
+                navigate(
+                  `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
+                );
+              }
             }
           },
           onError: (err) => {
@@ -1058,6 +1081,50 @@ export const LevelContentPage: React.FC = () => {
                 {renderStageInfoPanel()}
               </aside>
             )}
+          </div>
+        )}
+
+        {showXpModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+            <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-white/20 bg-white/95 p-6 text-center shadow-2xl transition-all duration-300 transform scale-100 flex flex-col items-center">
+              {/* Visual illustration / glowing check medal */}
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 shadow-[0_8px_30px_rgb(245,158,11,0.3)] mb-4 animate-bounce">
+                <svg
+                  className="h-10 w-10 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                {/* Glowing light effect */}
+                <div className="absolute -inset-1 rounded-full bg-yellow-400/20 blur-md -z-10" />
+              </div>
+
+              <h3 className="text-2xl font-black tracking-tight text-amber-600 font-sans mb-1">
+                +{xpAwardedAmount} XP Earned!
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+                Evidence XP
+              </p>
+              
+              <p className="text-xs text-slate-600 font-medium leading-relaxed px-2 mb-6">
+                Excellent work! You completed the <span className="font-bold text-slate-800 capitalize">{activeStage}</span> stage. This evidence XP has been logged to your capability profile to boost your overall role readiness.
+              </p>
+
+              <button
+                type="button"
+                onClick={handleCloseXpModal}
+                className="w-full rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 py-3.5 text-xs font-bold text-white shadow-lg hover:shadow-xl hover:from-slate-800 hover:to-slate-700 active:scale-95 transition-all duration-200"
+              >
+                Continue
+              </button>
+            </div>
           </div>
         )}
       </div>

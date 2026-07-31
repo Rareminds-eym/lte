@@ -6,6 +6,7 @@ import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { z } from "zod";
 import { upsertStageProgress } from "../../../../queries";
 import { LevelModuleParamsSchema } from "../../../../schemas";
+import { completeStage } from "@functions/lib/xp-engine";
 
 const StageProgressBodySchema = z.object({
   eContentId: z.string().uuid("Invalid eContentId format"),
@@ -49,21 +50,73 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
 
     const { eContentId, stageName, status } = parsedBody.data;
-
     const supabase = createServiceSupabase(context.env);
-    const progressData = await upsertStageProgress(
-      supabase,
-      userId,
-      levelId,
-      moduleNumber,
-      eContentId,
-      stageName,
-      status,
-    );
+
+    let progressData;
+    let xpAwarded = 0;
+
+    if (status === "completed") {
+      // 1. Resolve modules_content_id from e_content
+      const { data: eContent, error: eError } = await supabase
+        .from("e_content")
+        .select("modules_content_id")
+        .eq("id", eContentId)
+        .single();
+
+      if (eError || !eContent) {
+        return jsonError("Associated modules_content stage not found for eContentId", 404, {
+          code: "NOT_FOUND",
+          requestId,
+        });
+      }
+
+      // 2. Call completeStage from the unified XP engine
+      const xpResult = await completeStage(supabase, userId, eContent.modules_content_id);
+      xpAwarded = xpResult.xpAwarded;
+
+      // 3. Fetch the updated progress counters from user_module_progress to return to client
+      const { data: stageProg, error: stageProgErr } = await supabase
+        .from("user_stage_progress")
+        .select("user_module_progress_id")
+        .eq("id", xpResult.userStageProgressId)
+        .single();
+
+      if (stageProgErr || !stageProg) {
+        throw new Error("Failed to find module progress ID for returning status data");
+      }
+
+      const { data: updatedProgress, error: progressFetchErr } = await supabase
+        .from("user_module_progress")
+        .select("stages_completed, completion_percentage")
+        .eq("id", stageProg.user_module_progress_id)
+        .single();
+
+      if (progressFetchErr || !updatedProgress) {
+        throw new Error("Failed to fetch updated progress counters");
+      }
+
+      progressData = {
+        stageProgressId: xpResult.userStageProgressId,
+        stagesCompleted: updatedProgress.stages_completed,
+        completionPercentage: updatedProgress.completion_percentage,
+      };
+    } else {
+      // Standard in-progress update
+      progressData = await upsertStageProgress(
+        supabase,
+        userId,
+        levelId,
+        moduleNumber,
+        eContentId,
+        stageName,
+        status,
+      );
+    }
 
     return jsonResponse({
       success: true,
       ...progressData,
+      xpAwarded,
     });
   } catch (error) {
     if (error instanceof AuthError) {

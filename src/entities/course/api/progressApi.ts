@@ -15,6 +15,7 @@ export interface StageProgressResponse {
   stageProgressId: string;
   stagesCompleted: number;
   completionPercentage: number;
+  xpAwarded?: number;
 }
 
 export async function startLevelProgress(levelId: string): Promise<LevelProgressResponse> {
