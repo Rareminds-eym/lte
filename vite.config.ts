@@ -19,10 +19,10 @@ export default defineConfig({
 		...(process.env.VITEST
 			? {
 					alias: {
-						"@file-viewer/pptx": path.resolve(__dirname, "./src/__mocks__/fileViewerPptx.ts"),
-						"docx-preview": path.resolve(__dirname, "./src/__mocks__/fileViewerPptx.ts"),
-						"pdfjs-dist": path.resolve(__dirname, "./src/__mocks__/fileViewerPptx.ts"),
-						xlsx: path.resolve(__dirname, "./src/__mocks__/fileViewerPptx.ts"),
+						"@file-viewer/pptx": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						"docx-preview": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						"pdfjs-dist": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						xlsx: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
 					},
 				}
 			: {}),

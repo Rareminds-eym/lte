@@ -1,3 +1,4 @@
+import { apiLogger } from "@functions/lib/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   Capability,
@@ -127,7 +128,11 @@ export async function getLevelsForCapability(
         }
       }
 
-      const parsedLevelNo = parseInt(row.level_code.match(/L(\d+)/i)?.[1] ?? "1", 10);
+      const levelCodeMatch = row.level_code.match(/L(\d+)/i);
+      if (!levelCodeMatch) {
+        apiLogger.warn(`Unrecognized level_code format: ${row.level_code}`, { capabilityId });
+      }
+      const parsedLevelNo = parseInt(levelCodeMatch?.[1] ?? "1", 10);
 
       return {
         id: row.id,

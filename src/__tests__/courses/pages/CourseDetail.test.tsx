@@ -114,10 +114,25 @@ vi.mock("@/entities/course", async () => {
     useCapabilityLevels: vi.fn(() => ({
       data: mockDbLevels,
       isPending: false,
+      isError: false,
       error: null,
+      refetch: vi.fn(),
     })),
   };
 });
+
+type LevelsQuery = ReturnType<typeof useCapabilityLevels>;
+
+function levelsQueryResult(overrides: Partial<LevelsQuery> = {}): LevelsQuery {
+  return {
+    data: mockDbLevels,
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    ...overrides,
+  } as unknown as LevelsQuery;
+}
 
 describe("CourseDetail", () => {
   it("renders course hero banner dynamically with capability code and title", () => {
@@ -162,24 +177,24 @@ describe("CourseDetail", () => {
     expect(screen.getAllByTestId(/^level-card-/)).toHaveLength(5);
   });
 
-  it("renders API level data when levels are returned", async () => {
-    vi.mocked(useCapabilityLevels).mockReturnValueOnce({
-      data: [
-        {
-          id: "lvl-1",
-          levelNumber: 1,
-          code: "TEST_L1_CL001",
-          title: "Guided Foundations",
-          description: "Learn the basics.",
-          deliverables: ["Setup Worksheet"],
-          durationMinutes: 360,
-          difficulty: "beginner",
-          status: "published",
-        },
-      ],
-      isPending: false,
-      error: null,
-    } as never);
+  it("renders API level data when levels are returned", () => {
+    vi.mocked(useCapabilityLevels).mockReturnValueOnce(
+      levelsQueryResult({
+        data: [
+          {
+            id: "lvl-1",
+            levelNumber: 1,
+            code: "TEST_L1_CL001",
+            title: "Guided Foundations",
+            description: "Learn the basics.",
+            deliverables: ["Setup Worksheet"],
+            durationMinutes: 360,
+            difficulty: "beginner",
+            status: "published",
+          },
+        ],
+      }),
+    );
     render(<CourseDetail />);
     expect(screen.getByText("Guided Foundations")).toBeInTheDocument();
     expect(screen.getByText("6 hrs")).toBeInTheDocument();
