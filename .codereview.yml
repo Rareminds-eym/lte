@@ -1849,3 +1849,20 @@ primary_rule: |
       Mounting local `<Toaster>` components in layouts, pages, features, or widgets is a rule violation. The global
       `<Toaster />` must remain registered only at the root provider layer (`AppProviders.tsx`).
     severity: high
+
+  - category: state-management
+    title: "Include authentication state or user ID in query key dependencies"
+    description: |
+      All server-state queries (useQuery) that rely on implicit authentication headers
+      via apiFetch must include the user's ID or authentication status in their queryKey.
+      This ensures that the query cache is partitioned correctly per user and invalidates
+      automatically when the active session changes, preventing cross-user data leakage.
+    severity: high
+
+  - category: state-management
+    title: "Enforce generic type constraints on apiFetch calls"
+    description: |
+      The generic parameter `T` of `apiFetch` must be constrained to `extends unknown = unknown`.
+      Always omit the explicit `<unknown>` generic type parameter in calls to `apiFetch`, allowing
+      TypeScript to infer it from default constraints, or type it to the exact response schema structure.
+    severity: high

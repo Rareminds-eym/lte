@@ -1,6 +1,7 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useAuthStore } from "@/entities/session";
 import { getLogger } from "@/shared";
 import { ApplicationLoader } from "@/shared/ui";
@@ -116,6 +117,15 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
       cancelled = true;
     };
   }, [callbackParams, exchangeCode, navigate, targetNext]);
+
+  // 3. Orchestrate active learning path fetching once authenticated
+  useEffect(() => {
+    if (initialized && isAuthenticated) {
+      void useLearningPathStore.getState().fetchAndSetActiveLearningPath();
+    } else if (initialized && !isAuthenticated) {
+      useLearningPathStore.getState().clearActiveLearningPath();
+    }
+  }, [initialized, isAuthenticated]);
 
   // ── Render gates ──────────────────────────────────────────────────────────
 

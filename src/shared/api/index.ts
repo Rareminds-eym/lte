@@ -1,11 +1,12 @@
 export { ApiError } from "./ApiError";
+export { apiFetch, registerTokenGetter } from "./client";
 
 interface ApiErrorPayload {
   error?: string;
   message?: string;
 }
 
-async function parseJsonResponse<T>(response: Response): Promise<T> {
+async function parseJsonResponse<T = unknown>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({}))) as unknown;
 
   if (!response.ok) {
@@ -17,7 +18,7 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
-export async function apiGet<T>(url: string, options?: RequestInit): Promise<T> {
+export async function apiGet<T = unknown>(url: string, options?: RequestInit): Promise<T> {
   return parseJsonResponse<T>(
     await fetch(url, {
       ...options,
@@ -25,8 +26,4 @@ export async function apiGet<T>(url: string, options?: RequestInit): Promise<T> 
       credentials: options?.credentials ?? "include",
     }),
   );
-}
-
-export async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
-  return parseJsonResponse<T>(await fetch(url, options));
 }

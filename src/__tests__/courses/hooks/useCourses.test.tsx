@@ -5,14 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const mockFetchUserCourses = vi.fn();
 vi.mock("@/entities/course/api/courseApi", () => ({
-  fetchUserCourses: (...args: unknown[]) => mockFetchUserCourses(...args),
-}));
-
-vi.mock("@/entities/session", () => ({
-  useAuthStore: vi.fn((selector?: unknown) => {
-    const state = { accessToken: "mock-token" };
-    return typeof selector === "function" ? selector(state) : state;
-  }),
+  fetchUserCourses: () => mockFetchUserCourses(),
 }));
 
 import { useCourses } from "@/entities/course";
@@ -27,14 +20,14 @@ function createWrapper() {
 describe("useCourses", () => {
   it("returns loading state initially", () => {
     mockFetchUserCourses.mockReturnValue(new Promise(() => {}));
-    const { result } = renderHook(() => useCourses(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useCourses("user-1"), { wrapper: createWrapper() });
     expect(result.current.isLoading).toBe(true);
   });
 
   it("returns courses data on success", async () => {
     const courses = [{ id: "1", title: "Course 1" }];
     mockFetchUserCourses.mockResolvedValue(courses);
-    const { result } = renderHook(() => useCourses(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useCourses("user-1"), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(courses);
   });
@@ -43,7 +36,7 @@ describe("useCourses", () => {
     const err = new Error("API error") as Error & { status: number };
     err.status = 400;
     mockFetchUserCourses.mockRejectedValue(err);
-    const { result } = renderHook(() => useCourses(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useCourses("user-1"), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeDefined();
   });
