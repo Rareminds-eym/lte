@@ -1,4 +1,4 @@
-import { AuthError, requireAuth } from "@functions/lib/auth";
+import { requireAuth } from "@functions/lib/auth";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -40,11 +40,11 @@ function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): Mo
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     order: vi.fn().mockImplementation(() => chain),
-    then(onfulfilled) {
-      return Promise.resolve({ data: resolveVal, error: errorVal }).then(onfulfilled);
+    toPromise() {
+      return Promise.resolve({ data: resolveVal, error: errorVal });
     },
   };
-  return chain;
+  return chain as unknown as MockQueryChain;
 }
 
 describe("Progress API Endpoints", () => {

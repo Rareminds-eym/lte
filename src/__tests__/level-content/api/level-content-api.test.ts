@@ -59,56 +59,112 @@ describe("Level Content API Schemas & Queries", () => {
 
   describe("getLevelWithModules query logic", () => {
     it("returns formatted level details and module summaries", async () => {
-      const mockSingle = vi.fn().mockResolvedValue({
-        data: {
-          id: levelId,
-          level_code: "crs-sys-fail-inv",
+      const levelData = {
+        id: levelId,
+        level_code: "crs-sys-fail-inv",
+        title: "System Failure Investigation",
+        description: "Investigate latency spikes",
+        problem_statement: {
           title: "System Failure Investigation",
-          description: "Investigate latency spikes",
-          problem_statement: {
-            title: "System Failure Investigation",
-            description: "A production incident needs evidence-led investigation.",
-          },
-          observable_behavior: "Identifies root cause",
-          example_outputs: "RCA document",
-          duration_minutes: 270,
-          difficulty_level: "intermediate",
-          status: "published",
-          version_no: 1,
-          modules: [
-            {
-              id: "mod-0",
-              module_no: 0,
-              title: "System Failure Investigation",
-              description: "Incident Kickoff",
-              is_published: true,
-              is_active: true,
-            },
-            {
-              id: "mod-1",
-              module_no: 1,
-              title: "Structured Logging",
-              description: "JSON logs",
-              is_published: true,
-              is_active: true,
-            },
-          ],
+          description: "A production incident needs evidence-led investigation.",
         },
-        error: null,
+        observable_behavior: "Identifies root cause",
+        example_outputs: "RCA document",
+        duration_minutes: 270,
+        difficulty_level: "intermediate",
+        status: "published",
+        version_no: 1,
+        capability_id: "cap-1",
+      };
+
+      const modulesData = [
+        {
+          id: "mod-0",
+          module_no: 0,
+          title: "System Failure Investigation",
+          description: "Incident Kickoff",
+          is_published: true,
+          is_active: true,
+          module_problem_statement: null,
+          pressure_points: null,
+          user_confusion: null,
+          industry_challenge: null,
+          prerequisites: null,
+          what_youll_learn: null,
+          when_to_apply: null,
+        },
+        {
+          id: "mod-1",
+          module_no: 1,
+          title: "Structured Logging",
+          description: "JSON logs",
+          is_published: true,
+          is_active: true,
+          module_problem_statement: null,
+          pressure_points: null,
+          user_confusion: null,
+          industry_challenge: null,
+          prerequisites: null,
+          what_youll_learn: null,
+          when_to_apply: null,
+        },
+      ];
+
+      const eqMock = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: modulesData, error: null }),
+        }),
+      });
+      const levelEqMock = vi.fn().mockReturnValueOnce({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: levelData, error: null }),
+        }),
       });
 
-      const eqMock = vi.fn().mockReturnThis();
       const mockSupabase = {
-        from: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        eq: eqMock,
-        single: mockSingle,
+        from: vi.fn().mockImplementation((table) => {
+          if (table === "levels") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: levelEqMock,
+            };
+          }
+          if (table === "modules") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: eqMock,
+            };
+          }
+          if (table === "module_artifacts") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              in: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            };
+          }
+          if (table === "capabilities") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnValue({
+                single: vi
+                  .fn()
+                  .mockResolvedValue({ data: { code: "TEST", name: "Test" }, error: null }),
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: eqMock,
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          };
+        }),
       } as unknown as SupabaseClient;
 
       const result = await getLevelWithModules(mockSupabase, levelId);
 
       expect(result).not.toBeNull();
-      expect(eqMock).toHaveBeenCalledWith("id", levelId);
+      expect(eqMock).toHaveBeenCalledWith("level_id", levelId);
       expect(result?.levelCode).toBe("crs-sys-fail-inv");
       expect(result?.title).toBe("System Failure Investigation");
       expect(result?.levelProblemStatement.description).toBe(

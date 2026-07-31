@@ -189,7 +189,7 @@ export const LevelContentPage: React.FC = () => {
   };
 
   const { mutate: startModule } = useStartModuleProgress();
-  const { mutate: updateStage } = useUpdateStageProgress();
+  const { mutate: updateStage, isPending: isUpdateStagePending } = useUpdateStageProgress();
 
   useEffect(() => {
     if (levelId && Number.isInteger(moduleNumber)) {
@@ -345,7 +345,7 @@ export const LevelContentPage: React.FC = () => {
     );
   }
 
-  const completedStages = levelModule.completedStages || [];
+  const completedStages = (levelModule.completedStages || []) as LteStage[];
   const previewItems = activeStageContent.items;
   const stageSummary = getStageSummary(levelModule, activeStageContent);
   const stageDescription = activeStageContent.stageDescription;
@@ -356,6 +356,15 @@ export const LevelContentPage: React.FC = () => {
     activeStageIndex >= 0 && activeStageIndex < STAGES.length - 1
       ? (STAGES[activeStageIndex + 1] ?? null)
       : null;
+
+  const isCurrentStageCompleted = completedStages.includes(activeStage);
+  const isModuleComplete = levelModule.progressPercentage === 100;
+  const isCurrentStageInProgress = !isCurrentStageCompleted && completedStages.length > 0;
+
+  // Check if there's a next module
+  const nextModuleNo = moduleNumber + 1;
+  const nextModuleExists = level.modules.some((m) => m.moduleNo === nextModuleNo);
+
   const selectedContent =
     previewItems.find((item) => item.id === selectedContentId) ?? previewItems[0] ?? null;
   const activeArtifact = getPrimaryArtifact(activeStageContent.artifacts);
@@ -384,8 +393,8 @@ export const LevelContentPage: React.FC = () => {
       ? (levelModule.progressPercentage ?? m.progressPercentage ?? 0)
       : (m.progressPercentage ?? 0);
     const isCompleted = isCurrentModule
-      ? (levelModule.progressPercentage === 100 || m.isCompleted || false)
-      : (m.progressPercentage === 100 || m.isCompleted || false);
+      ? levelModule.progressPercentage === 100 || m.isCompleted || false
+      : m.progressPercentage === 100 || m.isCompleted || false;
 
     return {
       id: m.id,
@@ -395,7 +404,7 @@ export const LevelContentPage: React.FC = () => {
       isCompleted,
       stageProgressDots: isCurrentModule
         ? levelModule.stages.map((stage) => {
-            const name = stage.stageName.toLowerCase();
+            const name = stage.stageName.toLowerCase() as LteStage;
             if (name === activeStage) return "blue";
             if (completedStages.includes(name)) return "green";
             return "gray";
@@ -411,9 +420,11 @@ export const LevelContentPage: React.FC = () => {
       handleStageSelect(pendingNextStage);
     } else {
       toast.success("Module completed successfully!");
-      navigate(
-        `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId || "")}`,
-      );
+      if (levelId && level.capabilityCode) {
+        navigate(
+          `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
+        );
+      }
     }
   };
 
@@ -444,11 +455,15 @@ export const LevelContentPage: React.FC = () => {
             } else {
               if (nextStage) {
                 handleStageNavigation(nextStage);
-              } else {
-                toast.success("Module completed successfully!");
+              } else if (nextModuleExists) {
+                // All stages complete, move to next module
                 navigate(
-                  `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
+                  `/my-courses/${encodeURIComponent(levelId)}/modules/${nextModuleNo}?stage=engage`,
                 );
+              } else {
+                // Last module completed
+                toast.success("Course completed successfully!");
+                navigate(`/my-courses`);
               }
             }
           },
@@ -461,9 +476,11 @@ export const LevelContentPage: React.FC = () => {
       if (nextStage) {
         handleStageNavigation(nextStage);
       } else {
-        navigate(
-          `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
-        );
+        if (levelId && level.capabilityCode) {
+          navigate(
+            `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
+          );
+        }
       }
     }
   };
@@ -483,23 +500,71 @@ export const LevelContentPage: React.FC = () => {
       </Button>
 
       <div className="flex items-center gap-1.5">
-        {STAGES.map((stage) => (
-          <button
-            key={stage}
-            type="button"
-            aria-label={`Go to ${formatStageLabel(stage)} stage`}
-            className={`h-2 rounded-full transition-all ${
-              stage === activeStage ? "w-6 bg-brand-600" : "w-2 bg-success-500"
-            }`}
-            onClick={() => handleStageNavigation(stage)}
-          />
-        ))}
+        {STAGES.map((stage) => {
+          const isCompleted = completedStages.includes(stage);
+          return (
+            <button
+              key={stage}
+              type="button"
+              aria-label={`Go to ${formatStageLabel(stage)} stage`}
+              className={`h-2 rounded-full transition-all ${
+                stage === activeStage
+                  ? "w-6 bg-brand-600"
+                  : isCompleted
+                    ? "w-6 bg-success-500"
+                    : "w-2 bg-slate-300"
+              }`}
+              onClick={() => handleStageNavigation(stage)}
+            />
+          );
+        })}
       </div>
 
-      <Button type="button" size="sm" className="justify-self-end" onClick={handleMarkStageDone}>
-        <span className="inline-flex items-center gap-1.5">
-          {nextStage ? "Mark Done & Next" : "Mark as Completed"}
-          {nextStage ? <ChevronRightIcon size={16} /> : <CheckIcon size={16} />}
+      <Button
+        type="button"
+        size="sm"
+        className="justify-self-end"
+        onClick={() => {
+          if (isModuleComplete) {
+            if (nextModuleExists && levelId) {
+              navigate(
+                `/my-courses/${encodeURIComponent(levelId)}/modules/${nextModuleNo}?stage=engage`,
+              );
+            } else {
+              navigate("/my-courses");
+            }
+          } else if (isCurrentStageCompleted) {
+            if (nextStage) {
+              handleStageNavigation(nextStage);
+            }
+          } else {
+            handleMarkStageDone();
+          }
+        }}
+        disabled={isUpdateStagePending}
+      >
+        <span className="inline-flex items-center gap-2">
+          {isModuleComplete ? (
+            <>
+              {nextModuleExists ? "Go to Next Module" : "Completed"}
+              <CheckIcon size={16} />
+            </>
+          ) : isCurrentStageCompleted ? (
+            <>
+              Next
+              <ChevronRightIcon size={16} />
+            </>
+          ) : isCurrentStageInProgress ? (
+            <>
+              Continue Learning
+              <ChevronRightIcon size={16} />
+            </>
+          ) : (
+            <>
+              Start Learning
+              <ChevronRightIcon size={16} />
+            </>
+          )}
         </span>
       </Button>
     </div>
@@ -1096,6 +1161,7 @@ export const LevelContentPage: React.FC = () => {
                   stroke="currentColor"
                   strokeWidth={2.5}
                 >
+                  <title>Completion Check</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -1112,9 +1178,12 @@ export const LevelContentPage: React.FC = () => {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
                 Evidence XP
               </p>
-              
+
               <p className="text-xs text-slate-600 font-medium leading-relaxed px-2 mb-6">
-                Excellent work! You completed the <span className="font-bold text-slate-800 capitalize">{activeStage}</span> stage. This evidence XP has been logged to your capability profile to boost your overall role readiness.
+                Excellent work! You completed the{" "}
+                <span className="font-bold text-slate-800 capitalize">{activeStage}</span> stage.
+                This evidence XP has been logged to your capability profile to boost your overall
+                role readiness.
               </p>
 
               <button

@@ -7,19 +7,19 @@ interface LevelStatsBarProps {
   modulesCount?: number;
   artifactsCount?: number;
   hasCertificate?: boolean;
-  currentLevelNo?: number;
-  totalLevelsNo?: number;
+  currentLevelNo: number;
+  totalLevelsNo: number;
   targetLevel?: string;
 }
 
 export const LevelStatsBar: React.FC<LevelStatsBarProps> = ({
-  totalDuration = "45 hrs",
-  modulesCount = 7,
-  artifactsCount = 7,
-  hasCertificate = true,
-  currentLevelNo = 1,
-  totalLevelsNo = 5,
-  targetLevel = "TARGET: L3",
+  totalDuration = "0 hrs",
+  modulesCount = 0,
+  artifactsCount = 0,
+  hasCertificate = false,
+  currentLevelNo,
+  totalLevelsNo,
+  targetLevel = "TARGET: L1",
 }) => {
   return (
     <div className="w-full bg-white rounded-2xl border border-border-default p-4 sm:p-6 shadow-xl -mt-10 sm:-mt-12 relative z-20 mx-auto max-w-[96%] sm:max-w-[98%]">

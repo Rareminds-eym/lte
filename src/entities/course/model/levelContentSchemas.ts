@@ -87,6 +87,15 @@ export const LevelModuleSummarySchema = z.object({
   description: z.string(),
   isPublished: z.boolean(),
   progressPercentage: z.number().optional(),
+  completedStages: z.array(z.string()).optional(),
+  isCompleted: z.boolean().optional(),
+  module_problem_statement: z.string().nullable().optional(),
+  pressure_points: z.array(z.string()).nullable().optional(),
+  user_confusion: z.array(z.string()).nullable().optional(),
+  industry_challenge: z.string().nullable().optional(),
+  prerequisites: z.array(z.string()).nullable().optional(),
+  what_youll_learn: z.array(z.string()).nullable().optional(),
+  when_to_apply: z.string().nullable().optional(),
 });
 
 export const LevelDetailsResponseSchema = z.object({

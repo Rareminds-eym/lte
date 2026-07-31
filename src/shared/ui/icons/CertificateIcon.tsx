@@ -18,6 +18,7 @@ export const CertificateIcon: React.FC<IconProps> = ({
     className={className}
     {...props}
   >
+    <title>Certificate</title>
     <g clipPath="url(#cert-svg-clip)">
       <path
         fill="currentColor"

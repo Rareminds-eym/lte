@@ -3,10 +3,10 @@ import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { completeStage } from "@functions/lib/xp-engine";
 import { z } from "zod";
 import { upsertStageProgress } from "../../../../queries";
 import { LevelModuleParamsSchema } from "../../../../schemas";
-import { completeStage } from "@functions/lib/xp-engine";
 
 const StageProgressBodySchema = z.object({
   eContentId: z.string().uuid("Invalid eContentId format"),
@@ -34,7 +34,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     let rawBody: Record<string, unknown>;
     try {
       rawBody = await readJsonObject(context.request);
-    } catch (err) {
+    } catch {
       return jsonError("Request body must be a valid JSON object", 400, {
         code: "BAD_REQUEST",
         requestId,
@@ -52,7 +52,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     const { eContentId, stageName, status } = parsedBody.data;
     const supabase = createServiceSupabase(context.env);
 
-    let progressData;
+    let progressData: Record<string, unknown>;
     let xpAwarded = 0;
 
     if (status === "completed") {

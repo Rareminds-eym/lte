@@ -10,10 +10,10 @@ export interface LevelProblemStatementProps {
 
 export const LevelProblemStatement: React.FC<LevelProblemStatementProps> = ({
   label = "COURSE PROBLEM STATEMENT",
-  title = "Guided Requisition Intake and Readiness Check",
-  description = "A business unit manager has raised a request to hire 3 Sales Executives for the South Zone because the team missed its last two monthly revenue targets by 18% and 22%. You receive a hiring request email, an old job description, a headcount tracker, a budget approval screenshot, and a vacancy tracker showing 1 approved replacement role and 2 unapproved expansion roles. The request is incomplete because the manager has not clarified territory allocation, salary range, reporting manager, replacement versus new-role justification, and whether the budget covers all 3 positions. You must decide whether the requisition is ready for HR processing, partially ready with missing information, or blocked until role, budget, and approval gaps are clarified.",
-  completedModules = 1,
-  totalModules = 7,
+  title,
+  description,
+  completedModules = 0,
+  totalModules = 0,
 }) => {
   return (
     <div className="relative w-full bg-surface-dark-card border border-brand-500/20 rounded-2xl p-5 sm:p-8 flex flex-col md:flex-row gap-6 md:gap-8 justify-between shadow-xl overflow-hidden">

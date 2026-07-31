@@ -118,7 +118,7 @@ export async function awardXp(
   eventType: string,
   sourceType: string,
   sourceId: string,
-  metadata: Record<string, any> = {},
+  metadata: Record<string, unknown> = {},
   customXpAmount?: number,
 ): Promise<{ success: boolean; xpAwarded: number; alreadyAwarded: boolean }> {
   const xpAmount = customXpAmount !== undefined ? customXpAmount : (XP_AMOUNTS[eventType] ?? 0);
@@ -193,7 +193,7 @@ export async function completeStage(
 
   if (progressQueryError) throw progressQueryError;
 
-  let progressRecord = progressList && progressList[0];
+  let progressRecord = progressList?.[0];
 
   if (!progressRecord) {
     const { data: moduleData } = await supabase
@@ -232,6 +232,8 @@ export async function completeStage(
     if (insertError) throw insertError;
     progressRecord = newProgress;
   }
+
+  if (!progressRecord) throw new Error("Failed to create or retrieve module progress");
 
   // 4. Fetch or Create user_stage_progress record
   const { data: stageProgress, error: stageProgressQueryError } = await supabase
@@ -296,7 +298,10 @@ export async function completeStage(
 
   // 6. Update user_module_progress progress counters if this is a newly completed stage
   if (isNewCompletion && !xpResult.alreadyAwarded) {
-    const nextStagesCompleted = Math.min(6, progressRecord.stages_completed + 1);
+    const nextStagesCompleted = Math.min(
+      6,
+      (progressRecord as NonNullable<typeof progressRecord>).stages_completed + 1,
+    );
     const completionPercentage = Math.round((nextStagesCompleted / 6) * 100);
 
     const { error: updateError } = await supabase
@@ -307,7 +312,7 @@ export async function completeStage(
         current_stage: stageContent.stage_name,
         last_activity_at: new Date().toISOString(),
       })
-      .eq("id", progressRecord.id);
+      .eq("id", (progressRecord as NonNullable<typeof progressRecord>).id);
 
     if (updateError) throw updateError;
   }
@@ -360,7 +365,11 @@ export async function evaluateArtifact(
 
   const userId = submission.user_id;
   const attemptNo = submission.attempt_no;
-  const artifact = submission.module_artifacts as any;
+  const artifact = (
+    Array.isArray(submission.module_artifacts)
+      ? submission.module_artifacts[0]
+      : submission.module_artifacts
+  ) as { artifact_type: "practice" | "final" };
   const isPractice = artifact.artifact_type === "practice";
 
   let evidenceXp = 0;
@@ -581,14 +590,9 @@ export async function triggerDailyLogin(
   const todayDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
   if (!todayDate) throw new Error("Invalid date");
 
-  const xpResult = await awardXp(
-    supabase,
-    userId,
-    "daily_login",
-    "users",
-    userId,
-    { login_date: todayDate },
-  );
+  const xpResult = await awardXp(supabase, userId, "daily_login", "users", userId, {
+    login_date: todayDate,
+  });
 
   return { success: true, xpAwarded: xpResult.xpAwarded };
 }
@@ -669,33 +673,32 @@ export async function adminOverrideArtifact(
     .eq("id", submissionId)
     .single();
 
-  const passingScore = (submission as any)?.module_artifacts?.passing_score ?? 60;
+  const passingScore =
+    (submission?.module_artifacts as { passing_score?: number } | null)?.passing_score ?? 60;
   const decision = newScore >= passingScore ? "pass" : "fail";
 
   // 3. Create a NEW evaluation entry reflecting correction
-  const { error: insertError } = await supabase
-    .from("artifact_evaluation_flows")
-    .insert({
-      submission_id: submissionId,
-      stage: "ai",
-      status: "completed",
-      evaluated_by: adminId,
-      score: newScore,
-      decision,
-      completed_at: new Date().toISOString(),
-      overall_status: decision === "pass" ? "accepted" : "resubmission_required",
-      is_current_stage: true,
-      progression_triggered: true,
-      metadata: {
-        admin_override: true,
-        acting_admin_id: adminId,
-        justification,
-        prior_score: previousFlow.score,
-        prior_decision: previousFlow.decision,
-        prior_flow_id: previousFlow.id,
-        timestamp: new Date().toISOString(),
-      },
-    });
+  const { error: insertError } = await supabase.from("artifact_evaluation_flows").insert({
+    submission_id: submissionId,
+    stage: "ai",
+    status: "completed",
+    evaluated_by: adminId,
+    score: newScore,
+    decision,
+    completed_at: new Date().toISOString(),
+    overall_status: decision === "pass" ? "accepted" : "resubmission_required",
+    is_current_stage: true,
+    progression_triggered: true,
+    metadata: {
+      admin_override: true,
+      acting_admin_id: adminId,
+      justification,
+      prior_score: previousFlow.score,
+      prior_decision: previousFlow.decision,
+      prior_flow_id: previousFlow.id,
+      timestamp: new Date().toISOString(),
+    },
+  });
 
   if (insertError) throw insertError;
 
@@ -759,9 +762,16 @@ export async function calculateReadiness(
 
   if (subErr) throw subErr;
 
-  const finalSubmissions = artifactSubmissions.filter(
-    (s: any) => s.module_artifacts?.artifact_type === "final",
-  );
+  const finalSubmissions = (
+    artifactSubmissions as Array<{
+      id: unknown;
+      status: unknown;
+      module_artifacts: Array<{ artifact_type?: string }>;
+    }>
+  ).filter((s) => {
+    const artifacts = s.module_artifacts?.[0];
+    return artifacts?.artifact_type === "final";
+  });
   const totalMandatoryArtifacts = finalSubmissions.length || 1;
   const acceptedMandatoryArtifacts = finalSubmissions.filter((s) => s.status === "accepted").length;
   const artifactCompletion = (acceptedMandatoryArtifacts / totalMandatoryArtifacts) * 100;
@@ -804,7 +814,7 @@ export async function calculateReadiness(
     .maybeSingle();
 
   let completedFields = 0;
-  let totalFields = 3;
+  const totalFields = 3;
   if (profile) {
     if (profile.bio && profile.bio.trim().length > 0) completedFields++;
     if (profile.job_title && profile.job_title.trim().length > 0) completedFields++;

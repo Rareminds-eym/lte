@@ -27,12 +27,12 @@ export interface StageTag {
 }
 
 export interface ModuleDetailBlock {
-  problem: string;
-  prerequisites: string | string[];
-  commonConfusion: string | string[];
-  industryChallenge: string;
-  whatYoullLearn: string | string[];
-  whenToApply: string;
+  problem?: string;
+  prerequisites?: string[];
+  commonConfusion?: string[];
+  industryChallenge?: string;
+  whatYoullLearn?: string[];
+  whenToApply?: string;
 }
 
 export interface ModuleItem {
@@ -45,145 +45,8 @@ export interface ModuleItem {
   progressPercentage?: number;
   details?: ModuleDetailBlock;
   stages?: StageTag[];
+  completedStages?: string[];
 }
-
-const mockModules: ModuleItem[] = [
-  {
-    id: "mod-0",
-    moduleNumber: 0,
-    duration: "2.5 hrs",
-    title: "System Failure Investigation",
-    description: "Learn how to investigate and debug system failures in production environments.",
-    status: "active",
-    progressPercentage: 0,
-    stages: [
-      { name: "Engage", status: "active" },
-      { name: "Explore", status: "locked" },
-      { name: "Explain", status: "locked" },
-      { name: "Express", status: "locked" },
-      { name: "Empower", status: "locked" },
-      { name: "Evolve", status: "locked" },
-    ],
-    details: {
-      problem:
-        "At 3:30 PM, a tired guest is waiting near the front desk while the queue grows. The learner sees a reservation for Rohan Mehta, an early-arrival note, payment/readiness uncertainty, and a room that is not yet fully inspection-cleared. Before touching any check-in or access step, the learner must identify the course mission, L1 role boundary, tools, risks, and one open validation question.",
-      prerequisites: [
-        "Basic awareness of hotel or reception operations",
-        "Ability to read simple records and status notes",
-        "No prior operational experience required",
-      ],
-      commonConfusion: [
-        "May treat guest urgency as permission to proceed",
-        "May assume a clean room is access-ready",
-        "May accept a payment claim as proof",
-        "May confuse helpful service with approval authority",
-        "May not know which evidence must be checked first",
-      ],
-      industryChallenge:
-        "Front-office teams must protect guest trust and service flow while coordinating reservation, identity, payment, room status, duty, and handoff evidence across different owners without allowing premature access.",
-      whatYoullLearn: [
-        "Why arrival-readiness evidence matters",
-        "How to identify the main evidence types",
-        "How L1 authority differs from supervisor approval",
-        "How to recognize risk before action",
-        "How to write one open validation question",
-      ],
-      whenToApply:
-        "Use before entering an arrival room or taking any check-in, room-access, or key issuance step.",
-    },
-  },
-  {
-    id: "mod-1",
-    moduleNumber: 1,
-    duration: "2.5 hrs",
-    title: "Case Intake & Role Boundary",
-    description:
-      "Learner opens the arrival case, separates facts from assumptions, identifies missing/conflicting records, and protects L1 authority while preparing intake.",
-    status: "active",
-    progressPercentage: 0,
-    stages: [
-      { name: "Engage", status: "active", duration: "1h 0m" },
-      { name: "Explore", status: "locked", duration: "45m" },
-      { name: "Explain", status: "locked", duration: "20m" },
-      { name: "Express", status: "locked" },
-      { name: "Empower", status: "locked" },
-      { name: "Evolve", status: "locked" },
-    ],
-    details: {
-      problem:
-        "The learner receives the first case file. Reservation card shows guest name Rohan Mehta, ETA 09:00, folio status: early-arrival requested. Folio note: payment info pending. Room Status card: Room 412 clean - not inspected. Learner must separate facts, assumptions, missing information, and role boundary.",
-      prerequisites: [
-        "Completed Module 0 Course Readiness",
-        "Given understands the L1 allowed and prohibited actions",
-        "Can identify reservation, ID, PMS/payment, room-status, and handoff evidence",
-      ],
-      commonConfusion: [
-        "May record the guest date as a confirmed fact",
-        "May ignore the ID-name variation",
-        "May skip checking PMS folio",
-        "May assume room status is ready",
-        "May mix assumptions with evidence",
-        "May promise access while collecting information",
-      ],
-      industryChallenge:
-        "Front-office staff must create a reliable case record from fragmented guest statements and system evidence so that the next turnover can act without repeating work or inheriting hidden assumptions.",
-      whatYoullLearn: [
-        "How to separate facts, claims, assumptions, and missing information",
-        "How to capture supervision-justified evidence",
-        "How to record PMS-folio and room-status logs",
-        "How to ask safe clarification questions",
-        "When supervisor approval is required",
-      ],
-      whenToApply:
-        "Use during the first structured intake of a guest or visitor arrival case, especially when the person is waiting and the available records do not fully agree.",
-    },
-  },
-  {
-    id: "mod-2",
-    moduleNumber: 2,
-    duration: "2.5 hrs",
-    title: "Evidence / Requirement Validation",
-    description:
-      "Learner validates whether reservation, identity, room status, and payment/readiness evidence is complete, matching, missing, blocked, or requires supervisor review.",
-    status: "locked",
-  },
-  {
-    id: "mod-3",
-    moduleNumber: 3,
-    duration: "2.5 hrs",
-    title: "Guided Work Action or Handoff",
-    description:
-      "Learner turns validated evidence into an arrival-safe recommendation or handoff without approving check-in or keyholding access.",
-    status: "locked",
-  },
-  {
-    id: "mod-4",
-    moduleNumber: 4,
-    duration: "2.5 hrs",
-    title: "Exceptions, Blockers, Risks & Escalations",
-    description:
-      "Learner identifies exceptions, blockers, dependency risks, wrong-owner risks, and pressure traps, then escalates with evidence and safe next steps.",
-    status: "locked",
-  },
-  {
-    id: "mod-5",
-    moduleNumber: 5,
-    duration: "2.5 hrs",
-    title: "Quality, Communication & Closure",
-    description:
-      "Learner checks whether L1 work is clean, complete, safe, and ready for review/closure while distinguishing completed work from unresolved risks.",
-    status: "locked",
-  },
-  {
-    id: "mod-6",
-    moduleNumber: 6,
-    duration: "2.5 hrs",
-    title: "Portfolio, Transfer & Final Validation",
-    description:
-      "Learner assembles evidence chain, defends decisions, applies work style to a new visitor readiness case, and proves guided L1 capability.",
-    status: "locked",
-  },
-];
 
 import { useNavigate } from "react-router-dom";
 import type { LevelModuleSummary } from "@/entities/course";
@@ -191,12 +54,14 @@ import type { LevelModuleSummary } from "@/entities/course";
 export interface LevelModuleListProps {
   modules?: LevelModuleSummary[];
   levelId?: string;
+  moduleDurationMinutes?: number;
   onSelectModule?: (moduleNo: number) => void;
 }
 
 export const LevelModuleList: React.FC<LevelModuleListProps> = ({
   modules,
   levelId,
+  moduleDurationMinutes,
   onSelectModule,
 }) => {
   const navigate = useNavigate();
@@ -204,10 +69,6 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
   const displayModules: ModuleItem[] =
     modules && modules.length > 0
       ? modules.map((m, index) => {
-          const defaultMock =
-            mockModules.find((mock) => mock.moduleNumber === m.moduleNo) ??
-            mockModules[index % mockModules.length];
-
           // Resolve status dynamically based on progress and completeness of preceding modules
           let status: "completed" | "active" | "locked";
           const isCompleted =
@@ -234,19 +95,59 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
           // Bind real progress percentage from database summary
           const progressPercentage = m.progressPercentage;
 
+          // Parse JSONB fields from database
+          const parseArrayField = (value: unknown): string[] | undefined => {
+            if (!value) return undefined;
+            try {
+              if (Array.isArray(value)) {
+                return value.map((v: unknown) => (typeof v === "string" ? v : String(v)));
+              }
+              if (typeof value === "object" && value !== null) {
+                // Try to extract array from JSONB object or return undefined
+                const obj = value as Record<string, unknown>;
+                if (obj.items && Array.isArray(obj.items)) {
+                  return obj.items.map((v: unknown) => (typeof v === "string" ? v : String(v)));
+                }
+                return undefined;
+              }
+              if (typeof value === "string") {
+                return [value];
+              }
+              return undefined;
+            } catch {
+              return undefined;
+            }
+          };
+
+          // Build details from database fields
+          const details: ModuleDetailBlock = {
+            problem: m.module_problem_statement || undefined,
+            prerequisites: parseArrayField(m.prerequisites),
+            commonConfusion: parseArrayField(m.user_confusion),
+            industryChallenge: m.industry_challenge || undefined,
+            whatYoullLearn: parseArrayField(m.what_youll_learn),
+            whenToApply: m.when_to_apply || undefined,
+          };
+
+          const durationHrs =
+            moduleDurationMinutes && moduleDurationMinutes > 0
+              ? Math.ceil(moduleDurationMinutes / 60)
+              : 0;
+
           return {
             id: m.id,
             moduleNumber: m.moduleNo,
-            duration: defaultMock?.duration ?? "2.5 hrs",
+            duration: durationHrs > 0 ? `${durationHrs} hrs` : "TBD",
             title: m.title,
             description: m.description,
             status,
             progressPercentage,
-            details: defaultMock?.details ?? mockModules[0]?.details,
-            stages: defaultMock?.stages,
+            completedStages: m.completedStages,
+            details: Object.values(details).some((v) => v !== undefined) ? details : undefined,
+            stages: undefined,
           };
         })
-      : mockModules;
+      : [];
 
   // Find the first active module or the first one overall
   const activeModule = displayModules.find((m) => m.status === "active");
@@ -286,7 +187,9 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
           </span>
 
           {/* In Progress Badge - Dynamic */}
-          <span className={`px-3.5 py-1.5 text-xs font-semibold rounded-full flex items-center gap-1.5 shadow-2xs ${progressBadgeColor}`}>
+          <span
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-full flex items-center gap-1.5 shadow-2xs ${progressBadgeColor}`}
+          >
             {displayModules.some((m) => m.status === "completed") ? (
               <CheckIcon className="w-3.5 h-3.5" />
             ) : (
@@ -365,6 +268,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                           viewBox="0 0 24 24"
                           stroke="currentColor"
                         >
+                          <title>Module Duration</title>
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -505,53 +409,29 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
 
                     {/* 6E Framework Stage Tags matching exact Figma design */}
                     {(() => {
-                      const defaultStages: StageTag[] = [
-                        {
-                          name: "Engage",
-                          status:
-                            item.status === "completed"
-                              ? "completed"
-                              : item.status === "active"
-                                ? "active"
-                                : "locked",
-                          duration: "1h 0m",
-                        },
-                        {
-                          name: "Explore",
-                          status: item.status === "completed" ? "completed" : "locked",
-                          duration: "45m",
-                        },
-                        {
-                          name: "Explain",
-                          status: item.status === "completed" ? "completed" : "locked",
-                          duration: "20m",
-                        },
-                        {
-                          name: "Express",
-                          status: item.status === "completed" ? "completed" : "locked",
-                        },
-                        {
-                          name: "Empower",
-                          status: item.status === "completed" ? "completed" : "locked",
-                        },
-                        {
-                          name: "Evolve",
-                          status: item.status === "completed" ? "completed" : "locked",
-                        },
+                      const STAGE_NAMES = [
+                        "Engage",
+                        "Explore",
+                        "Explain",
+                        "Express",
+                        "Empower",
+                        "Evolve",
                       ];
-                      const rawStages =
-                        item.stages && item.stages.length > 0 ? item.stages : defaultStages;
+                      // Use real stages from DB if available, otherwise use framework stages
                       const stages =
-                        item.status === "locked"
-                          ? rawStages.map((s) => ({ ...s, status: "locked" as const }))
-                          : rawStages;
+                        item.stages && item.stages.length > 0
+                          ? item.stages
+                          : STAGE_NAMES.map((name) => ({ name }));
 
                       return (
                         <div className="pt-4 flex flex-wrap gap-2.5">
                           {stages.map((stage, sIdx) => {
-                            const isDone = stage.status === "completed";
-                            const isActive = stage.status === "active";
-                            const name = stage.name.toLowerCase();
+                            const stageName = stage.name.toLowerCase();
+                            // Get completion status directly from database
+                            const isDone = item.completedStages?.includes(stageName) ?? false;
+                            // Stage is active if has progress but not completed
+                            const isActive = !isDone && (item.progressPercentage ?? 0) > 0;
+                            const name = stageName;
 
                             let stageIcon = <CheckIcon className="w-3.5 h-3.5 stroke-[2.5]" />;
                             if (name.includes("explain")) {
@@ -621,7 +501,13 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                             }}
                             className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2 cursor-pointer"
                           >
-                            <span>Start Learning</span>
+                            <span>
+                              {item.progressPercentage === 100
+                                ? "Review Module"
+                                : item.progressPercentage && item.progressPercentage > 0
+                                  ? "Continue Learning"
+                                  : "Start Learning"}
+                            </span>
                             <ChevronRightIcon className="w-4 h-4 stroke-[2.5]" />
                           </Button>
                           <Button
@@ -636,6 +522,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                               viewBox="0 0 24 24"
                               stroke="currentColor"
                             >
+                              <title>Submit Arrow</title>
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
@@ -650,10 +537,19 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                           <Button
                             variant="primary"
                             size="md"
-                            className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2"
+                            onClick={() => {
+                              if (onSelectModule) {
+                                onSelectModule(item.moduleNumber);
+                              } else if (levelId) {
+                                navigate(
+                                  `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}`,
+                                );
+                              }
+                            }}
+                            className="bg-success-600 hover:bg-success-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2 cursor-pointer"
                           >
-                            <span>Completed</span>
-                            <ChevronRightIcon className="w-4 h-4 stroke-[2.5]" />
+                            <span>Review Module</span>
+                            <CheckIcon className="w-4 h-4 stroke-[2.5]" />
                           </Button>
                           <Button
                             variant="primary"
@@ -667,6 +563,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                               viewBox="0 0 24 24"
                               stroke="currentColor"
                             >
+                              <title>Submit Arrow</title>
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"

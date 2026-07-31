@@ -44,9 +44,16 @@ export const useUpdateStageProgress = () => {
         params.status,
       ),
     onSuccess: (_, variables) => {
+      // Invalidate module level content
       queryClient.invalidateQueries({
         queryKey: ["levelContent", variables.levelId, variables.moduleNo],
       });
+      // Invalidate level details (includes progressPercentage recalculation)
+      queryClient.invalidateQueries({
+        queryKey: ["levelDetails"],
+      });
+      // Invalidate course capability levels to update course progress percentage
+      queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });
     },
   });
 };

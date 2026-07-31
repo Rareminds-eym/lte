@@ -7,12 +7,12 @@ interface LevelHeroBannerProps {
   capabilityCode: string;
   capabilityName?: string;
   levelBadge?: string;
-  title?: string;
-  description?: string;
-  overallProgress?: number;
-  doneCount?: number;
-  activeCount?: number;
-  availableCount?: number;
+  title: string;
+  description: string;
+  overallProgress: number;
+  doneCount: number;
+  activeCount: number;
+  availableCount: number;
   nextUpTitle?: string;
   onContinueLearning?: () => void;
   onShare?: () => void;
@@ -21,14 +21,14 @@ interface LevelHeroBannerProps {
 
 export const LevelHeroBanner: React.FC<LevelHeroBannerProps> = ({
   capabilityCode,
-  levelBadge = "Beginner",
-  title = "Debugging & Observability for Backend Systems",
-  description = "Master production-grade debugging and observability using real-world incident scenarios. Build from structured logging through full incident resolution.",
-  overallProgress = 6,
-  doneCount = 0,
-  activeCount = 1,
-  availableCount = 5,
-  nextUpTitle = "Module 1 · Explain Stage",
+  levelBadge,
+  title,
+  description,
+  overallProgress,
+  doneCount,
+  activeCount,
+  availableCount,
+  nextUpTitle,
   onContinueLearning,
   onShare,
   onBookmark,

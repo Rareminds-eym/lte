@@ -1,12 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  awardXp,
-  completeStage,
-  evaluateArtifact,
-  evaluateFallback,
-  XP_AMOUNTS,
-  XP_CATEGORIES,
-} from "../xp-engine";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { awardXp, completeStage, evaluateArtifact, evaluateFallback } from "../xp-engine";
 
 // Mock Supabase Client
 const mockSingle = vi.fn();
@@ -17,6 +10,7 @@ const mockIn = vi.fn();
 const mockSelect = vi.fn();
 const mockUpdate = vi.fn();
 const mockInsert = vi.fn();
+const mockOrder = vi.fn();
 
 const mockSupabase = {
   from: vi.fn().mockImplementation(() => ({
@@ -28,8 +22,9 @@ const mockSupabase = {
     limit: mockLimit,
     single: mockSingle,
     maybeSingle: mockMaybeSingle,
+    order: mockOrder,
   })),
-} as any;
+} as unknown as typeof mockSupabase;
 
 describe("XP Engine Core logic", () => {
   beforeEach(() => {
@@ -42,15 +37,23 @@ describe("XP Engine Core logic", () => {
       limit: mockLimit,
       single: mockSingle,
       maybeSingle: mockMaybeSingle,
+      order: mockOrder,
     });
     mockEq.mockReturnValue({
       eq: mockEq,
       single: mockSingle,
       maybeSingle: mockMaybeSingle,
       limit: mockLimit,
+      order: mockOrder,
     });
-    mockIn.mockReturnValue({ eq: mockEq, single: mockSingle });
-    mockLimit.mockReturnValue({ maybeSingle: mockMaybeSingle });
+    mockIn.mockReturnValue({ eq: mockEq, single: mockSingle, order: mockOrder });
+    mockLimit.mockReturnValue({ maybeSingle: mockMaybeSingle, order: mockOrder });
+    mockOrder.mockReturnValue({
+      eq: mockEq,
+      single: mockSingle,
+      maybeSingle: mockMaybeSingle,
+      limit: mockLimit,
+    });
   });
 
   describe("awardXp", () => {
@@ -115,9 +118,11 @@ describe("XP Engine Core logic", () => {
       // Mock user_module_progress lookup (already exists)
       mockSelect.mockReturnValueOnce({
         eq: vi.fn().mockReturnValueOnce({
-          eq: vi.fn().mockReturnValueOnce([
-            { id: "mod-progress-1", stages_completed: 1, module_status: "in_progress" },
-          ]),
+          eq: vi
+            .fn()
+            .mockReturnValueOnce([
+              { id: "mod-progress-1", stages_completed: 1, module_status: "in_progress" },
+            ]),
         }),
       });
 

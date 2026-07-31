@@ -17,9 +17,11 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     const { levelId } = parsedParams.data;
+    const url = new URL(context.request.url);
+    const userId = url.searchParams.get("userId") ?? undefined;
     const supabase = createServiceSupabase(context.env);
 
-    const levelDetails = await getLevelWithModules(supabase, levelId);
+    const levelDetails = await getLevelWithModules(supabase, levelId, userId);
 
     if (!levelDetails) {
       return jsonError(`Level with id '${levelId}' not found`, 404);

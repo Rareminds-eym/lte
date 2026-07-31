@@ -151,13 +151,13 @@ export interface LevelRow {
     description: string;
     is_published: boolean;
     is_active: boolean;
-    modules_content?: Array<{
-      id: string;
-      module_artifacts?: Array<{
-        artifact_type: string;
-        is_active: boolean;
-      }>;
-    }>;
+    module_problem_statement?: string | null;
+    pressure_points?: Record<string, unknown> | null;
+    user_confusion?: Record<string, unknown> | null;
+    industry_challenge?: string | null;
+    prerequisites?: Record<string, unknown> | null;
+    what_youll_learn?: Record<string, unknown> | null;
+    when_to_apply?: string | null;
   }>;
 }
 

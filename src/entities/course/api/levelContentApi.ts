@@ -9,14 +9,25 @@ const LEVEL_API_BASE = "/api/v1/courses";
 
 export async function fetchLevelDetails(
   levelId: string,
-  capabilityCode: string,
+  capabilityCode?: string,
+  userId?: string,
 ): Promise<LevelDetailsResponse> {
-  const url = capabilityCode
+  let url = capabilityCode
     ? `${LEVEL_API_BASE}/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`
     : `${LEVEL_API_BASE}/${encodeURIComponent(levelId)}`;
+  if (userId) {
+    url += `?userId=${encodeURIComponent(userId)}`;
+  }
   const payload = await apiGet<unknown>(url);
-  const parsedPayload = LevelDetailsPayloadSchema.parse(payload);
-  return parsedPayload.level;
+  try {
+    const parsedPayload = LevelDetailsPayloadSchema.parse(payload);
+    return parsedPayload.level;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Schema validation failed: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 export async function fetchLevelModuleDetails(

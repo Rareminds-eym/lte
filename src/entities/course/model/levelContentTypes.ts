@@ -66,6 +66,15 @@ export interface LevelModuleSummary {
   description: string;
   isPublished: boolean;
   progressPercentage?: number;
+  completedStages?: string[];
+  isCompleted?: boolean;
+  module_problem_statement?: string | null;
+  pressure_points?: string[] | null;
+  user_confusion?: string[] | null;
+  industry_challenge?: string | null;
+  prerequisites?: string[] | null;
+  what_youll_learn?: string[] | null;
+  when_to_apply?: string | null;
 }
 
 export interface LevelDetailsResponse {

@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useLevelDetails, useStartLevelProgress, useCourses } from "@/entities/course";
+import { useCourses, useLevelDetails, useStartLevelProgress } from "@/entities/course";
 import { useAuthStore } from "@/entities/session";
 import { PageLoader } from "@/shared/ui";
 import {
@@ -20,7 +20,7 @@ export const LevelModulesPage: React.FC = () => {
 
   const userId = useAuthStore((s) => s.user?.id);
   const { data: courses } = useCourses(userId);
-  const { data: levelData, isLoading, error } = useLevelDetails(levelId, capabilityCode);
+  const { data: levelData, isLoading, error } = useLevelDetails(levelId, capabilityCode, userId);
   const { mutate: startLevel } = useStartLevelProgress();
 
   useEffect(() => {
@@ -73,15 +73,21 @@ export const LevelModulesPage: React.FC = () => {
   const modulesList = levelData.modules || [];
   const totalCount = modulesList.length;
 
-  // Module content status: isPublished = module content is ready for learners
-  const publishedModules = modulesList.filter((m) => m.isPublished);
-  const unpublishedModules = modulesList.filter((m) => !m.isPublished);
+  // Calculate per-module duration
+  const durationPerModule =
+    levelData.durationMinutes && totalCount > 0
+      ? Math.ceil(levelData.durationMinutes / totalCount)
+      : 0;
 
-  // Hero banner progress: published = done, first unpublished = active, rest = available
-  const doneCount = publishedModules.length;
-  const activeCount = unpublishedModules.length > 0 ? 1 : 0;
-  const availableCount = Math.max(0, unpublishedModules.length - activeCount);
-  const calculatedProgress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+  // Hero banner progress: based on user module progress from API
+  const completedModulesCount = modulesList.filter((m) => m.progressPercentage === 100).length;
+  const activeCount = modulesList.filter((m) => {
+    const progress = m.progressPercentage ?? 0;
+    return progress > 0 && progress < 100;
+  }).length;
+  const availableCount = modulesList.filter((m) => (m.progressPercentage ?? 0) === 0).length;
+  const calculatedProgress =
+    totalCount > 0 ? Math.round((completedModulesCount / totalCount) * 100) : 0;
 
   // User submissions: comes from user progress API (not yet wired — 0 until available)
   const submittedCount = 0;
@@ -92,8 +98,14 @@ export const LevelModulesPage: React.FC = () => {
       ? `LEVEL ${levelData.levelNo} · ${(levelData.levelLabel || levelData.difficultyLevel).toUpperCase()}`
       : undefined;
 
-  // Next up: first unpublished module, or first module overall
-  const nextUpModule = modulesList.find((m) => !m.isPublished) ?? modulesList[0];
+  // Next up: active module (in progress), or first available, or last completed
+  const nextUpModule =
+    modulesList.find((m) => {
+      const progress = m.progressPercentage ?? 0;
+      return progress > 0 && progress < 100;
+    }) ??
+    modulesList.find((m) => (m.progressPercentage ?? 0) === 0) ??
+    modulesList[modulesList.length - 1];
   const nextUpTitle = nextUpModule
     ? `Module ${nextUpModule.moduleNo} · ${nextUpModule.title}`
     : undefined;
@@ -106,7 +118,8 @@ export const LevelModulesPage: React.FC = () => {
   // Find active course from user's course list to get totalLevels & targetLevel
   const activeCourse = courses?.find(
     (c) =>
-      c.capabilityCode.toLowerCase() === (levelData.capabilityCode || capabilityCode || "").toLowerCase() ||
+      c.capabilityCode.toLowerCase() ===
+        (levelData.capabilityCode || capabilityCode || "").toLowerCase() ||
       c.capabilityId === (levelData.capabilityCode || capabilityCode) ||
       c.id === (levelData.capabilityCode || capabilityCode),
   );
@@ -124,7 +137,7 @@ export const LevelModulesPage: React.FC = () => {
         title={title}
         description={description}
         overallProgress={calculatedProgress}
-        doneCount={doneCount}
+        doneCount={completedModulesCount}
         activeCount={activeCount}
         availableCount={availableCount}
         nextUpTitle={nextUpTitle}
@@ -139,7 +152,7 @@ export const LevelModulesPage: React.FC = () => {
             modulesCount={totalCount}
             artifactsCount={levelData.artifactsCount}
             hasCertificate={true}
-            currentLevelNo={levelData.levelNo}
+            currentLevelNo={levelData.levelNo ?? 0}
             totalLevelsNo={dynamicTotalLevels}
             targetLevel={dynamicTargetLevel}
           />
@@ -159,6 +172,7 @@ export const LevelModulesPage: React.FC = () => {
         <LevelModuleList
           modules={modulesList}
           levelId={levelId}
+          moduleDurationMinutes={durationPerModule}
           onSelectModule={(moduleNo) => {
             if (levelId) {
               navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${moduleNo}`);
