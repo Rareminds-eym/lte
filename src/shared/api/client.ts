@@ -62,22 +62,25 @@ export async function apiFetch<T = unknown>(path: string, options: RequestInit =
     try {
       const clonedResponse = typeof response.clone === "function" ? response.clone() : response;
       try {
-        const errorJson = (await clonedResponse.json()) as {
-          message?: string;
-          error?: string | { message?: string };
-        };
-        if (errorJson.message) {
-          errorMessage = errorJson.message;
-        } else if (errorJson.error) {
-          if (typeof errorJson.error === "string") {
-            errorMessage = errorJson.error;
-          } else if (typeof errorJson.error === "object" && errorJson.error.message) {
-            errorMessage = errorJson.error.message;
+        const errorJson = (await clonedResponse.json()) as unknown;
+        if (errorJson && typeof errorJson === "object") {
+          const record = errorJson as { message?: unknown; error?: unknown };
+          if (typeof record.message === "string") {
+            errorMessage = record.message;
+          } else if (record.error) {
+            if (typeof record.error === "string") {
+              errorMessage = record.error;
+            } else if (typeof record.error === "object" && record.error !== null) {
+              const innerError = record.error as { message?: unknown };
+              if (typeof innerError.message === "string") {
+                errorMessage = innerError.message;
+              }
+            }
           }
         }
       } catch {
         // Fall back to reading the response body as text if it's not JSON
-        const rawText = await response.text();
+        const rawText = await clonedResponse.text();
         if (rawText && rawText.trim().length > 0 && rawText.length < 500) {
           errorMessage = rawText.trim();
         }

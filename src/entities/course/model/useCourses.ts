@@ -5,7 +5,7 @@ export const useCourses = (userId?: string, options?: { enabled?: boolean }) => 
   return useQuery({
     queryKey: ["userCourses", userId],
     queryFn: () => fetchUserCourses(),
-    enabled: !!userId && options?.enabled !== false,
+    enabled: typeof userId === "string" && userId.trim() !== "" && options?.enabled !== false,
     staleTime: 1000 * 60 * 5,
     retry: (failureCount, error) => {
       if (

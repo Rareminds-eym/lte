@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { ZodIssue } from "zod";
+import { useShallow } from "zustand/react/shallow";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useAuthStore } from "@/entities/session";
 import { initializeLearningPathSchema } from "../model/initializeLearningPath.schema";
@@ -25,9 +26,13 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
   const initializationStartedRef = useRef(false);
   const lastParamsRef = useRef<string | null>(null);
 
-  const authLoading = useAuthStore((s) => s.loading);
-  const authInitialized = useAuthStore((s) => s.initialized);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { authLoading, authInitialized, isAuthenticated } = useAuthStore(
+    useShallow((s) => ({
+      authLoading: s.loading,
+      authInitialized: s.initialized,
+      isAuthenticated: s.isAuthenticated,
+    })),
+  );
 
   const { mutate, isPending } = useInitializeLearningPath();
 
@@ -103,7 +108,10 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
       },
       {
         onSuccess: async () => {
-          await useLearningPathStore.getState().fetchAndSetActiveLearningPath();
+          await useLearningPathStore
+            .getState()
+            .fetchAndSetActiveLearningPath()
+            .catch(() => {});
           navigate(buildCourseDetailUrl(capabilityCode), {
             replace: true,
           });

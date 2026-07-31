@@ -31,7 +31,7 @@ function buildSignedOutState(error: string | null = null): Partial<AuthState> {
   return { accessToken: null, user: null, isAuthenticated: false, error };
 }
 
-export const useAuthStore = create<AuthState>((set, _get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   user: null,
   isAuthenticated: false,

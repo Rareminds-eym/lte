@@ -121,7 +121,10 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
   // 3. Orchestrate active learning path fetching once authenticated
   useEffect(() => {
     if (initialized && isAuthenticated) {
-      void useLearningPathStore.getState().fetchAndSetActiveLearningPath();
+      useLearningPathStore
+        .getState()
+        .fetchAndSetActiveLearningPath()
+        .catch(() => {});
     } else if (initialized && !isAuthenticated) {
       useLearningPathStore.getState().clearActiveLearningPath();
     }

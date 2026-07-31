@@ -35,8 +35,7 @@ describe("LearningPathInitializer Feature", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Default mock implementation for useAuthStore selector calls
-    vi.mocked(useAuthStore).mockImplementation(<T,>(selector?: (s: StoreState) => T) => {
+    vi.mocked(useAuthStore).mockImplementation((selector?: (s: StoreState) => unknown) => {
       const state: StoreState = {
         accessToken: "mock-token",
         loading: false,
@@ -49,7 +48,7 @@ describe("LearningPathInitializer Feature", () => {
         logout: vi.fn(),
         setAccessToken: vi.fn(),
       };
-      return selector ? selector(state) : (state as T);
+      return selector ? selector(state) : state;
     });
 
     // Default mock implementation for useInitializeLearningPath
