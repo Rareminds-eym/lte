@@ -8,7 +8,9 @@ const renderHeader = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</Memo
 describe("Header", () => {
   it("renders search input", () => {
     renderHeader(<Header />);
-    expect(screen.getByPlaceholderText("Search courses, skills, topics...")).toBeInTheDocument();
+    expect(
+      screen.getAllByPlaceholderText("Search courses, skills, topics...")[0],
+    ).toBeInTheDocument();
   });
 
   it("renders notifications button", () => {
@@ -34,7 +36,10 @@ describe("Header", () => {
   it("calls onSearch when input changes", () => {
     const onSearch = vi.fn();
     renderHeader(<Header onSearch={onSearch} />);
-    const input = screen.getByPlaceholderText("Search courses, skills, topics...");
+    const [input] = screen.getAllByPlaceholderText("Search courses, skills, topics...");
+    if (!input) {
+      throw new Error("Expected at least one search input");
+    }
     fireEvent.change(input, { target: { value: "react" } });
     expect(onSearch).toHaveBeenCalledWith("react");
   });
