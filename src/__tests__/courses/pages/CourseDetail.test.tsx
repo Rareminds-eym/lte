@@ -22,7 +22,7 @@ vi.mock("@/features/initialize-learning-path", () => ({
   LearningPathInitializer: () => <div data-testid="learning-path-initializer" />,
 }));
 
-const mockDbLevels = [
+const mockDbLevels = vi.hoisted(() => [
   {
     id: "lvl-1",
     levelNumber: 1,
@@ -78,7 +78,7 @@ const mockDbLevels = [
     difficulty: "advanced",
     status: "published",
   },
-];
+]);
 
 vi.mock("@/entities/course", async () => {
   const actual = await vi.importActual<typeof import("@/entities/course")>("@/entities/course");

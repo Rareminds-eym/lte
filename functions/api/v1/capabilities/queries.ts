@@ -107,7 +107,8 @@ export async function getLevelsForCapability(
       "id, level_code, title, description, example_outputs, duration_minutes, difficulty_level, status",
     )
     .eq("capability_id", capabilityId)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("status", "published");
 
   if (error) {
     throw new Error(`Failed to fetch capability levels: ${error.message}`);

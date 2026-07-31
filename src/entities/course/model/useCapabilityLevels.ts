@@ -7,7 +7,7 @@ export const useCapabilityLevels = (capabilityCode: string) => {
 
   return useQuery({
     queryKey: ["capabilityLevels", capabilityCode, accessToken],
-    queryFn: ({ queryKey }) => fetchCapabilityLevels(queryKey[2] as string, queryKey[1] as string),
+    queryFn: ({ queryKey }) => fetchCapabilityLevels(queryKey[1] as string),
     enabled: !!accessToken && !!capabilityCode,
     staleTime: 1000 * 60 * 5,
     retry: false,

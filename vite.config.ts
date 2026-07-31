@@ -1,3 +1,4 @@
+import path from "node:path";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
@@ -15,6 +16,12 @@ export default defineConfig({
 	],
 	resolve: {
 		tsconfigPaths: true,
+		alias: {
+			"@file-viewer/pptx": path.resolve(__dirname, "./src/__mocks__/fileViewerPptx.ts"),
+			"docx-preview": path.resolve(__dirname, "./src/__mocks__/fileViewerPptx.ts"),
+			"pdfjs-dist": path.resolve(__dirname, "./src/__mocks__/fileViewerPptx.ts"),
+			"xlsx": path.resolve(__dirname, "./src/__mocks__/fileViewerPptx.ts"),
+		},
   },
   optimizeDeps: {
     exclude: ["@file-viewer/pptx"],
