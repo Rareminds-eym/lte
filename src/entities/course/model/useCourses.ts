@@ -1,14 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuthStore } from "@/entities/session";
 import { fetchUserCourses } from "../api/courseApi";
 
-export const useCourses = () => {
-  const accessToken = useAuthStore((s) => s.accessToken);
-
+export const useCourses = (userId?: string, options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: ["userCourses", accessToken],
-    queryFn: ({ queryKey }) => fetchUserCourses(queryKey[1] as string),
-    enabled: !!accessToken,
+    queryKey: ["userCourses", userId],
+    queryFn: () => fetchUserCourses(),
+    enabled: typeof userId === "string" && userId.trim() !== "" && options?.enabled !== false,
     staleTime: 1000 * 60 * 5,
     retry: (failureCount, error) => {
       if (

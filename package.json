@@ -4,12 +4,15 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@file-viewer/pptx": "^2.2.4",
     "@rareminds-eym/auth-client": "1.0.12",
     "@rareminds-eym/auth-core": "2.1.2",
     "@supabase/supabase-js": "2.110.2",
     "@t3-oss/env-core": "0.13.11",
     "@tanstack/react-query": "5.101.2",
+    "docx-preview": "^0.4.0",
     "framer-motion": "^12.42.2",
+    "pdfjs-dist": "^6.2.108",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-error-boundary": "6.1.1",
@@ -17,6 +20,7 @@
     "react-router-dom": "7.18.1",
     "tailwind-merge": "^3.6.0",
     "wrangler": "4.110.0",
+    "xlsx": "^0.18.5",
     "zod": "4.4.3",
     "zustand": "5.0.14"
   },

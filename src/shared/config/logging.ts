@@ -103,7 +103,7 @@ export class Logger {
     this.output(logEntry);
   }
 
-  timed<T>(
+  timed<T = unknown>(
     message: string,
     fn: () => T | Promise<T>,
     metadata?: Record<string, unknown>,

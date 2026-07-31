@@ -1,4 +1,5 @@
 import type React from "react";
+import { useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/entities/session";
 import { getLogger, getSkillpassportUrl, useUIStore } from "@/shared";
@@ -14,6 +15,8 @@ export const DashboardLayout: React.FC = () => {
   const authError = useAuthStore((state) => state.error);
   const isCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   // Case 1: User is authenticated in SSO but lacks LTE product entitlement
   if (
@@ -66,23 +69,55 @@ export const DashboardLayout: React.FC = () => {
   };
 
   const handleNavigate = (id: string) => {
+    setIsMobileDrawerOpen(false);
     const path = navPathMap[id];
     if (path) navigate(path);
   };
 
   const activeNavId = location.pathname.includes("dashboard") ? "dashboard" : "my-courses";
 
+  const pageTitle = activeNavId === "dashboard" ? "Dashboard" : "My Courses";
+
   return (
-    <div className="flex h-screen bg-surface-secondary">
+    <div className="flex h-screen bg-surface-secondary overflow-hidden relative">
+      {/* Desktop Navigation Drawer */}
       <NavigationDrawer
         activeNavId={activeNavId}
         isCollapsed={isCollapsed}
         onToggleCollapse={toggleSidebar}
         onNavigate={handleNavigate}
+        className="hidden md:flex"
       />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header userName={userName} userStatus={userStatus} userEmail={user?.email} />
-        <main className="flex-1 p-6 overflow-y-auto">
+
+      {/* Mobile Navigation Drawer Overlay */}
+      {isMobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <button
+            type="button"
+            aria-label="Close navigation drawer"
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs border-0 p-0"
+            onClick={() => setIsMobileDrawerOpen(false)}
+          />
+          <NavigationDrawer
+            activeNavId={activeNavId}
+            isCollapsed={false}
+            onToggleCollapse={() => setIsMobileDrawerOpen(false)}
+            onNavigate={handleNavigate}
+            className="relative z-10 w-72 h-full shadow-2xl"
+          />
+        </div>
+      )}
+
+      {/* Main Layout Area */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <Header
+          pageTitle={pageTitle}
+          userName={userName}
+          userStatus={userStatus}
+          userEmail={user?.email}
+          onToggleMobileDrawer={() => setIsMobileDrawerOpen(true)}
+        />
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto min-w-0">
           <Outlet />
         </main>
       </div>

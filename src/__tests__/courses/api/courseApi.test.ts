@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Course } from "@/entities/course";
 import { fetchUserCourses } from "@/entities/course/api/courseApi";
+import { registerTokenGetter } from "@/shared/api";
 
 function mockFetch(status: number, body: unknown): void {
   globalThis.fetch = vi.fn().mockResolvedValue({
@@ -12,7 +13,14 @@ function mockFetch(status: number, body: unknown): void {
 }
 
 describe("courseApi", () => {
-  afterEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    registerTokenGetter(() => "token");
+  });
+
+  afterEach(() => {
+    registerTokenGetter(() => null);
+    vi.restoreAllMocks();
+  });
 
   describe("fetchUserCourses", () => {
     const cap = {
@@ -31,7 +39,7 @@ describe("courseApi", () => {
 
     it("maps capability to course shape", async () => {
       mockFetch(200, { success: true, capabilities: [cap] });
-      const courses: Course[] = await fetchUserCourses("token");
+      const courses: Course[] = await fetchUserCourses();
       expect(courses).toHaveLength(1);
       expect(courses[0]).toMatchObject({
         id: "cap-1",
@@ -61,28 +69,29 @@ describe("courseApi", () => {
           },
         ],
       });
-      const courses = await fetchUserCourses("token");
-      const course = courses[0]!;
+      const courses = await fetchUserCourses();
+      const course = courses[0];
+      if (!course) {
+        throw new Error("Expected one mapped course");
+      }
       expect(course.capabilityCode).toMatch(/^CAP-/);
       expect(course.priority).toBe("");
     });
 
     it("returns empty array when no capabilities", async () => {
       mockFetch(200, { success: true, capabilities: [] });
-      const courses = await fetchUserCourses("token");
+      const courses = await fetchUserCourses();
       expect(courses).toEqual([]);
     });
 
     it("throws on non-ok response", async () => {
       mockFetch(401, { success: false, error: { message: "Unauthorized" } });
-      await expect(fetchUserCourses("bad-token")).rejects.toThrow("Unauthorized");
+      await expect(fetchUserCourses()).rejects.toThrow("Unauthorized");
     });
 
     it("throws on failed success flag", async () => {
       mockFetch(200, { success: false });
-      await expect(fetchUserCourses("token")).rejects.toThrow(
-        "Invalid response format from server",
-      );
+      await expect(fetchUserCourses()).rejects.toThrow("Invalid response format from server");
     });
   });
 });

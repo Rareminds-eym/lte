@@ -1,4 +1,5 @@
 import type React from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/shared/lib";
 import { Button, Image } from "@/shared/ui";
 import type { Course } from "../model/types";
@@ -10,6 +11,7 @@ export interface CourseCardProps {
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid", className }) => {
+  const navigate = useNavigate();
   const actionLabel =
     course.status === "not_started"
       ? "Start"
@@ -30,6 +32,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
             : "outline"
       }
       size="sm"
+      onClick={() => navigate(`/my-courses/${encodeURIComponent(course.capabilityCode)}`)}
       className={cn(
         "rounded-full shrink-0 font-medium text-xs px-3.5 py-1.5",
         course.status === "not_started" &&

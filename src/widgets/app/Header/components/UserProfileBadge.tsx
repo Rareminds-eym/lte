@@ -53,9 +53,11 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
       )}
 
       {/* User Details */}
-      <div className="flex flex-col leading-tight">
-        <span className="text-sm font-bold text-content-primary">{name}</span>
-        {status && <span className="text-xs font-normal text-content-muted">{status}</span>}
+      <div className="hidden sm:flex flex-col leading-tight max-w-[120px]">
+        <span className="text-sm font-bold text-content-primary truncate">{name}</span>
+        {status && (
+          <span className="text-xs font-normal text-content-muted truncate">{status}</span>
+        )}
       </div>
 
       {/* Dropdown Chevron */}

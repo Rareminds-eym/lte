@@ -178,6 +178,14 @@ describe("Courses", () => {
       </MemoryRouter>,
     );
 
+  const getRequiredTab = (index: number) => {
+    const tab = screen.getAllByRole("tab")[index];
+    if (!tab) {
+      throw new Error(`Expected tab at index ${index}`);
+    }
+    return tab;
+  };
+
   it("renders page title and description", () => {
     renderCourses();
     expect(screen.getByText("My Courses")).toBeInTheDocument();
@@ -211,16 +219,14 @@ describe("Courses", () => {
 
   it("shows 4 Core courses after filtering", () => {
     renderCourses();
-    const tabs = screen.getAllByRole("tab");
-    fireEvent.click(tabs[1]!);
+    fireEvent.click(getRequiredTab(1));
     const cards = screen.getAllByTestId("course-card");
     expect(cards.length).toBe(4);
   });
 
   it("shows 2 Supporting courses after filtering", () => {
     renderCourses();
-    const tabs = screen.getAllByRole("tab");
-    fireEvent.click(tabs[3]!);
+    fireEvent.click(getRequiredTab(3));
     const cards = screen.getAllByTestId("course-card");
     expect(cards.length).toBe(2);
   });
@@ -229,16 +235,14 @@ describe("Courses", () => {
     renderCourses();
     fireEvent.click(screen.getByLabelText("Next page"));
     expect(screen.getAllByTestId("course-card").length).toBe(2);
-    const tabs = screen.getAllByRole("tab");
-    fireEvent.click(tabs[1]!);
+    fireEvent.click(getRequiredTab(1));
     expect(screen.getAllByTestId("course-card").length).toBe(4);
   });
 
   it("updates course count text when filtering", () => {
     renderCourses();
     expect(screen.getByText("8 courses")).toBeInTheDocument();
-    const tabs = screen.getAllByRole("tab");
-    fireEvent.click(tabs[3]!);
+    fireEvent.click(getRequiredTab(3));
     expect(screen.getByText("2 courses")).toBeInTheDocument();
   });
 
