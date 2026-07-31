@@ -19,10 +19,10 @@ export interface ModulesDrawerProps {
 }
 
 const DOT_COLOR_MAP: Record<string, string> = {
-  blue: "bg-blue-600",
-  green: "bg-emerald-500",
-  purple: "bg-purple-300",
-  gray: "bg-gray-300",
+  blue: "bg-brand-600",
+  green: "bg-success-600",
+  purple: "bg-accent-purple-600",
+  gray: "bg-surface-muted",
 };
 
 const clampProgress = (value: number | undefined) => {
@@ -43,9 +43,9 @@ const getModuleDots = (
 };
 
 const getProgressColor = (progressPercentage: number, isActive: boolean) => {
-  if (progressPercentage >= 100) return "bg-emerald-500";
-  if (progressPercentage > 0 || isActive) return "bg-blue-600";
-  return "bg-slate-300";
+  if (progressPercentage >= 100) return "bg-success-600";
+  if (progressPercentage > 0 || isActive) return "bg-brand-600";
+  return "bg-surface-muted";
 };
 
 export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
@@ -57,11 +57,11 @@ export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
 }) => {
   return (
     <aside
-      className={`w-[256px] max-w-[256px] bg-white border-r border-slate-200/80 flex flex-col h-full shrink-0 overflow-hidden font-sans select-none transition-all duration-200 ${className}`}
+      className={`w-[256px] max-w-[256px] bg-surface-primary border-r border-line-default/80 flex flex-col h-full shrink-0 overflow-hidden font-sans select-none transition-all duration-200 ${className}`}
     >
       {/* Header */}
-      <div className="px-4 py-3 sm:px-4 sm:py-3.5 flex items-center justify-between border-b border-slate-100">
-        <h2 className="text-[11px] sm:text-xs font-bold tracking-widest text-slate-800 uppercase">
+      <div className="px-4 py-3 sm:px-4 sm:py-3.5 flex items-center justify-between border-b border-line-subtle">
+        <h2 className="text-[11px] sm:text-xs font-bold tracking-widest text-content-heading uppercase">
           MODULES
         </h2>
         {onClose && (
@@ -72,7 +72,7 @@ export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
             icon={<CloseIcon size={15} />}
             variant="icon"
             size="sm"
-            className="h-8 w-8 rounded-xl border-slate-200/80 bg-white text-slate-500 shadow-2xs hover:bg-slate-50 hover:text-slate-700"
+            className="h-8 w-8 rounded-xl border-line-default/80 bg-surface-primary text-content-secondary shadow-2xs hover:bg-surface-subtle hover:text-content-primary"
           />
         )}
       </div>
@@ -80,7 +80,7 @@ export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
       {/* Modules List */}
       <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden p-2.5 sm:space-y-2 sm:p-3">
         {modules.length === 0 && (
-          <p className="px-2 py-3 text-xs leading-relaxed text-slate-500">
+          <p className="px-2 py-3 text-xs leading-relaxed text-content-secondary">
             No modules available for this course.
           </p>
         )}
@@ -99,7 +99,7 @@ export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => onSelectModule?.(module.moduleNo)}
-                className="w-full min-w-0 justify-start overflow-hidden border border-blue-100/50 bg-brand-50 p-2.5 text-left font-sans sm:p-3 rounded-xl transition-all duration-150 shadow-2xs"
+                className="w-full min-w-0 justify-start overflow-hidden border border-brand-100/50 bg-brand-50 p-2.5 text-left font-sans sm:p-3 rounded-xl transition-all duration-150 shadow-2xs"
               >
                 <div className="flex w-full min-w-0 items-start justify-between gap-2">
                   <div className="flex items-start gap-2.5 flex-1 min-w-0">
@@ -110,15 +110,15 @@ export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
                     </span>
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <div className="flex min-w-0 items-start justify-between gap-2">
-                        <h3 className="min-w-0 truncate text-xs font-bold leading-tight text-slate-900 sm:text-[13px]">
+                        <h3 className="min-w-0 truncate text-xs font-bold leading-tight text-content-primary sm:text-[13px]">
                           {module.title}
                         </h3>
-                        <span className="shrink-0 text-[11px] font-semibold text-slate-400 sm:text-xs">
+                        <span className="shrink-0 text-[11px] font-semibold text-content-muted sm:text-xs">
                           {progressPercentage}%
                         </span>
                       </div>
 
-                      <div className="mt-1.5 h-1 rounded-full bg-slate-200">
+                      <div className="mt-1.5 h-1 rounded-full bg-surface-emphasis">
                         <div
                           className={`h-full rounded-full ${progressColor}`}
                           style={{ width: `${progressPercentage}%` }}
@@ -130,7 +130,7 @@ export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
                           <span
                             key={`${module.id}-${dotColor}-${idx}`}
                             className={`h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5 ${
-                              DOT_COLOR_MAP[dotColor] || "bg-gray-300"
+                              DOT_COLOR_MAP[dotColor] || "bg-surface-muted"
                             }`}
                           />
                         ))}
@@ -149,29 +149,29 @@ export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => onSelectModule?.(module.moduleNo)}
-              className="w-full min-w-0 justify-start overflow-hidden border border-transparent bg-transparent p-2 text-left font-sans sm:p-2.5 rounded-lg hover:bg-slate-50/80 transition-colors duration-150"
+              className="w-full min-w-0 justify-start overflow-hidden border border-transparent bg-transparent p-2 text-left font-sans sm:p-2.5 rounded-lg hover:bg-surface-subtle/80 transition-colors duration-150"
             >
               <div className="flex w-full min-w-0 items-start gap-2.5">
                 <span
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold sm:h-6.5 sm:w-6.5 sm:text-xs ${
                     progressPercentage > 0
                       ? `${progressColor} border-transparent text-white`
-                      : "border-slate-200/70 bg-slate-100/90 text-slate-500"
+                      : "border-line-default/70 bg-surface-muted/90 text-content-secondary"
                   }`}
                 >
                   {module.moduleNo}
                 </span>
                 <div className="min-w-0 flex-1 overflow-hidden pb-1.5">
                   <div className="flex min-w-0 items-start justify-between gap-2">
-                    <h3 className="min-w-0 truncate text-xs font-semibold text-slate-700 hover:text-slate-900 sm:text-[13px]">
+                    <h3 className="min-w-0 truncate text-xs font-semibold text-content-body hover:text-content-primary sm:text-[13px]">
                       {module.title}
                     </h3>
-                    <span className="shrink-0 text-[11px] font-medium text-slate-400 sm:text-xs">
+                    <span className="shrink-0 text-[11px] font-medium text-content-muted sm:text-xs">
                       {progressPercentage}%
                     </span>
                   </div>
 
-                  <div className="mt-1.5 h-1 rounded-full bg-slate-200">
+                  <div className="mt-1.5 h-1 rounded-full bg-surface-emphasis">
                     <div
                       className={`h-full rounded-full ${progressColor}`}
                       style={{ width: `${progressPercentage}%` }}

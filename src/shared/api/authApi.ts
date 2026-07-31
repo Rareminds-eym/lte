@@ -5,7 +5,7 @@ import type {
   RefreshResponse,
 } from "@/shared/types/auth";
 
-async function parseJsonResponse<T>(response: Response): Promise<T> {
+async function parseJsonResponse<T = unknown>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => null)) as unknown;
 
   if (!response.ok) {

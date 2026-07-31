@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CourseCard, CourseCardGridSkeleton, useCourses } from "@/entities/course";
+import { useAuthStore } from "@/entities/session";
 import { getLogger } from "@/shared";
 import { cn } from "@/shared/lib";
 import { Button } from "@/shared/ui";
@@ -30,7 +31,8 @@ export const CoursesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const { data: courses, isPending, error } = useCourses();
+  const userId = useAuthStore((s) => s.user?.id);
+  const { data: courses, isPending, error } = useCourses(userId ?? undefined);
 
   const filteredCourses = filterCoursesByPriority(courses ?? [], activePriority);
   const totalPages = Math.ceil(filteredCourses.length / COURSE_PAGE_SIZE);

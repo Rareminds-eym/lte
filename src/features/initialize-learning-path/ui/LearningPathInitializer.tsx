@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { ZodIssue } from "zod";
+import { useShallow } from "zustand/react/shallow";
+import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useAuthStore } from "@/entities/session";
+import { getLogger } from "@/shared";
 import { initializeLearningPathSchema } from "../model/initializeLearningPath.schema";
 import { useInitializeLearningPath } from "../model/useInitializeLearningPath";
+
+const logger = getLogger("LearningPathInitializer");
 
 type LearningPathInitializerProps = {
   capabilityCode: string;
@@ -24,7 +29,13 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
   const initializationStartedRef = useRef(false);
   const lastParamsRef = useRef<string | null>(null);
 
-  const { accessToken, loading: authLoading, initialized: authInitialized } = useAuthStore();
+  const { authLoading, authInitialized, isAuthenticated } = useAuthStore(
+    useShallow((s) => ({
+      authLoading: s.loading,
+      authInitialized: s.initialized,
+      isAuthenticated: s.isAuthenticated,
+    })),
+  );
 
   const { mutate, isPending } = useInitializeLearningPath();
 
@@ -59,7 +70,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     const paramsChanged = searchParamsString !== lastParamsRef.current;
 
     // Check if we should skip initialization
-    if (parsedParams === null || authLoading || !authInitialized || !accessToken) {
+    if (parsedParams === null || authLoading || !authInitialized || !isAuthenticated) {
       if (paramsChanged) {
         lastParamsRef.current = searchParamsString;
         initializationStartedRef.current = false;
@@ -97,11 +108,18 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     mutate(
       {
         payload: parsedParams.data,
-        accessToken,
       },
       {
         onSuccess: async () => {
-          await useAuthStore.getState().fetchAndSetActiveLearningPath();
+          await useLearningPathStore
+            .getState()
+            .fetchAndSetActiveLearningPath()
+            .catch((error: unknown) => {
+              logger.error(
+                "Failed to fetch active learning path",
+                error instanceof Error ? error : new Error(String(error)),
+              );
+            });
           navigate(buildCourseDetailUrl(capabilityCode), {
             replace: true,
           });
@@ -120,7 +138,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     parsedParams,
     authLoading,
     authInitialized,
-    accessToken,
+    isAuthenticated,
     mutate,
     capabilityCode,
     navigate,
@@ -135,7 +153,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
         aria-live="polite"
         aria-busy="true"
       >
-        <span className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-indigo-200 border-t-indigo-600" />
+        <span className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-brand-200 border-t-brand-600" />
         <div>
           <p className="text-sm font-semibold text-content-primary">
             Initializing learning path...

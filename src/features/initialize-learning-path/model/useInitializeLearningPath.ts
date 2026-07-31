@@ -5,16 +5,9 @@ import type { InitializeLearningPathPayload } from "./initializeLearningPath.sch
 
 export const useInitializeLearningPath = () => {
   return useMutation({
-    mutationFn: ({
-      payload,
-      accessToken,
-    }: {
-      payload: InitializeLearningPathPayload;
-      accessToken: string;
-    }) =>
+    mutationFn: ({ payload }: { payload: InitializeLearningPathPayload }) =>
       initializeLearningPath({
         payload,
-        accessToken,
       }),
 
     retry: (failureCount, error) => {

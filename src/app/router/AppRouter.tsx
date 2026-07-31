@@ -5,8 +5,7 @@ import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 import { LevelPlayerLayout } from "@/app/layouts/LevelPlayerLayout";
 import { MainLayout } from "@/app/layouts/MainLayout";
 import { GuestGuard } from "@/app/router/guards";
-import { RouteLoadingBoundary } from "@/shared/ui";
-import { DashboardSkeleton } from "@/widgets/dashboard";
+import { PageLoader, RouteLoadingBoundary } from "@/shared/ui";
 
 // Lazy loaded page components — must be declared at module scope (workspace rule)
 const HomePage = lazy(() => import("@/pages/home").then((m) => ({ default: m.HomePage })));
@@ -20,6 +19,7 @@ const LevelContent = lazy(() =>
   import("@/pages/level-content").then((m) => ({ default: m.LevelContent })),
 );
 const NotFound = lazy(() => import("@/pages/not-found").then((m) => ({ default: m.NotFound })));
+
 export const AppRouter: React.FC = () => {
   return (
     <Routes>
@@ -27,7 +27,7 @@ export const AppRouter: React.FC = () => {
         <Route
           path="/"
           element={
-            <RouteLoadingBoundary>
+            <RouteLoadingBoundary fallback={<PageLoader message="Loading homepage..." />}>
               <HomePage />
             </RouteLoadingBoundary>
           }
@@ -35,7 +35,7 @@ export const AppRouter: React.FC = () => {
         <Route
           path="/login"
           element={
-            <RouteLoadingBoundary>
+            <RouteLoadingBoundary fallback={<PageLoader message="Loading login page..." />}>
               <GuestGuard>
                 <LoginPage />
               </GuestGuard>
@@ -47,7 +47,7 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/dashboard"
             element={
-              <RouteLoadingBoundary fallback={<DashboardSkeleton />}>
+              <RouteLoadingBoundary fallback={<PageLoader message="Loading dashboard..." />}>
                 <Dashboard />
               </RouteLoadingBoundary>
             }
@@ -55,7 +55,7 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/my-courses"
             element={
-              <RouteLoadingBoundary>
+              <RouteLoadingBoundary fallback={<PageLoader message="Loading courses..." />}>
                 <Courses />
               </RouteLoadingBoundary>
             }
@@ -63,7 +63,7 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/my-courses/:capabilityCode"
             element={
-              <RouteLoadingBoundary>
+              <RouteLoadingBoundary fallback={<PageLoader message="Loading course details..." />}>
                 <CourseDetail />
               </RouteLoadingBoundary>
             }
@@ -73,7 +73,7 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/courses/:levelId/modules/:moduleNo"
             element={
-              <RouteLoadingBoundary>
+              <RouteLoadingBoundary fallback={<PageLoader message="Loading course content..." />}>
                 <LevelContent />
               </RouteLoadingBoundary>
             }
@@ -83,7 +83,7 @@ export const AppRouter: React.FC = () => {
       <Route
         path="*"
         element={
-          <RouteLoadingBoundary>
+          <RouteLoadingBoundary fallback={<PageLoader message="Loading page..." />}>
             <NotFound />
           </RouteLoadingBoundary>
         }
