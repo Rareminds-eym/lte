@@ -1,7 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useAuthStore } from "@/entities/session";
 import { getLogger } from "@/shared";
 import { ApplicationLoader } from "@/shared/ui";
@@ -102,7 +101,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
         if (!cancelled) {
           logger.info(`Exchange succeeded, navigating to ${targetNext}`);
           window.history.replaceState({}, "", targetNext);
-          void navigate(targetNext, { replace: true });
+          navigate(targetNext, { replace: true });
         }
       })
       .catch((error: unknown) => {
@@ -118,22 +117,13 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
     };
   }, [callbackParams, exchangeCode, navigate, targetNext]);
 
-  // 3. Orchestrate active learning path fetching once authenticated
-  useEffect(() => {
-    if (initialized && isAuthenticated) {
-      void useLearningPathStore.getState().fetchAndSetActiveLearningPath();
-    } else if (initialized && !isAuthenticated) {
-      useLearningPathStore.getState().clearActiveLearningPath();
-    }
-  }, [initialized, isAuthenticated]);
-
   // ── Render gates ──────────────────────────────────────────────────────────
 
   // SSO callback flow: always show ApplicationLoader until exchange resolves.
   if (callbackParams || location.pathname.startsWith("/auth/callback")) {
     if (!callbackParams) {
       // Bare /auth/callback with no params — bounce to landing
-      void navigate("/", { replace: true });
+      navigate("/", { replace: true });
       return <ApplicationLoader message="Redirecting…" />;
     }
     const message = callbackError ?? authError;
@@ -155,29 +145,31 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
                 onClick={() => window.location.reload()}
                 className="px-4 py-2 bg-brand-600 text-content-inverse font-semibold text-sm rounded-lg hover:bg-brand-700 transition-colors cursor-pointer"
               >
-                Retry sign in
+                Retry Sign In
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  void navigate("/", { replace: true });
+                  navigate("/login", { replace: true });
+                  window.location.reload();
                 }}
-                className="px-4 py-2 border border-line-default text-content-primary font-semibold text-sm rounded-lg hover:bg-surface-secondary transition-colors cursor-pointer"
+                className="px-4 py-2 border border-line-strong text-content-body font-semibold text-sm rounded-lg hover:bg-surface-muted transition-colors cursor-pointer"
               >
-                Return to login
+                Return to Login
               </button>
             </div>
           </section>
         </main>
       );
     }
-    return <ApplicationLoader message="Completing sign in…" />;
+    return <ApplicationLoader message="Verifying your SkillPassport session…" />;
   }
 
-  // Application bootstrap flow: block rendering until silent refresh settles.
+  // Initial bootstrap: show ApplicationLoader while session is being resolved
   if (loading || !initialized) {
-    return <ApplicationLoader message="Initializing application state…" />;
+    return <ApplicationLoader message="Initializing…" />;
   }
 
+  // Auth is resolved — hand control back to the route tree
   return <>{children}</>;
 };

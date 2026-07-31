@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fetchActiveLearningPath } from "@/entities/active-learning-path";
-import { registerTokenGetter } from "@/shared/api";
 
 function mockFetch(status: number, body: unknown): void {
   globalThis.fetch = vi.fn().mockResolvedValue({
@@ -12,14 +11,7 @@ function mockFetch(status: number, body: unknown): void {
 }
 
 describe("learningPathApi", () => {
-  beforeEach(() => {
-    registerTokenGetter(() => "token");
-  });
-
-  afterEach(() => {
-    registerTokenGetter(() => null);
-    vi.restoreAllMocks();
-  });
+  afterEach(() => vi.restoreAllMocks());
 
   describe("fetchActiveLearningPath", () => {
     it("returns active learning path on success", async () => {
@@ -32,24 +24,26 @@ describe("learningPathApi", () => {
         matchScore: 85,
       };
       mockFetch(200, { success: true, data: path });
-      const result = await fetchActiveLearningPath();
+      const result = await fetchActiveLearningPath("token");
       expect(result).toEqual(path);
     });
 
     it("returns null when no active path exists", async () => {
       mockFetch(200, { success: true, data: null });
-      const result = await fetchActiveLearningPath();
+      const result = await fetchActiveLearningPath("token");
       expect(result).toBeNull();
     });
 
     it("throws on non-ok response", async () => {
       mockFetch(401, { success: false, error: { message: "Unauthorized" } });
-      await expect(fetchActiveLearningPath()).rejects.toThrow("Unauthorized");
+      await expect(fetchActiveLearningPath("bad-token")).rejects.toThrow("Unauthorized");
     });
 
     it("throws status text when error message is missing", async () => {
       mockFetch(500, {});
-      await expect(fetchActiveLearningPath()).rejects.toThrow("Request failed with status 500");
+      await expect(fetchActiveLearningPath("token")).rejects.toThrow(
+        "Request failed with status 500",
+      );
     });
 
     it("throws status text when JSON is malformed on error", async () => {
@@ -59,7 +53,9 @@ describe("learningPathApi", () => {
         statusText: "Internal Server Error",
         json: () => Promise.reject(new Error("Invalid JSON")),
       });
-      await expect(fetchActiveLearningPath()).rejects.toThrow("Request failed with status 500");
+      await expect(fetchActiveLearningPath("token")).rejects.toThrow(
+        "Request failed with status 500",
+      );
     });
   });
 });

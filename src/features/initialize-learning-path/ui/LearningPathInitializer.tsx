@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { ZodIssue } from "zod";
-import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useAuthStore } from "@/entities/session";
 import { initializeLearningPathSchema } from "../model/initializeLearningPath.schema";
 import { useInitializeLearningPath } from "../model/useInitializeLearningPath";
@@ -25,10 +24,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
   const initializationStartedRef = useRef(false);
   const lastParamsRef = useRef<string | null>(null);
 
-  // Selector-based subscriptions to prevent unnecessary re-renders
-  const authLoading = useAuthStore((s) => s.loading);
-  const authInitialized = useAuthStore((s) => s.initialized);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { accessToken, loading: authLoading, initialized: authInitialized } = useAuthStore();
 
   const { mutate, isPending } = useInitializeLearningPath();
 
@@ -63,7 +59,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     const paramsChanged = searchParamsString !== lastParamsRef.current;
 
     // Check if we should skip initialization
-    if (parsedParams === null || authLoading || !authInitialized || !isAuthenticated) {
+    if (parsedParams === null || authLoading || !authInitialized || !accessToken) {
       if (paramsChanged) {
         lastParamsRef.current = searchParamsString;
         initializationStartedRef.current = false;
@@ -101,11 +97,11 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     mutate(
       {
         payload: parsedParams.data,
+        accessToken,
       },
       {
         onSuccess: async () => {
-          // Refresh the active learning path inside its decoupled store
-          await useLearningPathStore.getState().fetchAndSetActiveLearningPath();
+          await useAuthStore.getState().fetchAndSetActiveLearningPath();
           navigate(buildCourseDetailUrl(capabilityCode), {
             replace: true,
           });
@@ -124,7 +120,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
     parsedParams,
     authLoading,
     authInitialized,
-    isAuthenticated,
+    accessToken,
     mutate,
     capabilityCode,
     navigate,
