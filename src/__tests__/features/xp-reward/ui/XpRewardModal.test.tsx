@@ -17,7 +17,7 @@ describe("XpRewardModal", () => {
 
     expect(screen.getByText("+50")).toBeInTheDocument();
     expect(screen.getByText("XP Earned!")).toBeInTheDocument();
-    expect(screen.getByText("READINESS XP")).toBeInTheDocument();
+    expect(screen.getByText(/READINESS XP/)).toBeInTheDocument();
     expect(screen.getByText(/You completed the/)).toBeInTheDocument();
     expect(screen.getByText("explore")).toBeInTheDocument();
     expect(screen.getByText("125")).toBeInTheDocument();

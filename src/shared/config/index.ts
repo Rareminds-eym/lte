@@ -1,4 +1,4 @@
-import { clientEnv } from "./env";
+import { getClientEnv } from "./env";
 
 // Shared configuration constants
 
@@ -16,7 +16,7 @@ export const ROUTES = {
 };
 
 export function getSkillpassportUrl(): string {
-  return clientEnv.VITE_SKILLPASSPORT_URL.replace(/\/+$/, "");
+  return getClientEnv().VITE_SKILLPASSPORT_URL.replace(/\/+$/, "");
 }
 
 export * from "./env";
