@@ -113,9 +113,9 @@ describe("AppRouter", () => {
     expect(await screen.findByTestId("course-detail-page")).toBeInTheDocument();
   });
 
-  it("renders level content at /courses/:levelId/modules/:moduleNo", async () => {
+  it("renders level content at /my-courses/:levelId/modules/:moduleNo", async () => {
     render(
-      <MemoryRouter initialEntries={["/courses/0a010796-10c0-5287-b89a-6ab56bd71399/modules/1"]}>
+      <MemoryRouter initialEntries={["/my-courses/0a010796-10c0-5287-b89a-6ab56bd71399/modules/1"]}>
         <AppRouter />
       </MemoryRouter>,
     );

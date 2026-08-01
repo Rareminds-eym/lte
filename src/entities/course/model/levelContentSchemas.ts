@@ -87,20 +87,34 @@ export const LevelModuleSummarySchema = z.object({
   description: z.string(),
   isPublished: z.boolean(),
   progressPercentage: z.number().optional(),
+  completedStages: z.array(z.string()).optional(),
+  isCompleted: z.boolean().optional(),
+  module_problem_statement: z.string().nullable().optional(),
+  pressure_points: z.array(z.string()).nullable().optional(),
+  user_confusion: z.array(z.string()).nullable().optional(),
+  industry_challenge: z.string().nullable().optional(),
+  prerequisites: z.array(z.string()).nullable().optional(),
+  what_youll_learn: z.array(z.string()).nullable().optional(),
+  when_to_apply: z.string().nullable().optional(),
 });
 
 export const LevelDetailsResponseSchema = z.object({
   id: z.string(),
   levelCode: z.string(),
+  capabilityName: z.string().optional(),
+  capabilityCode: z.string().optional(),
   title: z.string(),
   description: z.string(),
   levelProblemStatement: LevelProblemStatementSchema,
   observableBehavior: z.unknown(),
   exampleOutputs: z.unknown(),
   durationMinutes: z.number(),
+  levelNo: z.number().optional(),
+  levelLabel: z.string().optional(),
   difficultyLevel: z.string(),
   levelStatus: z.string(),
   versionNo: z.number(),
+  artifactsCount: z.number(),
   modules: z.array(LevelModuleSummarySchema),
 });
 
@@ -124,6 +138,8 @@ export const ModuleDetailsResponseSchema = z.object({
   tools: JsonRecordSchema,
   learningContent: JsonRecordSchema,
   stages: z.array(ModuleStageContentSchema),
+  progressPercentage: z.number().optional(),
+  completedStages: z.array(z.string()).optional(),
 });
 
 export const LevelDetailsPayloadSchema = z.object({

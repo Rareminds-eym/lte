@@ -76,15 +76,20 @@ export interface LevelModuleSummary {
 export interface LevelDetailsResponse {
   id: string;
   levelCode: string;
+  capabilityName?: string;
+  capabilityCode?: string;
   title: string;
   description: string;
   levelProblemStatement: LevelProblemStatement;
   observableBehavior: unknown;
   exampleOutputs: unknown;
   durationMinutes: number;
+  levelNo?: number;
+  levelLabel?: string;
   difficultyLevel: string;
   levelStatus: string;
   versionNo: number;
+  artifactsCount: number;
   modules: LevelModuleSummary[];
 }
 
@@ -127,6 +132,18 @@ export interface LevelRow {
   difficulty_level: string;
   status: string;
   version_no: number;
+  capabilities?:
+    | {
+        code: string;
+        name: string;
+      }
+    | Array<{ code: string; name: string }>;
+  level_scale?:
+    | {
+        level_no: number;
+        level_label: string;
+      }
+    | Array<{ level_no: number; level_label: string }>;
   modules?: Array<{
     id: string;
     module_no: number;
@@ -134,6 +151,13 @@ export interface LevelRow {
     description: string;
     is_published: boolean;
     is_active: boolean;
+    module_problem_statement?: string | null;
+    pressure_points?: Record<string, unknown> | null;
+    user_confusion?: Record<string, unknown> | null;
+    industry_challenge?: string | null;
+    prerequisites?: Record<string, unknown> | null;
+    what_youll_learn?: Record<string, unknown> | null;
+    when_to_apply?: string | null;
   }>;
 }
 

@@ -28,6 +28,7 @@ async function validateDirectory(rootDir) {
 						await traverse(fullPath);
 					}
 				} else if (entry.isFile()) {
+					
 					const ext = entry.name.substring(entry.name.lastIndexOf("."));
 
 					if (EXTENSIONS_TO_CHECK.includes(ext)) {

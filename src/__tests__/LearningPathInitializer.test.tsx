@@ -1,8 +1,8 @@
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-describe("LearningPathInitializer (Moved)", () => {
-  it("points to the new location", () => {
-    // This test has been moved to:
-    // src/__tests__/features/initialize-learning-path/ui/LearningPathInitializer.test.tsx
+// Deprecated: Please delete this file. The actual tests have been moved to src/__tests__/features/initialize-learning-path/ui/LearningPathInitializer.test.tsx
+describe("Deprecated LearningPathInitializer", () => {
+  it("dummy placeholder test", () => {
+    expect(true).toBe(true);
   });
 });

@@ -1,7 +1,8 @@
 import type React from "react";
 import { useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLearningPathStore } from "@/entities/active-learning-path";
 import { CourseCardGridSkeleton, useCapabilityLevels, useCourses } from "@/entities/course";
 import { useAuthStore } from "@/entities/session";
 import { LearningPathInitializer } from "@/features/initialize-learning-path";
@@ -32,8 +33,13 @@ const hasInitError = (state: unknown): state is InitErrorState => {
 export const CourseDetailPage: React.FC = () => {
   const { capabilityCode } = useParams<{ capabilityCode: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const userId = useAuthStore((s) => s.user?.id);
+  const user = useAuthStore((s) => s.user);
+  const authLoading = useAuthStore((s) => s.loading);
+  const authInitialized = useAuthStore((s) => s.initialized);
+  const userId = user?.id;
+
   // Fetch remote user courses & capabilities state via TanStack Query
   const { data: courses, isPending, error } = useCourses(userId ?? undefined);
   const {
@@ -43,6 +49,10 @@ export const CourseDetailPage: React.FC = () => {
     error: levelsError,
     refetch: refetchLevels,
   } = useCapabilityLevels(capabilityCode ?? "");
+  // Track whether the learning path is still being loaded/created.
+  // During the SkillPassport → LTE transition the LP may not exist yet;
+  // the levels query is gated on it, so show a skeleton while it settles.
+  const learningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
   const [displayType, setDisplayType] = useState<"card" | "list">("card");
 
   const initError = hasInitError(location.state) ? location.state.initializationError : undefined;
@@ -101,16 +111,25 @@ export const CourseDetailPage: React.FC = () => {
     parsedTargetLevelNum,
   );
 
-  const handleLevelAction = (levelNumber: number, levelTitle: string, status: string) => {
-    if (status === "completed") {
-      toast.success(`Reviewing Level ${levelNumber}: ${levelTitle}`);
-    } else if (status === "unlocked") {
-      toast.success(`Continuing Level ${levelNumber}: ${levelTitle}`);
+  const handleLevelAction = (levelId?: string, status?: string) => {
+    if (status === "locked") {
+      toast.error("This level is locked. Complete the previous level first.");
+      return;
+    }
+    if (capabilityCode && levelId) {
+      navigate(
+        `/courses/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
+      );
+    } else {
+      toast.error("Unable to navigate to level modules: level ID is missing.");
     }
   };
 
+  const isCoursesLoading =
+    !courses && ((Boolean(userId) && isPending) || (authLoading && !authInitialized));
+
   // Page Content Loading Skeleton (complies with restricted loading states rule)
-  if (isPending) {
+  if (isCoursesLoading) {
     return <CourseDetailSkeleton />;
   }
 
@@ -240,7 +259,7 @@ export const CourseDetailPage: React.FC = () => {
           </div>
 
           {/* Level Cards Section Content with Loading, Error, Retry, and Empty States */}
-          {isLevelsPending ? (
+          {isLevelsPending || learningPathLoading ? (
             <CourseCardGridSkeleton count={3} />
           ) : isLevelsError ? (
             <div
@@ -280,7 +299,7 @@ export const CourseDetailPage: React.FC = () => {
                   key={level.code}
                   {...level}
                   variant={displayType}
-                  onAction={() => handleLevelAction(level.levelNumber, level.title, level.status)}
+                  onAction={() => handleLevelAction(level.id, level.status)}
                   isLast={idx === dynamicLevelCards.length - 1}
                 />
               ))}

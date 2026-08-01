@@ -183,6 +183,17 @@ current_src_structure: |
         index.ts
         ui/
           CourseDetailPage.tsx
+      level-content/
+        index.ts
+        ui/
+          LevelContentPage.tsx
+          components/
+            ArtifactPanel.tsx
+            StageInfoPanel.tsx
+      level-modules/
+        index.ts
+        ui/
+          LevelModulesPage.tsx
       not-found/
         index.ts
         ui/
@@ -207,6 +218,14 @@ current_src_structure: |
         layouts/
         pages/
         widgets/
+      level-content/
+        api/
+        pages/
+        widgets/
+      level-modules/
+      features/
+        xp-reward/
+          ui/
       shared/
         barrels/
         config/

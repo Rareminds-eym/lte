@@ -1,11 +1,13 @@
 import { getLogger } from "../config/logging";
 import { ApiError } from "./ApiError";
+import { refreshSession } from "./authApi";
 
 const logger = getLogger("apiFetch");
 
 type TokenGetter = () => string | null;
 
 let getToken: TokenGetter = () => null;
+let refreshPromise: Promise<string | null> | null = null;
 
 /**
  * Register a callback that returns the current access token.
@@ -16,11 +18,18 @@ export const registerTokenGetter = (getter: TokenGetter): void => {
   getToken = getter;
 };
 
+export interface ApiFetchOptions extends RequestInit {
+  _isRetry?: boolean;
+}
+
 /**
  * Generic API Fetch client designed for LTE domain requests.
  * Automatically injects authorization headers, logs queries, and handles errors.
  */
-export async function apiFetch<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiFetch<T = unknown>(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<T> {
   const token = getToken();
   const headers = new Headers(options.headers);
 
@@ -58,6 +67,39 @@ export async function apiFetch<T = unknown>(path: string, options: RequestInit =
   }
 
   if (!response.ok) {
+    // Industrial grade 401 auto-refresh & single-flight retry interceptor
+    if (response.status === 401 && !options._isRetry && !path.includes("/api/v1/auth/")) {
+      logger.info(`Received 401 for ${path}. Intercepting for session refresh...`);
+      if (!refreshPromise) {
+        refreshPromise = refreshSession()
+          .then((res) => {
+            if (res && typeof res.access_token === "string" && res.access_token.length > 0) {
+              logger.info("Session refreshed successfully in apiFetch interceptor");
+              return res.access_token;
+            }
+            return null;
+          })
+          .catch((err) => {
+            logger.warn("Session refresh failed in apiFetch interceptor", err);
+            return null;
+          })
+          .finally(() => {
+            refreshPromise = null;
+          });
+      }
+
+      const refreshedToken = await refreshPromise;
+      if (refreshedToken) {
+        logger.info(`Retrying request ${path} with refreshed access token`);
+        const retryHeaders = new Headers(options.headers);
+        retryHeaders.set("Authorization", `Bearer ${refreshedToken}`);
+        return apiFetch<T>(path, {
+          ...options,
+          headers: retryHeaders,
+          _isRetry: true,
+        });
+      }
+    }
     let errorMessage = `API Request failed with status ${response.status}`;
     try {
       const clonedResponse = typeof response.clone === "function" ? response.clone() : response;

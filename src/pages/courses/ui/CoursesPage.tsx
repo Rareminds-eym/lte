@@ -31,8 +31,15 @@ export const CoursesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const userId = useAuthStore((s) => s.user?.id);
-  const { data: courses, isPending, error } = useCourses(userId ?? undefined);
+  const user = useAuthStore((s) => s.user);
+  const authLoading = useAuthStore((s) => s.loading);
+  const authInitialized = useAuthStore((s) => s.initialized);
+  const userId = user?.id;
+
+  const { data: courses, isPending, error, refetch } = useCourses(userId ?? undefined);
+
+  const isCoursesLoading =
+    !courses && ((Boolean(userId) && isPending) || (authLoading && !authInitialized));
 
   const filteredCourses = filterCoursesByPriority(courses ?? [], activePriority);
   const totalPages = Math.ceil(filteredCourses.length / COURSE_PAGE_SIZE);
@@ -50,7 +57,7 @@ export const CoursesPage = () => {
     }
   }
 
-  if (isPending) {
+  if (isCoursesLoading) {
     return (
       <div className="mx-auto max-w-[1440px] space-y-6">
         <header className="flex items-start justify-between gap-6 animate-pulse">
@@ -80,8 +87,15 @@ export const CoursesPage = () => {
     );
     return (
       <div className="mx-auto max-w-[1440px] py-16 text-center" role="alert">
-        <p className="text-danger-600 font-semibold">Failed to load courses.</p>
-        <p className="text-sm text-content-secondary mt-1">{error.message}</p>
+        <div className="rounded-2xl border border-danger-200 bg-danger-50 p-8 shadow-xs max-w-md mx-auto">
+          <p className="text-base font-bold text-danger-700">Failed to load courses</p>
+          <p className="text-xs text-danger-600 mt-1">{error.message}</p>
+          <div className="mt-4 flex justify-center">
+            <Button type="button" size="sm" variant="outline" onClick={() => void refetch()}>
+              Retry Loading Courses
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

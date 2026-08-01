@@ -23,6 +23,7 @@ export function mapApiLevelsToCards(
       : "Intermediate";
 
     return {
+      id: level.id,
       levelNumber: level.levelNumber,
       code: level.code,
       title: level.title,

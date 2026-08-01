@@ -1,5 +1,6 @@
 import { toAuthApiUser } from "@functions/lib/auth";
 import { createRefreshCookie } from "@functions/lib/cookies";
+import { validateBackendEnv } from "@functions/lib/env";
 import {
   getClientIp,
   getUserAgent,
@@ -11,7 +12,12 @@ import { ssoLogger } from "@functions/lib/logger";
 import { exchangeAuthorizationCode } from "@functions/lib/sso-client";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import { syncSsoShadowData } from "@functions/lib/sync-shadow";
-import type { AuthSuccessResponse, LteEnv, PagesContext } from "@functions/lib/types";
+import type {
+  AuthSuccessResponse,
+  LteEnv,
+  PagesContext,
+  SsoExchangeResponse,
+} from "@functions/lib/types";
 
 function getStringField(body: Record<string, unknown>, field: string): string | null {
   const value = body[field];
@@ -20,10 +26,7 @@ function getStringField(body: Record<string, unknown>, field: string): string | 
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   try {
-    if (!context.env.SSO_SERVICE) {
-      ssoLogger.error("SSO_SERVICE binding missing!");
-      return jsonError("SSO service not available. Ensure sso-worker is running.", 500);
-    }
+    validateBackendEnv(context.env);
     ssoLogger.debug("SSO_SERVICE binding available");
 
     const body = await readJsonObject(context.request);
@@ -37,13 +40,20 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 
     ssoLogger.info("Exchanging authorization code for tokens...");
 
-    const exchange = await exchangeAuthorizationCode(context.env, {
-      code,
-      state,
-      redirectUri,
-      ip: getClientIp(context.request),
-      ua: getUserAgent(context.request),
-    });
+    let exchange: SsoExchangeResponse;
+    try {
+      exchange = await exchangeAuthorizationCode(context.env, {
+        code,
+        state,
+        redirectUri,
+        ip: getClientIp(context.request),
+        ua: getUserAgent(context.request),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "SSO exchange failed";
+      ssoLogger.error("SSO exchange failed", err instanceof Error ? err : new Error(message));
+      return jsonError(message, 401);
+    }
 
     ssoLogger.info("Exchange successful", { userId: exchange.user.sub });
 
@@ -59,8 +69,14 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     });
     headers.set("Set-Cookie", cookieHeader);
 
-    const supabase = createServiceSupabase(context.env);
-    await syncSsoShadowData(supabase, exchange.user, exchange.subscription);
+    try {
+      const supabase = createServiceSupabase(context.env);
+      await syncSsoShadowData(supabase, exchange.user, exchange.subscription);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "SSO shadow sync failed";
+      ssoLogger.error("SSO shadow sync failed", err instanceof Error ? err : new Error(message));
+      return jsonError("Internal server error during authentication sync", 500);
+    }
 
     return jsonResponse<AuthSuccessResponse>(
       {
@@ -71,8 +87,11 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       { headers },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "SSO exchange failed";
-    ssoLogger.error("SSO exchange failed", error instanceof Error ? error : new Error(message));
-    return jsonError(message, 401);
+    const message = error instanceof Error ? error.message : "Internal server error";
+    ssoLogger.error(
+      "SSO request processing failed",
+      error instanceof Error ? error : new Error(message),
+    );
+    return jsonError(message, 500);
   }
 }

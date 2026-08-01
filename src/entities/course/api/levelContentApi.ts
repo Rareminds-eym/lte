@@ -7,10 +7,27 @@ import type { LevelDetailsResponse, ModuleDetailsResponse } from "../model/level
 
 const LEVEL_API_BASE = "/api/v1/courses";
 
-export async function fetchLevelDetails(levelId: string): Promise<LevelDetailsResponse> {
-  const payload = await apiGet<unknown>(`${LEVEL_API_BASE}/${encodeURIComponent(levelId)}`);
-  const parsedPayload = LevelDetailsPayloadSchema.parse(payload);
-  return parsedPayload.level;
+export async function fetchLevelDetails(
+  levelId: string,
+  capabilityCode?: string,
+  userId?: string,
+): Promise<LevelDetailsResponse> {
+  let url = capabilityCode
+    ? `${LEVEL_API_BASE}/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`
+    : `${LEVEL_API_BASE}/${encodeURIComponent(levelId)}`;
+  if (userId) {
+    url += `?userId=${encodeURIComponent(userId)}`;
+  }
+  const payload = await apiGet<unknown>(url);
+  try {
+    const parsedPayload = LevelDetailsPayloadSchema.parse(payload);
+    return parsedPayload.level;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Schema validation failed: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 export async function fetchLevelModuleDetails(

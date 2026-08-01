@@ -1,5 +1,5 @@
 import type React from "react";
-import { Button, CloseIcon } from "@/shared/ui";
+import { Button, CloseIcon, LockIcon } from "@/shared/ui";
 
 export interface ModuleItem {
   id: string;
@@ -85,11 +85,53 @@ export const ModulesDrawer: React.FC<ModulesDrawerProps> = ({
           </p>
         )}
 
-        {modules.map((module) => {
+        {modules.map((module, index) => {
           const isActive = module.moduleNo === activeModuleNo;
           const progressPercentage = clampProgress(module.progressPercentage);
           const dots = getModuleDots(module.stageProgressDots, progressPercentage);
           const progressColor = getProgressColor(progressPercentage, isActive);
+
+          const isPrevCompleted =
+            index > 0 &&
+            (modules[index - 1]?.isCompleted ||
+              (modules[index - 1]?.progressPercentage ?? 0) >= 100);
+          const isLocked = index > 0 && !isPrevCompleted;
+
+          if (isLocked) {
+            return (
+              <Button
+                key={module.id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled
+                className="w-full min-w-0 justify-start overflow-hidden border border-transparent bg-transparent p-2 text-left font-sans sm:p-2.5 rounded-lg opacity-50 cursor-not-allowed"
+              >
+                <div className="flex w-full min-w-0 items-start gap-2.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line-default/70 bg-surface-muted/90 text-content-secondary sm:h-6.5 sm:w-6.5">
+                    <LockIcon size={12} className="text-content-muted" />
+                  </span>
+                  <div className="min-w-0 flex-1 overflow-hidden pb-1.5">
+                    <div className="flex min-w-0 items-start justify-between gap-2">
+                      <h3 className="min-w-0 truncate text-xs font-semibold text-content-muted sm:text-[13px]">
+                        {module.title}
+                      </h3>
+                      <span className="shrink-0 text-[11px] font-medium text-content-muted sm:text-xs">
+                        0%
+                      </span>
+                    </div>
+
+                    <div className="mt-1.5 h-1 rounded-full bg-surface-emphasis">
+                      <div
+                        className="h-full rounded-full bg-surface-muted"
+                        style={{ width: "0%" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </Button>
+            );
+          }
 
           if (isActive) {
             return (

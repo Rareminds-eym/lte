@@ -1,4 +1,5 @@
 import type { AuthUser } from "@rareminds-eym/auth-core";
+import { validateBackendEnv } from "./env";
 import { getMe, SsoAuthError } from "./sso-client";
 import type { LteEnv } from "./types";
 
@@ -19,10 +20,8 @@ export class AuthError extends Error {
   }
 }
 
-export async function requireAuth(
-  request: Request,
-  env: Pick<LteEnv, "SSO_SERVICE">,
-): Promise<AuthUser> {
+export async function requireAuth(request: Request, env: LteEnv): Promise<AuthUser> {
+  validateBackendEnv(env);
   const token = extractBearerToken(request);
   if (!token) {
     throw new AuthError("Missing bearer token", "UNAUTHORIZED");

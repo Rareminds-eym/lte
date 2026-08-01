@@ -20,6 +20,7 @@ const levelPayload = {
     difficultyLevel: "intermediate",
     levelStatus: "published",
     versionNo: 1,
+    artifactsCount: 2,
     modules: [
       {
         id: "module-1",
@@ -72,7 +73,8 @@ describe("level content client API", () => {
     vi.restoreAllMocks();
   });
 
-  it("fetches level details through the dynamic course endpoint", async () => {
+  it("fetches level details through the capability-based endpoint", async () => {
+    const capabilityCode = "TEST-CODE";
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify(levelPayload), {
         status: 200,
@@ -80,11 +82,14 @@ describe("level content client API", () => {
       }),
     );
 
-    await expect(fetchLevelDetails(levelId)).resolves.toEqual(levelPayload.level);
-    expect(fetchMock).toHaveBeenCalledWith(`/api/v1/courses/${levelId}`, {
-      credentials: "include",
-      method: "GET",
-    });
+    await expect(fetchLevelDetails(levelId, capabilityCode)).resolves.toEqual(levelPayload.level);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/v1/courses/${capabilityCode}/levels/${levelId}`,
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.any(Headers),
+      }),
+    );
   });
 
   it("fetches module details through the dynamic module endpoint", async () => {
@@ -96,13 +101,17 @@ describe("level content client API", () => {
     );
 
     await expect(fetchLevelModuleDetails(levelId, 1)).resolves.toEqual(modulePayload.module);
-    expect(fetchMock).toHaveBeenCalledWith(`/api/v1/courses/${levelId}/modules/1`, {
-      credentials: "include",
-      method: "GET",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/v1/courses/${levelId}/modules/1`,
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.any(Headers),
+      }),
+    );
   });
 
   it("rejects invalid API response shapes before rendering", async () => {
+    const capabilityCode = "TEST-CODE";
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ success: true, level: { id: "course-1" } }), {
         status: 200,
@@ -110,6 +119,6 @@ describe("level content client API", () => {
       }),
     );
 
-    await expect(fetchLevelDetails(levelId)).rejects.toThrow();
+    await expect(fetchLevelDetails(levelId, capabilityCode)).rejects.toThrow();
   });
 });

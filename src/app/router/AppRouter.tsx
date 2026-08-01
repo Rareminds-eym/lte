@@ -18,6 +18,9 @@ const CourseDetail = lazy(() =>
 const LevelContent = lazy(() =>
   import("@/pages/level-content").then((m) => ({ default: m.LevelContent })),
 );
+const LevelModules = lazy(() =>
+  import("@/pages/level-modules").then((m) => ({ default: m.LevelModulesPage })),
+);
 const NotFound = lazy(() => import("@/pages/not-found").then((m) => ({ default: m.NotFound })));
 
 export const AppRouter: React.FC = () => {
@@ -68,10 +71,18 @@ export const AppRouter: React.FC = () => {
               </RouteLoadingBoundary>
             }
           />
+          <Route
+            path="/courses/:capabilityCode/levels/:levelId"
+            element={
+              <RouteLoadingBoundary fallback={<PageLoader message="Loading course modules..." />}>
+                <LevelModules />
+              </RouteLoadingBoundary>
+            }
+          />
         </Route>
         <Route element={<LevelPlayerLayout />}>
           <Route
-            path="/courses/:levelId/modules/:moduleNo"
+            path="/my-courses/:levelId/modules/:moduleNo"
             element={
               <RouteLoadingBoundary fallback={<PageLoader message="Loading course content..." />}>
                 <LevelContent />

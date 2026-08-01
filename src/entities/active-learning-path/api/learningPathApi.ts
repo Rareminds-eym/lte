@@ -9,9 +9,18 @@ const ActiveLearningPathResponseSchema = z.object({
       learningPathId: z.string(),
       learningTrackId: z.string(),
       roleId: z.string(),
-      track: z.string(),
-      fit: z.string(),
-      matchScore: z.number(),
+      track: z
+        .string()
+        .nullish()
+        .transform((v) => v ?? ""),
+      fit: z
+        .string()
+        .nullish()
+        .transform((v) => v ?? ""),
+      matchScore: z
+        .number()
+        .nullish()
+        .transform((v) => v ?? 0),
     })
     .nullable(),
 });
