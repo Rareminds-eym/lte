@@ -9,7 +9,6 @@ import { join, relative } from "node:path";
 
 const MAX_LINES = 1000;
 const EXCLUDED_DIRS = ["node_modules", ".git", "dist", "build", "coverage"];
-const EXCLUDED_FILES = ["src/pages/level-content/ui/LevelContentPage.tsx"];
 const DIRECTORIES_TO_CHECK = ["src", "functions"];
 const EXTENSIONS_TO_CHECK = [".ts", ".tsx"];
 
@@ -29,9 +28,7 @@ async function validateDirectory(rootDir) {
 						await traverse(fullPath);
 					}
 				} else if (entry.isFile()) {
-					if (EXCLUDED_FILES.includes(relativePath)) {
-						continue;
-					}
+					
 					const ext = entry.name.substring(entry.name.lastIndexOf("."));
 
 					if (EXTENSIONS_TO_CHECK.includes(ext)) {

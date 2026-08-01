@@ -37,3 +37,4 @@ export { TargetIcon } from "./TargetIcon";
 export { TrendingArrowIcon } from "./TrendingArrowIcon";
 export { TrendUpIcon } from "./TrendUpIcon";
 export type { IconProps } from "./types";
+export { XpHexagonIcon } from "./XpHexagonIcon";

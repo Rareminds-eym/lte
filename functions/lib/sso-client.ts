@@ -62,19 +62,40 @@ export async function refreshLteSession(
       ua?: string,
     ) => Promise<{ access_token: string; refresh_token: string }>;
   };
-  if (typeof service.authenticateSharedSession === "function") {
-    const res = await service.authenticateSharedSession(
-      refreshToken,
-      "lte",
-      ip ?? undefined,
-      ua ?? undefined,
-    );
-    if (!res?.success || !res?.access_token) {
-      throw new Error(res?.error || "Invalid or revoked session");
+  try {
+    if (typeof service.authenticateSharedSession === "function") {
+      const res = await service.authenticateSharedSession(
+        refreshToken,
+        "lte",
+        ip ?? undefined,
+        ua ?? undefined,
+      );
+      if (!res?.success || !res?.access_token) {
+        throw new SsoAuthError(res?.error || "Invalid or revoked session");
+      }
+      return { access_token: res.access_token, refresh_token: res.refresh_token || refreshToken };
     }
-    return { access_token: res.access_token, refresh_token: res.refresh_token || refreshToken };
+    return await service.refreshSession(refreshToken, ip ?? undefined, ua ?? undefined);
+  } catch (error) {
+    if (error instanceof SsoAuthError) {
+      throw error;
+    }
+    const msg = error instanceof Error ? error.message : String(error);
+    const isSessionInvalid =
+      msg.includes("Session not found") ||
+      msg.includes("Session expired") ||
+      msg.includes("Invalid refresh token") ||
+      msg.includes("revoked") ||
+      msg.includes("expired") ||
+      msg.includes("Invalid or revoked session") ||
+      msg.includes("invalid_grant") ||
+      msg.includes("Unauthenticated");
+
+    if (isSessionInvalid) {
+      throw new SsoAuthError(msg);
+    }
+    throw error;
   }
-  return service.refreshSession(refreshToken, ip ?? undefined, ua ?? undefined);
 }
 
 export async function logoutLteSession(

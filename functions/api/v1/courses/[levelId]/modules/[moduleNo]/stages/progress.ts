@@ -3,7 +3,7 @@ import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { completeStage } from "@functions/lib/xp-engine";
+import { completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
 import { z } from "zod";
 import { upsertStageProgress } from "../../../../queries";
 import { LevelModuleParamsSchema } from "../../../../schemas";
@@ -54,6 +54,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 
     let progressData: Record<string, unknown>;
     let xpAwarded = 0;
+    let totalXp = 0;
 
     if (status === "completed") {
       // 1. Resolve modules_content_id from e_content
@@ -73,6 +74,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       // 2. Call completeStage from the unified XP engine
       const xpResult = await completeStage(supabase, userId, eContent.modules_content_id);
       xpAwarded = xpResult.xpAwarded;
+      totalXp = await getUserTotalXp(supabase, userId);
 
       // 3. Fetch the updated progress counters from user_module_progress to return to client
       const { data: stageProg, error: stageProgErr } = await supabase
@@ -117,6 +119,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       success: true,
       ...progressData,
       xpAwarded,
+      totalXp,
     });
   } catch (error) {
     if (error instanceof AuthError) {

@@ -851,3 +851,19 @@ export async function calculateReadiness(
 
   return { readinessScore, band };
 }
+
+/**
+ * Calculates the total XP for a user from the xp_events table.
+ */
+export async function getUserTotalXp(supabase: SupabaseClient, userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("xp_events")
+    .select("xp_amount")
+    .eq("user_id", userId);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).reduce((sum, item) => sum + (item.xp_amount ?? 0), 0);
+}

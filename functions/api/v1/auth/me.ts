@@ -1,4 +1,4 @@
-import { requireAuth, toAuthApiUser } from "@functions/lib/auth";
+import { AuthError, requireAuth, toAuthApiUser } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { authLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
@@ -16,17 +16,26 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
         .select("id")
         .eq("id", user.sub)
         .maybeSingle();
-      if (error || !existingUser) {
+      if (error) {
+        throw error;
+      }
+      if (!existingUser) {
         authLogger.warn("User data not found in LTE database during /me check", {
           userId: user.sub,
         });
-        throw new Error("LTE user record not found. Please sign in via SkillPassport.");
+        throw new AuthError(
+          "LTE user record not found. Please sign in via SkillPassport.",
+          "UNAUTHORIZED",
+        );
       }
     }
 
     return jsonResponse({ user: toAuthApiUser(user) });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unauthenticated";
-    return jsonError(message, 401);
+    if (error instanceof AuthError) {
+      return jsonError(error.message, error.code === "UNAUTHORIZED" ? 401 : 403);
+    }
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return jsonError(message, 500);
   }
 }
