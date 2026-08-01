@@ -114,7 +114,7 @@ describe("NavigationDrawer", () => {
     const { container } = render(<NavigationDrawer />);
     const btn = screen.getByText(label).closest("button");
     expect(btn).toHaveAttribute("aria-disabled", "true");
-    expect(btn).toHaveAttribute("title", "Coming soon");
+    expect(btn).toHaveAttribute("title", `${label} — Coming soon`);
     expect(btn?.querySelector("svg")).not.toBeNull();
     expect(container.querySelectorAll("nav [aria-disabled='true']").length).toBe(
       LOCKED_LABELS.length,
