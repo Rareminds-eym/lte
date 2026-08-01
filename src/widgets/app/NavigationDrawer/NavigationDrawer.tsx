@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { Button, IconButton, Image } from "@/shared/ui";
+import { Button, IconButton, Image, LockIcon, toast } from "@/shared/ui";
 
 const SvgIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <svg
@@ -29,7 +29,10 @@ interface NavItem {
   id: string;
   label: string;
   icon: React.ReactNode;
+  locked?: boolean;
 }
+
+const COMING_SOON_TOAST: React.ReactNode = <LockIcon size={16} className="text-content-muted" />;
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   activeNavId: initialActiveNavId = "dashboard",
@@ -43,10 +46,19 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   const handleToggle = () => onToggleCollapse?.();
 
   const handleNavClick = (id: string) => {
+    const item = navItems.find((i) => i.id === id);
+    if (item?.locked) {
+      toast(`${item.label} is coming soon`, { icon: COMING_SOON_TOAST });
+      return;
+    }
     setActiveId(id);
     if (onNavigate) {
       onNavigate(id);
     }
+  };
+
+  const handleMentorClick = () => {
+    toast("AI Mentor is coming soon", { icon: COMING_SOON_TOAST });
   };
 
   const navItems: NavItem[] = [
@@ -75,6 +87,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     {
       id: "rewards-milestones",
       label: "Rewards & Milestones",
+      locked: true,
       icon: (
         <SvgIcon>
           <rect x="1" y="4" width="22" height="16" rx="2" />
@@ -85,6 +98,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     {
       id: "career-explorer",
       label: "Career Explorer",
+      locked: true,
       icon: (
         <SvgIcon>
           <circle cx="12" cy="12" r="10" />
@@ -95,6 +109,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     {
       id: "learning-progress",
       label: "Learning Progress",
+      locked: true,
       icon: (
         <SvgIcon>
           <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
@@ -106,6 +121,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     {
       id: "mentor-feedback",
       label: "Mentor Feedback",
+      locked: true,
       icon: (
         <SvgIcon>
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -115,6 +131,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     {
       id: "achievements",
       label: "Achievements",
+      locked: true,
       icon: (
         <SvgIcon>
           <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
@@ -129,6 +146,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     {
       id: "settings",
       label: "Settings",
+      locked: true,
       icon: (
         <SvgIcon>
           <circle cx="12" cy="12" r="3" />
@@ -196,21 +214,38 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         <nav className="space-y-1 w-full flex flex-col">
           {navItems.map((item) => {
             const isActive = activeId === item.id;
+            const isLocked = Boolean(item.locked);
             return (
               <button
                 key={item.id}
                 type="button"
-                title={isCollapsed ? item.label : undefined}
+                aria-disabled={isLocked || undefined}
+                aria-label={isLocked ? `${item.label} — Coming soon` : undefined}
+                title={
+                  isLocked
+                    ? isCollapsed
+                      ? `${item.label} — Coming soon`
+                      : "Coming soon"
+                    : isCollapsed
+                      ? item.label
+                      : undefined
+                }
                 onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl font-semibold text-sm transition-colors duration-150 cursor-pointer overflow-hidden ${
-                  isActive
-                    ? "bg-brand-50 text-brand-600"
-                    : "text-content-secondary hover:bg-surface-muted hover:text-content-primary"
+                className={`w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl font-semibold text-sm transition-colors duration-150 overflow-hidden ${
+                  isLocked
+                    ? "text-content-muted cursor-not-allowed hover:bg-surface-muted"
+                    : isActive
+                      ? "bg-brand-50 text-brand-600 cursor-pointer"
+                      : "text-content-secondary hover:bg-surface-muted hover:text-content-primary cursor-pointer"
                 }`}
               >
                 <span
                   className={`shrink-0 flex items-center justify-center w-5 h-5 ${
-                    isActive ? "text-brand-600" : "text-content-secondary"
+                    isLocked
+                      ? "text-content-muted"
+                      : isActive
+                        ? "text-brand-600"
+                        : "text-content-secondary"
                   }`}
                 >
                   {item.icon}
@@ -222,6 +257,13 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
                 >
                   {item.label}
                 </span>
+                {isLocked && (
+                  <LockIcon
+                    size={14}
+                    aria-hidden="true"
+                    className="shrink-0 ml-auto text-content-muted"
+                  />
+                )}
               </button>
             );
           })}
@@ -236,7 +278,10 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             <IconButton
               variant="solid-blue"
               size="lg"
-              aria-label="Ask AI Mentor"
+              aria-label="Ask AI Mentor — Coming soon"
+              aria-disabled="true"
+              title="Coming soon"
+              onClick={handleMentorClick}
               icon={
                 <svg aria-hidden="true" className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
@@ -256,7 +301,11 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             <Button
               variant="primary"
               size="sm"
-              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-xs border-none justify-center mt-1"
+              aria-label="Ask AI Mentor — Coming soon"
+              aria-disabled="true"
+              title="Coming soon"
+              onClick={handleMentorClick}
+              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-xs border-none justify-center mt-1 opacity-70 cursor-not-allowed!"
               icon={
                 <svg aria-hidden="true" className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                   <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
