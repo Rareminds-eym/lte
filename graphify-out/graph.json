@@ -9647,7 +9647,7 @@
       "label": "SvgIcon()",
       "file_type": "code",
       "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
-      "source_location": "L5",
+      "source_location": "L14",
       "_origin": "ast",
       "id": "src_widgets_app_navigationdrawer_navigationdrawer_svgicon",
       "community": 118,
@@ -9657,7 +9657,7 @@
       "label": "NavigationDrawerProps",
       "file_type": "code",
       "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
-      "source_location": "L20",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "src_widgets_app_navigationdrawer_navigationdrawer_navigationdrawerprops",
       "community": 118,
@@ -9667,7 +9667,7 @@
       "label": "NavItem",
       "file_type": "code",
       "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
-      "source_location": "L28",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "src_widgets_app_navigationdrawer_navigationdrawer_navitem",
       "community": 118,
@@ -9677,7 +9677,7 @@
       "label": "NAV_ITEMS",
       "file_type": "code",
       "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
-      "source_location": "L39",
+      "source_location": "L48",
       "_origin": "ast",
       "id": "src_widgets_app_navigationdrawer_navigationdrawer_nav_items",
       "community": 118,
@@ -37962,6 +37962,17 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_app_navigationdrawer_navigationdrawer",
+      "target": "src_shared_ui_icons_bookopenicon_bookopenicon",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/shared/ui/icons/CheckIcon.tsx",
@@ -39304,6 +39315,17 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_app_navigationdrawer_navigationdrawer",
+      "target": "src_shared_ui_icons_messagesquareicon_messagesquareicon",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "re_exports",
       "context": "export",
       "confidence": "EXTRACTED",
@@ -39689,6 +39711,17 @@
       "source_location": "L31",
       "weight": 1.0,
       "source": "src_shared_ui_icons_index",
+      "target": "src_shared_ui_icons_sparklesicon_sparklesicon",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_widgets_app_navigationdrawer_navigationdrawer",
       "target": "src_shared_ui_icons_sparklesicon_sparklesicon",
       "confidence_score": 1.0
     },
@@ -40768,7 +40801,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
-      "source_location": "L39",
+      "source_location": "L48",
       "weight": 1.0,
       "source": "src_widgets_app_navigationdrawer_navigationdrawer",
       "target": "src_widgets_app_navigationdrawer_navigationdrawer_nav_items",
@@ -40788,7 +40821,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
-      "source_location": "L20",
+      "source_location": "L29",
       "weight": 1.0,
       "source": "src_widgets_app_navigationdrawer_navigationdrawer",
       "target": "src_widgets_app_navigationdrawer_navigationdrawer_navigationdrawerprops",
@@ -40798,7 +40831,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
-      "source_location": "L28",
+      "source_location": "L37",
       "weight": 1.0,
       "source": "src_widgets_app_navigationdrawer_navigationdrawer",
       "target": "src_widgets_app_navigationdrawer_navigationdrawer_navitem",
@@ -40808,7 +40841,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/widgets/app/NavigationDrawer/NavigationDrawer.tsx",
-      "source_location": "L5",
+      "source_location": "L14",
       "weight": 1.0,
       "source": "src_widgets_app_navigationdrawer_navigationdrawer",
       "target": "src_widgets_app_navigationdrawer_navigationdrawer_svgicon",
@@ -50080,5 +50113,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "37bb17e283eee0923ad3e8bcdc9b639aea95f930"
+  "built_at_commit": "fd7e8bce3f1797d444662be36e4d1e592934d4d3"
 }
