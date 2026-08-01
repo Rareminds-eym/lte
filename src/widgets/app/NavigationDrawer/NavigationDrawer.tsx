@@ -1,6 +1,15 @@
 import type React from "react";
 import { useState } from "react";
-import { Button, IconButton, Image, LockIcon, toast } from "@/shared/ui";
+import {
+  BookOpenIcon,
+  Button,
+  IconButton,
+  Image,
+  LockIcon,
+  MessageSquareIcon,
+  SparklesIcon,
+  toast,
+} from "@/shared/ui";
 
 const SvgIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <svg
@@ -52,12 +61,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "my-courses",
     label: "My Courses",
-    icon: (
-      <SvgIcon>
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-      </SvgIcon>
-    ),
+    icon: <BookOpenIcon size={20} />,
   },
   {
     id: "rewards-milestones",
@@ -97,11 +101,7 @@ const NAV_ITEMS: NavItem[] = [
     id: "mentor-feedback",
     label: "Mentor Feedback",
     locked: true,
-    icon: (
-      <SvgIcon>
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </SvgIcon>
-    ),
+    icon: <MessageSquareIcon size={20} />,
   },
   {
     id: "achievements",
@@ -274,11 +274,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
               aria-disabled="true"
               title="Ask AI Mentor — Coming soon"
               onClick={handleMentorClick}
-              icon={
-                <svg aria-hidden="true" className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
-                </svg>
-              }
+              icon={<SparklesIcon size={20} />}
             />
           </div>
         ) : (
@@ -298,11 +294,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
               title="Ask AI Mentor — Coming soon"
               onClick={handleMentorClick}
               className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-xs border-none justify-center mt-1 cursor-not-allowed!"
-              icon={
-                <svg aria-hidden="true" className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
-                </svg>
-              }
+              icon={<SparklesIcon size={16} />}
             >
               Ask AI Mentor
             </Button>
