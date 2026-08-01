@@ -36,6 +36,101 @@ const COMING_SOON_TOAST: React.ReactNode = (
   <LockIcon size={16} className="text-content-secondary" />
 );
 
+const NAV_ITEMS: NavItem[] = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: (
+      <SvgIcon>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+      </SvgIcon>
+    ),
+  },
+  {
+    id: "my-courses",
+    label: "My Courses",
+    icon: (
+      <SvgIcon>
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+      </SvgIcon>
+    ),
+  },
+  {
+    id: "rewards-milestones",
+    label: "Rewards & Milestones",
+    locked: true,
+    icon: (
+      <SvgIcon>
+        <rect x="1" y="4" width="22" height="16" rx="2" />
+        <line x1="1" y1="10" x2="23" y2="10" />
+      </SvgIcon>
+    ),
+  },
+  {
+    id: "career-explorer",
+    label: "Career Explorer",
+    locked: true,
+    icon: (
+      <SvgIcon>
+        <circle cx="12" cy="12" r="10" />
+        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+      </SvgIcon>
+    ),
+  },
+  {
+    id: "learning-progress",
+    label: "Learning Progress",
+    locked: true,
+    icon: (
+      <SvgIcon>
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+        <path d="m9 14 2 2 4-4" />
+      </SvgIcon>
+    ),
+  },
+  {
+    id: "mentor-feedback",
+    label: "Mentor Feedback",
+    locked: true,
+    icon: (
+      <SvgIcon>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </SvgIcon>
+    ),
+  },
+  {
+    id: "achievements",
+    label: "Achievements",
+    locked: true,
+    icon: (
+      <SvgIcon>
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+        <path d="M18 9h1.5a2.5 2.5 0 0 1 0-5H18" />
+        <path d="M4 22h16" />
+        <path d="M10 14.66V17c0 .55-.45 1-1 1H7.5" />
+        <path d="M14 14.66V17c0 .55.45 1 1 1h1.5" />
+        <path d="M18 4H6v7a6 6 0 0 0 12 0V4z" />
+      </SvgIcon>
+    ),
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    locked: true,
+    icon: (
+      <SvgIcon>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </SvgIcon>
+    ),
+  },
+];
+
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   activeNavId: initialActiveNavId = "dashboard",
   isCollapsed = false,
@@ -48,7 +143,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   const handleToggle = () => onToggleCollapse?.();
 
   const handleNavClick = (id: string) => {
-    const item = navItems.find((i) => i.id === id);
+    const item = NAV_ITEMS.find((i) => i.id === id);
     if (item?.locked) {
       toast(`${item.label} is coming soon`, { icon: COMING_SOON_TOAST, id: "coming-soon" });
       return;
@@ -62,101 +157,6 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   const handleMentorClick = () => {
     toast("AI Mentor is coming soon", { icon: COMING_SOON_TOAST, id: "coming-soon" });
   };
-
-  const navItems: NavItem[] = [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: (
-        <SvgIcon>
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-        </SvgIcon>
-      ),
-    },
-    {
-      id: "my-courses",
-      label: "My Courses",
-      icon: (
-        <SvgIcon>
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-        </SvgIcon>
-      ),
-    },
-    {
-      id: "rewards-milestones",
-      label: "Rewards & Milestones",
-      locked: true,
-      icon: (
-        <SvgIcon>
-          <rect x="1" y="4" width="22" height="16" rx="2" />
-          <line x1="1" y1="10" x2="23" y2="10" />
-        </SvgIcon>
-      ),
-    },
-    {
-      id: "career-explorer",
-      label: "Career Explorer",
-      locked: true,
-      icon: (
-        <SvgIcon>
-          <circle cx="12" cy="12" r="10" />
-          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-        </SvgIcon>
-      ),
-    },
-    {
-      id: "learning-progress",
-      label: "Learning Progress",
-      locked: true,
-      icon: (
-        <SvgIcon>
-          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-          <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-          <path d="m9 14 2 2 4-4" />
-        </SvgIcon>
-      ),
-    },
-    {
-      id: "mentor-feedback",
-      label: "Mentor Feedback",
-      locked: true,
-      icon: (
-        <SvgIcon>
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </SvgIcon>
-      ),
-    },
-    {
-      id: "achievements",
-      label: "Achievements",
-      locked: true,
-      icon: (
-        <SvgIcon>
-          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-          <path d="M18 9h1.5a2.5 2.5 0 0 1 0-5H18" />
-          <path d="M4 22h16" />
-          <path d="M10 14.66V17c0 .55-.45 1-1 1H7.5" />
-          <path d="M14 14.66V17c0 .55.45 1 1 1h1.5" />
-          <path d="M18 4H6v7a6 6 0 0 0 12 0V4z" />
-        </SvgIcon>
-      ),
-    },
-    {
-      id: "settings",
-      label: "Settings",
-      locked: true,
-      icon: (
-        <SvgIcon>
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </SvgIcon>
-      ),
-    },
-  ];
 
   return (
     <aside
@@ -214,7 +214,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
 
         {/* Unified Navigation Menu */}
         <nav className="space-y-1 w-full flex flex-col">
-          {navItems.map((item) => {
+          {NAV_ITEMS.map((item) => {
             const isActive = activeId === item.id;
             const isLocked = Boolean(item.locked);
             return (
