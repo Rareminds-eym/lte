@@ -137,11 +137,12 @@ export async function getLevelWithModules(
 
       if (progresses) {
         for (const p of progresses) {
-          moduleProgressMap[p.module_id] = {
+          const entry = {
             completionPercentage: p.completion_percentage || 0,
             isCompleted: p.module_status === "completed",
-            completedStages: [],
+            completedStages: [] as string[],
           };
+          moduleProgressMap[p.module_id] = entry;
 
           const { data: stages } = await supabase
             .from("user_stage_progress")
@@ -150,9 +151,7 @@ export async function getLevelWithModules(
             .eq("status", "completed");
 
           if (stages) {
-            moduleProgressMap[p.module_id].completedStages = stages.map((s) =>
-              s.stage_name.toLowerCase(),
-            );
+            entry.completedStages = stages.map((s) => s.stage_name.toLowerCase());
           }
         }
       }

@@ -194,17 +194,18 @@ describe("Level Modules Integration", () => {
       );
 
       const result = await fetchLevelDetails(LEVEL_ID, CAPABILITY_CODE);
+      const [mod0, mod1] = result.modules;
 
       // First module: 67% complete with some stages done
-      expect(result.modules[0].progressPercentage).toBe(67);
-      expect(result.modules[0].completedStages).toContain("engage");
-      expect(result.modules[0].completedStages).toContain("explore");
-      expect(result.modules[0].completedStages).toContain("explain");
-      expect(result.modules[0].completedStages).not.toContain("express");
+      expect(mod0?.progressPercentage).toBe(67);
+      expect(mod0?.completedStages).toContain("engage");
+      expect(mod0?.completedStages).toContain("explore");
+      expect(mod0?.completedStages).toContain("explain");
+      expect(mod0?.completedStages).not.toContain("express");
 
       // Second module: not started
-      expect(result.modules[1].progressPercentage).toBe(0);
-      expect(result.modules[1].completedStages).toEqual([]);
+      expect(mod1?.progressPercentage).toBe(0);
+      expect(mod1?.completedStages).toEqual([]);
     });
 
     it("should include stage information from completedStages", async () => {
@@ -216,10 +217,11 @@ describe("Level Modules Integration", () => {
       );
 
       const result = await fetchLevelDetails(LEVEL_ID, CAPABILITY_CODE);
+      const [mod0] = result.modules;
 
       // Verify stage data is properly returned
-      expect(Array.isArray(result.modules[0].completedStages)).toBe(true);
-      expect(result.modules[0].completedStages.length).toBeGreaterThan(0);
+      expect(Array.isArray(mod0?.completedStages)).toBe(true);
+      expect(mod0?.completedStages?.length).toBeGreaterThan(0);
     });
   });
 
@@ -295,11 +297,11 @@ describe("Level Modules Integration", () => {
       expect(typeof result.durationMinutes).toBe("number");
       expect(Array.isArray(result.modules)).toBe(true);
 
-      const module = result.modules[0];
-      expect(typeof module.id).toBe("string");
-      expect(typeof module.moduleNo).toBe("number");
-      expect(typeof module.progressPercentage).toBe("number");
-      expect(Array.isArray(module.completedStages)).toBe(true);
+      const [moduleItem] = result.modules;
+      expect(typeof moduleItem?.id).toBe("string");
+      expect(typeof moduleItem?.moduleNo).toBe("number");
+      expect(typeof moduleItem?.progressPercentage).toBe("number");
+      expect(Array.isArray(moduleItem?.completedStages)).toBe(true);
     });
   });
 });

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ApiError } from "@/shared/api";
 import { fetchUserCourses } from "../api/courseApi";
 
 export const useCourses = (userId?: string, options?: { enabled?: boolean }) => {
@@ -8,12 +9,20 @@ export const useCourses = (userId?: string, options?: { enabled?: boolean }) => 
     enabled: typeof userId === "string" && userId.trim() !== "" && options?.enabled !== false,
     staleTime: 1000 * 60 * 5,
     retry: (failureCount, error) => {
+      const status =
+        error instanceof ApiError
+          ? error.status
+          : typeof (error as { status?: unknown })?.status === "number"
+            ? (error as unknown as { status: number }).status
+            : undefined;
+
+      // Do not retry hard client errors (400, 404, etc.), but allow 1 retry for 401/403 in case token is refreshing
       if (
-        error instanceof Error &&
-        "status" in error &&
-        typeof (error as { status: unknown }).status === "number" &&
-        (error as { status: number }).status >= 400 &&
-        (error as { status: number }).status < 500
+        typeof status === "number" &&
+        status >= 400 &&
+        status < 500 &&
+        status !== 401 &&
+        status !== 403
       ) {
         return false;
       }

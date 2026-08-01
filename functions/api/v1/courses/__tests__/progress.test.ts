@@ -24,10 +24,13 @@ interface MockQueryChain {
   insert: (payload?: unknown) => MockQueryChain;
   upsert: (rows: unknown) => MockQueryChain;
   eq: (col: string, val: unknown) => MockQueryChain;
+  in: (col: string, val: unknown) => MockQueryChain;
+  limit: (count: number) => MockQueryChain;
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
   single: () => Promise<{ data: unknown; error: unknown }>;
   order: (col: string, options?: unknown) => MockQueryChain;
-  then: typeof Promise.prototype.then;
+  toPromise?: () => Promise<{ data: unknown; error: unknown }>;
+  then?: typeof Promise.prototype.then;
 }
 
 function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): MockQueryChain {
@@ -37,6 +40,8 @@ function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): Mo
     insert: vi.fn().mockImplementation(() => chain),
     upsert: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
+    in: vi.fn().mockImplementation(() => chain),
+    limit: vi.fn().mockImplementation(() => chain),
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     order: vi.fn().mockImplementation(() => chain),
@@ -191,6 +196,16 @@ describe("Progress API Endpoints", () => {
 
       const mockSupabase = {
         from: vi.fn().mockImplementation((table: string) => {
+          if (table === "e_content") {
+            return createMockQueryChain({ id: "econtent-123", modules_content_id: "mc-123" });
+          }
+          if (table === "modules_content") {
+            return createMockQueryChain({
+              module_id: "module-123",
+              stage_name: "engage",
+              stage_order: 1,
+            });
+          }
           if (table === "learning_paths") {
             return createMockQueryChain({ id: "path-123", role_id: "role-123" });
           }
@@ -208,18 +223,20 @@ describe("Progress API Endpoints", () => {
             return createMockQueryChain({ id: "module-123" });
           }
           if (table === "user_module_progress") {
-            return createMockQueryChain({ id: "mod-progress-123" });
+            return createMockQueryChain({
+              id: "mod-progress-123",
+              stages_completed: 2,
+              completion_percentage: 33,
+            });
           }
           if (table === "user_stage_progress") {
-            const chain = createMockQueryChain(null);
+            const chain = createMockQueryChain({
+              id: "stage-progress-123",
+              user_module_progress_id: "mod-progress-123",
+            });
             chain.insert = vi
               .fn()
               .mockImplementation(() => createMockQueryChain({ id: "stage-progress-123" }));
-            chain.select = vi
-              .fn()
-              .mockImplementation(() =>
-                createMockQueryChain([{ stage_name: "engage" }, { stage_name: "explore" }]),
-              );
             return chain;
           }
           return createMockQueryChain(null);

@@ -6,6 +6,7 @@ export const useStartLevelProgress = () => {
   return useMutation({
     mutationFn: (levelId: string) => startLevelProgress(levelId),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userCourses"] });
       queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });
       queryClient.invalidateQueries({ queryKey: ["levelDetails"] });
     },
@@ -18,6 +19,7 @@ export const useStartModuleProgress = () => {
     mutationFn: (params: { levelId: string; moduleNo: number }) =>
       startModuleProgress(params.levelId, params.moduleNo),
     onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["userCourses"] });
       queryClient.invalidateQueries({
         queryKey: ["levelContent", variables.levelId, variables.moduleNo],
       });
@@ -44,6 +46,8 @@ export const useUpdateStageProgress = () => {
         params.status,
       ),
     onSuccess: (_, variables) => {
+      // Invalidate user courses list to reflect overall progress updates
+      queryClient.invalidateQueries({ queryKey: ["userCourses"] });
       // Invalidate module level content
       queryClient.invalidateQueries({
         queryKey: ["levelContent", variables.levelId, variables.moduleNo],

@@ -105,8 +105,9 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
               if (typeof value === "object" && value !== null) {
                 // Try to extract array from JSONB object or return undefined
                 const obj = value as Record<string, unknown>;
-                if (obj.items && Array.isArray(obj.items)) {
-                  return obj.items.map((v: unknown) => (typeof v === "string" ? v : String(v)));
+                const items = obj["items"];
+                if (items && Array.isArray(items)) {
+                  return items.map((v: unknown) => (typeof v === "string" ? v : String(v)));
                 }
                 return undefined;
               }
@@ -328,10 +329,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                             <span>Prerequisites</span>
                           </h5>
                           <ul className="space-y-2 text-xs text-slate-600 font-normal pl-7.5">
-                            {(Array.isArray(item.details.prerequisites)
-                              ? item.details.prerequisites
-                              : item.details.prerequisites.split(/(?<=\.)\s+/).filter(Boolean)
-                            ).map((pt, i) => (
+                            {(item.details.prerequisites ?? []).map((pt: string, i: number) => (
                               <li key={i} className="leading-snug">
                                 {pt}
                               </li>
@@ -348,10 +346,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                             <span>Common Confusion</span>
                           </h5>
                           <ul className="space-y-2 text-xs text-slate-600 font-normal pl-7.5">
-                            {(Array.isArray(item.details.commonConfusion)
-                              ? item.details.commonConfusion
-                              : item.details.commonConfusion.split(/(?<=\.)\s+/).filter(Boolean)
-                            ).map((pt, i) => (
+                            {(item.details.commonConfusion ?? []).map((pt: string, i: number) => (
                               <li key={i} className="leading-snug">
                                 {pt}
                               </li>
@@ -381,10 +376,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                             <span>What You'll Learn</span>
                           </h5>
                           <ul className="space-y-2 text-xs text-slate-600 font-normal pl-7.5">
-                            {(Array.isArray(item.details.whatYoullLearn)
-                              ? item.details.whatYoullLearn
-                              : item.details.whatYoullLearn.split(/(?<=\.)\s+/).filter(Boolean)
-                            ).map((pt, i) => (
+                            {(item.details.whatYoullLearn ?? []).map((pt: string, i: number) => (
                               <li key={i} className="leading-snug">
                                 {pt}
                               </li>
@@ -418,10 +410,10 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                         "Evolve",
                       ];
                       // Use real stages from DB if available, otherwise use framework stages
-                      const stages =
+                      const stages: StageTag[] =
                         item.stages && item.stages.length > 0
                           ? item.stages
-                          : STAGE_NAMES.map((name) => ({ name }));
+                          : STAGE_NAMES.map((name) => ({ name, status: "locked" }));
 
                       return (
                         <div className="pt-4 flex flex-wrap gap-2.5">

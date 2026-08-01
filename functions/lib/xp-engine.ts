@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { apiLogger } from "./logger";
 
 // Event to XP amount mapping (TRD-DB-007 enum values)
 export const XP_AMOUNTS: Record<string, number> = {
@@ -147,7 +148,7 @@ export async function awardXp(
 
     return { success: true, xpAwarded: xpAmount, alreadyAwarded: false };
   } catch (error) {
-    console.error("Error awarding XP:", error);
+    apiLogger.error("Error awarding XP", error);
     throw error;
   }
 }

@@ -12,48 +12,51 @@ const mockUpdate = vi.fn();
 const mockInsert = vi.fn();
 const mockOrder = vi.fn();
 
-const mockSupabase = {
-  from: vi.fn().mockImplementation(() => ({
+function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chain: Record<string, any> = {
+    select: vi.fn().mockImplementation(() => chain),
+    update: vi.fn().mockImplementation(() => chain),
+    insert: vi.fn().mockImplementation(() => chain),
+    upsert: vi.fn().mockImplementation(() => chain),
+    eq: vi.fn().mockImplementation(() => chain),
+    in: vi.fn().mockImplementation(() => chain),
+    limit: vi.fn().mockImplementation(() => chain),
+    maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
+    single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
+    order: vi.fn().mockImplementation(() => chain),
+    // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
+    then: (resolve: (val: unknown) => unknown) =>
+      Promise.resolve({ data: resolveVal, error: errorVal }).then(resolve),
+  };
+  return chain;
+}
+
+function createChain() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chain: Record<string, any> = {
+    select: (...args: unknown[]) => mockSelect(...args) ?? chain,
+    update: (...args: unknown[]) => mockUpdate(...args) ?? chain,
     insert: mockInsert,
-    update: mockUpdate,
-    select: mockSelect,
-    eq: mockEq,
-    in: mockIn,
-    limit: mockLimit,
+    eq: (...args: unknown[]) => mockEq(...args) ?? chain,
+    in: (...args: unknown[]) => mockIn(...args) ?? chain,
+    limit: (...args: unknown[]) => mockLimit(...args) ?? chain,
+    order: (...args: unknown[]) => mockOrder(...args) ?? chain,
     single: mockSingle,
     maybeSingle: mockMaybeSingle,
-    order: mockOrder,
-  })),
-} as unknown as typeof mockSupabase;
+  };
+  return chain;
+}
+
+const mockSupabase = {
+  from: vi.fn().mockImplementation(() => createChain()),
+} as unknown as Parameters<typeof awardXp>[0];
 
 describe("XP Engine Core logic", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockInsert.mockReturnValue({ error: null });
-    mockUpdate.mockReturnValue({ error: null });
-    mockSelect.mockReturnValue({
-      eq: mockEq,
-      in: mockIn,
-      limit: mockLimit,
-      single: mockSingle,
-      maybeSingle: mockMaybeSingle,
-      order: mockOrder,
-    });
-    mockEq.mockReturnValue({
-      eq: mockEq,
-      single: mockSingle,
-      maybeSingle: mockMaybeSingle,
-      limit: mockLimit,
-      order: mockOrder,
-    });
-    mockIn.mockReturnValue({ eq: mockEq, single: mockSingle, order: mockOrder });
-    mockLimit.mockReturnValue({ maybeSingle: mockMaybeSingle, order: mockOrder });
-    mockOrder.mockReturnValue({
-      eq: mockEq,
-      single: mockSingle,
-      maybeSingle: mockMaybeSingle,
-      limit: mockLimit,
-    });
+    mockUpdate.mockReturnValue(null);
   });
 
   describe("awardXp", () => {
@@ -103,46 +106,33 @@ describe("XP Engine Core logic", () => {
 
   describe("completeStage", () => {
     it("should award +1 Evidence XP and upsert stage progress record", async () => {
-      // Mock modules_content lookup
-      mockSingle.mockReturnValueOnce({
-        data: { module_id: "mod-1", stage_name: "engage", stage_order: 1 },
-        error: null,
-      });
-
-      // Mock e_content lookup
-      mockMaybeSingle.mockReturnValueOnce({
-        data: { id: "content-1" },
-        error: null,
-      });
-
-      // Mock user_module_progress lookup (already exists)
-      mockSelect.mockReturnValueOnce({
-        eq: vi.fn().mockReturnValueOnce({
-          eq: vi
-            .fn()
-            .mockReturnValueOnce([
+      const mockSupabase = {
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === "modules_content") {
+            return createMockQueryChain({
+              module_id: "mod-1",
+              stage_name: "engage",
+              stage_order: 1,
+            });
+          }
+          if (table === "e_content") {
+            return createMockQueryChain({ id: "content-1" });
+          }
+          if (table === "user_module_progress") {
+            return createMockQueryChain([
               { id: "mod-progress-1", stages_completed: 1, module_status: "in_progress" },
-            ]),
+            ]);
+          }
+          if (table === "user_stage_progress") {
+            const chain = createMockQueryChain(null);
+            chain["insert"] = vi
+              .fn()
+              .mockImplementation(() => createMockQueryChain({ id: "stage-progress-1" }));
+            return chain;
+          }
+          return createMockQueryChain(null);
         }),
-      });
-
-      // Mock user_stage_progress lookup (not completed yet)
-      mockMaybeSingle.mockReturnValueOnce({
-        data: null,
-        error: null,
-      });
-
-      // Mock insert of user_stage_progress
-      mockSingle.mockReturnValueOnce({
-        data: { id: "stage-progress-1" },
-        error: null,
-      });
-
-      // Mock insert of xp_event (awardXp call)
-      mockInsert.mockReturnValueOnce({ error: null });
-
-      // Mock update of user_module_progress
-      mockEq.mockReturnValueOnce({ error: null });
+      } as unknown as Parameters<typeof awardXp>[0];
 
       const result = await completeStage(mockSupabase, "user-1", "content-stage-1");
 

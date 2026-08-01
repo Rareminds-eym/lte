@@ -7,16 +7,46 @@ const apiLogger = getLogger("api");
 
 const UserCapabilitySchema = z.object({
   id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  code: z.string().optional(),
-  level: z.string().optional(),
-  priority: z.string().optional(),
-  step: z.number().optional(),
-  totalLevels: z.number(),
-  currentLevel: z.number(),
-  status: z.string(),
-  progress: z.number(),
+  name: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? ""),
+  description: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? ""),
+  code: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? undefined),
+  level: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? undefined),
+  priority: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? ""),
+  step: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? undefined),
+  totalLevels: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? 0),
+  currentLevel: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? 0),
+  status: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? "not_started"),
+  progress: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? 0),
 });
 
 const UserCapabilitiesResponseSchema = z.object({
@@ -27,22 +57,45 @@ const UserCapabilitiesResponseSchema = z.object({
 
 type UserCapabilityResponse = z.infer<typeof UserCapabilitySchema>;
 
-export const CapabilityLevelSchema = z
-  .object({
-    id: z.string(),
-    levelNumber: z.number(),
-    code: z.string(),
-    title: z.string(),
-    description: z.array(z.string()).or(z.string()),
-    deliverables: z.array(z.string()),
-    durationMinutes: z.number(),
-    difficulty: z.string(),
-    status: z.string(),
-  })
-  .transform((val) => ({
-    ...val,
-    description: Array.isArray(val.description) ? val.description.join(" ") : val.description,
-  }));
+export const CapabilityLevelSchema = z.object({
+  id: z.string(),
+  levelNumber: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? 1),
+  code: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? ""),
+  title: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? ""),
+  description: z
+    .array(z.string())
+    .or(z.string())
+    .nullish()
+    .transform((v) => {
+      if (!v) return "";
+      return Array.isArray(v) ? v.join(" ") : v;
+    }),
+  deliverables: z
+    .array(z.string())
+    .nullish()
+    .transform((v) => v ?? []),
+  durationMinutes: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? 0),
+  difficulty: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? "intermediate"),
+  status: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? "published"),
+});
 
 export type CapabilityLevel = z.infer<typeof CapabilityLevelSchema>;
 
@@ -60,6 +113,7 @@ async function fetchUserCapabilities(): Promise<UserCapabilityResponse[]> {
 
   const parsed = UserCapabilitiesResponseSchema.safeParse(raw);
   if (!parsed.success) {
+    apiLogger.error("Failed to parse user capabilities response", parsed.error);
     throw new ApiError("Invalid response format from server");
   }
 

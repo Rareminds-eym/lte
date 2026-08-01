@@ -1,14 +1,23 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/shared";
 import { initializeLearningPath } from "../api/initializeLearningPath";
 import type { InitializeLearningPathPayload } from "./initializeLearningPath.schema";
 
 export const useInitializeLearningPath = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ payload }: { payload: InitializeLearningPathPayload }) =>
       initializeLearningPath({
         payload,
       }),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userCourses"] });
+      queryClient.invalidateQueries({ queryKey: ["activeLearningPath"] });
+      // Purge any stale/errored levels queries so they refetch against the
+      // newly-created learning path (prevents lingering 404 cache entries).
+      queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });
+    },
 
     retry: (failureCount, error) => {
       // Do not retry on aborted requests

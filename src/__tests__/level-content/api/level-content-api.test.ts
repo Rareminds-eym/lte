@@ -135,6 +135,12 @@ describe("Level Content API Schemas & Queries", () => {
               eq: eqMock,
             };
           }
+          if (table === "modules_content") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              in: vi.fn().mockResolvedValue({ data: [], error: null }),
+            };
+          }
           if (table === "module_artifacts") {
             return {
               select: vi.fn().mockReturnThis(),
@@ -156,6 +162,7 @@ describe("Level Content API Schemas & Queries", () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: eqMock,
+            in: vi.fn().mockResolvedValue({ data: [], error: null }),
             single: vi.fn().mockResolvedValue({ data: null, error: null }),
           };
         }),
