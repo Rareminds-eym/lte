@@ -32,10 +32,13 @@ export { useCourses } from "./model/useCourses";
 export {
   getLevelContentQueryKey,
   getLevelDetailsQueryKey,
+  getLevelModuleDetailsQueryKey,
   LEVEL_CONTENT_QUERY_KEY,
   LEVEL_DETAILS_QUERY_KEY,
+  LEVEL_MODULE_DETAILS_QUERY_KEY,
   useLevelContentData,
   useLevelDetails,
+  useLevelModuleDetails,
 } from "./model/useLevelContentData";
 export {
   useStartLevelProgress,

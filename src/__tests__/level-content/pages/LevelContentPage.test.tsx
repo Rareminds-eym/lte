@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LevelContentPage } from "@/pages/level-content";
@@ -7,13 +7,15 @@ import { LevelContentPage } from "@/pages/level-content";
 const {
   fetchLevelDetailsMock,
   fetchLevelModuleDetailsMock,
-  useLevelContentDataMock,
+  useLevelDetailsMock,
+  useLevelModuleDetailsMock,
   useStartModuleProgressMock,
   useUpdateStageProgressMock,
 } = vi.hoisted(() => ({
   fetchLevelDetailsMock: vi.fn(),
   fetchLevelModuleDetailsMock: vi.fn(),
-  useLevelContentDataMock: vi.fn(),
+  useLevelDetailsMock: vi.fn(),
+  useLevelModuleDetailsMock: vi.fn(),
   useStartModuleProgressMock: vi.fn(),
   useUpdateStageProgressMock: vi.fn(),
 }));
@@ -26,7 +28,8 @@ vi.mock("@/entities/course", async () => {
     ...actual,
     fetchLevelDetails: (...args: unknown[]) => fetchLevelDetailsMock(...args),
     fetchLevelModuleDetails: (...args: unknown[]) => fetchLevelModuleDetailsMock(...args),
-    useLevelContentData: (...args: unknown[]) => useLevelContentDataMock(...args),
+    useLevelDetails: (...args: unknown[]) => useLevelDetailsMock(...args),
+    useLevelModuleDetails: (...args: unknown[]) => useLevelModuleDetailsMock(...args),
     useStartModuleProgress: (...args: unknown[]) => useStartModuleProgressMock(...args),
     useUpdateStageProgress: (...args: unknown[]) => useUpdateStageProgressMock(...args),
   };
@@ -210,14 +213,21 @@ describe("LevelContentPage", () => {
   beforeEach(() => {
     fetchLevelDetailsMock.mockResolvedValue(mockLevelContentData.level);
     fetchLevelModuleDetailsMock.mockResolvedValue(mockLevelContentData.module);
-    useLevelContentDataMock.mockReset();
+    useLevelDetailsMock.mockReset();
+    useLevelModuleDetailsMock.mockReset();
     useStartModuleProgressMock.mockReturnValue({ mutate: vi.fn() });
     useUpdateStageProgressMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
   });
 
   it("loads level and module content from the level entity hook", () => {
-    useLevelContentDataMock.mockReturnValue({
-      data: mockLevelContentData,
+    useLevelDetailsMock.mockReturnValue({
+      data: mockLevelContentData.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: mockLevelContentData.module,
       isLoading: false,
       isError: false,
       error: null,
@@ -225,11 +235,33 @@ describe("LevelContentPage", () => {
 
     renderPage();
 
-    expect(useLevelContentDataMock).toHaveBeenCalledWith(levelId, 1);
+    expect(useLevelDetailsMock).toHaveBeenCalledWith(levelId);
+    expect(useLevelModuleDetailsMock).toHaveBeenCalledWith(levelId, 1);
     expect(screen.getAllByText("System Failure Investigation")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Incident Signals")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Incident Triage Walkthrough")[0]).toBeInTheDocument();
     expect(screen.getByText("How to isolate useful signals.")).toBeInTheDocument();
+  });
+
+  it("keeps the module review shell visible while module content loads", () => {
+    useLevelDetailsMock.mockReturnValue({
+      data: mockLevelContentData.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.getAllByText("Incident Signals")[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Incident Triage Walkthrough")).not.toBeInTheDocument();
   });
 
   it("uses the stage query parameter to select stage content", () => {
@@ -240,8 +272,14 @@ describe("LevelContentPage", () => {
         completedStages: ["engage"],
       },
     };
-    useLevelContentDataMock.mockReturnValue({
-      data,
+    useLevelDetailsMock.mockReturnValue({
+      data: data.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: data.module,
       isLoading: false,
       isError: false,
       error: null,
@@ -255,6 +293,45 @@ describe("LevelContentPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("moves to the next stage after Mark Done & Next completes", async () => {
+    useLevelDetailsMock.mockReturnValue({
+      data: mockLevelContentData.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: mockLevelContentData.module,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useUpdateStageProgressMock.mockReturnValue({
+      mutate: vi.fn((_params, options) => {
+        options?.onSuccess?.({
+          success: true,
+          stageProgressId: "stage-progress-1",
+          stagesCompleted: 1,
+          completionPercentage: 16,
+          xpAwarded: 0,
+          totalXp: 0,
+        });
+      }),
+      isPending: false,
+    });
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /Mark Done & Next/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Explore")[0]).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("No learning content is available for this stage yet."),
+    ).toBeInTheDocument();
+  });
+
   it("shows the practice artifact drawer for the Express stage", () => {
     const data = {
       ...mockLevelContentData,
@@ -263,8 +340,14 @@ describe("LevelContentPage", () => {
         completedStages: ["engage", "explore", "explain"],
       },
     };
-    useLevelContentDataMock.mockReturnValue({
-      data,
+    useLevelDetailsMock.mockReturnValue({
+      data: data.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: data.module,
       isLoading: false,
       isError: false,
       error: null,
@@ -288,8 +371,14 @@ describe("LevelContentPage", () => {
         completedStages: ["engage", "explore", "explain", "express", "empower"],
       },
     };
-    useLevelContentDataMock.mockReturnValue({
-      data,
+    useLevelDetailsMock.mockReturnValue({
+      data: data.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: data.module,
       isLoading: false,
       isError: false,
       error: null,
@@ -304,8 +393,65 @@ describe("LevelContentPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("navigates to the next module from a completed final stage", () => {
+    const data = {
+      ...mockLevelContentData,
+      module: {
+        ...mockLevelContentData.module,
+        progressPercentage: 100,
+        completedStages: ["engage", "explore", "explain", "express", "empower", "evolve"],
+        stages: mockLevelContentData.module.stages.map((stage) =>
+          stage.stageName === "evolve"
+            ? {
+                ...stage,
+                items: [
+                  {
+                    id: "content-final-review",
+                    contentType: "slide",
+                    title: "Final Review",
+                    description: "Review before moving ahead.",
+                    url: "https://example.com/final-review",
+                    sortOrder: 1,
+                    durationSeconds: 120,
+                    xpReward: 0,
+                    mimeType: null,
+                    fileSizeBytes: null,
+                    status: "published",
+                  },
+                ],
+              }
+            : stage,
+        ),
+      },
+    };
+    useLevelDetailsMock.mockReturnValue({
+      data: data.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: data.module,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage(`/my-courses/${levelId}/modules/1?stage=evolve`);
+
+    fireEvent.click(screen.getByRole("button", { name: /Next Module/i }));
+
+    expect(useLevelModuleDetailsMock).toHaveBeenCalledWith(levelId, 2);
+  });
+
   it("shows an error state when the API fails", () => {
-    useLevelContentDataMock.mockReturnValue({
+    useLevelDetailsMock.mockReturnValue({
+      data: mockLevelContentData.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
