@@ -1,3 +1,4 @@
+import { assertStageSequenceAllowed, LTE_STAGE_SEQUENCE } from "@functions/lib/stage-sequence";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   EContentItem,
@@ -8,6 +9,7 @@ import type {
   Lte6eStage,
   ModuleArtifact,
   ModuleArtifactQuestion,
+  ModuleContentRow,
   ModuleRow,
   ModuleStageContent,
 } from "./types";
@@ -293,50 +295,7 @@ export async function getModuleDetails(
       support,
       knowledge,
       tools,
-      learning_content,
-      modules_content (
-        id,
-        stage_name,
-        stage_order,
-        stage_description,
-        is_active,
-        e_content (
-          id,
-          content_type,
-          title,
-          description,
-          url,
-          sort_order,
-          duration_seconds,
-          xp_reward,
-          mime_type,
-          file_size_bytes,
-          status
-        ),
-        module_artifacts (
-          id,
-          artifact_type,
-          total_score,
-          passing_score,
-          is_active,
-          artifact_questions (
-            id,
-            question_order,
-            title,
-            description,
-            instructions
-          ),
-          artifact_templates (
-            id,
-            question_id,
-            file_name,
-            file_url,
-            file_type,
-            version,
-            is_downloadable
-          )
-        )
-      )
+      learning_content
     `)
     .eq("level_id", levelData.id)
     .eq("module_no", moduleNo)
@@ -349,7 +308,93 @@ export async function getModuleDetails(
 
   const rawModule = moduleData as unknown as ModuleRow;
 
-  const ALL_STAGES: Lte6eStage[] = ["engage", "explore", "explain", "express", "empower", "evolve"];
+  const ALL_STAGES: Lte6eStage[] = [...LTE_STAGE_SEQUENCE];
+  let completedStages: string[] = [];
+  let progressPercentage = 0;
+
+  if (userId) {
+    const { data: moduleProgress } = await supabase
+      .from("user_module_progress")
+      .select("id, completion_percentage")
+      .eq("user_id", userId)
+      .eq("module_id", rawModule.id)
+      .maybeSingle();
+
+    if (moduleProgress) {
+      progressPercentage = moduleProgress.completion_percentage || 0;
+
+      const { data: stagesProg } = await supabase
+        .from("user_stage_progress")
+        .select("stage_name")
+        .eq("user_module_progress_id", moduleProgress.id)
+        .eq("status", "completed");
+
+      if (stagesProg) {
+        completedStages = stagesProg.map((s) => s.stage_name.toLowerCase());
+      }
+    }
+  }
+
+  const completedStageSet = new Set(completedStages);
+  const firstIncompleteStage = ALL_STAGES.find((stage) => !completedStageSet.has(stage));
+  const allowedStages = firstIncompleteStage
+    ? [...completedStageSet, firstIncompleteStage]
+    : ALL_STAGES;
+
+  const { data: modulesContentData, error: modulesContentError } = await supabase
+    .from("modules_content")
+    .select(`
+      id,
+      stage_name,
+      stage_order,
+      stage_description,
+      is_active,
+      e_content (
+        id,
+        content_type,
+        title,
+        description,
+        url,
+        sort_order,
+        duration_seconds,
+        xp_reward,
+        mime_type,
+        file_size_bytes,
+        status
+      ),
+      module_artifacts (
+        id,
+        artifact_type,
+        total_score,
+        passing_score,
+        is_active,
+        artifact_questions (
+          id,
+          question_order,
+          title,
+          description,
+          instructions
+        ),
+        artifact_templates (
+          id,
+          question_id,
+          file_name,
+          file_url,
+          file_type,
+          version,
+          is_downloadable
+        )
+      )
+    `)
+    .eq("module_id", rawModule.id)
+    .eq("is_active", true)
+    .in("stage_name", allowedStages);
+
+  if (modulesContentError) {
+    throw new Error(`Failed to fetch module stage content: ${modulesContentError.message}`);
+  }
+
+  rawModule.modules_content = modulesContentData as unknown as ModuleContentRow[];
 
   const rawStagesMap = new Map<string, ModuleStageContent>();
 
@@ -432,32 +477,6 @@ export async function getModuleDetails(
       isActive: false,
     };
   });
-
-  let completedStages: string[] = [];
-  let progressPercentage = 0;
-
-  if (userId) {
-    const { data: moduleProgress } = await supabase
-      .from("user_module_progress")
-      .select("id, completion_percentage")
-      .eq("user_id", userId)
-      .eq("module_id", rawModule.id)
-      .maybeSingle();
-
-    if (moduleProgress) {
-      progressPercentage = moduleProgress.completion_percentage || 0;
-
-      const { data: stagesProg } = await supabase
-        .from("user_stage_progress")
-        .select("stage_name")
-        .eq("user_module_progress_id", moduleProgress.id)
-        .eq("status", "completed");
-
-      if (stagesProg) {
-        completedStages = stagesProg.map((s) => s.stage_name.toLowerCase());
-      }
-    }
-  }
 
   return {
     id: rawModule.id,
@@ -744,6 +763,22 @@ export async function upsertStageProgress(
   if (!stageOrder) {
     throw new Error(`Invalid stage name: ${stageName}`);
   }
+
+  const { data: existingCompletedStages, error: completedStagesError } = await supabase
+    .from("user_stage_progress")
+    .select("stage_name")
+    .eq("user_module_progress_id", moduleProgressId)
+    .eq("user_id", userId)
+    .eq("status", "completed");
+
+  if (completedStagesError) {
+    throw new Error(`Failed to validate stage sequence: ${completedStagesError.message}`);
+  }
+
+  assertStageSequenceAllowed(
+    stageName,
+    existingCompletedStages?.map((stage) => stage.stage_name) ?? [],
+  );
 
   // 3. Upsert stage progress
   const { data: existingProgress } = await supabase

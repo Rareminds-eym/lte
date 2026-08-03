@@ -239,52 +239,62 @@ describe("Level Content API Schemas & Queries", () => {
           knowledge: {},
           tools: {},
           learning_content: {},
-          modules_content: [
-            {
-              id: "mc-engage",
-              stage_name: "engage",
-              stage_order: 1,
-              stage_description: "Understand the incident context before taking action.",
-              is_active: true,
-              e_content: [
-                {
-                  id: "item-1",
-                  content_type: "video",
-                  title: "Incident Kickoff: API Latency Spike",
-                  description: "Alert walkthrough",
-                  url: "https://example.com/video.mp4",
-                  sort_order: 1,
-                  duration_seconds: 540,
-                  xp_reward: 50,
-                  mime_type: "video/mp4",
-                  file_size_bytes: 1024000,
-                  status: "published",
-                },
-                {
-                  id: "item-2",
-                  content_type: "pdf",
-                  title: "Failure Investigation Workbook",
-                  description: "Workbook",
-                  url: "https://example.com/doc.pdf",
-                  sort_order: 2,
-                  duration_seconds: 300,
-                  xp_reward: 25,
-                  mime_type: "application/pdf",
-                  file_size_bytes: 512000,
-                  status: "published",
-                },
-              ],
-              module_artifacts: [],
-            },
-          ],
         },
         error: null,
       });
+      const modulesContentData = [
+        {
+          id: "mc-engage",
+          stage_name: "engage",
+          stage_order: 1,
+          stage_description: "Understand the incident context before taking action.",
+          is_active: true,
+          e_content: [
+            {
+              id: "item-1",
+              content_type: "video",
+              title: "Incident Kickoff: API Latency Spike",
+              description: "Alert walkthrough",
+              url: "https://example.com/video.mp4",
+              sort_order: 1,
+              duration_seconds: 540,
+              xp_reward: 50,
+              mime_type: "video/mp4",
+              file_size_bytes: 1024000,
+              status: "published",
+            },
+            {
+              id: "item-2",
+              content_type: "pdf",
+              title: "Failure Investigation Workbook",
+              description: "Workbook",
+              url: "https://example.com/doc.pdf",
+              sort_order: 2,
+              duration_seconds: 300,
+              xp_reward: 25,
+              mime_type: "application/pdf",
+              file_size_bytes: 512000,
+              status: "published",
+            },
+          ],
+          module_artifacts: [],
+        },
+      ];
 
       let callCount = 0;
       const eqMock = vi.fn().mockReturnThis();
+      const inMock = vi.fn().mockResolvedValue({ data: modulesContentData, error: null });
       const mockSupabase = {
-        from: vi.fn().mockReturnThis(),
+        from: vi.fn().mockImplementation((table) => {
+          if (table === "modules_content") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: eqMock,
+              in: inMock,
+            };
+          }
+          return mockSupabase;
+        }),
         select: vi.fn().mockReturnThis(),
         eq: eqMock,
         single: vi.fn().mockImplementation(() => {
@@ -301,6 +311,7 @@ describe("Level Content API Schemas & Queries", () => {
       expect(result?.moduleNo).toBe(0);
       expect(result?.levelCode).toBe("crs-sys-fail-inv");
       expect(result?.stages.length).toBe(6); // All 6E stages ensured
+      expect(inMock).toHaveBeenCalledWith("stage_name", ["engage"]);
 
       const engageStage = result?.stages.find((s) => s.stageName === "engage");
       expect(engageStage).toBeDefined();

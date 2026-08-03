@@ -1,8 +1,12 @@
 import type React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   type EContentItem,
+  fetchLevelDetails,
+  fetchLevelModuleDetails,
+  getLevelContentQueryKey,
   type ModuleArtifact,
   type ModuleDetailsResponse,
   type ModuleStageContent,
@@ -11,6 +15,7 @@ import {
   useStartModuleProgress,
   useUpdateStageProgress,
 } from "@/entities/course";
+import { useModuleNavigationStore } from "@/features/module-navigation";
 import { XpRewardModal } from "@/features/xp-reward";
 import {
   Button,
@@ -97,10 +102,26 @@ const getArtifactStepperMeta = (artifact: ModuleArtifact | null) => {
   return null;
 };
 
+const getModuleStageSequence = (stages: ModuleStageContent[] | undefined) => {
+  const stageNames = new Set(
+    (stages ?? [])
+      .map((stage) => stage.stageName.toLowerCase() as LteStage)
+      .filter((stage) => STAGES.includes(stage)),
+  );
+
+  return stageNames.size ? STAGES.filter((stage) => stageNames.has(stage)) : STAGES;
+};
+
+const getFirstIncompleteStage = (stages: LteStage[], completedStages: Set<LteStage>) =>
+  stages.find((stage) => !completedStages.has(stage)) ?? null;
+
 export const LevelContentPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { levelId, moduleNo } = useParams<{ levelId: string; moduleNo: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const startModuleNavigation = useModuleNavigationStore((state) => state.startModuleNavigation);
+  const clearModuleNavigation = useModuleNavigationStore((state) => state.clearModuleNavigation);
 
   const [isModulesOpen, setIsModulesOpen] = useState(true);
   const [isStageInfoOpen, setIsStageInfoOpen] = useState(true);
@@ -120,12 +141,18 @@ export const LevelContentPage: React.FC = () => {
   const [xpAwardedAmount, setXpAwardedAmount] = useState(0);
   const [totalXpAmount, setTotalXpAmount] = useState(0);
   const [pendingNextStage, setPendingNextStage] = useState<LteStage | null>(null);
+  const [pendingNextModuleNo, setPendingNextModuleNo] = useState<number | null>(null);
 
   const moduleNumber = Number(moduleNo);
   const hasValidRouteParams = Boolean(levelId) && Number.isInteger(moduleNumber);
   const { data, isLoading, isError } = useLevelContentData(
     levelId,
     hasValidRouteParams ? moduleNumber : undefined,
+  );
+  const nextModuleNoForPrefetch = Number.isInteger(moduleNumber) ? moduleNumber + 1 : undefined;
+  const nextModuleExistsForPrefetch = Boolean(
+    nextModuleNoForPrefetch &&
+      data?.level.modules.some((module) => module.moduleNo === nextModuleNoForPrefetch),
   );
 
   const rawStage = searchParams.get("stage")?.toLowerCase();
@@ -169,6 +196,28 @@ export const LevelContentPage: React.FC = () => {
       startModule({ levelId, moduleNo: moduleNumber });
     }
   }, [levelId, moduleNumber, startModule]);
+
+  useEffect(() => {
+    if (!data && !isLoading) return;
+    clearModuleNavigation();
+  }, [clearModuleNavigation, data, isLoading]);
+
+  useEffect(() => {
+    if (!levelId || !nextModuleNoForPrefetch || !nextModuleExistsForPrefetch) return;
+
+    void queryClient.prefetchQuery({
+      queryKey: getLevelContentQueryKey(levelId, nextModuleNoForPrefetch),
+      queryFn: async () => {
+        const [level, module] = await Promise.all([
+          fetchLevelDetails(levelId),
+          fetchLevelModuleDetails(levelId, nextModuleNoForPrefetch),
+        ]);
+
+        return { level, module };
+      },
+      staleTime: 1000 * 60 * 5,
+    });
+  }, [levelId, nextModuleExistsForPrefetch, nextModuleNoForPrefetch, queryClient]);
 
   const levelModuleForSync = data?.module;
   const activeStageContentForSync = levelModuleForSync?.stages.find(
@@ -267,6 +316,39 @@ export const LevelContentPage: React.FC = () => {
     </div>
   );
 
+  const routeStageSequence = getModuleStageSequence(data?.module.stages);
+  const routeCompletedStageSet = new Set((data?.module.completedStages || []) as LteStage[]);
+  const routeFirstIncompleteStage = getFirstIncompleteStage(
+    routeStageSequence,
+    routeCompletedStageSet,
+  );
+  const isRouteStageLocked = Boolean(
+    routeFirstIncompleteStage &&
+      !routeCompletedStageSet.has(activeStage) &&
+      activeStage !== routeFirstIncompleteStage,
+  );
+
+  useEffect(() => {
+    if (!data) return;
+
+    const fallbackStage = routeFirstIncompleteStage ?? routeStageSequence[0] ?? "engage";
+    if (!routeStageSequence.includes(activeStage) || isRouteStageLocked) {
+      setSelectedContentId(null);
+      setSearchParams((prev) => {
+        const updated = new URLSearchParams(prev);
+        updated.set("stage", fallbackStage);
+        return updated;
+      });
+    }
+  }, [
+    activeStage,
+    data,
+    isRouteStageLocked,
+    routeFirstIncompleteStage,
+    routeStageSequence,
+    setSearchParams,
+  ]);
+
   if (!hasValidRouteParams) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-surface-secondary p-4">
@@ -322,17 +404,32 @@ export const LevelContentPage: React.FC = () => {
   const previewItems = activeStageContent.items;
   const stageSummary = getStageSummary(levelModule, activeStageContent);
   const stageDescription = activeStageContent.stageDescription;
-  const activeStageIndex = STAGES.indexOf(activeStage);
+  const navigableStages = routeStageSequence;
+  const completedStageSet = new Set(completedStages);
+  const activeStageIndex = navigableStages.indexOf(activeStage);
   const previousStage: LteStage | null =
-    activeStageIndex > 0 ? (STAGES[activeStageIndex - 1] ?? null) : null;
+    activeStageIndex > 0 ? (navigableStages[activeStageIndex - 1] ?? null) : null;
   const nextStage: LteStage | null =
-    activeStageIndex >= 0 && activeStageIndex < STAGES.length - 1
-      ? (STAGES[activeStageIndex + 1] ?? null)
+    activeStageIndex >= 0 && activeStageIndex < navigableStages.length - 1
+      ? (navigableStages[activeStageIndex + 1] ?? null)
       : null;
 
-  const isCurrentStageCompleted = completedStages.includes(activeStage);
-  const isModuleComplete = levelModule.progressPercentage === 100;
-  const isCurrentStageInProgress = !isCurrentStageCompleted && completedStages.length > 0;
+  const isCurrentStageCompleted = completedStageSet.has(activeStage);
+  const isModuleComplete = navigableStages.every((stage) => completedStageSet.has(stage));
+  const isModuleCompleteAfterCurrentStage = navigableStages.every(
+    (stage) => stage === activeStage || completedStageSet.has(stage),
+  );
+  const firstIncompleteStage = getFirstIncompleteStage(navigableStages, completedStageSet);
+  const nextIncompleteStageAfterCurrent = navigableStages
+    .slice(activeStageIndex + 1)
+    .find((stage) => !completedStageSet.has(stage));
+  const nextStageAfterCurrentCompletion = isModuleCompleteAfterCurrentStage
+    ? nextStage
+    : (nextIncompleteStageAfterCurrent ?? firstIncompleteStage);
+  const isStageLocked = (stage: LteStage) =>
+    Boolean(
+      firstIncompleteStage && !completedStageSet.has(stage) && stage !== firstIncompleteStage,
+    );
 
   // Check if there's a next module
   const nextModuleNo = moduleNumber + 1;
@@ -340,6 +437,11 @@ export const LevelContentPage: React.FC = () => {
 
   const selectedContent =
     previewItems.find((item) => item.id === selectedContentId) ?? previewItems[0] ?? null;
+  const selectedContentIndex = selectedContent
+    ? previewItems.findIndex((item) => item.id === selectedContent.id)
+    : -1;
+  const nextContent =
+    selectedContentIndex >= 0 ? (previewItems[selectedContentIndex + 1] ?? null) : null;
   const activeArtifact = getPrimaryArtifact(activeStageContent.artifacts);
   const activeArtifactType = activeArtifact?.artifactType ?? null;
   const rightPanelTitle = getArtifactPanelTitle(activeArtifact);
@@ -389,22 +491,54 @@ export const LevelContentPage: React.FC = () => {
   const handleCloseXpModal = () => {
     setShowXpModal(false);
     if (pendingNextStage) {
+      setPendingNextStage(null);
       setSelectedContentId(null);
       handleStageSelect(pendingNextStage);
+    } else if (pendingNextModuleNo && levelId) {
+      const moduleToOpen = pendingNextModuleNo;
+      setPendingNextModuleNo(null);
+      setSelectedContentId(null);
+      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${moduleToOpen}?stage=engage`);
     } else {
-      toast.success("Module completed successfully!");
-      if (levelId && level.capabilityCode) {
-        navigate(
-          `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
-        );
-      }
+      toast.success("Course completed successfully!");
+      navigate("/my-courses");
     }
   };
 
   const handleStageNavigation = (stage: LteStage | null) => {
-    if (!stage) return;
+    if (!stage || isStageLocked(stage)) return;
     setSelectedContentId(null);
     handleStageSelect(stage);
+  };
+
+  const handleNextModule = () => {
+    if (!levelId || !nextModuleExists) return;
+    startModuleNavigation(levelId, nextModuleNo);
+    setSelectedContentId(null);
+    navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${nextModuleNo}?stage=engage`);
+  };
+
+  const handleCompleteCourse = () => {
+    toast.success("Course completed successfully!");
+    navigate("/my-courses");
+  };
+
+  const handleAdvanceBeyondStage = () => {
+    if (nextStage) {
+      handleStageNavigation(nextStage);
+      return;
+    }
+
+    if (!isModuleComplete) {
+      handleStageNavigation(firstIncompleteStage);
+      return;
+    }
+
+    if (nextModuleExists) {
+      handleNextModule();
+    } else {
+      handleCompleteCourse();
+    }
   };
 
   const handleMarkStageDone = () => {
@@ -424,20 +558,18 @@ export const LevelContentPage: React.FC = () => {
             if (data?.xpAwarded && data.xpAwarded > 0) {
               setXpAwardedAmount(data.xpAwarded);
               setTotalXpAmount(data.totalXp ?? 0);
-              setPendingNextStage(nextStage);
+              setPendingNextStage(nextStageAfterCurrentCompletion);
+              setPendingNextModuleNo(
+                isModuleCompleteAfterCurrentStage && nextModuleExists ? nextModuleNo : null,
+              );
               setShowXpModal(true);
             } else {
-              if (nextStage) {
-                handleStageNavigation(nextStage);
-              } else if (nextModuleExists) {
-                // All stages complete, move to next module
-                navigate(
-                  `/my-courses/${encodeURIComponent(levelId)}/modules/${nextModuleNo}?stage=engage`,
-                );
+              if (nextStageAfterCurrentCompletion) {
+                handleStageNavigation(nextStageAfterCurrentCompletion);
+              } else if (isModuleCompleteAfterCurrentStage && nextModuleExists) {
+                handleNextModule();
               } else {
-                // Last module completed
-                toast.success("Course completed successfully!");
-                navigate(`/my-courses`);
+                handleCompleteCourse();
               }
             }
           },
@@ -447,17 +579,35 @@ export const LevelContentPage: React.FC = () => {
         },
       );
     } else {
-      if (nextStage) {
-        handleStageNavigation(nextStage);
-      } else {
-        if (levelId && level.capabilityCode) {
-          navigate(
-            `/courses/${encodeURIComponent(level.capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
-          );
-        }
-      }
+      handleAdvanceBeyondStage();
     }
   };
+
+  const handlePrimaryNext = () => {
+    if (nextContent) {
+      setSelectedContentId(nextContent.id);
+      return;
+    }
+
+    if (isCurrentStageCompleted) {
+      handleAdvanceBeyondStage();
+      return;
+    }
+
+    handleMarkStageDone();
+  };
+
+  const primaryNextLabel = isCurrentStageCompleted
+    ? nextContent || nextStage || !isModuleComplete
+      ? "Next"
+      : nextModuleExists
+        ? "Next Module"
+        : "Complete Course"
+    : nextContent || nextStage || !isModuleCompleteAfterCurrentStage
+      ? "Mark Done & Next"
+      : nextModuleExists
+        ? "Mark Done & Next Module"
+        : "Mark Done & Complete Course";
 
   const renderStageNavigationBar = () => (
     <div className="sticky bottom-0 z-20 grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-line-default bg-surface-primary px-4 shadow-[0_-4px_12px_rgba(15,23,42,0.05)]">
@@ -466,7 +616,7 @@ export const LevelContentPage: React.FC = () => {
         variant="outline"
         size="sm"
         className="justify-self-start text-content-muted"
-        disabled={!previousStage}
+        disabled={!previousStage || isStageLocked(previousStage)}
         icon={<ChevronLeftIcon size={16} />}
         onClick={() => handleStageNavigation(previousStage)}
       >
@@ -476,17 +626,21 @@ export const LevelContentPage: React.FC = () => {
       <div className="flex items-center gap-1.5">
         {STAGES.map((stage) => {
           const isCompleted = completedStages.includes(stage);
+          const isLocked = isStageLocked(stage);
           return (
             <button
               key={stage}
               type="button"
               aria-label={`Go to ${formatStageLabel(stage)} stage`}
+              disabled={isLocked}
               className={`h-2 rounded-full transition-all ${
                 stage === activeStage
                   ? "w-6 bg-brand-600"
                   : isCompleted
                     ? "w-6 bg-success-500"
-                    : "w-2 bg-line-strong"
+                    : isLocked
+                      ? "w-2 bg-line-subtle opacity-50 cursor-not-allowed"
+                      : "w-2 bg-line-strong"
               }`}
               onClick={() => handleStageNavigation(stage)}
             />
@@ -498,46 +652,15 @@ export const LevelContentPage: React.FC = () => {
         type="button"
         size="sm"
         className="justify-self-end"
-        onClick={() => {
-          if (isModuleComplete) {
-            if (nextModuleExists && levelId) {
-              navigate(
-                `/my-courses/${encodeURIComponent(levelId)}/modules/${nextModuleNo}?stage=engage`,
-              );
-            } else {
-              navigate("/my-courses");
-            }
-          } else if (isCurrentStageCompleted) {
-            if (nextStage) {
-              handleStageNavigation(nextStage);
-            }
-          } else {
-            handleMarkStageDone();
-          }
-        }}
+        onClick={handlePrimaryNext}
         disabled={isUpdateStagePending}
       >
         <span className="inline-flex items-center gap-2">
-          {isModuleComplete ? (
-            <>
-              {nextModuleExists ? "Go to Next Module" : "Completed"}
-              <CheckIcon size={16} />
-            </>
-          ) : isCurrentStageCompleted ? (
-            <>
-              Next
-              <ChevronRightIcon size={16} />
-            </>
-          ) : isCurrentStageInProgress ? (
-            <>
-              Continue Learning
-              <ChevronRightIcon size={16} />
-            </>
+          {primaryNextLabel}
+          {primaryNextLabel === "Complete Course" ? (
+            <CheckIcon size={16} />
           ) : (
-            <>
-              Start Learning
-              <ChevronRightIcon size={16} />
-            </>
+            <ChevronRightIcon size={16} />
           )}
         </span>
       </Button>
@@ -685,7 +808,8 @@ export const LevelContentPage: React.FC = () => {
         activeStage={activeStage}
         completedStages={completedStages}
         stageOverrides={stageStepperOverrides}
-        onStageSelect={handleStageSelect}
+        isStageDisabled={isStageLocked}
+        onStageSelect={handleStageNavigation}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">

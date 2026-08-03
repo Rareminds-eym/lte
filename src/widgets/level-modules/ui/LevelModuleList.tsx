@@ -1,6 +1,7 @@
 import type React from "react";
 import { Button } from "@/shared/ui/Button";
 import {
+  BeakerIcon,
   BookOpenIcon,
   CertificateIcon,
   CheckIcon,
@@ -152,15 +153,19 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
 
   // Find the first active module or the first one overall
   const activeModule = displayModules.find((m) => m.status === "active");
-  const progressText = activeModule
-    ? `MOD-${activeModule.moduleNumber} In Progress`
-    : displayModules.some((m) => m.status === "completed")
-      ? "Course Completed"
+  const isCourseCompleted =
+    displayModules.length > 0 && displayModules.every((module) => module.status === "completed");
+  const progressText = isCourseCompleted
+    ? "Course Completed"
+    : activeModule
+      ? `MOD-${activeModule.moduleNumber} In Progress`
       : "No module in progress";
 
-  const progressBadgeColor = displayModules.some((m) => m.status === "completed")
+  const progressBadgeColor = isCourseCompleted
     ? "bg-success-50 text-success-600 border border-success-200/90"
-    : "bg-warning-50 text-warning-600 border border-warning-200/90";
+    : activeModule
+      ? "bg-warning-50 text-warning-600 border border-warning-200/90"
+      : "bg-surface-muted text-content-muted border border-line-default";
 
   return (
     <div className="w-full mt-10 space-y-8">
@@ -191,7 +196,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
           <span
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-full flex items-center gap-1.5 shadow-2xs ${progressBadgeColor}`}
           >
-            {displayModules.some((m) => m.status === "completed") ? (
+            {isCourseCompleted ? (
               <CheckIcon className="w-3.5 h-3.5" />
             ) : (
               <ClockIcon className="w-3.5 h-3.5" />
@@ -425,8 +430,10 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                             const isActive = !isDone && (item.progressPercentage ?? 0) > 0;
                             const name = stageName;
 
-                            let stageIcon = <CheckIcon className="w-3.5 h-3.5 stroke-[2.5]" />;
-                            if (name.includes("explain")) {
+                            let stageIcon = <LightbulbIcon className="w-3.5 h-3.5" />;
+                            if (name.includes("explore")) {
+                              stageIcon = <BeakerIcon className="w-3.5 h-3.5" />;
+                            } else if (name.includes("explain")) {
                               stageIcon = <LayersIcon className="w-3.5 h-3.5" />;
                             } else if (name.includes("express")) {
                               stageIcon = <CodeBracketsIcon className="w-3.5 h-3.5" />;
@@ -502,27 +509,6 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                             </span>
                             <ChevronRightIcon className="w-4 h-4 stroke-[2.5]" />
                           </Button>
-                          <Button
-                            variant="primary"
-                            size="md"
-                            className="!bg-success-600 hover:!bg-success-700 !text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2"
-                          >
-                            <span>Submit Artifact</span>
-                            <svg
-                              className="w-4 h-4 text-white rotate-[30deg]"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <title>Submit Arrow</title>
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                              />
-                            </svg>
-                          </Button>
                         </>
                       ) : (
                         <>
@@ -543,27 +529,6 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                             <span>Review Module</span>
                             <CheckIcon className="w-4 h-4 stroke-[2.5]" />
                           </Button>
-                          <Button
-                            variant="primary"
-                            size="md"
-                            className="!bg-success-600 hover:!bg-success-700 !text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2"
-                          >
-                            <span>Submitted</span>
-                            <svg
-                              className="w-4 h-4 text-white rotate-[30deg]"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <title>Submit Arrow</title>
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                              />
-                            </svg>
-                          </Button>
                         </>
                       )}
                     </div>
@@ -577,21 +542,53 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
 
       {/* Course Completion Timeline Row using @theme tokens */}
       <div className="relative flex gap-4 sm:gap-6 items-center pt-2">
-        {/* Left Timeline Indicator with Blue Certificate Icon */}
+        {/* Left Timeline Indicator */}
         <div className="flex flex-col items-center shrink-0 z-10">
-          <div className="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow-md">
-            <CertificateIcon className="w-5 h-5 text-white" />
+          <div
+            className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-md ${
+              isCourseCompleted ? "bg-brand-600 text-white" : "bg-slate-200 text-slate-500"
+            }`}
+          >
+            {isCourseCompleted ? (
+              <CertificateIcon className="w-5 h-5 text-white" />
+            ) : (
+              <LockIcon className="w-5 h-5 text-slate-500" />
+            )}
           </div>
         </div>
 
         {/* Right Content Card */}
-        <div className="flex-1 p-6 sm:p-7 rounded-3xl bg-surface-primary border border-line-default shadow-2xs flex items-center justify-between gap-4">
-          <span className="text-success-300 font-bold text-lg sm:text-xl tracking-tight">
-            Congratulations! You have completed this course
-          </span>
+        <div
+          className={`flex-1 p-5 sm:p-7 rounded-3xl border shadow-2xs flex items-center justify-between gap-4 ${
+            isCourseCompleted
+              ? "bg-success-50 border-success-200"
+              : "bg-surface-primary border-line-default"
+          }`}
+        >
+          <div className="min-w-0">
+            <span
+              className={`block font-bold text-lg sm:text-xl tracking-tight ${
+                isCourseCompleted ? "text-success-600" : "text-content-primary"
+              }`}
+            >
+              {isCourseCompleted
+                ? "Congratulations! You have completed this course"
+                : "Course completion locked"}
+            </span>
+            {!isCourseCompleted && (
+              <span className="mt-1 block text-sm font-medium text-content-muted">
+                Complete all modules to unlock your course completion certificate.
+              </span>
+            )}
+          </div>
 
-          {/* Sparkles Icon from shared/ui/icons */}
-          <SparklesIcon className="w-6 h-6 text-success-300 shrink-0" />
+          {isCourseCompleted ? (
+            <SparklesIcon className="w-6 h-6 text-success-500 shrink-0" />
+          ) : (
+            <div className="h-11 w-11 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+              <LockIcon className="w-5 h-5" />
+            </div>
+          )}
         </div>
       </div>
     </div>

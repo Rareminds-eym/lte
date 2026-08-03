@@ -1,6 +1,7 @@
 import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
+import { StageSequenceError } from "@functions/lib/stage-sequence";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
@@ -124,6 +125,13 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
   } catch (error) {
     if (error instanceof AuthError) {
       return jsonError(error.message, error.code === "UNAUTHORIZED" ? 401 : 403, {
+        code: error.code,
+        requestId,
+      });
+    }
+
+    if (error instanceof StageSequenceError) {
+      return jsonError(error.message, 409, {
         code: error.code,
         requestId,
       });

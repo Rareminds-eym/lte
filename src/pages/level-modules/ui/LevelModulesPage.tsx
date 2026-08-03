@@ -29,12 +29,6 @@ export const LevelModulesPage: React.FC = () => {
     }
   }, [levelId, startLevel]);
 
-  const handleContinueLearning = () => {
-    if (levelId) {
-      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/1`);
-    }
-  };
-
   if (isLoading) {
     return <PageLoader message="Loading level modules..." />;
   }
@@ -89,9 +83,6 @@ export const LevelModulesPage: React.FC = () => {
   const calculatedProgress =
     totalCount > 0 ? Math.round((completedModulesCount / totalCount) * 100) : 0;
 
-  // User submissions: comes from user progress API (not yet wired — 0 until available)
-  const submittedCount = 0;
-
   // Level badge from DB data only
   const levelBadge =
     levelData.levelNo && (levelData.levelLabel || levelData.difficultyLevel)
@@ -109,6 +100,14 @@ export const LevelModulesPage: React.FC = () => {
   const nextUpTitle = nextUpModule
     ? `Module ${nextUpModule.moduleNo} · ${nextUpModule.title}`
     : undefined;
+  const hasStartedLearning = completedModulesCount > 0 || activeCount > 0;
+  const learningCtaLabel = hasStartedLearning ? "Continue Learning" : "Start Learning";
+
+  const handleContinueLearning = () => {
+    if (levelId) {
+      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${nextUpModule?.moduleNo ?? 1}`);
+    }
+  };
 
   // Duration from DB
   const totalDuration = levelData.durationMinutes
@@ -125,7 +124,7 @@ export const LevelModulesPage: React.FC = () => {
   );
 
   const dynamicTotalLevels = activeCourse?.totalLevels ?? 5;
-  const dynamicTargetLevel = activeCourse?.targetLevel ?? "TARGET: L3";
+  const dynamicTargetLevel = activeCourse?.targetLevel ?? "L3";
 
   return (
     <div className="-mx-4 md:-mx-6 -mt-4 md:-mt-6 pb-12">
@@ -140,6 +139,7 @@ export const LevelModulesPage: React.FC = () => {
         doneCount={completedModulesCount}
         activeCount={activeCount}
         availableCount={availableCount}
+        learningCtaLabel={learningCtaLabel}
         nextUpTitle={nextUpTitle}
         onContinueLearning={handleContinueLearning}
       />
@@ -163,7 +163,7 @@ export const LevelModulesPage: React.FC = () => {
           <LevelProblemStatement
             title={problemTitle}
             description={problemDescription}
-            completedModules={submittedCount}
+            completedModules={completedModulesCount}
             totalModules={totalCount}
           />
         </div>

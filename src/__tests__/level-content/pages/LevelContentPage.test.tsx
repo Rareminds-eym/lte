@@ -4,8 +4,18 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LevelContentPage } from "@/pages/level-content";
 
-const { useLevelContentDataMock } = vi.hoisted(() => ({
+const {
+  fetchLevelDetailsMock,
+  fetchLevelModuleDetailsMock,
+  useLevelContentDataMock,
+  useStartModuleProgressMock,
+  useUpdateStageProgressMock,
+} = vi.hoisted(() => ({
+  fetchLevelDetailsMock: vi.fn(),
+  fetchLevelModuleDetailsMock: vi.fn(),
   useLevelContentDataMock: vi.fn(),
+  useStartModuleProgressMock: vi.fn(),
+  useUpdateStageProgressMock: vi.fn(),
 }));
 
 const levelId = "0a010796-10c0-5287-b89a-6ab56bd71399";
@@ -14,7 +24,11 @@ vi.mock("@/entities/course", async () => {
   const actual = await vi.importActual<typeof import("@/entities/course")>("@/entities/course");
   return {
     ...actual,
+    fetchLevelDetails: (...args: unknown[]) => fetchLevelDetailsMock(...args),
+    fetchLevelModuleDetails: (...args: unknown[]) => fetchLevelModuleDetailsMock(...args),
     useLevelContentData: (...args: unknown[]) => useLevelContentDataMock(...args),
+    useStartModuleProgress: (...args: unknown[]) => useStartModuleProgressMock(...args),
+    useUpdateStageProgress: (...args: unknown[]) => useUpdateStageProgressMock(...args),
   };
 });
 
@@ -194,7 +208,11 @@ const renderPage = (path = `/my-courses/${levelId}/modules/1`) => {
 
 describe("LevelContentPage", () => {
   beforeEach(() => {
+    fetchLevelDetailsMock.mockResolvedValue(mockLevelContentData.level);
+    fetchLevelModuleDetailsMock.mockResolvedValue(mockLevelContentData.module);
     useLevelContentDataMock.mockReset();
+    useStartModuleProgressMock.mockReturnValue({ mutate: vi.fn() });
+    useUpdateStageProgressMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
   });
 
   it("loads level and module content from the level entity hook", () => {
@@ -215,8 +233,15 @@ describe("LevelContentPage", () => {
   });
 
   it("uses the stage query parameter to select stage content", () => {
+    const data = {
+      ...mockLevelContentData,
+      module: {
+        ...mockLevelContentData.module,
+        completedStages: ["engage"],
+      },
+    };
     useLevelContentDataMock.mockReturnValue({
-      data: mockLevelContentData,
+      data,
       isLoading: false,
       isError: false,
       error: null,
@@ -231,8 +256,15 @@ describe("LevelContentPage", () => {
   });
 
   it("shows the practice artifact drawer for the Express stage", () => {
+    const data = {
+      ...mockLevelContentData,
+      module: {
+        ...mockLevelContentData.module,
+        completedStages: ["engage", "explore", "explain"],
+      },
+    };
     useLevelContentDataMock.mockReturnValue({
-      data: mockLevelContentData,
+      data,
       isLoading: false,
       isError: false,
       error: null,
@@ -249,8 +281,15 @@ describe("LevelContentPage", () => {
   });
 
   it("shows a final artifact drawer for any stage that has a final artifact", () => {
+    const data = {
+      ...mockLevelContentData,
+      module: {
+        ...mockLevelContentData.module,
+        completedStages: ["engage", "explore", "explain", "express", "empower"],
+      },
+    };
     useLevelContentDataMock.mockReturnValue({
-      data: mockLevelContentData,
+      data,
       isLoading: false,
       isError: false,
       error: null,

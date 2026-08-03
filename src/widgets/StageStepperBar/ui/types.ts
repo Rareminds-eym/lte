@@ -13,6 +13,7 @@ export interface StageStepperBarProps {
   activeStage?: LteStage;
   completedStages?: LteStage[];
   stageOverrides?: Partial<Record<LteStage, Pick<StageStepInfo, "subtitle" | "icon">>>;
+  isStageDisabled?: (stage: LteStage) => boolean;
   onStageSelect?: (stage: LteStage) => void;
   className?: string;
 }

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { apiLogger } from "./logger";
+import { assertStageSequenceAllowed } from "./stage-sequence";
 
 // Event to XP amount mapping (TRD-DB-007 enum values)
 export const XP_AMOUNTS: Record<string, number> = {
@@ -197,6 +198,8 @@ export async function completeStage(
   let progressRecord = progressList?.[0];
 
   if (!progressRecord) {
+    assertStageSequenceAllowed(stageContent.stage_name, []);
+
     const { data: moduleData } = await supabase
       .from("modules")
       .select("level_id")
@@ -235,6 +238,20 @@ export async function completeStage(
   }
 
   if (!progressRecord) throw new Error("Failed to create or retrieve module progress");
+
+  const { data: completedStages, error: completedStagesError } = await supabase
+    .from("user_stage_progress")
+    .select("stage_name")
+    .eq("user_module_progress_id", progressRecord.id)
+    .eq("user_id", userId)
+    .eq("status", "completed");
+
+  if (completedStagesError) throw completedStagesError;
+
+  assertStageSequenceAllowed(
+    stageContent.stage_name,
+    completedStages?.map((stage) => stage.stage_name) ?? [],
+  );
 
   // 4. Fetch or Create user_stage_progress record
   const { data: stageProgress, error: stageProgressQueryError } = await supabase
