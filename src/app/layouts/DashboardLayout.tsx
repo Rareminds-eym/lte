@@ -66,6 +66,7 @@ export const DashboardLayout: React.FC = () => {
   const navPathMap: Record<string, string> = {
     dashboard: "/dashboard",
     "my-courses": "/my-courses",
+    settings: "/settings",
   };
 
   const handleNavigate = (id: string) => {
@@ -74,9 +75,18 @@ export const DashboardLayout: React.FC = () => {
     if (path) navigate(path);
   };
 
-  const activeNavId = location.pathname.includes("dashboard") ? "dashboard" : "my-courses";
+  const activeNavId = location.pathname.includes("settings")
+    ? "settings"
+    : location.pathname.includes("dashboard")
+      ? "dashboard"
+      : "my-courses";
 
-  const pageTitle = activeNavId === "dashboard" ? "Dashboard" : "My Courses";
+  const pageTitleMap: Record<string, string> = {
+    dashboard: "Dashboard",
+    "my-courses": "My Courses",
+    settings: "Settings",
+  };
+  const pageTitle = pageTitleMap[activeNavId] ?? "Dashboard";
 
   return (
     <div className="flex h-screen bg-surface-secondary overflow-hidden relative">

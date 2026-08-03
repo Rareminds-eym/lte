@@ -121,7 +121,6 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "settings",
     label: "Settings",
-    locked: true,
     icon: (
       <SvgIcon>
         <circle cx="12" cy="12" r="3" />

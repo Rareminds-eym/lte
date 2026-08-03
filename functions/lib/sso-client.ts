@@ -38,6 +38,25 @@ export async function exchangeAuthorizationCode(
   });
 }
 
+export async function changeSsoPassword(
+  env: Pick<LteEnv, "SSO_SERVICE">,
+  params: {
+    current_password: string;
+    new_password: string;
+    access_token: string;
+    ip?: string | null;
+    ua?: string | null;
+  },
+): Promise<{ success: boolean; message?: string }> {
+  return getSsoService(env).changePassword({
+    current_password: params.current_password,
+    new_password: params.new_password,
+    access_token: params.access_token,
+    ip: params.ip ?? undefined,
+    ua: params.ua ?? undefined,
+  });
+}
+
 export async function refreshLteSession(
   env: Pick<LteEnv, "SSO_SERVICE">,
   refreshToken: string,
