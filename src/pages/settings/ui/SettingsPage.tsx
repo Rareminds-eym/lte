@@ -6,7 +6,7 @@ import {
   useSettingsProfile,
   useUpdateProfile,
 } from "@/entities/settings";
-import { Button, RouteContentSkeleton, ToggleSwitch, toast } from "@/shared/ui";
+import { Button, RouteContentSkeleton, TextField, ToggleSwitch, toast } from "@/shared/ui";
 
 // ─── Section Icon Components ────────────────────────────────────────────────
 
@@ -450,11 +450,8 @@ export const SettingsPage: React.FC = () => {
             </div>
             <div className="w-full h-2 bg-surface-emphasis rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500 ease-out"
-                style={{
-                  width: `${profile.profileStrength}%`,
-                  background: "linear-gradient(90deg, #10b981 0%, #34d399 100%)",
-                }}
+                className="h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-success-500 to-success-400"
+                style={{ width: `${profile.profileStrength}%` }}
               />
             </div>
           </div>
@@ -463,108 +460,60 @@ export const SettingsPage: React.FC = () => {
         {/* ─── Profile Form Fields ──────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-6">
           {/* Full Name */}
-          <div>
-            <label
-              htmlFor="settings-fullname"
-              className="block text-xs font-semibold text-content-primary mb-1.5"
-            >
-              Full Name
-            </label>
-            <input
-              id="settings-fullname"
-              type="text"
-              value={fullName}
-              onChange={(e) => setProfileEdits((prev) => ({ ...prev, fullName: e.target.value }))}
-              className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
-            />
-          </div>
+          <TextField
+            id="settings-fullname"
+            label="Full Name"
+            type="text"
+            value={fullName}
+            onChange={(e) => setProfileEdits((prev) => ({ ...prev, fullName: e.target.value }))}
+          />
 
           {/* Email Address */}
-          <div>
-            <label
-              htmlFor="settings-email"
-              className="block text-xs font-semibold text-content-primary mb-1.5"
-            >
-              Email Address
-            </label>
-            <input
-              id="settings-email"
-              type="email"
-              value={profile.email}
-              readOnly
-              className="w-full px-3.5 py-2.5 text-sm text-content-secondary bg-surface-secondary border border-line-default rounded-lg cursor-not-allowed"
-            />
-          </div>
+          <TextField
+            id="settings-email"
+            label="Email Address"
+            type="email"
+            value={profile.email}
+            readOnly
+          />
 
           {/* Phone Number */}
-          <div>
-            <label
-              htmlFor="settings-phone"
-              className="block text-xs font-semibold text-content-primary mb-1.5"
-            >
-              Phone Number
-            </label>
-            <input
-              id="settings-phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setProfileEdits((prev) => ({ ...prev, phone: e.target.value }))}
-              className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
-            />
-          </div>
+          <TextField
+            id="settings-phone"
+            label="Phone Number"
+            type="tel"
+            value={phone}
+            onChange={(e) => setProfileEdits((prev) => ({ ...prev, phone: e.target.value }))}
+          />
 
           {/* Program */}
-          <div>
-            <label
-              htmlFor="settings-program"
-              className="block text-xs font-semibold text-content-primary mb-1.5"
-            >
-              Program
-            </label>
-            <input
-              id="settings-program"
-              type="text"
-              value={program}
-              onChange={(e) => setProfileEdits((prev) => ({ ...prev, program: e.target.value }))}
-              className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
-            />
-          </div>
+          <TextField
+            id="settings-program"
+            label="Program"
+            type="text"
+            value={program}
+            onChange={(e) => setProfileEdits((prev) => ({ ...prev, program: e.target.value }))}
+          />
 
           {/* Grade / Semester */}
-          <div>
-            <label
-              htmlFor="settings-grade"
-              className="block text-xs font-semibold text-content-primary mb-1.5"
-            >
-              Grade / Semester
-            </label>
-            <input
-              id="settings-grade"
-              type="text"
-              value={gradeSemester}
-              onChange={(e) =>
-                setProfileEdits((prev) => ({ ...prev, gradeSemester: e.target.value }))
-              }
-              className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
-            />
-          </div>
+          <TextField
+            id="settings-grade"
+            label="Grade / Semester"
+            type="text"
+            value={gradeSemester}
+            onChange={(e) =>
+              setProfileEdits((prev) => ({ ...prev, gradeSemester: e.target.value }))
+            }
+          />
 
           {/* Learner ID (read-only) */}
-          <div>
-            <label
-              htmlFor="settings-learnerid"
-              className="block text-xs font-semibold text-content-primary mb-1.5"
-            >
-              Learner ID
-            </label>
-            <input
-              id="settings-learnerid"
-              type="text"
-              value={profile.learnerId}
-              readOnly
-              className="w-full px-3.5 py-2.5 text-sm text-content-secondary bg-surface-secondary border border-line-default rounded-lg cursor-not-allowed"
-            />
-          </div>
+          <TextField
+            id="settings-learnerid"
+            label="Learner ID"
+            type="text"
+            value={profile.learnerId}
+            readOnly
+          />
         </div>
 
         {/* ─── Info Badges / Pills ─────────────────────────────────── */}
@@ -625,56 +574,34 @@ export const SettingsPage: React.FC = () => {
 
         {/* Current Password */}
         <div className="mb-5">
-          <label
-            htmlFor="settings-current-password"
-            className="block text-xs font-semibold text-content-primary mb-1.5"
-          >
-            Current Password
-          </label>
-          <input
+          <TextField
             id="settings-current-password"
+            label="Current Password"
             type="password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="••••••••••"
-            className="w-full max-w-sm px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
           />
         </div>
 
         {/* New Password + Confirm (2 columns) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-2">
-          <div>
-            <label
-              htmlFor="settings-new-password"
-              className="block text-xs font-semibold text-content-primary mb-1.5"
-            >
-              New Password
-            </label>
-            <input
-              id="settings-new-password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new password"
-              className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg placeholder:text-content-muted focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="settings-confirm-password"
-              className="block text-xs font-semibold text-content-primary mb-1.5"
-            >
-              Confirm New Password
-            </label>
-            <input
-              id="settings-confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter new password"
-              className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg placeholder:text-content-muted focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
-            />
-          </div>
+          <TextField
+            id="settings-new-password"
+            label="New Password"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Enter new password"
+          />
+          <TextField
+            id="settings-confirm-password"
+            label="Confirm New Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Re-enter new password"
+          />
         </div>
         <p className="text-xs text-content-muted italic mb-6">
           Minimum 8 characters, one number and one symbol.

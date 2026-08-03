@@ -28,6 +28,7 @@ export {
   type SegmentedProgressBarProps,
 } from "./SegmentedProgressBar";
 export { Skeleton, SkeletonGroup } from "./Skeleton";
+export { TextField, type TextFieldProps } from "./TextField";
 // Toast notifications
 export { Toaster, toast } from "./Toast";
 export {
