@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   type EContentItem,
@@ -159,7 +159,10 @@ export const LevelContentPage: React.FC = () => {
     isLoading: isModuleLoading,
     isError: isModuleError,
   } = useLevelModuleDetails(levelId, hasValidRouteParams ? moduleNumber : undefined);
-  const data = level && levelModule ? { level, module: levelModule } : undefined;
+  const data = useMemo(
+    () => (level && levelModule ? { level, module: levelModule } : undefined),
+    [level, levelModule],
+  );
   const nextModuleNoForPrefetch = Number.isInteger(moduleNumber) ? moduleNumber + 1 : undefined;
   const nextModuleExistsForPrefetch = Boolean(
     nextModuleNoForPrefetch &&

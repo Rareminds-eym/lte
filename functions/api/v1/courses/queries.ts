@@ -775,7 +775,7 @@ export async function upsertStageProgress(
   }
 
   assertStageSequenceAllowed(
-    stageName,
+    normalizedStageName,
     existingCompletedStages?.map((stage) => stage.stage_name) ?? [],
   );
 

@@ -12,11 +12,11 @@ export type LteStageName = (typeof LTE_STAGE_SEQUENCE)[number];
 export const LTE_STAGE_COUNT = LTE_STAGE_SEQUENCE.length;
 
 export const normalizeLteStageName = (stageName: string): LteStageName => {
-  const normalizedStageName = stageName.toLowerCase() as LteStageName;
-  if (!LTE_STAGE_SEQUENCE.includes(normalizedStageName)) {
+  const normalizedStageName = stageName.toLowerCase();
+  if (!LTE_STAGE_SEQUENCE.includes(normalizedStageName as LteStageName)) {
     throw new Error(`Invalid stage name: ${stageName}`);
   }
-  return normalizedStageName;
+  return normalizedStageName as LteStageName;
 };
 
 export const isLteStageName = (stageName: string | undefined): stageName is LteStageName =>
