@@ -43,6 +43,8 @@
     "test": "vitest",
     "test:ci": "vitest run",
     "test:property": "vitest --run src/__tests__/property/",
+    "db:reset:dev": "supabase db reset --sql-paths \"./seed/dev/*.sql\"",
+    "db:reset:prod": "supabase db reset --sql-paths \"./seed/production/*.sql\"",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "setup:husky": "node scripts/setup-husky-cross-platform.js",
     "ci": "npm run lint:files && npm run lint:console && npm run lint:lengths && npm run lint:biome && npm run lint:secrets && npm run lint && npm run typecheck && vitest run",
