@@ -6,6 +6,8 @@ import {
   type EContentItem,
   fetchLevelModuleDetails,
   getLevelModuleDetailsQueryKey,
+  isLteStageName,
+  LTE_STAGE_SEQUENCE,
   type ModuleArtifact,
   type ModuleDetailsResponse,
   type ModuleStageContent,
@@ -31,8 +33,6 @@ import {
   LightbulbIcon,
   LightningBoltIcon,
   PlayIcon,
-  Skeleton,
-  SkeletonGroup,
   toast,
 } from "@/shared/ui";
 import {
@@ -43,9 +43,9 @@ import {
   StageStepperBar,
 } from "@/widgets";
 import { ArtifactPanel } from "./components/ArtifactPanel";
+import { ModuleLoadingShell } from "./components/ModuleLoadingShell";
 import { StageInfoPanel } from "./components/StageInfoPanel";
 
-const STAGES: LteStage[] = ["engage", "explore", "explain", "express", "empower", "evolve"];
 const LEVEL_CONTENT_UNAVAILABLE_MESSAGE =
   "This course content is not available right now. Please go back to your courses and try again.";
 
@@ -107,10 +107,14 @@ const getModuleStageSequence = (stages: ModuleStageContent[] | undefined) => {
   const stageNames = new Set(
     (stages ?? [])
       .map((stage) => stage.stageName.toLowerCase() as LteStage)
-      .filter((stage) => STAGES.includes(stage)),
+      .filter((stage) => isLteStageName(stage)),
   );
 
-  return stageNames.size ? STAGES.filter((stage) => stageNames.has(stage)) : STAGES;
+  return (
+    stageNames.size
+      ? LTE_STAGE_SEQUENCE.filter((stage) => stageNames.has(stage))
+      : [...LTE_STAGE_SEQUENCE]
+  ) as LteStage[];
 };
 
 const getFirstIncompleteStage = (stages: LteStage[], completedStages: Set<LteStage>) =>
@@ -163,9 +167,7 @@ export const LevelContentPage: React.FC = () => {
   );
 
   const rawStage = searchParams.get("stage")?.toLowerCase();
-  const activeStage: LteStage = STAGES.includes(rawStage as LteStage)
-    ? (rawStage as LteStage)
-    : "engage";
+  const activeStage: LteStage = isLteStageName(rawStage) ? (rawStage as LteStage) : "engage";
 
   useEffect(() => {
     const measureScenarioText = () => {
@@ -351,108 +353,6 @@ export const LevelContentPage: React.FC = () => {
     setSearchParams,
   ]);
 
-  const renderModuleLoadingState = () => {
-    if (!level) return null;
-
-    const activeModuleSummary = level.modules.find((module) => module.moduleNo === moduleNumber);
-    const completedStages = (activeModuleSummary?.completedStages || []) as LteStage[];
-    const moduleDrawerItems: ModuleItem[] = level.modules.map((module) => ({
-      id: module.id,
-      moduleNo: module.moduleNo,
-      title: module.title,
-      progressPercentage: module.progressPercentage ?? 0,
-      isCompleted: module.progressPercentage === 100 || module.isCompleted || false,
-    }));
-
-    return (
-      <div className="flex h-full w-full flex-col overflow-hidden bg-surface-secondary">
-        <LevelHeader
-          levelTitle={activeModuleSummary?.title ?? level.title}
-          activeStage={activeStage}
-          isModulesOpen={isModulesOpen}
-          isStageInfoOpen={isStageInfoOpen}
-          onBackClick={handleBackToOverview}
-          onOverviewClick={handleBackToOverview}
-          onToggleModules={handleToggleModules}
-          onToggleStageInfo={handleToggleStageInfo}
-        />
-
-        <StageStepperBar
-          activeStage={activeStage}
-          completedStages={completedStages}
-          isStageDisabled={() => true}
-          onStageSelect={() => undefined}
-        />
-
-        <div className="relative flex min-h-0 flex-1 overflow-hidden">
-          {isModulesOpen && (
-            <ModulesDrawer
-              activeModuleNo={moduleNumber}
-              modules={moduleDrawerItems}
-              onSelectModule={handleModuleSelect}
-              onClose={() => setIsModulesOpen(false)}
-              className="hidden lg:flex"
-            />
-          )}
-
-          <SkeletonGroup
-            className="flex min-h-0 min-w-0 flex-1 flex-col bg-white"
-            aria-label="Loading module content"
-          >
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-line-subtle px-5">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-64" />
-                <Skeleton className="h-3 w-40" />
-              </div>
-              <div className="flex gap-2">
-                <Skeleton className="h-9 w-9 rounded-lg" />
-                <Skeleton className="h-9 w-9 rounded-lg" />
-              </div>
-            </div>
-            <div className="flex min-h-0 flex-1 items-center justify-center bg-surface-muted p-6">
-              <Skeleton className="h-3/5 w-4/5 rounded-xl" />
-            </div>
-            <div className="grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-line-default bg-surface-primary px-4">
-              <Skeleton className="h-9 w-24 rounded-lg" />
-              <Skeleton className="h-2 w-36 rounded-full" />
-              <Skeleton className="h-9 w-28 justify-self-end rounded-lg bg-brand-100" />
-            </div>
-          </SkeletonGroup>
-
-          {isStageInfoOpen && (
-            <aside className="hidden min-h-0 w-[340px] shrink-0 flex-col overflow-hidden border-l border-border-default/80 bg-white font-sans select-none lg:flex">
-              <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3.5">
-                <h2 className="text-xs font-bold tracking-widest text-content-heading uppercase">
-                  Stage Info
-                </h2>
-                <div className="flex items-center gap-1">
-                  <IconButton
-                    aria-label="Expand stage info"
-                    icon={<ExpandIcon size={13} />}
-                    size="sm"
-                    variant="outline"
-                    disabled
-                  />
-                  <IconButton
-                    aria-label="Close stage info"
-                    icon={<CloseIcon size={13} />}
-                    size="sm"
-                    variant="outline"
-                    onClick={handleToggleStageInfo}
-                  />
-                </div>
-              </div>
-              <SkeletonGroup className="space-y-4 p-4" aria-label="Loading stage info">
-                <Skeleton className="h-36 w-full rounded-xl" />
-                <Skeleton className="h-40 w-full rounded-xl bg-brand-50" />
-              </SkeletonGroup>
-            </aside>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   if (!hasValidRouteParams) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-surface-secondary p-4">
@@ -493,7 +393,23 @@ export const LevelContentPage: React.FC = () => {
   }
 
   if (isModuleLoading || !levelModule) {
-    return renderModuleLoadingState();
+    const activeModuleSummary = level.modules.find((module) => module.moduleNo === moduleNumber);
+
+    return (
+      <ModuleLoadingShell
+        level={level}
+        moduleNumber={moduleNumber}
+        activeStage={activeStage}
+        completedStages={(activeModuleSummary?.completedStages || []) as LteStage[]}
+        isModulesOpen={isModulesOpen}
+        isStageInfoOpen={isStageInfoOpen}
+        onBackToOverview={handleBackToOverview}
+        onToggleModules={handleToggleModules}
+        onToggleStageInfo={handleToggleStageInfo}
+        onSelectModule={handleModuleSelect}
+        onCloseModules={() => setIsModulesOpen(false)}
+      />
+    );
   }
 
   const activeStageContent = levelModule.stages.find((stage) => stage.stageName === activeStage);
@@ -741,8 +657,8 @@ export const LevelContentPage: React.FC = () => {
       </Button>
 
       <div className="flex items-center gap-1.5">
-        {STAGES.map((stage) => {
-          const isCompleted = completedStages.includes(stage);
+        {navigableStages.map((stage) => {
+          const isCompleted = completedStageSet.has(stage);
           const isLocked = isStageLocked(stage);
           return (
             <button

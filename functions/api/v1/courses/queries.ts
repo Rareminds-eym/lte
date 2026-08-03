@@ -1,4 +1,11 @@
-import { assertStageSequenceAllowed, LTE_STAGE_SEQUENCE } from "@functions/lib/stage-sequence";
+import {
+  assertStageSequenceAllowed,
+  getStageCompletionPercentage,
+  getStageOrder,
+  LTE_STAGE_COUNT,
+  LTE_STAGE_SEQUENCE,
+  normalizeStageName,
+} from "@functions/lib/stage-sequence";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   EContentItem,
@@ -750,16 +757,8 @@ export async function upsertStageProgress(
   );
 
   // 2. Validate stage name and get stage order
-  const stageOrders: Record<string, number> = {
-    engage: 1,
-    explore: 2,
-    explain: 3,
-    express: 4,
-    empower: 5,
-    evolve: 6,
-  };
-
-  const stageOrder = stageOrders[stageName.toLowerCase()];
+  const normalizedStageName = normalizeStageName(stageName);
+  const stageOrder = getStageOrder(normalizedStageName);
   if (!stageOrder) {
     throw new Error(`Invalid stage name: ${stageName}`);
   }
@@ -787,7 +786,7 @@ export async function upsertStageProgress(
     .eq("user_module_progress_id", moduleProgressId)
     .eq("user_id", userId)
     .eq("e_content_id", eContentId)
-    .eq("stage_name", stageName.toLowerCase())
+    .eq("stage_name", normalizedStageName)
     .maybeSingle();
 
   let stageProgressId = "";
@@ -816,7 +815,7 @@ export async function upsertStageProgress(
         user_module_progress_id: moduleProgressId,
         user_id: userId,
         e_content_id: eContentId,
-        stage_name: stageName.toLowerCase(),
+        stage_name: normalizedStageName,
         stage_order: stageOrder,
         status: status,
         started_at: new Date().toISOString(),
@@ -849,13 +848,13 @@ export async function upsertStageProgress(
     completedItems?.map((item) => item.stage_name.toLowerCase()) ?? [],
   );
   const stagesCompleted = completedStagesSet.size;
-  const completionPercentage = Math.round((stagesCompleted / 6) * 100);
+  const completionPercentage = getStageCompletionPercentage(stagesCompleted);
 
   // 5. Update user_module_progress
   const { error: modUpdateError } = await supabase
     .from("user_module_progress")
     .update({
-      current_stage: stageName.toLowerCase(),
+      current_stage: normalizedStageName,
       stages_completed: stagesCompleted,
       completion_percentage: completionPercentage,
       last_activity_at: new Date().toISOString(),
@@ -868,7 +867,7 @@ export async function upsertStageProgress(
   }
 
   // 6. If all stages completed, set module status to completed
-  if (stagesCompleted === 6) {
+  if (stagesCompleted === LTE_STAGE_COUNT) {
     const { error: finalModError } = await supabase
       .from("user_module_progress")
       .update({

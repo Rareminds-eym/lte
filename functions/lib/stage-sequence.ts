@@ -9,7 +9,24 @@ export const LTE_STAGE_SEQUENCE = [
 
 export type LteStageName = (typeof LTE_STAGE_SEQUENCE)[number];
 
-const normalizeStageName = (stageName: string) => stageName.toLowerCase() as LteStageName;
+export const LTE_STAGE_COUNT = LTE_STAGE_SEQUENCE.length;
+
+export const normalizeStageName = (stageName: string): LteStageName => {
+  const normalizedStageName = stageName.toLowerCase() as LteStageName;
+  if (!LTE_STAGE_SEQUENCE.includes(normalizedStageName)) {
+    throw new Error(`Invalid stage name: ${stageName}`);
+  }
+  return normalizedStageName;
+};
+
+export function getStageOrder(stageName: string) {
+  const stageIndex = LTE_STAGE_SEQUENCE.indexOf(normalizeStageName(stageName));
+  return stageIndex === -1 ? null : stageIndex + 1;
+}
+
+export function getStageCompletionPercentage(stagesCompleted: number) {
+  return Math.round((stagesCompleted / LTE_STAGE_COUNT) * 100);
+}
 
 export class StageSequenceError extends Error {
   code = "STAGE_SEQUENCE_LOCKED" as const;

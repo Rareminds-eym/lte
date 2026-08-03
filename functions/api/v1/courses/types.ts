@@ -1,5 +1,7 @@
+import type { LteStageName } from "@functions/lib/stage-sequence";
+
 /** 6E Learning Stages: Engage → Explore → Explain → Express → Empower → Evolve */
-export type Lte6eStage = "engage" | "explore" | "explain" | "express" | "empower" | "evolve";
+export type Lte6eStage = LteStageName;
 
 /** Educational content types supported by the LTE system */
 export type ContentType = "pdf" | "doc" | "video" | "image" | "slide" | "link" | "audio" | "text";

@@ -26,6 +26,14 @@ export type {
   ModuleDetailsResponse,
   ModuleStageContent,
 } from "./model/levelContentTypes";
+export type { LteStageName } from "./model/stages";
+export {
+  formatLteStageLabel,
+  isLteStageName,
+  LTE_STAGE_COUNT,
+  LTE_STAGE_SEQUENCE,
+  normalizeLteStageName,
+} from "./model/stages";
 export type { Course, CourseStatus } from "./model/types";
 export { useCapabilityLevels } from "./model/useCapabilityLevels";
 export { useCourses } from "./model/useCourses";

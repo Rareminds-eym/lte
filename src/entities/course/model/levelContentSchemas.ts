@@ -1,16 +1,10 @@
 import { z } from "zod";
+import { LTE_STAGE_SEQUENCE } from "./stages";
 
 const JsonRecordSchema = z.record(z.string(), z.unknown());
 const NullableStringListSchema = z.array(z.string()).nullable();
 
-export const Lte6eStageSchema = z.enum([
-  "engage",
-  "explore",
-  "explain",
-  "express",
-  "empower",
-  "evolve",
-]);
+export const Lte6eStageSchema = z.enum(LTE_STAGE_SEQUENCE);
 
 export const ContentTypeSchema = z.enum([
   "pdf",

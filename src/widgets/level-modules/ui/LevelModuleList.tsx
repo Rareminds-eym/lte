@@ -50,7 +50,12 @@ export interface ModuleItem {
 }
 
 import { useNavigate } from "react-router-dom";
-import type { LevelModuleSummary } from "@/entities/course";
+import {
+  formatLteStageLabel,
+  type LevelModuleSummary,
+  LTE_STAGE_SEQUENCE,
+  normalizeLteStageName,
+} from "@/entities/course";
 
 export interface LevelModuleListProps {
   modules?: LevelModuleSummary[];
@@ -406,26 +411,24 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
 
                     {/* 6E Framework Stage Tags matching exact Figma design */}
                     {(() => {
-                      const STAGE_NAMES = [
-                        "Engage",
-                        "Explore",
-                        "Explain",
-                        "Express",
-                        "Empower",
-                        "Evolve",
-                      ];
                       // Use real stages from DB if available, otherwise use framework stages
                       const stages: StageTag[] =
                         item.stages && item.stages.length > 0
                           ? item.stages
-                          : STAGE_NAMES.map((name) => ({ name, status: "locked" }));
+                          : LTE_STAGE_SEQUENCE.map((stage) => ({
+                              name: formatLteStageLabel(stage),
+                              status: "locked",
+                            }));
+                      const completedStageSet = new Set(
+                        (item.completedStages ?? []).map(normalizeLteStageName),
+                      );
 
                       return (
                         <div className="pt-4 flex flex-wrap gap-2.5">
                           {stages.map((stage, sIdx) => {
-                            const stageName = stage.name.toLowerCase();
+                            const stageName = normalizeLteStageName(stage.name);
                             // Get completion status directly from database
-                            const isDone = item.completedStages?.includes(stageName) ?? false;
+                            const isDone = completedStageSet.has(stageName);
                             // Stage is active if has progress but not completed
                             const isActive = !isDone && (item.progressPercentage ?? 0) > 0;
                             const name = stageName;

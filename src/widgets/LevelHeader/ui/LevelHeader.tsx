@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import type { LteStageName } from "@/entities/course";
 import {
   ArrowLeftIcon,
   BeakerIcon,
@@ -17,7 +18,7 @@ import {
   TrendingArrowIcon,
 } from "@/shared/ui";
 
-export type LteStage = "engage" | "explore" | "explain" | "express" | "empower" | "evolve";
+export type LteStage = LteStageName;
 
 export interface LevelHeaderProps {
   levelTitle: string;

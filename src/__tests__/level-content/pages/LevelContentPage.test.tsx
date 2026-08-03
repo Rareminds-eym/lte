@@ -5,14 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LevelContentPage } from "@/pages/level-content";
 
 const {
-  fetchLevelDetailsMock,
   fetchLevelModuleDetailsMock,
   useLevelDetailsMock,
   useLevelModuleDetailsMock,
   useStartModuleProgressMock,
   useUpdateStageProgressMock,
 } = vi.hoisted(() => ({
-  fetchLevelDetailsMock: vi.fn(),
   fetchLevelModuleDetailsMock: vi.fn(),
   useLevelDetailsMock: vi.fn(),
   useLevelModuleDetailsMock: vi.fn(),
@@ -26,7 +24,6 @@ vi.mock("@/entities/course", async () => {
   const actual = await vi.importActual<typeof import("@/entities/course")>("@/entities/course");
   return {
     ...actual,
-    fetchLevelDetails: (...args: unknown[]) => fetchLevelDetailsMock(...args),
     fetchLevelModuleDetails: (...args: unknown[]) => fetchLevelModuleDetailsMock(...args),
     useLevelDetails: (...args: unknown[]) => useLevelDetailsMock(...args),
     useLevelModuleDetails: (...args: unknown[]) => useLevelModuleDetailsMock(...args),
@@ -211,7 +208,6 @@ const renderPage = (path = `/my-courses/${levelId}/modules/1`) => {
 
 describe("LevelContentPage", () => {
   beforeEach(() => {
-    fetchLevelDetailsMock.mockResolvedValue(mockLevelContentData.level);
     fetchLevelModuleDetailsMock.mockResolvedValue(mockLevelContentData.module);
     useLevelDetailsMock.mockReset();
     useLevelModuleDetailsMock.mockReset();

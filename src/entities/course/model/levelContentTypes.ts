@@ -1,4 +1,6 @@
-export type Lte6eStage = "engage" | "explore" | "explain" | "express" | "empower" | "evolve";
+import type { LteStageName } from "./stages";
+
+export type Lte6eStage = LteStageName;
 
 export type ContentType = "pdf" | "doc" | "video" | "image" | "slide" | "link" | "audio" | "text";
 

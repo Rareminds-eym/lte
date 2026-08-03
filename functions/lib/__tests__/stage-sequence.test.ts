@@ -13,4 +13,8 @@ describe("assertStageSequenceAllowed", () => {
   it("blocks future stages when previous stages are incomplete", () => {
     expect(() => assertStageSequenceAllowed("evolve", ["engage"])).toThrow(StageSequenceError);
   });
+
+  it("rejects invalid stage names", () => {
+    expect(() => assertStageSequenceAllowed("invalid", [])).toThrow("Invalid stage name");
+  });
 });

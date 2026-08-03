@@ -1,7 +1,7 @@
 import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
-import { StageSequenceError } from "@functions/lib/stage-sequence";
+import { LTE_STAGE_SEQUENCE, StageSequenceError } from "@functions/lib/stage-sequence";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
@@ -11,7 +11,7 @@ import { LevelModuleParamsSchema } from "../../../../schemas";
 
 const StageProgressBodySchema = z.object({
   eContentId: z.string().uuid("Invalid eContentId format"),
-  stageName: z.enum(["engage", "explore", "explain", "express", "empower", "evolve"]),
+  stageName: z.enum(LTE_STAGE_SEQUENCE),
   status: z.enum(["in_progress", "completed"]),
 });
 
