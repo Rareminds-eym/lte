@@ -24,6 +24,16 @@ export interface SettingsProfileResponse {
   };
 }
 
+function getMetaString(obj: Record<string, unknown>, keys: string[]): string {
+  for (const k of keys) {
+    const val = obj[k];
+    if (typeof val === "string" && val.trim().length > 0) {
+      return val.trim();
+    }
+  }
+  return "";
+}
+
 function calculateProfileStrength(profile: Record<string, unknown>): number {
   const fields = [
     "fullName",
@@ -67,54 +77,24 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     const metadata = (dbUser?.metadata ?? user.user_metadata ?? {}) as Record<string, unknown>;
 
-    const firstName =
-      dbUser?.first_name ||
-      (typeof metadata["firstName"] === "string" ? metadata["firstName"] : "") ||
-      (typeof metadata["first_name"] === "string" ? metadata["first_name"] : "");
-    const lastName =
-      dbUser?.last_name ||
-      (typeof metadata["lastName"] === "string" ? metadata["lastName"] : "") ||
-      (typeof metadata["family_name"] === "string" ? metadata["family_name"] : "");
+    const firstName = dbUser?.first_name || getMetaString(metadata, ["firstName", "first_name"]);
+    const lastName = dbUser?.last_name || getMetaString(metadata, ["lastName", "family_name"]);
 
     const fullNameCandidate = `${firstName} ${lastName}`.trim();
-    const fullName =
-      fullNameCandidate ||
-      (typeof metadata["full_name"] === "string" ? metadata["full_name"] : "") ||
-      (typeof metadata["name"] === "string" ? metadata["name"] : "");
+    const fullName = fullNameCandidate || getMetaString(metadata, ["full_name", "name"]);
 
     const email = dbUser?.email || user.email || "";
-    const phone =
-      dbUser?.phone ||
-      (typeof metadata["phone"] === "string" ? metadata["phone"] : "") ||
-      (typeof metadata["phone_number"] === "string" ? metadata["phone_number"] : "");
-
-    const program =
-      (typeof metadata["program"] === "string" ? metadata["program"] : "") ||
-      (typeof metadata["degree"] === "string" ? metadata["degree"] : "") ||
-      (typeof metadata["course"] === "string" ? metadata["course"] : "");
-
-    const gradeSemester =
-      (typeof metadata["gradeSemester"] === "string" ? metadata["gradeSemester"] : "") ||
-      (typeof metadata["grade"] === "string" ? metadata["grade"] : "") ||
-      (typeof metadata["semester"] === "string" ? metadata["semester"] : "");
-
-    const learnerId =
-      (typeof metadata["learnerId"] === "string" ? metadata["learnerId"] : "") ||
-      (typeof metadata["learner_id"] === "string" ? metadata["learner_id"] : "") ||
-      userId;
-
-    const college =
-      (typeof metadata["college"] === "string" ? metadata["college"] : "") ||
-      (typeof metadata["institution"] === "string" ? metadata["institution"] : "") ||
-      (typeof metadata["university"] === "string" ? metadata["university"] : "");
-
-    const section = typeof metadata["section"] === "string" ? metadata["section"] : "";
+    const phone = dbUser?.phone || getMetaString(metadata, ["phone", "phone_number"]);
+    const program = getMetaString(metadata, ["program", "degree", "course"]);
+    const gradeSemester = getMetaString(metadata, ["gradeSemester", "grade", "semester"]);
+    const learnerId = getMetaString(metadata, ["learnerId", "learner_id"]) || userId;
+    const college = getMetaString(metadata, ["college", "institution", "university"]);
+    const section = getMetaString(metadata, ["section"]);
 
     const skillPassportVerified =
       metadata["skillPassportVerified"] === true || metadata["skill_passport_verified"] === true;
-
     const twoFactorEnabled = metadata["twoFactorEnabled"] === true;
-    const loginAlertsEnabled = metadata["loginAlertsEnabled"] !== false;
+    const loginAlertsEnabled = metadata["loginAlertsEnabled"] === true;
 
     const rawProfile = {
       fullName,
@@ -176,37 +156,36 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
     let firstName = existingUser?.first_name ?? "";
     let lastName = existingUser?.last_name ?? "";
 
-    const bodyFullName = typeof body["fullName"] === "string" ? body["fullName"] : "";
-    const bodyFirstName = typeof body["firstName"] === "string" ? body["firstName"] : "";
-    const bodyLastName = typeof body["lastName"] === "string" ? body["lastName"] : "";
-    const bodyPhone = typeof body["phone"] === "string" ? body["phone"] : "";
-    const bodyProgram = typeof body["program"] === "string" ? body["program"] : "";
-    const bodyGradeSemester =
-      typeof body["gradeSemester"] === "string" ? body["gradeSemester"] : "";
-    const bodyCollege = typeof body["college"] === "string" ? body["college"] : "";
-    const bodySection = typeof body["section"] === "string" ? body["section"] : "";
+    const bodyFullName = getMetaString(body, ["fullName"]);
+    const bodyFirstName = getMetaString(body, ["firstName"]);
+    const bodyLastName = getMetaString(body, ["lastName"]);
+    const bodyPhone = getMetaString(body, ["phone"]);
+    const bodyProgram = getMetaString(body, ["program"]);
+    const bodyGradeSemester = getMetaString(body, ["gradeSemester"]);
+    const bodyCollege = getMetaString(body, ["college"]);
+    const bodySection = getMetaString(body, ["section"]);
     const bodyTwoFactor =
       typeof body["twoFactorEnabled"] === "boolean" ? body["twoFactorEnabled"] : undefined;
     const bodyLoginAlerts =
       typeof body["loginAlertsEnabled"] === "boolean" ? body["loginAlertsEnabled"] : undefined;
 
-    if (bodyFullName.trim().length > 0) {
-      const parts = bodyFullName.trim().split(" ");
+    if (bodyFullName.length > 0) {
+      const parts = bodyFullName.split(" ");
       firstName = parts[0];
       lastName = parts.slice(1).join(" ");
     } else {
-      if (bodyFirstName.trim().length > 0) firstName = bodyFirstName.trim();
-      if (bodyLastName.trim().length > 0) lastName = bodyLastName.trim();
+      if (bodyFirstName.length > 0) firstName = bodyFirstName;
+      if (bodyLastName.length > 0) lastName = bodyLastName;
     }
 
-    const phone = bodyPhone.trim().length > 0 ? bodyPhone.trim() : (existingUser?.phone ?? null);
+    const phone = bodyPhone.length > 0 ? bodyPhone : (existingUser?.phone ?? null);
 
     const updatedMetadata: Record<string, unknown> = {
       ...existingMetadata,
-      ...(bodyProgram.trim().length > 0 ? { program: bodyProgram.trim() } : {}),
-      ...(bodyGradeSemester.trim().length > 0 ? { gradeSemester: bodyGradeSemester.trim() } : {}),
-      ...(bodyCollege.trim().length > 0 ? { college: bodyCollege.trim() } : {}),
-      ...(bodySection.trim().length > 0 ? { section: bodySection.trim() } : {}),
+      ...(bodyProgram.length > 0 ? { program: bodyProgram } : {}),
+      ...(bodyGradeSemester.length > 0 ? { gradeSemester: bodyGradeSemester } : {}),
+      ...(bodyCollege.length > 0 ? { college: bodyCollege } : {}),
+      ...(bodySection.length > 0 ? { section: bodySection } : {}),
       ...(bodyTwoFactor !== undefined ? { twoFactorEnabled: bodyTwoFactor } : {}),
       ...(bodyLoginAlerts !== undefined ? { loginAlertsEnabled: bodyLoginAlerts } : {}),
     };
@@ -229,16 +208,11 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
 
     const fullName = `${firstName} ${lastName}`.trim();
     const email = user.email;
-    const program =
-      typeof updatedMetadata["program"] === "string" ? updatedMetadata["program"] : "";
-    const gradeSemester =
-      typeof updatedMetadata["gradeSemester"] === "string" ? updatedMetadata["gradeSemester"] : "";
-    const learnerId =
-      typeof updatedMetadata["learnerId"] === "string" ? updatedMetadata["learnerId"] : userId;
-    const college =
-      typeof updatedMetadata["college"] === "string" ? updatedMetadata["college"] : "";
-    const section =
-      typeof updatedMetadata["section"] === "string" ? updatedMetadata["section"] : "";
+    const program = getMetaString(updatedMetadata, ["program"]);
+    const gradeSemester = getMetaString(updatedMetadata, ["gradeSemester"]);
+    const learnerId = getMetaString(updatedMetadata, ["learnerId"]) || userId;
+    const college = getMetaString(updatedMetadata, ["college"]);
+    const section = getMetaString(updatedMetadata, ["section"]);
     const skillPassportVerified =
       updatedMetadata["skillPassportVerified"] === true ||
       updatedMetadata["skill_passport_verified"] === true;

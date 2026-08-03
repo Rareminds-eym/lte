@@ -6,9 +6,26 @@ import {
   useSettingsProfile,
   useUpdateProfile,
 } from "@/entities/settings";
-import { RouteContentSkeleton, toast } from "@/shared/ui";
+import { Button, RouteContentSkeleton, ToggleSwitch, toast } from "@/shared/ui";
 
 // ─── Section Icon Components ────────────────────────────────────────────────
+
+/** Settings gear icon for page header */
+const SettingsHeaderIcon: React.FC = () => (
+  <svg
+    aria-hidden="true"
+    className="w-5 h-5 text-brand-600"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
 
 /** Person icon for Profile section header */
 const ProfileIcon: React.FC = () => (
@@ -112,53 +129,6 @@ const CheckIcon: React.FC = () => (
   </svg>
 );
 
-// ─── Toggle Switch Component ────────────────────────────────────────────────
-
-interface ToggleSwitchProps {
-  id: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  label: string;
-  description: string;
-}
-
-const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
-  id,
-  checked,
-  onChange,
-  label,
-  description,
-}) => (
-  <div className="flex items-center justify-between py-3">
-    <div className="flex-1">
-      <label
-        htmlFor={id}
-        className="block text-sm font-semibold text-content-primary cursor-pointer"
-      >
-        {label}
-      </label>
-      <p className="text-xs text-content-secondary mt-0.5">{description}</p>
-    </div>
-    <button
-      id={id}
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${
-        checked ? "bg-brand-600" : "bg-content-muted"
-      }`}
-    >
-      <span
-        aria-hidden="true"
-        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out ${
-          checked ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
-  </div>
-);
-
 // ─── Tab Button Types ───────────────────────────────────────────────────────
 
 type TabId = "profile" | "account-security" | "danger-zone";
@@ -191,23 +161,18 @@ export const SettingsPage: React.FC = () => {
   const securityRef = useRef<HTMLDivElement>(null);
   const dangerRef = useRef<HTMLDivElement>(null);
 
-  // User edits for profile inputs (null means fallback to fetched DB profile data)
-  const [fullNameOverride, setFullNameOverride] = useState<string | null>(null);
-  const [phoneOverride, setPhoneOverride] = useState<string | null>(null);
-  const [programOverride, setProgramOverride] = useState<string | null>(null);
-  const [gradeSemesterOverride, setGradeSemesterOverride] = useState<string | null>(null);
+  // User edits for profile inputs (overrides fetched DB profile data)
+  const [profileEdits, setProfileEdits] = useState<Record<string, string>>({});
 
-  const fullName = fullNameOverride ?? profile?.fullName ?? "";
-  const phone = phoneOverride ?? profile?.phone ?? "";
-  const program = programOverride ?? profile?.program ?? "";
-  const gradeSemester = gradeSemesterOverride ?? profile?.gradeSemester ?? "";
+  const fullName = profileEdits["fullName"] ?? profile?.fullName ?? "";
+  const phone = profileEdits["phone"] ?? profile?.phone ?? "";
+  const program = profileEdits["program"] ?? profile?.program ?? "";
+  const gradeSemester = profileEdits["gradeSemester"] ?? profile?.gradeSemester ?? "";
 
   // Account & Security overrides
-  const [twoFactorOverride, setTwoFactorOverride] = useState<boolean | null>(null);
   const [loginAlertsOverride, setLoginAlertsOverride] = useState<boolean | null>(null);
 
-  const twoFactorEnabled = twoFactorOverride ?? profile?.twoFactorEnabled ?? false;
-  const loginAlertsEnabled = loginAlertsOverride ?? profile?.loginAlertsEnabled ?? true;
+  const loginAlertsEnabled = loginAlertsOverride ?? profile?.loginAlertsEnabled ?? false;
 
   // Form state — Account & Security
   const [currentPassword, setCurrentPassword] = useState("");
@@ -216,23 +181,6 @@ export const SettingsPage: React.FC = () => {
 
   // Danger zone confirmation modal
   const [confirmModal, setConfirmModal] = useState<"deactivate" | "delete" | null>(null);
-
-  const handleToggleTwoFactor = (checked: boolean) => {
-    setTwoFactorOverride(checked);
-    updateProfileMutation.mutate(
-      { twoFactorEnabled: checked },
-      {
-        onSuccess: () => {
-          toast(`Two-Factor Authentication ${checked ? "enabled" : "disabled"}`);
-          setTwoFactorOverride(null);
-        },
-        onError: (err) => {
-          toast(err.message || "Failed to update Two-Factor settings");
-          setTwoFactorOverride(null);
-        },
-      },
-    );
-  };
 
   const handleToggleLoginAlerts = (checked: boolean) => {
     setLoginAlertsOverride(checked);
@@ -274,10 +222,7 @@ export const SettingsPage: React.FC = () => {
       {
         onSuccess: () => {
           toast("Profile updated successfully!");
-          setFullNameOverride(null);
-          setPhoneOverride(null);
-          setProgramOverride(null);
-          setGradeSemesterOverride(null);
+          setProfileEdits({});
         },
         onError: (err) => {
           toast(err.message || "Failed to update profile");
@@ -288,10 +233,7 @@ export const SettingsPage: React.FC = () => {
 
   /** Handle Reset Profile form */
   const handleCancelProfile = () => {
-    setFullNameOverride(null);
-    setPhoneOverride(null);
-    setProgramOverride(null);
-    setGradeSemesterOverride(null);
+    setProfileEdits({});
   };
 
   /** Handle Change Password submit */
@@ -380,18 +322,27 @@ export const SettingsPage: React.FC = () => {
     : "RA";
 
   return (
-    <div className="max-w-3xl mx-auto pb-12">
+    <div className="mx-auto max-w-[1440px] space-y-6">
       {/* ─── Page Header ──────────────────────────────────────────────── */}
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-content-primary tracking-tight">Settings</h1>
-        <p className="text-sm text-content-secondary mt-1">
-          Manage your profile and account security. Changes are saved per section.
-        </p>
+      <header>
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center shrink-0 mt-1">
+              <SettingsHeaderIcon />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-content-primary leading-tight">Settings</h1>
+              <p className="text-sm text-content-secondary mt-0.5">
+                Manage your profile information, account security, and notification preferences.
+              </p>
+            </div>
+          </div>
+        </div>
       </header>
 
       {/* ─── Tab Navigation ───────────────────────────────────────────── */}
       <div
-        className="flex gap-1 border-b border-line-default mb-8"
+        className="flex items-center gap-6 border-b border-line-default"
         role="tablist"
         aria-label="Settings sections"
       >
@@ -405,21 +356,21 @@ export const SettingsPage: React.FC = () => {
               aria-selected={isActive}
               aria-controls={`section-${tab.id}`}
               onClick={() => handleTabClick(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px ${
+              className={`relative pb-3 text-sm font-medium transition-colors cursor-pointer flex items-center gap-2 ${
                 tab.isDanger
                   ? isActive
-                    ? "border-danger-500 text-danger-600"
-                    : "border-transparent text-content-secondary hover:text-danger-500"
+                    ? "text-danger-600 font-semibold"
+                    : "text-content-secondary hover:text-danger-600"
                   : isActive
-                    ? "border-brand-600 text-brand-600"
-                    : "border-transparent text-content-secondary hover:text-content-primary"
+                    ? "text-brand-600 font-semibold"
+                    : "text-content-secondary hover:text-content-primary"
               }`}
             >
               <span
                 className={`${
                   tab.isDanger
                     ? isActive
-                      ? "text-danger-500"
+                      ? "text-danger-600"
                       : "text-content-secondary"
                     : isActive
                       ? "text-brand-600"
@@ -429,6 +380,13 @@ export const SettingsPage: React.FC = () => {
                 {tab.icon}
               </span>
               {tab.label}
+              {isActive && (
+                <span
+                  className={`absolute -bottom-px left-0 right-0 h-0.5 rounded-full z-10 ${
+                    tab.isDanger ? "bg-danger-600" : "bg-brand-600"
+                  }`}
+                />
+              )}
             </button>
           );
         })}
@@ -516,7 +474,7 @@ export const SettingsPage: React.FC = () => {
               id="settings-fullname"
               type="text"
               value={fullName}
-              onChange={(e) => setFullNameOverride(e.target.value)}
+              onChange={(e) => setProfileEdits((prev) => ({ ...prev, fullName: e.target.value }))}
               className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
             />
           </div>
@@ -550,7 +508,7 @@ export const SettingsPage: React.FC = () => {
               id="settings-phone"
               type="tel"
               value={phone}
-              onChange={(e) => setPhoneOverride(e.target.value)}
+              onChange={(e) => setProfileEdits((prev) => ({ ...prev, phone: e.target.value }))}
               className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
             />
           </div>
@@ -567,7 +525,7 @@ export const SettingsPage: React.FC = () => {
               id="settings-program"
               type="text"
               value={program}
-              onChange={(e) => setProgramOverride(e.target.value)}
+              onChange={(e) => setProfileEdits((prev) => ({ ...prev, program: e.target.value }))}
               className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
             />
           </div>
@@ -584,7 +542,9 @@ export const SettingsPage: React.FC = () => {
               id="settings-grade"
               type="text"
               value={gradeSemester}
-              onChange={(e) => setGradeSemesterOverride(e.target.value)}
+              onChange={(e) =>
+                setProfileEdits((prev) => ({ ...prev, gradeSemester: e.target.value }))
+              }
               className="w-full px-3.5 py-2.5 text-sm text-content-primary bg-white border border-line-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-shadow"
             />
           </div>
@@ -626,21 +586,18 @@ export const SettingsPage: React.FC = () => {
 
         {/* ─── Profile Action Buttons ──────────────────────────────── */}
         <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleCancelProfile}
-            className="px-5 py-2.5 text-sm font-semibold text-content-primary bg-white border border-line-default rounded-lg hover:bg-surface-secondary transition-colors cursor-pointer"
-          >
+          <Button type="button" onClick={handleCancelProfile} variant="outline" size="md">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={handleSaveProfile}
             disabled={updateProfileMutation.isPending}
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-brand-600 rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors cursor-pointer shadow-sm"
+            variant="primary"
+            size="md"
           >
             {updateProfileMutation.isPending ? "Saving..." : "Save Profile"}
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -726,10 +683,11 @@ export const SettingsPage: React.FC = () => {
         {/* Toggle: Two-Factor Authentication */}
         <ToggleSwitch
           id="settings-2fa"
-          checked={twoFactorEnabled}
-          onChange={handleToggleTwoFactor}
+          checked={false}
+          onChange={() => toast("Two-Factor Authentication is coming soon")}
           label="Two-Factor Authentication"
           description="Add an extra layer of security using an authenticator app or SMS."
+          comingSoon
         />
 
         {/* Divider */}
@@ -746,14 +704,15 @@ export const SettingsPage: React.FC = () => {
 
         {/* Update Password Button */}
         <div className="flex justify-end mt-6">
-          <button
+          <Button
             type="button"
             onClick={handleUpdatePassword}
             disabled={changePasswordMutation.isPending}
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-brand-600 rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors cursor-pointer shadow-sm"
+            variant="primary"
+            size="md"
           >
             {changePasswordMutation.isPending ? "Updating..." : "Update Password"}
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -788,13 +747,15 @@ export const SettingsPage: React.FC = () => {
               by logging back in.
             </p>
           </div>
-          <button
+          <Button
             type="button"
             onClick={() => setConfirmModal("deactivate")}
-            className="px-5 py-2 text-sm font-semibold text-danger-600 bg-white border border-danger-300 rounded-lg hover:bg-danger-50 transition-colors cursor-pointer shrink-0"
+            variant="outline"
+            size="sm"
+            className="text-danger-600 border-danger-300 hover:bg-danger-50 shrink-0"
           >
             Deactivate
-          </button>
+          </Button>
         </div>
 
         {/* Delete Account Permanently */}
@@ -806,13 +767,15 @@ export const SettingsPage: React.FC = () => {
               This cannot be reversed.
             </p>
           </div>
-          <button
+          <Button
             type="button"
             onClick={() => setConfirmModal("delete")}
-            className="px-5 py-2 text-sm font-semibold text-white bg-danger-600 rounded-lg hover:bg-danger-700 transition-colors cursor-pointer shrink-0"
+            variant="primary"
+            size="sm"
+            className="bg-danger-600 hover:bg-danger-700 text-white shrink-0"
           >
             Delete Account
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -831,25 +794,28 @@ export const SettingsPage: React.FC = () => {
                 : "This action is PERMANENT. All your certificates, learning progress, and Skill Passport history will be permanently deleted."}
             </p>
             <div className="flex justify-end gap-3">
-              <button
+              <Button
                 type="button"
                 onClick={() => setConfirmModal(null)}
-                className="px-4 py-2 text-xs font-semibold text-content-primary bg-white border border-line-default rounded-lg hover:bg-surface-secondary transition-colors cursor-pointer"
+                variant="outline"
+                size="sm"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={handleConfirmAccountAction}
                 disabled={accountActionMutation.isPending}
-                className="px-4 py-2 text-xs font-semibold text-white bg-danger-600 rounded-lg hover:bg-danger-700 disabled:opacity-50 transition-colors cursor-pointer shadow-sm"
+                variant="primary"
+                size="sm"
+                className="bg-danger-600 hover:bg-danger-700 text-white"
               >
                 {accountActionMutation.isPending
                   ? "Processing..."
                   : confirmModal === "deactivate"
                     ? "Confirm Deactivation"
                     : "Confirm Permanent Deletion"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
