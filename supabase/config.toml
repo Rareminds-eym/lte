@@ -49,10 +49,7 @@ enabled = true
 schema_paths = []
 
 [db.seed]
-enabled = true
-sql_paths = [
-  "./seed/*.sql"
-]
+enabled = false
 
 [realtime]
 enabled = true
