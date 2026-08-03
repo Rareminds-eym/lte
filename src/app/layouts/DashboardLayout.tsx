@@ -12,9 +12,16 @@ const DashboardScrollRestoration: React.FC = () => {
   const { pathname } = useLocation();
 
   useLayoutEffect(() => {
-    document
-      .getElementById(DASHBOARD_SCROLL_CONTAINER_ID)
-      ?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const scrollContainer = document.getElementById(DASHBOARD_SCROLL_CONTAINER_ID);
+    if (!scrollContainer) return;
+
+    if (typeof scrollContainer.scrollTo === "function") {
+      scrollContainer.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      return;
+    }
+
+    scrollContainer.scrollTop = 0;
+    scrollContainer.scrollLeft = 0;
   }, [pathname]);
 
   return null;
