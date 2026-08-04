@@ -24378,7 +24378,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "functions/api/v1/capabilities/[capabilityCode]/levels.ts",
-      "source_location": "L23",
+      "source_location": "L22",
       "weight": 1.0,
       "source": "functions_api_v1_capabilities_capabilitycode_levels_onrequestget",
       "target": "functions_api_v1_capabilities_queries_getcapabilitiesbyroleid"
@@ -24389,7 +24389,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "functions/api/v1/capabilities/[capabilityCode]/levels.ts",
-      "source_location": "L31",
+      "source_location": "L30",
       "weight": 1.0,
       "source": "functions_api_v1_capabilities_capabilitycode_levels_onrequestget",
       "target": "functions_api_v1_capabilities_queries_getlevelsforcapability"
@@ -24400,7 +24400,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "functions/api/v1/capabilities/[capabilityCode]/levels.ts",
-      "source_location": "L18",
+      "source_location": "L17",
       "weight": 1.0,
       "source": "functions_api_v1_capabilities_capabilitycode_levels_onrequestget",
       "target": "functions_api_v1_learning_paths_queries_getactivelearningpath"
@@ -24422,7 +24422,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "functions/api/v1/capabilities/[capabilityCode]/levels.ts",
-      "source_location": "L20",
+      "source_location": "L19",
       "weight": 1.0,
       "source": "functions_api_v1_capabilities_capabilitycode_levels_onrequestget",
       "target": "functions_lib_http_jsonerror"
@@ -24433,7 +24433,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "functions/api/v1/capabilities/[capabilityCode]/levels.ts",
-      "source_location": "L33",
+      "source_location": "L32",
       "weight": 1.0,
       "source": "functions_api_v1_capabilities_capabilitycode_levels_onrequestget",
       "target": "functions_lib_http_jsonresponse"
@@ -24444,7 +24444,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "functions/api/v1/capabilities/[capabilityCode]/levels.ts",
-      "source_location": "L51",
+      "source_location": "L50",
       "weight": 1.0,
       "source": "functions_api_v1_capabilities_capabilitycode_levels_onrequestget",
       "target": "functions_lib_logger_functionlogger_error"
@@ -65136,5 +65136,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "76966374bf9431022bb2b4ee197d0a7dd42dfb31"
+  "built_at_commit": "1b93dbe7fb748c1c8eba555b2d5916a42d2a0e69"
 }
