@@ -169,11 +169,6 @@ export const SettingsPage: React.FC = () => {
   const program = profileEdits["program"] ?? profile?.program ?? "";
   const gradeSemester = profileEdits["gradeSemester"] ?? profile?.gradeSemester ?? "";
 
-  // Account & Security overrides
-  const [loginAlertsOverride, setLoginAlertsOverride] = useState<boolean | null>(null);
-
-  const loginAlertsEnabled = loginAlertsOverride ?? profile?.loginAlertsEnabled ?? false;
-
   // Form state — Account & Security
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -181,23 +176,6 @@ export const SettingsPage: React.FC = () => {
 
   // Danger zone confirmation modal
   const [confirmModal, setConfirmModal] = useState<"deactivate" | "delete" | null>(null);
-
-  const handleToggleLoginAlerts = (checked: boolean) => {
-    setLoginAlertsOverride(checked);
-    updateProfileMutation.mutate(
-      { loginAlertsEnabled: checked },
-      {
-        onSuccess: () => {
-          toast(`Login alerts ${checked ? "enabled" : "disabled"}`);
-          setLoginAlertsOverride(null);
-        },
-        onError: (err) => {
-          toast(err.message || "Failed to update Login alerts settings");
-          setLoginAlertsOverride(null);
-        },
-      },
-    );
-  };
 
   /** Handle tab click — scroll to matching section */
   const handleTabClick = (tabId: TabId) => {
@@ -623,10 +601,11 @@ export const SettingsPage: React.FC = () => {
         {/* Toggle: Login Alerts */}
         <ToggleSwitch
           id="settings-login-alerts"
-          checked={loginAlertsEnabled}
-          onChange={handleToggleLoginAlerts}
+          checked={false}
+          onChange={() => toast("Login Alerts is coming soon")}
           label="Login Alerts"
           description="Get notified by email when a new device signs in to your account."
+          comingSoon
         />
 
         {/* Update Password Button */}

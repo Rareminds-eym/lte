@@ -276,30 +276,15 @@ describe("SettingsPage", () => {
     expect(toast).toHaveBeenCalledWith("SSO error");
   });
 
-  it("toggles login alerts and shows toast on success", async () => {
+  it("shows coming soon toast when login alerts switch is clicked", async () => {
     const user = userEvent.setup();
     render(<SettingsPage />);
 
     const alertsSwitch = screen.getByRole("switch", { name: /login alerts/i });
     await user.click(alertsSwitch);
 
-    expect(mockUpdateMutate).toHaveBeenCalledWith({ loginAlertsEnabled: true }, expect.any(Object));
-
-    const options = mockUpdateMutate.mock.calls.at(-1)?.[1] as { onSuccess: () => void };
-    options.onSuccess();
-    expect(toast).toHaveBeenCalledWith("Login alerts enabled");
-  });
-
-  it("shows toast when login alerts toggle fails", async () => {
-    const user = userEvent.setup();
-    render(<SettingsPage />);
-
-    await user.click(screen.getByRole("switch", { name: /login alerts/i }));
-
-    const options = mockUpdateMutate.mock.calls.at(-1)?.[1] as { onError: (err: Error) => void };
-    options.onError(new Error("Toggle failed"));
-
-    expect(toast).toHaveBeenCalledWith("Toggle failed");
+    expect(toast).toHaveBeenCalledWith("Login Alerts is coming soon");
+    expect(mockUpdateMutate).not.toHaveBeenCalled();
   });
 
   it("shows toast when profile save succeeds", async () => {
