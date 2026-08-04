@@ -104,8 +104,8 @@ export const LevelModulesPage: React.FC = () => {
   const learningCtaLabel = hasStartedLearning ? "Continue Learning" : "Start Learning";
 
   const handleContinueLearning = () => {
-    if (levelId) {
-      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${nextUpModule?.moduleNo ?? 1}`);
+    if (levelId && nextUpModule) {
+      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${nextUpModule.moduleNo}`);
     }
   };
 
