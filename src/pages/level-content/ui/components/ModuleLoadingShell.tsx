@@ -1,13 +1,8 @@
 import type React from "react";
 import type { LevelDetailsResponse } from "@/entities/course";
+import type { LteStage } from "@/shared/constants/lte-stages";
 import { CloseIcon, ExpandIcon, IconButton, Skeleton, SkeletonGroup } from "@/shared/ui";
-import {
-  LevelHeader,
-  type LteStage,
-  type ModuleItem,
-  ModulesDrawer,
-  StageStepperBar,
-} from "@/widgets";
+import { LevelHeader, type ModuleItem, ModulesDrawer, StageStepperBar } from "@/widgets";
 
 interface ModuleLoadingShellProps {
   level: LevelDetailsResponse;

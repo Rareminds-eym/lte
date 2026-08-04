@@ -1,6 +1,6 @@
 import type React from "react";
+import type { LteStage } from "@/shared/constants/lte-stages";
 import type { IconProps } from "@/shared/ui";
-import type { LteStage } from "@/widgets/LevelHeader";
 
 export interface StageStepInfo {
   id: LteStage;

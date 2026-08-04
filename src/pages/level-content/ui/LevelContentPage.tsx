@@ -18,6 +18,7 @@ import {
   useUpdateStageProgress,
 } from "@/entities/course";
 import { XpRewardModal } from "@/features/xp-reward";
+import type { LteStage } from "@/shared/constants/lte-stages";
 import {
   Button,
   CheckIcon,
@@ -35,13 +36,7 @@ import {
   PlayIcon,
   toast,
 } from "@/shared/ui";
-import {
-  LevelHeader,
-  type LteStage,
-  type ModuleItem,
-  ModulesDrawer,
-  StageStepperBar,
-} from "@/widgets";
+import { LevelHeader, type ModuleItem, ModulesDrawer, StageStepperBar } from "@/widgets";
 import { ArtifactPanel } from "./components/ArtifactPanel";
 import { ModuleLoadingShell } from "./components/ModuleLoadingShell";
 import { StageInfoPanel } from "./components/StageInfoPanel";
