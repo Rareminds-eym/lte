@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/entities/session";
 import {
   changePassword,
   executeAccountAction,
@@ -12,11 +13,16 @@ import type {
   UpdateProfilePayload,
 } from "./types";
 
-export const SETTINGS_PROFILE_QUERY_KEY = ["settingsProfile"];
+const SETTINGS_PROFILE_QUERY_KEY = "settingsProfile";
+
+/** Query key scoped to the signed-in user to prevent cross-user cache bleed. */
+export const settingsProfileQueryKey = (userId?: string) =>
+  [SETTINGS_PROFILE_QUERY_KEY, userId] as const;
 
 export const useSettingsProfile = () => {
+  const userId = useAuthStore((s) => s.user?.id);
   return useQuery<SettingsProfile>({
-    queryKey: SETTINGS_PROFILE_QUERY_KEY,
+    queryKey: settingsProfileQueryKey(userId),
     queryFn: fetchSettingsProfile,
     staleTime: 1000 * 60 * 5, // 5 min cache
   });
@@ -24,10 +30,11 @@ export const useSettingsProfile = () => {
 
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
+  const userId = useAuthStore((s) => s.user?.id);
   return useMutation<SettingsProfile, Error, UpdateProfilePayload>({
     mutationFn: updateSettingsProfile,
     onSuccess: (updatedProfile) => {
-      queryClient.setQueryData(SETTINGS_PROFILE_QUERY_KEY, updatedProfile);
+      queryClient.setQueryData(settingsProfileQueryKey(userId), updatedProfile);
     },
   });
 };

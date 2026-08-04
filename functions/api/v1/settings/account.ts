@@ -3,6 +3,7 @@ import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { AccountActionSchema } from "./schemas";
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -11,14 +12,15 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     const userId = user.sub;
 
     const body = await readJsonObject(context.request);
-    const action = body["action"] as string;
-
-    if (action !== "deactivate" && action !== "delete") {
+    const parsed = AccountActionSchema.safeParse(body);
+    if (!parsed.success) {
       return jsonError("Invalid action. Must be 'deactivate' or 'delete'", 400, {
-        code: "INVALID_ACTION",
+        code: "VALIDATION_ERROR",
         requestId,
+        details: parsed.error.issues,
       });
     }
+    const { action } = parsed.data;
 
     const supabase = createServiceSupabase(context.env);
 
@@ -56,7 +58,6 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
 
     apiLogger.error("Failed to execute account action", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }

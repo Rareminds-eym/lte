@@ -3,9 +3,7 @@ import type { LteEnv, SsoExchangeResponse } from "./types";
 
 export function getSsoService(env: Pick<LteEnv, "SSO_SERVICE">) {
   if (!env.SSO_SERVICE) {
-    const err = new Error(
-      "SSO_SERVICE binding is not configured. Make sure sso-worker is running on port 8787.",
-    );
+    const err = new Error("SSO_SERVICE binding is not configured.");
     err.name = "ConfigError";
     throw err;
   }
