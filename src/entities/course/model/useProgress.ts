@@ -1,5 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { startLevelProgress, startModuleProgress, updateStageProgress } from "../api/progressApi";
+import {
+  getLevelContentQueryKey,
+  getLevelDetailsQueryKey,
+  getLevelModuleDetailsQueryKey,
+  LEVEL_DETAILS_QUERY_KEY,
+} from "./useLevelContentData";
 
 export const useStartLevelProgress = () => {
   const queryClient = useQueryClient();
@@ -8,7 +14,7 @@ export const useStartLevelProgress = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userCourses"] });
       queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });
-      queryClient.invalidateQueries({ queryKey: ["levelDetails"] });
+      queryClient.invalidateQueries({ queryKey: [LEVEL_DETAILS_QUERY_KEY] });
     },
   });
 };
@@ -21,9 +27,12 @@ export const useStartModuleProgress = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["userCourses"] });
       queryClient.invalidateQueries({
-        queryKey: ["levelContent", variables.levelId, variables.moduleNo],
+        queryKey: getLevelContentQueryKey(variables.levelId, variables.moduleNo),
       });
-      queryClient.invalidateQueries({ queryKey: ["levelDetails", variables.levelId] });
+      queryClient.invalidateQueries({
+        queryKey: getLevelModuleDetailsQueryKey(variables.levelId, variables.moduleNo),
+      });
+      queryClient.invalidateQueries({ queryKey: getLevelDetailsQueryKey(variables.levelId) });
     },
   });
 };
@@ -50,11 +59,14 @@ export const useUpdateStageProgress = () => {
       queryClient.invalidateQueries({ queryKey: ["userCourses"] });
       // Invalidate module level content
       queryClient.invalidateQueries({
-        queryKey: ["levelContent", variables.levelId, variables.moduleNo],
+        queryKey: getLevelContentQueryKey(variables.levelId, variables.moduleNo),
+      });
+      queryClient.invalidateQueries({
+        queryKey: getLevelModuleDetailsQueryKey(variables.levelId, variables.moduleNo),
       });
       // Invalidate level details (includes progressPercentage recalculation)
       queryClient.invalidateQueries({
-        queryKey: ["levelDetails"],
+        queryKey: [LEVEL_DETAILS_QUERY_KEY],
       });
       // Invalidate course capability levels to update course progress percentage
       queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });

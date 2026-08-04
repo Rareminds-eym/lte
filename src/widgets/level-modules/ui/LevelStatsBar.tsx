@@ -19,7 +19,7 @@ export const LevelStatsBar: React.FC<LevelStatsBarProps> = ({
   hasCertificate = false,
   currentLevelNo,
   totalLevelsNo,
-  targetLevel = "TARGET: L1",
+  targetLevel = "L1",
 }) => {
   return (
     <div className="w-full bg-white rounded-2xl border border-border-default p-4 sm:p-6 shadow-xl -mt-10 sm:-mt-12 relative z-20 mx-auto max-w-[96%] sm:max-w-[98%]">
@@ -79,7 +79,7 @@ export const LevelStatsBar: React.FC<LevelStatsBarProps> = ({
             <span className="text-content-primary">
               Level {currentLevelNo} of {totalLevelsNo}
             </span>
-            <span className="text-content-secondary font-mono tracking-wider">{targetLevel}</span>
+            <span className="text-content-secondary tracking-wider">Target: {targetLevel}</span>
           </div>
 
           {/* Segmented Track Indicator Bar */}

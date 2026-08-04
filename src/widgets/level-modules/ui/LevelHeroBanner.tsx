@@ -13,6 +13,7 @@ interface LevelHeroBannerProps {
   doneCount: number;
   activeCount: number;
   availableCount: number;
+  learningCtaLabel?: string;
   nextUpTitle?: string;
   onContinueLearning?: () => void;
   onShare?: () => void;
@@ -28,6 +29,7 @@ export const LevelHeroBanner: React.FC<LevelHeroBannerProps> = ({
   doneCount,
   activeCount,
   availableCount,
+  learningCtaLabel = "Start Learning",
   nextUpTitle,
   onContinueLearning,
   onShare,
@@ -83,7 +85,7 @@ export const LevelHeroBanner: React.FC<LevelHeroBannerProps> = ({
               size="lg"
               className="h-11 bg-white !text-brand-600 hover:bg-slate-50 font-bold border-none shadow-lg active:scale-95 transition-all px-6 rounded-xl flex items-center justify-center gap-2"
             >
-              <span>Start Learning</span>
+              <span>{learningCtaLabel}</span>
               <ChevronRightIcon className="w-4 h-4 stroke-[2.5]" />
             </Button>
 
