@@ -70,6 +70,13 @@ export interface SsoRpcService {
     ip?: string | null;
     ua?: string | null;
   }): Promise<SsoExchangeResponse>;
+  changePassword(params: {
+    current_password: string;
+    new_password: string;
+    access_token: string;
+    ip?: string;
+    ua?: string;
+  }): Promise<{ success: boolean; message?: string }>;
 }
 
 export interface AuthApiUser {

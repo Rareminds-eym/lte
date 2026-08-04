@@ -12,7 +12,6 @@ const LOCKED_LABELS = [
   "Learning Progress",
   "Mentor Feedback",
   "Achievements",
-  "Settings",
 ];
 
 describe("NavigationDrawer", () => {
@@ -49,6 +48,13 @@ describe("NavigationDrawer", () => {
     render(<NavigationDrawer onNavigate={onNavigate} />);
     fireEvent.click(screen.getByText("My Courses"));
     expect(onNavigate).toHaveBeenCalledWith("my-courses");
+  });
+
+  it("calls onNavigate when Settings is clicked", () => {
+    const onNavigate = vi.fn();
+    render(<NavigationDrawer onNavigate={onNavigate} />);
+    fireEvent.click(screen.getByText("Settings"));
+    expect(onNavigate).toHaveBeenCalledWith("settings");
   });
 
   it("applies collapsed width class when isCollapsed is true", () => {
@@ -123,8 +129,8 @@ describe("NavigationDrawer", () => {
 
   it("keeps the label in the title tooltip for locked items when collapsed", () => {
     render(<NavigationDrawer isCollapsed />);
-    const btn = screen.getByText("Settings").closest("button");
-    expect(btn).toHaveAttribute("title", "Settings — Coming soon");
+    const btn = screen.getByText("Achievements").closest("button");
+    expect(btn).toHaveAttribute("title", "Achievements — Coming soon");
   });
 
   it("does not call onNavigate or change active item when a locked item is clicked", () => {
@@ -133,10 +139,12 @@ describe("NavigationDrawer", () => {
     const dashboardBtn = screen.getByText("Dashboard").closest("button");
     expect(dashboardBtn?.className).toContain("bg-brand-50");
 
-    fireEvent.click(screen.getByText("Settings"));
+    fireEvent.click(screen.getByText("Achievements"));
     expect(onNavigate).not.toHaveBeenCalled();
     expect(dashboardBtn?.className).toContain("bg-brand-50");
-    expect(screen.getByText("Settings").closest("button")?.className).not.toContain("bg-brand-50");
+    expect(screen.getByText("Achievements").closest("button")?.className).not.toContain(
+      "bg-brand-50",
+    );
   });
 
   it.each(LOCKED_LABELS)("shows a coming soon toast when %s is clicked", (label) => {

@@ -19,9 +19,12 @@ type StoreState = {
   setAccessToken: () => void;
 };
 
+type AuthStoreMock = Mock<(selector?: (s: StoreState) => unknown) => unknown> & {
+  getState: ReturnType<typeof vi.fn>;
+};
+
 // Mock auth store
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockUseAuthStore = vi.hoisted(() => vi.fn() as any);
+const mockUseAuthStore = vi.hoisted(() => vi.fn() as unknown as AuthStoreMock);
 vi.mock("@/entities/session", () => ({
   useAuthStore: mockUseAuthStore,
 }));
@@ -218,7 +221,7 @@ describe("LearningPathInitializer Feature", () => {
       );
 
       expect(mockMutate).toHaveBeenCalled();
-      const callbackObj = mockMutate.mock.calls[0]![1];
+      const callbackObj = mockMutate.mock.calls[0]?.[1];
       expect(callbackObj).toBeDefined();
 
       if (callbackObj && typeof callbackObj.onSuccess === "function") {

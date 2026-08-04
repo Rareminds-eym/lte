@@ -3,9 +3,7 @@ import type { LteEnv, SsoExchangeResponse } from "./types";
 
 export function getSsoService(env: Pick<LteEnv, "SSO_SERVICE">) {
   if (!env.SSO_SERVICE) {
-    const err = new Error(
-      "SSO_SERVICE binding is not configured. Make sure sso-worker is running on port 8787.",
-    );
+    const err = new Error("SSO_SERVICE binding is not configured.");
     err.name = "ConfigError";
     throw err;
   }
@@ -35,6 +33,25 @@ export async function exchangeAuthorizationCode(
   return getSsoService(env).exchangeAuthorizationCode({
     ...params,
     targetApp: "lte",
+  });
+}
+
+export async function changeSsoPassword(
+  env: Pick<LteEnv, "SSO_SERVICE">,
+  params: {
+    current_password: string;
+    new_password: string;
+    access_token: string;
+    ip?: string | null;
+    ua?: string | null;
+  },
+): Promise<{ success: boolean; message?: string }> {
+  return getSsoService(env).changePassword({
+    current_password: params.current_password,
+    new_password: params.new_password,
+    access_token: params.access_token,
+    ip: params.ip ?? undefined,
+    ua: params.ua ?? undefined,
   });
 }
 

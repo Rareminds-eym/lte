@@ -52,8 +52,8 @@ describe("Skill Gateway client", () => {
     );
 
     // Verify request body contains expected parameters
-    const fetchArgs = vi.mocked(globalThis.fetch).mock.calls[0]![1]!;
-    const body = JSON.parse(fetchArgs.body as string);
+    const fetchArgs = vi.mocked(globalThis.fetch).mock.calls[0]?.[1];
+    const body = JSON.parse(fetchArgs?.body as string);
     expect(body).toEqual({
       action: "ping",
       requestId: expect.any(String),
