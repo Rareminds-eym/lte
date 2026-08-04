@@ -1,5 +1,7 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useRef, useState } from "react";
+import { useAuthStore } from "@/entities/session";
 import {
   useAccountAction,
   useChangePassword,
@@ -149,6 +151,7 @@ const TABS: TabConfig[] = [
 // ─── Main Settings Page ─────────────────────────────────────────────────────
 
 export const SettingsPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const { data: profile, isLoading, isError, refetch } = useSettingsProfile();
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
@@ -255,12 +258,14 @@ export const SettingsPage: React.FC = () => {
     accountActionMutation.mutate(
       { action },
       {
-        onSuccess: (res) => {
-          toast(res.message || `Account ${action}d successfully`);
+        onSuccess: async (res) => {
+          toast(res.message || "Account deactivated successfully");
           setConfirmModal(null);
+          queryClient.clear();
+          await useAuthStore.getState().logout();
         },
         onError: (err) => {
-          toast(err.message || `Failed to ${action} account`);
+          toast(err.message || "Failed to deactivate account");
           setConfirmModal(null);
         },
       },

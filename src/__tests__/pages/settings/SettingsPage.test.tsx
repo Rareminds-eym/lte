@@ -25,6 +25,21 @@ vi.mock("@/shared/ui", async () => {
   };
 });
 
+const mockLogout = vi.fn().mockResolvedValue(undefined);
+const mockQueryClientClear = vi.fn();
+
+vi.mock("@/entities/session", () => ({
+  useAuthStore: Object.assign(vi.fn(), { getState: vi.fn(() => ({ logout: mockLogout })) }),
+}));
+
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQueryClient: vi.fn(() => ({ clear: mockQueryClientClear })),
+  };
+});
+
 describe("SettingsPage", () => {
   const mockProfile = {
     fullName: "R Amrutha",
@@ -168,7 +183,7 @@ describe("SettingsPage", () => {
     expect(mockAccountMutate).toHaveBeenCalledWith({ action: "deactivate" }, expect.any(Object));
   });
 
-  it("shows toast and closes modal when account action succeeds", async () => {
+  it("shows toast, clears cache, and logs out when account deactivation succeeds", async () => {
     const user = userEvent.setup();
     render(<SettingsPage />);
 
@@ -176,11 +191,13 @@ describe("SettingsPage", () => {
     await user.click(screen.getByRole("button", { name: "Confirm Deactivation" }));
 
     const options = mockAccountMutate.mock.calls.at(-1)?.[1] as {
-      onSuccess: (res: { message: string }) => void;
+      onSuccess: (res: { message: string }) => Promise<void>;
     };
-    options.onSuccess({ message: "Account deactivated successfully" });
+    await options.onSuccess({ message: "Account deactivated successfully" });
 
     expect(toast).toHaveBeenCalledWith("Account deactivated successfully");
+    expect(mockQueryClientClear).toHaveBeenCalled();
+    expect(mockLogout).toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByText("Deactivate Account?")).not.toBeInTheDocument());
   });
 
