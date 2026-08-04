@@ -1,4 +1,4 @@
-import type { LteStageName } from "@functions/lib/stage-sequence";
+import type { LteStageName } from "@/shared/types/lte-stages";
 
 /** 6E Learning Stages: Engage → Explore → Explain → Express → Empower → Evolve */
 export type Lte6eStage = LteStageName;

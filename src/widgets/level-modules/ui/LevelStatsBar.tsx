@@ -21,8 +21,6 @@ export const LevelStatsBar: React.FC<LevelStatsBarProps> = ({
   totalLevelsNo,
   targetLevel = "L1",
 }) => {
-  const normalizedTargetLevel = targetLevel.replace(/^target:\s*/i, "");
-
   return (
     <div className="w-full bg-white rounded-2xl border border-border-default p-4 sm:p-6 shadow-xl -mt-10 sm:-mt-12 relative z-20 mx-auto max-w-[96%] sm:max-w-[98%]">
       <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6">
@@ -81,9 +79,7 @@ export const LevelStatsBar: React.FC<LevelStatsBarProps> = ({
             <span className="text-content-primary">
               Level {currentLevelNo} of {totalLevelsNo}
             </span>
-            <span className="text-content-secondary tracking-wider">
-              Target: {normalizedTargetLevel}
-            </span>
+            <span className="text-content-secondary tracking-wider">Target: {targetLevel}</span>
           </div>
 
           {/* Segmented Track Indicator Bar */}

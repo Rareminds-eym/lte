@@ -1,15 +1,6 @@
-export const LTE_STAGE_SEQUENCE = [
-  "engage",
-  "explore",
-  "explain",
-  "express",
-  "empower",
-  "evolve",
-] as const;
+import { LTE_STAGE_SEQUENCE, type LteStageName } from "@/shared/types/lte-stages";
 
-export type LteStageName = (typeof LTE_STAGE_SEQUENCE)[number];
-
-export const LTE_STAGE_COUNT = LTE_STAGE_SEQUENCE.length;
+export { LTE_STAGE_COUNT, LTE_STAGE_SEQUENCE, type LteStageName } from "@/shared/types/lte-stages";
 
 export const normalizeLteStageName = (stageName: string): LteStageName => {
   const normalizedStageName = stageName.toLowerCase();

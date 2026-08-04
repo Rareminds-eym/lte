@@ -122,6 +122,7 @@ async function fetchUserCapabilities(): Promise<UserCapabilityResponse[]> {
 
 function mapCapabilityToCourse(cap: UserCapabilityResponse, index: number): Course {
   const code = cap.code ?? `CAP-${index + 1}`;
+  const targetLevel = (cap.level ?? "L3").replace(/^target:\s*/i, "");
   return {
     id: cap.id,
     capabilityId: cap.id,
@@ -136,7 +137,7 @@ function mapCapabilityToCourse(cap: UserCapabilityResponse, index: number): Cour
     progress: cap.progress,
     currentLevel: cap.currentLevel,
     totalLevels: cap.totalLevels,
-    targetLevel: cap.level ?? "L3",
+    targetLevel,
     durationHours: 0,
     xp: 0,
     priority: cap.priority ?? "",
