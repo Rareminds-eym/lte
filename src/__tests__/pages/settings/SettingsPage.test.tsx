@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -181,5 +181,161 @@ describe("SettingsPage", () => {
     await user.click(confirmButton);
 
     expect(mockAccountMutate).toHaveBeenCalledWith({ action: "delete" }, expect.any(Object));
+  });
+
+  it("shows toast and closes modal when account action succeeds", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    await user.click(screen.getByRole("button", { name: "Confirm Deactivation" }));
+
+    const options = mockAccountMutate.mock.calls.at(-1)?.[1] as {
+      onSuccess: (res: { message: string }) => void;
+    };
+    options.onSuccess({ message: "Account deactivated successfully" });
+
+    expect(toast).toHaveBeenCalledWith("Account deactivated successfully");
+    await waitFor(() => expect(screen.queryByText("Deactivate Account?")).not.toBeInTheDocument());
+  });
+
+  it("shows error toast when account action fails", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    await user.click(screen.getByRole("button", { name: "Confirm Deactivation" }));
+
+    const options = mockAccountMutate.mock.calls.at(-1)?.[1] as { onError: (err: Error) => void };
+    options.onError(new Error("Account action failed"));
+
+    expect(toast).toHaveBeenCalledWith("Account action failed");
+  });
+
+  it("shows toast when password fields are invalid", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    const current = screen.getByPlaceholderText("••••••••••");
+    const next = screen.getByPlaceholderText("Enter new password");
+    const confirm = screen.getByPlaceholderText("Re-enter new password");
+    const updateButton = screen.getByRole("button", { name: "Update Password" });
+
+    await user.click(updateButton);
+    expect(toast).toHaveBeenLastCalledWith("Please enter your current password");
+
+    await user.type(current, "oldpass");
+    await user.click(updateButton);
+    expect(toast).toHaveBeenLastCalledWith("New password must be at least 8 characters");
+
+    await user.type(next, "newpass123");
+    await user.click(updateButton);
+    expect(toast).toHaveBeenLastCalledWith("New password and confirm password do not match");
+
+    await user.type(confirm, "newpass123");
+    await user.click(updateButton);
+    expect(mockPasswordMutate).toHaveBeenCalledWith(
+      {
+        current_password: "oldpass",
+        new_password: "newpass123",
+      },
+      expect.any(Object),
+    );
+  });
+
+  it("shows toast and clears fields when password change succeeds", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    await user.type(screen.getByPlaceholderText("••••••••••"), "oldpass");
+    await user.type(screen.getByPlaceholderText("Enter new password"), "newpass123");
+    await user.type(screen.getByPlaceholderText("Re-enter new password"), "newpass123");
+    await user.click(screen.getByRole("button", { name: "Update Password" }));
+
+    const options = mockPasswordMutate.mock.calls.at(-1)?.[1] as {
+      onSuccess: (res: { message: string }) => void;
+    };
+    options.onSuccess({ message: "Password changed successfully" });
+
+    expect(toast).toHaveBeenCalledWith("Password changed successfully");
+    await waitFor(() => expect(screen.getByPlaceholderText("••••••••••")).toHaveValue(""));
+  });
+
+  it("shows toast when password change fails", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    await user.type(screen.getByPlaceholderText("••••••••••"), "oldpass");
+    await user.type(screen.getByPlaceholderText("Enter new password"), "newpass123");
+    await user.type(screen.getByPlaceholderText("Re-enter new password"), "newpass123");
+    await user.click(screen.getByRole("button", { name: "Update Password" }));
+
+    const options = mockPasswordMutate.mock.calls.at(-1)?.[1] as { onError: (err: Error) => void };
+    options.onError(new Error("SSO error"));
+
+    expect(toast).toHaveBeenCalledWith("SSO error");
+  });
+
+  it("toggles login alerts and shows toast on success", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    const alertsSwitch = screen.getByRole("switch", { name: /login alerts/i });
+    await user.click(alertsSwitch);
+
+    expect(mockUpdateMutate).toHaveBeenCalledWith({ loginAlertsEnabled: true }, expect.any(Object));
+
+    const options = mockUpdateMutate.mock.calls.at(-1)?.[1] as { onSuccess: () => void };
+    options.onSuccess();
+    expect(toast).toHaveBeenCalledWith("Login alerts enabled");
+  });
+
+  it("shows toast when login alerts toggle fails", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    await user.click(screen.getByRole("switch", { name: /login alerts/i }));
+
+    const options = mockUpdateMutate.mock.calls.at(-1)?.[1] as { onError: (err: Error) => void };
+    options.onError(new Error("Toggle failed"));
+
+    expect(toast).toHaveBeenCalledWith("Toggle failed");
+  });
+
+  it("shows toast when profile save succeeds", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    await user.click(screen.getByRole("button", { name: /save profile/i }));
+
+    const options = mockUpdateMutate.mock.calls.at(-1)?.[1] as { onSuccess: () => void };
+    options.onSuccess();
+    expect(toast).toHaveBeenCalledWith("Profile updated successfully!");
+  });
+
+  it("shows toast when profile save fails", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    await user.click(screen.getByRole("button", { name: /save profile/i }));
+
+    const options = mockUpdateMutate.mock.calls.at(-1)?.[1] as { onError: (err: Error) => void };
+    options.onError(new Error("Save failed"));
+
+    expect(toast).toHaveBeenCalledWith("Save failed");
+  });
+
+  it("cancels profile edits and restores original values", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    const nameInput = screen.getByDisplayValue("R Amrutha");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Amrutha R");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByDisplayValue("R Amrutha")).toBeInTheDocument();
+    expect(mockUpdateMutate).not.toHaveBeenCalled();
   });
 });
