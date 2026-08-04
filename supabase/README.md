@@ -38,6 +38,36 @@ supabase db push
 supabase db reset
 ```
 
+This resets migrations only because automatic seed execution is disabled in `config.toml`.
+
+### Reset database with environment seed
+Use the package scripts from the `lte` folder:
+
+```bash
+npm run db:reset:dev
+npm run db:reset:prod
+```
+
+Or from the repository root:
+
+```bash
+npm run db:reset:lte:dev
+npm run db:reset:lte:prod
+```
+
+`db:reset:dev` runs only `supabase/seed/dev/*.sql`.
+`db:reset:prod` runs only `supabase/seed/production/*.sql`.
+
+The scripts use Supabase CLI's `--sql-paths` flag to choose the seed folder for that reset.
+
+### Reset linked remote database with production seed
+Warning: this resets the linked remote database. Use only after confirming the project ref and taking any required backup.
+
+```bash
+supabase link --project-ref YOUR_PROJECT_REF
+supabase db reset --linked --sql-paths "./seed/production/*.sql"
+```
+
 ### View Studio
 Open http://127.0.0.1:54323 in your browser
 

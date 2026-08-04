@@ -22,6 +22,8 @@ const mockEnv = {
   SSO_SERVICE: {},
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+  SKILLPASSPORT_INTERNAL_URL: "https://skillpassport.example.com",
+  SKILLPASSPORT_INTERNAL_SECRET: "a-secret-that-is-at-least-32-characters-long",
 } as never;
 
 describe("extractBearerToken", () => {

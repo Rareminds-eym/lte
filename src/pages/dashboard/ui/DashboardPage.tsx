@@ -1,13 +1,21 @@
 import type React from "react";
+import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useDashboardData } from "@/entities/dashboard";
 import { DashboardContent, DashboardSkeleton } from "@/widgets/dashboard";
+import { LearningPathEmptyState } from "@/widgets/learning-path";
 
 export const DashboardPage: React.FC = () => {
   const { data, isPending, isError } = useDashboardData();
+  const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
+  const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
 
   // Loading state: use the structured DashboardSkeleton to prevent layout shift
-  if (isPending) {
+  if (isPending || activeLearningPathLoading) {
     return <DashboardSkeleton />;
+  }
+
+  if (needsAssessment) {
+    return <LearningPathEmptyState />;
   }
 
   if (isError) {

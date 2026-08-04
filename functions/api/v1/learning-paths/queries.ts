@@ -137,8 +137,10 @@ export async function upsertLearningPath(
     userId: string;
     trackId: string;
     roleId: string;
+    isActive?: boolean;
   },
 ): Promise<string> {
+  const isActive = params.isActive ?? true;
   const { data: inserted, error: insertError } = await supabase
     .from("learning_paths")
     .insert({
@@ -148,18 +150,18 @@ export async function upsertLearningPath(
       role_readiness_percentage: 0.0,
       level: 1,
       status: "not_started",
-      is_active: true,
+      is_active: isActive,
     })
     .select("id")
     .single();
 
   if (!insertError) return inserted.id;
 
-  // 23505 = unique_violation — row already exists, reactivate it
+  // 23505 = unique_violation — row already exists, update active status
   if (insertError.code === PG_UNIQUE_VIOLATION) {
     const { data: updated, error: updateError } = await supabase
       .from("learning_paths")
-      .update({ is_active: true })
+      .update({ is_active: isActive })
       .eq("user_id", params.userId)
       .eq("learning_track_id", params.trackId)
       .eq("role_id", params.roleId)

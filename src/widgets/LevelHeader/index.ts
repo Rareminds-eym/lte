@@ -1,1 +1,1 @@
-export { LevelHeader, type LevelHeaderProps, type LteStage } from "./ui/LevelHeader";
+export { LevelHeader, type LevelHeaderProps } from "./ui/LevelHeader";

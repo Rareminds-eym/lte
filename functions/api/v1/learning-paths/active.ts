@@ -1,9 +1,9 @@
 import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
+import { resolveActiveTrack } from "@functions/lib/learner-track";
 import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { getActiveLearningPath } from "./queries";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -12,11 +12,12 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const userId = user.sub;
 
     const supabase = createServiceSupabase(context.env);
-    const activePath = await getActiveLearningPath(supabase, userId);
+    const { data, needsAssessment } = await resolveActiveTrack(supabase, context.env, userId);
 
     return jsonResponse({
       success: true,
-      data: activePath,
+      data,
+      needsAssessment,
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -26,7 +27,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       });
     }
 
-    apiLogger.error("Failed to fetch active learning path", error, { requestId });
+    apiLogger.error("Failed to resolve active learning path", error, { requestId });
     const message = error instanceof Error ? error.message : "Internal server error";
     return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
   }

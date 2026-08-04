@@ -8,10 +8,13 @@ vi.mock("@/entities/active-learning-path/api/learningPathApi", () => ({
 }));
 
 describe("learningPathStore", () => {
+  const testUserId = "11111111-1111-4111-8111-111111111111";
+
   beforeEach(() => {
     useLearningPathStore.setState({
       activeLearningPath: null,
       activeLearningPathLoading: false,
+      needsAssessment: false,
       error: null,
     });
     vi.clearAllMocks();
@@ -27,21 +30,29 @@ describe("learningPathStore", () => {
         fit: "High",
         matchScore: 92,
       };
-      (learningPathApi.fetchActiveLearningPath as Mock).mockResolvedValue(mockPath);
+      (learningPathApi.fetchActiveLearningPath as Mock).mockResolvedValue({
+        data: mockPath,
+        needsAssessment: false,
+      });
 
-      await useLearningPathStore.getState().fetchAndSetActiveLearningPath();
+      await useLearningPathStore.getState().fetchAndSetActiveLearningPath(testUserId);
 
       expect(useLearningPathStore.getState().activeLearningPath).toEqual(mockPath);
+      expect(useLearningPathStore.getState().needsAssessment).toBe(false);
       expect(useLearningPathStore.getState().activeLearningPathLoading).toBe(false);
       expect(useLearningPathStore.getState().error).toBeNull();
     });
 
-    it("sets activeLearningPath to null when api returns null", async () => {
-      (learningPathApi.fetchActiveLearningPath as Mock).mockResolvedValue(null);
+    it("sets activeLearningPath to null and flags needsAssessment when api returns no path", async () => {
+      (learningPathApi.fetchActiveLearningPath as Mock).mockResolvedValue({
+        data: null,
+        needsAssessment: true,
+      });
 
-      await useLearningPathStore.getState().fetchAndSetActiveLearningPath();
+      await useLearningPathStore.getState().fetchAndSetActiveLearningPath(testUserId);
 
       expect(useLearningPathStore.getState().activeLearningPath).toBeNull();
+      expect(useLearningPathStore.getState().needsAssessment).toBe(true);
       expect(useLearningPathStore.getState().activeLearningPathLoading).toBe(false);
       expect(useLearningPathStore.getState().error).toBeNull();
     });
@@ -51,9 +62,10 @@ describe("learningPathStore", () => {
         new Error("Failed to reach server"),
       );
 
-      await useLearningPathStore.getState().fetchAndSetActiveLearningPath();
+      await useLearningPathStore.getState().fetchAndSetActiveLearningPath(testUserId);
 
       expect(useLearningPathStore.getState().activeLearningPath).toBeNull();
+      expect(useLearningPathStore.getState().needsAssessment).toBe(false);
       expect(useLearningPathStore.getState().activeLearningPathLoading).toBe(false);
       expect(useLearningPathStore.getState().error).toBe("Failed to reach server");
     });
@@ -71,6 +83,7 @@ describe("learningPathStore", () => {
           matchScore: 0,
         },
         activeLearningPathLoading: true,
+        needsAssessment: true,
         error: "Some old error",
       });
 
@@ -78,6 +91,7 @@ describe("learningPathStore", () => {
 
       expect(useLearningPathStore.getState().activeLearningPath).toBeNull();
       expect(useLearningPathStore.getState().activeLearningPathLoading).toBe(false);
+      expect(useLearningPathStore.getState().needsAssessment).toBe(false);
       expect(useLearningPathStore.getState().error).toBeNull();
     });
   });

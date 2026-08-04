@@ -11,7 +11,7 @@ import { useInitializeLearningPath } from "../model/useInitializeLearningPath";
 const logger = getLogger("LearningPathInitializer");
 
 type LearningPathInitializerProps = {
-  capabilityCode: string;
+  capabilityCode?: string;
 };
 
 const buildCourseDetailUrl = (code: string) => `/my-courses/${encodeURIComponent(code)}`;
@@ -96,7 +96,8 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
       const firstIssue = parsedParams.error.issues[0];
       const errorMessage = formatZodIssue(firstIssue);
 
-      navigate(buildCourseDetailUrl(capabilityCode), {
+      const targetUrl = capabilityCode ? buildCourseDetailUrl(capabilityCode) : "/my-courses";
+      navigate(targetUrl, {
         replace: true,
         state: {
           initializationError: errorMessage,
@@ -111,21 +112,26 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
       },
       {
         onSuccess: async () => {
-          await useLearningPathStore
-            .getState()
-            .fetchAndSetActiveLearningPath()
-            .catch((error: unknown) => {
-              logger.error(
-                "Failed to fetch active learning path",
-                error instanceof Error ? error : new Error(String(error)),
-              );
-            });
-          navigate(buildCourseDetailUrl(capabilityCode), {
+          const userId = useAuthStore.getState().user?.id;
+          if (userId) {
+            await useLearningPathStore
+              .getState()
+              .fetchAndSetActiveLearningPath(userId)
+              .catch((error: unknown) => {
+                logger.error(
+                  "Failed to fetch active learning path",
+                  error instanceof Error ? error : new Error(String(error)),
+                );
+              });
+          }
+          const targetUrl = capabilityCode ? buildCourseDetailUrl(capabilityCode) : "/my-courses";
+          navigate(targetUrl, {
             replace: true,
           });
         },
         onError: (error) => {
-          navigate(buildCourseDetailUrl(capabilityCode), {
+          const targetUrl = capabilityCode ? buildCourseDetailUrl(capabilityCode) : "/my-courses";
+          navigate(targetUrl, {
             replace: true,
             state: {
               initializationError: error.message,

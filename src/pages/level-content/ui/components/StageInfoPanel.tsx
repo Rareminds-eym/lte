@@ -1,5 +1,10 @@
 import type React from "react";
-import type { EContentItem, LevelDetailsResponse, ModuleDetailsResponse } from "@/entities/course";
+import type {
+  EContentItem,
+  LevelDetailsResponse,
+  LteStage,
+  ModuleDetailsResponse,
+} from "@/entities/course";
 import {
   BookOpenIcon,
   Button,
@@ -12,7 +17,6 @@ import {
   MessageSquareIcon,
   TargetIcon,
 } from "@/shared/ui";
-import type { LteStage } from "@/widgets";
 
 interface StageInfoPanelProps {
   level: LevelDetailsResponse;

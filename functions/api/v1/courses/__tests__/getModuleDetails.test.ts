@@ -142,7 +142,7 @@ describe("getModuleDetails", () => {
 
   it("creates virtual stages when modules_content is null", async () => {
     const supabase = makeSupabase(
-      moduleDetailsChains({ moduleResult: ok({ ...moduleRow, modules_content: null }) }),
+      moduleDetailsChains({ modulesContent: { data: null, error: null } }),
     );
     const result = await getModuleDetails(supabase, "level-1", 2);
     expect(result?.stages).toHaveLength(6);

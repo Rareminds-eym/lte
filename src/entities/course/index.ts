@@ -26,16 +26,27 @@ export type {
   ModuleDetailsResponse,
   ModuleStageContent,
 } from "./model/levelContentTypes";
+export type { LteStage, LteStageName } from "./model/stages";
+export {
+  formatLteStageLabel,
+  isLteStageName,
+  LTE_STAGE_COUNT,
+  LTE_STAGE_SEQUENCE,
+  normalizeLteStageName,
+} from "./model/stages";
 export type { Course, CourseStatus } from "./model/types";
 export { useCapabilityLevels } from "./model/useCapabilityLevels";
 export { useCourses } from "./model/useCourses";
 export {
   getLevelContentQueryKey,
   getLevelDetailsQueryKey,
+  getLevelModuleDetailsQueryKey,
   LEVEL_CONTENT_QUERY_KEY,
   LEVEL_DETAILS_QUERY_KEY,
+  LEVEL_MODULE_DETAILS_QUERY_KEY,
   useLevelContentData,
   useLevelDetails,
+  useLevelModuleDetails,
 } from "./model/useLevelContentData";
 export {
   useStartLevelProgress,

@@ -278,6 +278,7 @@ export function moduleDetailsChains(
     moduleResult?: QueryResult;
     moduleProgress?: QueryResult;
     stagesProg?: QueryResult;
+    modulesContent?: QueryResult;
   } = {},
 ): MockChains {
   return {
@@ -293,6 +294,9 @@ export function moduleDetailsChains(
     }),
     user_stage_progress: mockChain({
       thenQueue: [overrides.stagesProg ?? { data: null, error: null }],
+    }),
+    modules_content: mockChain({
+      thenQueue: [overrides.modulesContent ?? ok(moduleRow.modules_content)],
     }),
   };
 }

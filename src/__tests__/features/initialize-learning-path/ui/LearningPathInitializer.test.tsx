@@ -2,16 +2,37 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAuthStore } from "@/entities/session";
 import { initializeLearningPathSchema } from "@/features/initialize-learning-path/model/initializeLearningPath.schema";
 import { useInitializeLearningPath } from "@/features/initialize-learning-path/model/useInitializeLearningPath";
 import { LearningPathInitializer } from "@/features/initialize-learning-path/ui/LearningPathInitializer";
 
-type StoreState = ReturnType<typeof useAuthStore.getState>;
+type StoreState = {
+  accessToken: string | null;
+  loading: boolean;
+  initialized: boolean;
+  isAuthenticated: boolean;
+  user: { id: string } | null;
+  error: Error | null;
+  initialize: () => void;
+  exchangeCode: () => void;
+  logout: () => void;
+  setAccessToken: () => void;
+};
 
 // Mock auth store
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockUseAuthStore = vi.hoisted(() => vi.fn() as any);
 vi.mock("@/entities/session", () => ({
-  useAuthStore: vi.fn(),
+  useAuthStore: mockUseAuthStore,
+}));
+
+// Mock learning path store
+vi.mock("@/entities/active-learning-path", () => ({
+  useLearningPathStore: {
+    getState: () => ({
+      fetchAndSetActiveLearningPath: vi.fn().mockResolvedValue(undefined),
+    }),
+  },
 }));
 
 // Mock useInitializeLearningPath hook
@@ -36,21 +57,24 @@ describe("LearningPathInitializer Feature", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(useAuthStore).mockImplementation((selector?: (s: StoreState) => unknown) => {
-      const state: StoreState = {
-        accessToken: "mock-token",
-        loading: false,
-        initialized: true,
-        isAuthenticated: true,
-        user: null,
-        error: null,
-        initialize: vi.fn(),
-        exchangeCode: vi.fn(),
-        logout: vi.fn(),
-        setAccessToken: vi.fn(),
-      };
-      return selector ? selector(state) : state;
+    const mockState: StoreState = {
+      accessToken: "mock-token",
+      loading: false,
+      initialized: true,
+      isAuthenticated: true,
+      user: { id: "user-123" },
+      error: null,
+      initialize: vi.fn(),
+      exchangeCode: vi.fn(),
+      logout: vi.fn(),
+      setAccessToken: vi.fn(),
+    };
+
+    mockUseAuthStore.mockImplementation((selector?: (s: StoreState) => unknown) => {
+      return selector ? selector(mockState) : mockState;
     });
+
+    mockUseAuthStore.getState = vi.fn().mockReturnValue(mockState);
 
     // Default mock implementation for useInitializeLearningPath
     (useInitializeLearningPath as Mock).mockReturnValue({
@@ -171,6 +195,36 @@ describe("LearningPathInitializer Feature", () => {
         },
         expect.any(Object),
       );
+    });
+
+    it("redirects to /my-courses on success when capabilityCode is not provided", async () => {
+      (useInitializeLearningPath as Mock).mockReturnValue({
+        mutate: mockMutate,
+        isPending: false,
+      });
+
+      const params = [
+        "fit=High",
+        "track=Frontend",
+        "matchScore=92",
+        "attemptId=777b7ccb-ca18-4770-bc2f-6893608cc738",
+        "roleId=888b7ccb-ca18-4770-bc2f-6893608cc739",
+      ].join("&");
+
+      render(
+        <MemoryRouter initialEntries={[`/my-courses?${params}`]}>
+          <LearningPathInitializer />
+        </MemoryRouter>,
+      );
+
+      expect(mockMutate).toHaveBeenCalled();
+      const callbackObj = mockMutate.mock.calls[0]![1];
+      expect(callbackObj).toBeDefined();
+
+      if (callbackObj && typeof callbackObj.onSuccess === "function") {
+        await callbackObj.onSuccess();
+        expect(mockNavigate).toHaveBeenCalledWith("/my-courses", { replace: true });
+      }
     });
   });
 });

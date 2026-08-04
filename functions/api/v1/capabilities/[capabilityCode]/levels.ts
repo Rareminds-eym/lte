@@ -12,6 +12,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
   try {
     const user = await requireAuth(context.request, context.env);
     const supabase = createServiceSupabase(context.env);
+    // biome-ignore lint/complexity/useLiteralKeys: TS noPropertyAccessFromIndexSignature requires bracket notation
     const capabilityCode = context.params["capabilityCode"] ?? "";
 
     const activePath = await getActiveLearningPath(supabase, user.sub);

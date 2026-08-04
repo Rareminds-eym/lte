@@ -126,6 +126,74 @@ describe("Progress API Endpoints", () => {
       expect(body.success).toBe(true);
       expect(body.levelProgressId).toBe("progress-123");
     });
+
+    it("should initialize user capability if it is missing when tracking level progress", async () => {
+      vi.mocked(requireAuth).mockResolvedValueOnce(
+        mockUser as unknown as Awaited<ReturnType<typeof requireAuth>>,
+      );
+
+      const mockSupabase = {
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === "learning_paths") {
+            return createMockQueryChain({ id: "path-123", role_id: "role-123" });
+          }
+          if (table === "levels") {
+            return createMockQueryChain({
+              id: "level-123",
+              level_code: "RCP-L1",
+              capability_id: "cap-123",
+            });
+          }
+          if (table === "user_capability_level_progress") {
+            const chain = createMockQueryChain(null);
+            chain.insert = vi
+              .fn()
+              .mockImplementation(() => createMockQueryChain({ id: "progress-123" }));
+            return chain;
+          }
+          if (table === "role_capability_sequence") {
+            return createMockQueryChain({
+              id: "seq-123",
+              required_level: "L3",
+              capability_priority: "core",
+            });
+          }
+          if (table === "user_capabilities") {
+            const chain = createMockQueryChain(null);
+            chain.insert = vi
+              .fn()
+              .mockImplementation(() => createMockQueryChain({ id: "cap-insert-123" }));
+            return chain;
+          }
+          return createMockQueryChain(null);
+        }),
+      };
+
+      vi.mocked(createServiceSupabase).mockReturnValueOnce(
+        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
+      );
+
+      const request = new Request("http://localhost/api/v1/courses/level-123/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "in_progress" }),
+      });
+
+      const context = {
+        request,
+        env: {} as LteEnv,
+        params: { levelId: "level-123" },
+      } as unknown as PagesContext<LteEnv>;
+
+      const response = await onLevelProgressPost(context);
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.levelProgressId).toBe("progress-123");
+
+      expect(mockSupabase.from).toHaveBeenCalledWith("user_capabilities");
+    });
   });
 
   describe("POST /api/v1/courses/:levelId/modules/:moduleNo/progress", () => {

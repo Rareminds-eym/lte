@@ -274,6 +274,9 @@ describe("XP Engine Core logic", () => {
           if (table === "user_stage_progress") {
             stageProgressCalls.n++;
             if (stageProgressCalls.n === 1) {
+              return createMockQueryChain([]);
+            }
+            if (stageProgressCalls.n === 2) {
               return createMockQueryChain(null);
             }
             const inner = createMockQueryChain({ id: "stage-progress-1" });
@@ -475,6 +478,9 @@ describe("XP Engine Core logic", () => {
           if (table === "user_stage_progress") {
             stageProgressCalls.n++;
             if (stageProgressCalls.n === 1) {
+              return createMockQueryChain([]);
+            }
+            if (stageProgressCalls.n === 2) {
               return createMockQueryChain(null);
             }
             const inner = createMockQueryChain(null, { message: "insert failed" });
@@ -511,6 +517,9 @@ describe("XP Engine Core logic", () => {
           if (table === "user_stage_progress") {
             stageProgressCalls.n++;
             if (stageProgressCalls.n === 1) {
+              return createMockQueryChain([]);
+            }
+            if (stageProgressCalls.n === 2) {
               return createMockQueryChain({ id: "stage-progress-1", status: "in_progress" });
             }
             return createMockQueryChain(null);
@@ -548,6 +557,9 @@ describe("XP Engine Core logic", () => {
           if (table === "user_stage_progress") {
             stageProgressCalls.n++;
             if (stageProgressCalls.n === 1) {
+              return createMockQueryChain([]);
+            }
+            if (stageProgressCalls.n === 2) {
               return createMockQueryChain({ id: "stage-progress-1", status: "in_progress" });
             }
             return createMockQueryChain(null, { message: "update failed" });
@@ -588,6 +600,9 @@ describe("XP Engine Core logic", () => {
           if (table === "user_stage_progress") {
             stageProgressCalls.n++;
             if (stageProgressCalls.n === 1) {
+              return createMockQueryChain([]);
+            }
+            if (stageProgressCalls.n === 2) {
               return createMockQueryChain({ id: "stage-progress-1", status: "completed" });
             }
             return createMockQueryChain(null);
@@ -632,6 +647,9 @@ describe("XP Engine Core logic", () => {
           if (table === "user_stage_progress") {
             stageProgressCalls.n++;
             if (stageProgressCalls.n === 1) {
+              return createMockQueryChain([]);
+            }
+            if (stageProgressCalls.n === 2) {
               return createMockQueryChain({ id: "stage-progress-1", status: "in_progress" });
             }
             return createMockQueryChain(null);
@@ -672,6 +690,9 @@ describe("XP Engine Core logic", () => {
           if (table === "user_stage_progress") {
             stageProgressCalls.n++;
             if (stageProgressCalls.n === 1) {
+              return createMockQueryChain([]);
+            }
+            if (stageProgressCalls.n === 2) {
               return createMockQueryChain({ id: "stage-progress-1", status: "in_progress" });
             }
             return createMockQueryChain(null);

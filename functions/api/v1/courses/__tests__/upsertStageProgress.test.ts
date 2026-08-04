@@ -23,8 +23,9 @@ describe("upsertStageProgress", () => {
       maybeSingle: ok({ id: "sp-1", status: "in_progress" }),
       insert: ok({ id: "sp-new" }),
       thenQueue: [
+        ok([{ stage_name: "engage" }]),
         { data: null, error: null },
-        ok([{ stage_name: "explore" }, { stage_name: "explain" }]),
+        ok([{ stage_name: "engage" }, { stage_name: "explore" }]),
       ],
     });
     const ump = mockChain({
@@ -61,7 +62,7 @@ describe("upsertStageProgress", () => {
     const usp = mockChain({
       maybeSingle: ok({ id: "sp-1", status: "completed" }),
       insert: ok({ id: "sp-new" }),
-      thenQueue: [ok([])],
+      thenQueue: [ok([{ stage_name: "engage" }])],
     });
     const ump = mockChain({
       maybeSingle: { data: null, error: null },
@@ -84,7 +85,7 @@ describe("upsertStageProgress", () => {
     const supabase = makeSupabase(
       stageProgressChains({
         existing: ok({ id: "sp-1", status: "in_progress" }),
-        stageThenQueue: [err("update down")],
+        stageThenQueue: [ok([{ stage_name: "engage" }]), err("update down")],
       }),
     );
     await expect(
@@ -145,7 +146,7 @@ describe("upsertStageProgress", () => {
     const supabase = makeSupabase(
       stageProgressChains({
         existing: ok({ id: "sp-1", status: "completed" }),
-        stageThenQueue: [err("completed down")],
+        stageThenQueue: [ok([{ stage_name: "engage" }]), err("completed down")],
       }),
     );
     await expect(
@@ -157,7 +158,7 @@ describe("upsertStageProgress", () => {
     const supabase = makeSupabase(
       stageProgressChains({
         existing: ok({ id: "sp-1", status: "completed" }),
-        stageThenQueue: [ok([])],
+        stageThenQueue: [ok([{ stage_name: "engage" }])],
         modThenQueue: [err("mod update down")],
       }),
     );
@@ -170,7 +171,7 @@ describe("upsertStageProgress", () => {
     const usp = mockChain({
       maybeSingle: ok({ id: "sp-1", status: "in_progress" }),
       insert: ok({ id: "sp-new" }),
-      thenQueue: [{ data: null, error: null }, ok(SIX_STAGES)],
+      thenQueue: [ok([{ stage_name: "engage" }]), { data: null, error: null }, ok(SIX_STAGES)],
     });
     const ump = mockChain({
       maybeSingle: { data: null, error: null },
@@ -198,7 +199,11 @@ describe("upsertStageProgress", () => {
     const supabase = makeSupabase(
       stageProgressChains({
         existing: ok({ id: "sp-1", status: "in_progress" }),
-        stageThenQueue: [{ data: null, error: null }, ok(SIX_STAGES)],
+        stageThenQueue: [
+          ok([{ stage_name: "engage" }]),
+          { data: null, error: null },
+          ok(SIX_STAGES),
+        ],
         modThenQueue: [{ data: null, error: null }, err("final down")],
       }),
     );

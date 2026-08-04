@@ -4,6 +4,7 @@ import type { ActiveLearningPath } from "@/shared/types/auth";
 
 const ActiveLearningPathResponseSchema = z.object({
   success: z.literal(true),
+  needsAssessment: z.boolean().optional(),
   data: z
     .object({
       learningPathId: z.string(),
@@ -25,7 +26,12 @@ const ActiveLearningPathResponseSchema = z.object({
     .nullable(),
 });
 
-export async function fetchActiveLearningPath(): Promise<ActiveLearningPath | null> {
+export interface ActiveLearningPathResult {
+  data: ActiveLearningPath | null;
+  needsAssessment: boolean;
+}
+
+export async function fetchActiveLearningPath(): Promise<ActiveLearningPathResult> {
   const raw = await apiFetch("/api/v1/learning-paths/active", {
     method: "GET",
   });
@@ -35,5 +41,8 @@ export async function fetchActiveLearningPath(): Promise<ActiveLearningPath | nu
     throw new ApiError("Invalid response format from server");
   }
 
-  return parsed.data.data;
+  return {
+    data: parsed.data.data,
+    needsAssessment: parsed.data.needsAssessment ?? false,
+  };
 }

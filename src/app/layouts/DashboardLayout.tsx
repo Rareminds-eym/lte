@@ -1,11 +1,31 @@
 import type React from "react";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/entities/session";
 import { getLogger, getSkillpassportUrl, useUIStore } from "@/shared";
 import { Header, NavigationDrawer } from "@/widgets";
 
 const logger = getLogger("DashboardLayout");
+const DASHBOARD_SCROLL_CONTAINER_ID = "dashboard-scroll-container";
+
+const DashboardScrollRestoration: React.FC = () => {
+  const { pathname } = useLocation();
+
+  useLayoutEffect(() => {
+    const scrollContainer = document.getElementById(DASHBOARD_SCROLL_CONTAINER_ID);
+    if (!scrollContainer) return;
+
+    if (typeof scrollContainer.scrollTo === "function") {
+      scrollContainer.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      return;
+    }
+
+    scrollContainer.scrollTop = 0;
+    scrollContainer.scrollLeft = 0;
+  }, [pathname]);
+
+  return null;
+};
 
 export const DashboardLayout: React.FC = () => {
   const location = useLocation();
@@ -127,7 +147,11 @@ export const DashboardLayout: React.FC = () => {
           userEmail={user?.email}
           onToggleMobileDrawer={() => setIsMobileDrawerOpen(true)}
         />
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto min-w-0">
+        <DashboardScrollRestoration />
+        <main
+          id={DASHBOARD_SCROLL_CONTAINER_ID}
+          className="flex-1 p-4 md:p-6 overflow-y-auto min-w-0"
+        >
           <Outlet />
         </main>
       </div>
