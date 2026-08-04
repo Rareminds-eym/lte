@@ -19,10 +19,12 @@ type StoreState = {
   setAccessToken: () => void;
 };
 
+type AuthStoreMock = Mock<(selector?: (s: StoreState) => unknown) => unknown> & {
+  getState: ReturnType<typeof vi.fn>;
+};
+
 // Mock auth store
-// biome-ignore lint/suspicious/noExplicitAny: mock store needs ad-hoc getState property
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockUseAuthStore = vi.hoisted(() => vi.fn() as any);
+const mockUseAuthStore = vi.hoisted(() => vi.fn() as unknown as AuthStoreMock);
 vi.mock("@/entities/session", () => ({
   useAuthStore: mockUseAuthStore,
 }));
