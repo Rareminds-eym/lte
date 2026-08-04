@@ -8,6 +8,7 @@ import {
   getLevelModuleDetailsQueryKey,
   isLteStageName,
   LTE_STAGE_SEQUENCE,
+  type LteStage,
   type ModuleArtifact,
   type ModuleDetailsResponse,
   type ModuleStageContent,
@@ -18,7 +19,6 @@ import {
   useUpdateStageProgress,
 } from "@/entities/course";
 import { XpRewardModal } from "@/features/xp-reward";
-import type { LteStage } from "@/shared/constants/lte-stages";
 import {
   Button,
   CheckIcon,

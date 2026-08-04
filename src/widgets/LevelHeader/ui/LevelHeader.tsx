@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import type { LteStage } from "@/shared/constants/lte-stages";
+import type { LteStage } from "@/entities/course";
 import {
   ArrowLeftIcon,
   BeakerIcon,

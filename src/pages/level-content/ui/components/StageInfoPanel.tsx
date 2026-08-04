@@ -1,6 +1,10 @@
 import type React from "react";
-import type { EContentItem, LevelDetailsResponse, ModuleDetailsResponse } from "@/entities/course";
-import type { LteStage } from "@/shared/constants/lte-stages";
+import type {
+  EContentItem,
+  LevelDetailsResponse,
+  LteStage,
+  ModuleDetailsResponse,
+} from "@/entities/course";
 import {
   BookOpenIcon,
   Button,

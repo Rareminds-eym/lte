@@ -2,13 +2,13 @@ import {
   LTE_STAGE_COUNT,
   LTE_STAGE_SEQUENCE,
   type LteStageName,
-} from "@/shared/constants/lte-stages";
+} from "@functions/shared/lte-stages";
 
 export {
   LTE_STAGE_COUNT,
   LTE_STAGE_SEQUENCE,
   type LteStageName,
-} from "@/shared/constants/lte-stages";
+} from "@functions/shared/lte-stages";
 
 export const normalizeStageName = (stageName: string): LteStageName => {
   const normalizedStageName = stageName.toLowerCase();

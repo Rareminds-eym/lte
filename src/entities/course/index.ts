@@ -26,7 +26,7 @@ export type {
   ModuleDetailsResponse,
   ModuleStageContent,
 } from "./model/levelContentTypes";
-export type { LteStageName } from "./model/stages";
+export type { LteStage, LteStageName } from "./model/stages";
 export {
   formatLteStageLabel,
   isLteStageName,
