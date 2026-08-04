@@ -5,6 +5,8 @@ export interface LteEnv {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   COOKIE_DOMAIN?: string;
+  SKILLPASSPORT_INTERNAL_URL: string;
+  SKILLPASSPORT_INTERNAL_SECRET: string;
 }
 
 export interface PagesContext<Env = LteEnv> {
