@@ -29844,7 +29844,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "functions/api/v1/settings/account.ts",
-      "source_location": "L44",
+      "source_location": "L42",
       "weight": 1.0,
       "source": "functions_api_v1_settings_account_onrequestpost",
       "target": "functions_lib_http_jsonresponse"
@@ -29866,7 +29866,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "functions/api/v1/settings/account.ts",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0,
       "source": "functions_api_v1_settings_account_onrequestpost",
       "target": "functions_lib_supabase_createservicesupabase"
@@ -62164,5 +62164,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "d987167ef4c8a2df9aa68ee0cc264bf3890c4bc2"
+  "built_at_commit": "65a4b3d5de51bbff9de4ca4cae28c013e0d1ef84"
 }
