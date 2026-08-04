@@ -20,7 +20,7 @@ export const normalizeLteStageName = (stageName: string): LteStageName => {
 };
 
 export const isLteStageName = (stageName: string | undefined): stageName is LteStageName =>
-  Boolean(stageName && LTE_STAGE_SEQUENCE.includes(stageName.toLowerCase() as LteStageName));
+  Boolean(stageName && (LTE_STAGE_SEQUENCE as readonly string[]).includes(stageName));
 
 export const formatLteStageLabel = (stage: LteStageName) =>
   stage.charAt(0).toUpperCase() + stage.slice(1);

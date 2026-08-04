@@ -110,8 +110,8 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
               }
               if (typeof value === "object" && value !== null) {
                 // Try to extract array from JSONB object or return undefined
-                const obj = value as Record<string, unknown>;
-                const items = obj["items"];
+                const obj = value as { items?: unknown };
+                const items = obj.items;
                 if (items && Array.isArray(items)) {
                   return items.map((v: unknown) => (typeof v === "string" ? v : String(v)));
                 }
@@ -488,51 +488,47 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                   {!isLocked && (
                     <div className="p-4 sm:p-5 bg-surface-secondary border-t border-line-subtle flex flex-wrap items-center gap-3 rounded-b-2xl">
                       {isActive ? (
-                        <>
-                          <Button
-                            variant="primary"
-                            size="md"
-                            onClick={() => {
-                              if (onSelectModule) {
-                                onSelectModule(item.moduleNumber);
-                              } else if (levelId) {
-                                navigate(
-                                  `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}`,
-                                );
-                              }
-                            }}
-                            className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2 cursor-pointer"
-                          >
-                            <span>
-                              {item.progressPercentage === 100
-                                ? "Review Module"
-                                : item.progressPercentage && item.progressPercentage > 0
-                                  ? "Continue Learning"
-                                  : "Start Learning"}
-                            </span>
-                            <ChevronRightIcon className="w-4 h-4 stroke-[2.5]" />
-                          </Button>
-                        </>
+                        <Button
+                          variant="primary"
+                          size="md"
+                          onClick={() => {
+                            if (onSelectModule) {
+                              onSelectModule(item.moduleNumber);
+                            } else if (levelId) {
+                              navigate(
+                                `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}`,
+                              );
+                            }
+                          }}
+                          className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2 cursor-pointer"
+                        >
+                          <span>
+                            {item.progressPercentage === 100
+                              ? "Review Module"
+                              : item.progressPercentage && item.progressPercentage > 0
+                                ? "Continue Learning"
+                                : "Start Learning"}
+                          </span>
+                          <ChevronRightIcon className="w-4 h-4 stroke-[2.5]" />
+                        </Button>
                       ) : (
-                        <>
-                          <Button
-                            variant="primary"
-                            size="md"
-                            onClick={() => {
-                              if (onSelectModule) {
-                                onSelectModule(item.moduleNumber);
-                              } else if (levelId) {
-                                navigate(
-                                  `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}`,
-                                );
-                              }
-                            }}
-                            className="bg-success-600 hover:bg-success-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2 cursor-pointer"
-                          >
-                            <span>Review Module</span>
-                            <CheckIcon className="w-4 h-4 stroke-[2.5]" />
-                          </Button>
-                        </>
+                        <Button
+                          variant="primary"
+                          size="md"
+                          onClick={() => {
+                            if (onSelectModule) {
+                              onSelectModule(item.moduleNumber);
+                            } else if (levelId) {
+                              navigate(
+                                `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}`,
+                              );
+                            }
+                          }}
+                          className="bg-success-600 hover:bg-success-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-xs gap-2 cursor-pointer"
+                        >
+                          <span>Review Module</span>
+                          <CheckIcon className="w-4 h-4 stroke-[2.5]" />
+                        </Button>
                       )}
                     </div>
                   )}
