@@ -1,10 +1,15 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useLearningPathStore } from "@/entities/active-learning-path";
 import { CourseCard, CourseCardGridSkeleton, useCourses } from "@/entities/course";
 import { useAuthStore } from "@/entities/session";
+import { LearningPathInitializer } from "@/features/initialize-learning-path";
+import { StartAssessmentButton } from "@/features/start-assessment";
 import { getLogger } from "@/shared";
 import { cn } from "@/shared/lib";
 import { Button, SegmentedControl } from "@/shared/ui";
 import { Pagination } from "@/widgets";
+import { LearningPathEmptyState } from "@/widgets/learning-path";
 import {
   COURSE_PAGE_SIZE,
   filterCoursesByPriority,
@@ -30,11 +35,20 @@ export const CoursesPage = () => {
   const [activePriority, setActivePriority] = useState<Priority | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [searchParams] = useSearchParams();
 
   const user = useAuthStore((s) => s.user);
   const authLoading = useAuthStore((s) => s.loading);
   const authInitialized = useAuthStore((s) => s.initialized);
   const userId = user?.id;
+  const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
+
+  const hasInitParams = Boolean(
+    searchParams.get("fit") ||
+      searchParams.get("track") ||
+      searchParams.get("attemptId") ||
+      searchParams.get("roleId"),
+  );
 
   const { data: courses, isPending, error, refetch } = useCourses(userId ?? undefined);
 
@@ -80,6 +94,10 @@ export const CoursesPage = () => {
     );
   }
 
+  if (needsAssessment && !hasInitParams) {
+    return <LearningPathEmptyState />;
+  }
+
   if (error) {
     getLogger("CoursesPage").error(
       "Failed to load courses",
@@ -103,8 +121,24 @@ export const CoursesPage = () => {
   if (!courses || courses.length === 0) {
     return (
       <div className="mx-auto max-w-[1440px] space-y-6">
-        <div className="text-center py-16 text-content-secondary">
-          No courses found. Complete an assessment to get started.
+        <LearningPathInitializer />
+        <div className="py-16 text-center">
+          <div className="mx-auto max-w-md space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
+              <BookIcon />
+            </div>
+            <h2 className="text-xl font-bold text-content-primary">No learning path yet</h2>
+            <p className="text-sm text-content-secondary">
+              {needsAssessment
+                ? "Take a quick assessment to get your personalized learning track and unlock your courses."
+                : "No courses found. Please check back later."}
+            </p>
+            {needsAssessment && (
+              <div className="pt-2">
+                <StartAssessmentButton />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -112,6 +146,7 @@ export const CoursesPage = () => {
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
+      <LearningPathInitializer />
       <header>
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-start gap-3">

@@ -147,14 +147,6 @@ CREATE INDEX IF NOT EXISTS idx_learning_paths_user_badge
     ON public.learning_paths (user_id, badge);
 
 
--- ============================================================================
--- OPTIONAL BUSINESS-RULE INDEXES
--- ============================================================================
-
--- Allows only one active learning path per user.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_learning_paths_one_active_per_user
-    ON public.learning_paths (user_id)
-    WHERE is_active = true;
 
 
 -- ============================================================================

@@ -16,6 +16,8 @@ vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
 interface Chainable extends Record<string, unknown> {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  order: ReturnType<typeof vi.fn>;
+  limit: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
 }
@@ -24,6 +26,8 @@ function chainable(terminal: Record<string, unknown> = {}) {
   const chain: Chainable = {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
+    order: vi.fn().mockImplementation(() => chain),
+    limit: vi.fn().mockImplementation(() => chain),
     single: vi.fn().mockResolvedValue({ data: null, error: null }),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
   };

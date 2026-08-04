@@ -615,6 +615,25 @@ export async function upsertLevelProgress(
 
     if (capData) {
       currentLevelNum = capData.current_level;
+    } else {
+      // Initialize new user capability since it is missing
+      const { error: capInsertError } = await supabase.from("user_capabilities").insert({
+        user_id: userId,
+        learning_path_id: learningPathId,
+        role_sequence_id: seqData.id,
+        current_level: 0,
+        required_level: requiredLevelNum,
+        gap: requiredLevelNum,
+        has_gap: requiredLevelNum > 0,
+        gap_score: 0,
+        badge: "none",
+        updated_at: new Date().toISOString(),
+      });
+
+      if (capInsertError) {
+        throw new Error(`Failed to insert user capability: ${capInsertError.message}`);
+      }
+      currentLevelNum = 0;
     }
   }
 

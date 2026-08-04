@@ -3,6 +3,10 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { Courses } from "@/pages/courses";
 
+vi.mock("@/features/initialize-learning-path", () => ({
+  LearningPathInitializer: () => null,
+}));
+
 const mockCourses = vi.hoisted(() => [
   {
     id: "1",

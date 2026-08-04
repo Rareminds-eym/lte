@@ -31,15 +31,15 @@ describe("learningPathApi", () => {
         fit: "Strong",
         matchScore: 85,
       };
-      mockFetch(200, { success: true, data: path });
+      mockFetch(200, { success: true, data: path, needsAssessment: false });
       const result = await fetchActiveLearningPath();
-      expect(result).toEqual(path);
+      expect(result).toEqual({ data: path, needsAssessment: false });
     });
 
     it("returns null when no active path exists", async () => {
-      mockFetch(200, { success: true, data: null });
+      mockFetch(200, { success: true, data: null, needsAssessment: false });
       const result = await fetchActiveLearningPath();
-      expect(result).toBeNull();
+      expect(result).toEqual({ data: null, needsAssessment: false });
     });
 
     it("throws on non-ok response", async () => {

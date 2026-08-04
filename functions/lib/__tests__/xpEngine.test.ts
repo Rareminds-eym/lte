@@ -13,6 +13,7 @@ const mockInsert = vi.fn();
 const mockOrder = vi.fn();
 
 function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null) {
+  // biome-ignore lint/suspicious/noExplicitAny: mock chain requires dynamic method assignment
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const chain: Record<string, any> = {
     select: vi.fn().mockImplementation(() => chain),
@@ -33,6 +34,7 @@ function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null) {
 }
 
 function createChain() {
+  // biome-ignore lint/suspicious/noExplicitAny: mock chain requires dynamic method assignment
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const chain: Record<string, any> = {
     select: (...args: unknown[]) => mockSelect(...args) ?? chain,
@@ -125,6 +127,7 @@ describe("XP Engine Core logic", () => {
           }
           if (table === "user_stage_progress") {
             const chain = createMockQueryChain(null);
+            // biome-ignore lint/complexity/useLiteralKeys: TS noPropertyAccessFromIndexSignature requires bracket notation
             chain["insert"] = vi
               .fn()
               .mockImplementation(() => createMockQueryChain({ id: "stage-progress-1" }));

@@ -33,6 +33,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  const user = useAuthStore((state) => state.user);
   const initialize = useAuthStore((state) => state.initialize);
   const initialized = useAuthStore((state) => state.initialized);
   const loading = useAuthStore((state) => state.loading);
@@ -120,10 +121,10 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
 
   // 3. Orchestrate active learning path fetching once authenticated
   useEffect(() => {
-    if (initialized && isAuthenticated) {
+    if (initialized && isAuthenticated && user?.id) {
       useLearningPathStore
         .getState()
-        .fetchAndSetActiveLearningPath()
+        .fetchAndSetActiveLearningPath(user.id)
         .catch((error: unknown) => {
           logger.warn("Failed to fetch active learning path", {
             error: error instanceof Error ? error.message : String(error),
@@ -132,7 +133,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
     } else if (initialized && !isAuthenticated) {
       useLearningPathStore.getState().clearActiveLearningPath();
     }
-  }, [initialized, isAuthenticated]);
+  }, [initialized, isAuthenticated, user?.id]);
 
   // ── Render gates ──────────────────────────────────────────────────────────
 
