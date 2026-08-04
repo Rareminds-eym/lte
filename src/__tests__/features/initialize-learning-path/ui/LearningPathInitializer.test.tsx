@@ -20,6 +20,7 @@ type StoreState = {
 };
 
 // Mock auth store
+// biome-ignore lint/suspicious/noExplicitAny: mock store needs ad-hoc getState property
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockUseAuthStore = vi.hoisted(() => vi.fn() as any);
 vi.mock("@/entities/session", () => ({
@@ -218,7 +219,7 @@ describe("LearningPathInitializer Feature", () => {
       );
 
       expect(mockMutate).toHaveBeenCalled();
-      const callbackObj = mockMutate.mock.calls[0]![1];
+      const callbackObj = mockMutate.mock.calls[0]?.[1];
       expect(callbackObj).toBeDefined();
 
       if (callbackObj && typeof callbackObj.onSuccess === "function") {

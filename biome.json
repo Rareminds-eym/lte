@@ -29,7 +29,8 @@
         "useButtonType": "warn"
       },
       "complexity": {
-        "noCommaOperator": "warn"
+        "noCommaOperator": "warn",
+        "useLiteralKeys": "off"
       }
     }
   },
