@@ -160,7 +160,7 @@ export async function getLevelWithModules(
             .eq("status", "completed");
 
           if (stages) {
-            entry.completedStages = stages.map((s) => s.stage_name.toLowerCase());
+            entry.completedStages = stages.map((s) => normalizeStageName(s.stage_name));
           }
         }
       }
@@ -337,15 +337,15 @@ export async function getModuleDetails(
         .eq("status", "completed");
 
       if (stagesProg) {
-        completedStages = stagesProg.map((s) => s.stage_name.toLowerCase());
+        completedStages = stagesProg.map((s) => normalizeStageName(s.stage_name));
       }
     }
   }
 
-  const completedStageSet = new Set(completedStages);
+  const completedStageSet = new Set(completedStages.map(normalizeStageName));
   const firstIncompleteStage = ALL_STAGES.find((stage) => !completedStageSet.has(stage));
   const allowedStages = firstIncompleteStage
-    ? [...completedStageSet, firstIncompleteStage]
+    ? Array.from(completedStageSet).concat(firstIncompleteStage)
     : ALL_STAGES;
 
   const { data: modulesContentData, error: modulesContentError } = await supabase
@@ -845,7 +845,7 @@ export async function upsertStageProgress(
   }
 
   const completedStagesSet = new Set(
-    completedItems?.map((item) => item.stage_name.toLowerCase()) ?? [],
+    completedItems?.map((item) => normalizeStageName(item.stage_name)) ?? [],
   );
   const stagesCompleted = completedStagesSet.size;
   const completionPercentage = getStageCompletionPercentage(stagesCompleted);

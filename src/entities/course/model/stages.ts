@@ -1,13 +1,18 @@
-import { LTE_STAGE_SEQUENCE, type LteStageName } from "@/shared/types/lte-stages";
+import { LTE_STAGE_SEQUENCE, type LteStageName } from "@/shared/constants/lte-stages";
 
-export { LTE_STAGE_COUNT, LTE_STAGE_SEQUENCE, type LteStageName } from "@/shared/types/lte-stages";
+export {
+  LTE_STAGE_COUNT,
+  LTE_STAGE_SEQUENCE,
+  type LteStageName,
+} from "@/shared/constants/lte-stages";
 
 export const normalizeLteStageName = (stageName: string): LteStageName => {
   const normalizedStageName = stageName.toLowerCase();
-  if (!LTE_STAGE_SEQUENCE.includes(normalizedStageName as LteStageName)) {
+  const validatedStageName = LTE_STAGE_SEQUENCE.find((stage) => stage === normalizedStageName);
+  if (!validatedStageName) {
     throw new Error(`Invalid stage name: ${stageName}`);
   }
-  return normalizedStageName as LteStageName;
+  return validatedStageName;
 };
 
 export const isLteStageName = (stageName: string | undefined): stageName is LteStageName =>
