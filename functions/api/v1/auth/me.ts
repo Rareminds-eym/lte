@@ -13,7 +13,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       const supabase = createServiceSupabase(context.env);
       const { data: existingUser, error } = await supabase
         .from("users")
-        .select("id")
+        .select("id, status")
         .eq("id", user.sub)
         .maybeSingle();
       if (error) {
@@ -27,6 +27,20 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
           "LTE user record not found. Please sign in via SkillPassport.",
           "UNAUTHORIZED",
         );
+      }
+
+      // Block permanently disabled accounts
+      if (existingUser.status === "suspended" || existingUser.status === "deleted") {
+        throw new AuthError("Account access has been disabled.", "FORBIDDEN");
+      }
+
+      // Auto-reactivate deactivated accounts on sign-in
+      if (existingUser.status === "inactive") {
+        await supabase
+          .from("users")
+          .update({ status: "active", updated_at: new Date().toISOString() })
+          .eq("id", user.sub);
+        authLogger.info("Reactivated inactive user upon sign-in", { userId: user.sub });
       }
     }
 
