@@ -9,6 +9,7 @@ import {
 import { apiLogger } from "@functions/lib/logger";
 import { changeSsoPassword } from "@functions/lib/sso-client";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { PasswordChangeSchema } from "./schemas";
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -20,22 +21,15 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
 
     const body = await readJsonObject(context.request);
-    const currentPassword = body["current_password"] as string;
-    const newPassword = body["new_password"] as string;
-
-    if (!currentPassword || typeof currentPassword !== "string") {
-      return jsonError("Current password is required", 400, {
+    const parsed = PasswordChangeSchema.safeParse(body);
+    if (!parsed.success) {
+      return jsonError(parsed.error.issues[0]?.message ?? "Invalid input", 400, {
         code: "VALIDATION_ERROR",
         requestId,
+        details: parsed.error.issues,
       });
     }
-
-    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 8) {
-      return jsonError("New password must be at least 8 characters", 400, {
-        code: "VALIDATION_ERROR",
-        requestId,
-      });
-    }
+    const { current_password: currentPassword, new_password: newPassword } = parsed.data;
 
     const ip = getClientIp(context.request);
     const ua = getUserAgent(context.request);
@@ -61,7 +55,9 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
 
     apiLogger.error("Failed to change password via SSO service", error, { requestId });
-    const message = error instanceof Error ? error.message : "Failed to change password";
-    return jsonError(message, 400, { code: "PASSWORD_CHANGE_FAILED", requestId });
+    return jsonError("Password change failed", 400, {
+      code: "PASSWORD_CHANGE_FAILED",
+      requestId,
+    });
   }
 }

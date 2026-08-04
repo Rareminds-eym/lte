@@ -3,6 +3,7 @@ import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { ProfileUpdateSchema } from "./schemas";
 
 export interface SettingsProfileResponse {
   success: boolean;
@@ -22,6 +23,13 @@ export interface SettingsProfileResponse {
     loginAlertsEnabled: boolean;
     profileStrength: number;
   };
+}
+
+interface UserMetadata extends Record<string, unknown> {
+  skillPassportVerified?: unknown;
+  skill_passport_verified?: unknown;
+  twoFactorEnabled?: unknown;
+  loginAlertsEnabled?: unknown;
 }
 
 function getMetaString(obj: Record<string, unknown>, keys: string[]): string {
@@ -50,8 +58,6 @@ function calculateProfileStrength(profile: Record<string, unknown>): number {
     const val = profile[field];
     if (typeof val === "string" && val.trim().length > 0) {
       filled++;
-    } else if (typeof val === "boolean" && val) {
-      filled++;
     }
   }
   return Math.round((filled / fields.length) * 100);
@@ -75,7 +81,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       throw error;
     }
 
-    const metadata = (dbUser?.metadata ?? user.user_metadata ?? {}) as Record<string, unknown>;
+    const metadata = (dbUser?.metadata ?? user.user_metadata ?? {}) as UserMetadata;
 
     const firstName = dbUser?.first_name || getMetaString(metadata, ["firstName", "first_name"]);
     const lastName = dbUser?.last_name || getMetaString(metadata, ["lastName", "family_name"]);
@@ -92,9 +98,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const section = getMetaString(metadata, ["section"]);
 
     const skillPassportVerified =
-      metadata["skillPassportVerified"] === true || metadata["skill_passport_verified"] === true;
-    const twoFactorEnabled = metadata["twoFactorEnabled"] === true;
-    const loginAlertsEnabled = metadata["loginAlertsEnabled"] === true;
+      metadata.skillPassportVerified === true || metadata.skill_passport_verified === true;
+    const twoFactorEnabled = metadata.twoFactorEnabled === true;
+    const loginAlertsEnabled = metadata.loginAlertsEnabled === true;
 
     const rawProfile = {
       fullName,
@@ -130,8 +136,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     apiLogger.error("Failed to fetch settings profile", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }
 
@@ -142,6 +147,15 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
     const userId = user.sub;
 
     const body = await readJsonObject(context.request);
+    const parsed = ProfileUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return jsonError(parsed.error.issues[0]?.message ?? "Invalid input", 400, {
+        code: "VALIDATION_ERROR",
+        requestId,
+        details: parsed.error.issues,
+      });
+    }
+
     const supabase = createServiceSupabase(context.env);
 
     // Fetch existing metadata to merge
@@ -151,23 +165,21 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
       .eq("id", userId)
       .maybeSingle();
 
-    const existingMetadata = (existingUser?.metadata ?? {}) as Record<string, unknown>;
+    const existingMetadata = (existingUser?.metadata ?? {}) as UserMetadata;
 
     let firstName = existingUser?.first_name ?? "";
     let lastName = existingUser?.last_name ?? "";
 
-    const bodyFullName = getMetaString(body, ["fullName"]);
-    const bodyFirstName = getMetaString(body, ["firstName"]);
-    const bodyLastName = getMetaString(body, ["lastName"]);
-    const bodyPhone = getMetaString(body, ["phone"]);
-    const bodyProgram = getMetaString(body, ["program"]);
-    const bodyGradeSemester = getMetaString(body, ["gradeSemester"]);
-    const bodyCollege = getMetaString(body, ["college"]);
-    const bodySection = getMetaString(body, ["section"]);
-    const bodyTwoFactor =
-      typeof body["twoFactorEnabled"] === "boolean" ? body["twoFactorEnabled"] : undefined;
-    const bodyLoginAlerts =
-      typeof body["loginAlertsEnabled"] === "boolean" ? body["loginAlertsEnabled"] : undefined;
+    const bodyFullName = parsed.data.fullName ?? "";
+    const bodyFirstName = parsed.data.firstName ?? "";
+    const bodyLastName = parsed.data.lastName ?? "";
+    const bodyPhone = parsed.data.phone ?? "";
+    const bodyProgram = parsed.data.program ?? "";
+    const bodyGradeSemester = parsed.data.gradeSemester ?? "";
+    const bodyCollege = parsed.data.college ?? "";
+    const bodySection = parsed.data.section ?? "";
+    const bodyTwoFactor = parsed.data.twoFactorEnabled;
+    const bodyLoginAlerts = parsed.data.loginAlertsEnabled;
 
     if (bodyFullName.length > 0) {
       const parts = bodyFullName.split(" ");
@@ -180,7 +192,7 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
 
     const phone = bodyPhone.length > 0 ? bodyPhone : (existingUser?.phone ?? null);
 
-    const updatedMetadata: Record<string, unknown> = {
+    const updatedMetadata: UserMetadata = {
       ...existingMetadata,
       ...(bodyProgram.length > 0 ? { program: bodyProgram } : {}),
       ...(bodyGradeSemester.length > 0 ? { gradeSemester: bodyGradeSemester } : {}),
@@ -214,10 +226,10 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
     const college = getMetaString(updatedMetadata, ["college"]);
     const section = getMetaString(updatedMetadata, ["section"]);
     const skillPassportVerified =
-      updatedMetadata["skillPassportVerified"] === true ||
-      updatedMetadata["skill_passport_verified"] === true;
-    const twoFactorEnabled = updatedMetadata["twoFactorEnabled"] === true;
-    const loginAlertsEnabled = updatedMetadata["loginAlertsEnabled"] !== false;
+      updatedMetadata.skillPassportVerified === true ||
+      updatedMetadata.skill_passport_verified === true;
+    const twoFactorEnabled = updatedMetadata.twoFactorEnabled === true;
+    const loginAlertsEnabled = updatedMetadata.loginAlertsEnabled !== false;
 
     const rawProfile = {
       fullName,
@@ -253,7 +265,6 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     apiLogger.error("Failed to update settings profile", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }
