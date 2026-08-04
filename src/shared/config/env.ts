@@ -5,7 +5,6 @@ const clientEnvSchema = z.object({
 });
 
 export const getClientEnv = () => {
-  // biome-ignore lint/complexity/useLiteralKeys: TS noPropertyAccessFromIndexSignature requires bracket notation
   const url = import.meta.env["VITE_SKILLPASSPORT_URL"];
   if (!url || url.trim() === "") {
     throw new Error("VITE_SKILLPASSPORT_URL environment variable is not configured");
