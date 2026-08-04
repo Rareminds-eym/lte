@@ -73,7 +73,7 @@ describe("POST /api/v1/settings/account", () => {
 
   it("returns 400 for an invalid action", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    const response = await onRequestPost(postContext({ action: "suspend" }));
+    const response = await onRequestPost(postContext({ action: "delete" }));
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error.code).toBe("VALIDATION_ERROR");
@@ -93,23 +93,6 @@ describe("POST /api/v1/settings/account", () => {
     expect(body.status).toBe("inactive");
     expect(chain.update).toHaveBeenCalledWith(
       expect.objectContaining({ status: "inactive", updated_at: expect.any(String) }),
-    );
-  });
-
-  it("deletes the account", async () => {
-    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    const chain = updateChain({ data: null, error: null });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
-
-    const response = await onRequestPost(postContext({ action: "delete" }));
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.success).toBe(true);
-    expect(body.status).toBe("deleted");
-    expect(chain.update).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "deleted", updated_at: expect.any(String) }),
     );
   });
 

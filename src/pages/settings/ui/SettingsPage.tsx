@@ -175,7 +175,7 @@ export const SettingsPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   // Danger zone confirmation modal
-  const [confirmModal, setConfirmModal] = useState<"deactivate" | "delete" | null>(null);
+  const [confirmModal, setConfirmModal] = useState<"deactivate" | null>(null);
 
   /** Handle tab click — scroll to matching section */
   const handleTabClick = (tabId: TabId) => {
@@ -248,7 +248,7 @@ export const SettingsPage: React.FC = () => {
     );
   };
 
-  /** Handle Account Action (deactivate / delete) */
+  /** Handle Account Action (deactivate) */
   const handleConfirmAccountAction = () => {
     if (!confirmModal) return;
     const action = confirmModal;
@@ -639,13 +639,13 @@ export const SettingsPage: React.FC = () => {
               Danger Zone
             </h2>
             <p className="text-xs text-content-secondary">
-              These actions are permanent and cannot be undone
+              Deactivation is temporary — you can reactivate anytime by signing back in.
             </p>
           </div>
         </div>
 
         {/* Deactivate Account */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 border-b border-line-subtle">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4">
           <div className="mb-3 sm:mb-0 flex-1 min-w-0 mr-4">
             <h3 className="text-sm font-bold text-content-primary">Deactivate Account</h3>
             <p className="text-xs text-content-secondary mt-0.5 leading-relaxed">
@@ -663,41 +663,16 @@ export const SettingsPage: React.FC = () => {
             Deactivate
           </Button>
         </div>
-
-        {/* Delete Account Permanently */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4">
-          <div className="mb-3 sm:mb-0 flex-1 min-w-0 mr-4">
-            <h3 className="text-sm font-bold text-content-primary">Delete Account Permanently</h3>
-            <p className="text-xs text-content-secondary mt-0.5 leading-relaxed">
-              Permanently delete your account, Skill Passport, certificates and learning history.
-              This cannot be reversed.
-            </p>
-          </div>
-          <Button
-            type="button"
-            onClick={() => setConfirmModal("delete")}
-            variant="primary"
-            size="sm"
-            className="bg-danger-600 hover:bg-danger-700 text-white shrink-0"
-          >
-            Delete Account
-          </Button>
-        </div>
       </section>
 
       {/* ─── Confirmation Modal ─────────────────────────────────────── */}
       {confirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-line-default">
-            <h3 className="text-lg font-bold text-content-primary mb-2">
-              {confirmModal === "deactivate"
-                ? "Deactivate Account?"
-                : "Delete Account Permanently?"}
-            </h3>
+            <h3 className="text-lg font-bold text-content-primary mb-2">Deactivate Account?</h3>
             <p className="text-xs text-content-secondary leading-relaxed mb-6">
-              {confirmModal === "deactivate"
-                ? "Your profile will be hidden and notifications paused. You can reactivate anytime by signing in again."
-                : "This action is PERMANENT. All your certificates, learning progress, and Skill Passport history will be permanently deleted."}
+              Your profile will be hidden and notifications paused. You can reactivate anytime by
+              signing in again.
             </p>
             <div className="flex justify-end gap-3">
               <Button
@@ -716,11 +691,7 @@ export const SettingsPage: React.FC = () => {
                 size="sm"
                 className="bg-danger-600 hover:bg-danger-700 text-white"
               >
-                {accountActionMutation.isPending
-                  ? "Processing..."
-                  : confirmModal === "deactivate"
-                    ? "Confirm Deactivation"
-                    : "Confirm Permanent Deletion"}
+                {accountActionMutation.isPending ? "Processing..." : "Confirm Deactivation"}
               </Button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const AccountActionSchema = z.object({
-  action: z.enum(["deactivate", "delete"]),
+  action: z.enum(["deactivate"]),
 });
 
 export const PasswordChangeSchema = z.object({

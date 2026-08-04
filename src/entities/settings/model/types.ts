@@ -39,5 +39,5 @@ export interface ChangePasswordPayload {
 }
 
 export interface AccountActionPayload {
-  action: "deactivate" | "delete";
+  action: "deactivate";
 }

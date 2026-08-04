@@ -14,23 +14,21 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     const body = await readJsonObject(context.request);
     const parsed = AccountActionSchema.safeParse(body);
     if (!parsed.success) {
-      return jsonError("Invalid action. Must be 'deactivate' or 'delete'", 400, {
+      return jsonError("Invalid action. Must be 'deactivate'", 400, {
         code: "VALIDATION_ERROR",
         requestId,
         details: parsed.error.issues,
       });
     }
-    const { action } = parsed.data;
 
     const supabase = createServiceSupabase(context.env);
 
-    const newStatus = action === "deactivate" ? "inactive" : "deleted";
     const now = new Date().toISOString();
 
     const { error } = await supabase
       .from("users")
       .update({
-        status: newStatus,
+        status: "inactive",
         updated_at: now,
       })
       .eq("id", userId);
@@ -39,15 +37,12 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       throw error;
     }
 
-    apiLogger.info(`Account ${action} executed for user`, { userId, action, status: newStatus });
+    apiLogger.info(`Account deactivated for user`, { userId, status: "inactive" });
 
     return jsonResponse({
       success: true,
-      message:
-        action === "deactivate"
-          ? "Account has been deactivated successfully."
-          : "Account has been permanently deleted.",
-      status: newStatus,
+      message: "Account has been deactivated successfully.",
+      status: "inactive",
     });
   } catch (error) {
     if (error instanceof AuthError) {

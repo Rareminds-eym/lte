@@ -168,21 +168,6 @@ describe("SettingsPage", () => {
     expect(mockAccountMutate).toHaveBeenCalledWith({ action: "deactivate" }, expect.any(Object));
   });
 
-  it("opens confirm modal and executes account deletion", async () => {
-    const user = userEvent.setup();
-    render(<SettingsPage />);
-
-    const deleteButton = screen.getByRole("button", { name: "Delete Account" });
-    await user.click(deleteButton);
-
-    expect(screen.getByText("Delete Account Permanently?")).toBeInTheDocument();
-
-    const confirmButton = screen.getByRole("button", { name: "Confirm Permanent Deletion" });
-    await user.click(confirmButton);
-
-    expect(mockAccountMutate).toHaveBeenCalledWith({ action: "delete" }, expect.any(Object));
-  });
-
   it("shows toast and closes modal when account action succeeds", async () => {
     const user = userEvent.setup();
     render(<SettingsPage />);
