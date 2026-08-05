@@ -24,8 +24,6 @@ CREATE TABLE IF NOT EXISTS public.learning_paths (
 
     status varchar NOT NULL DEFAULT 'not_started',
 
-    is_active boolean NOT NULL DEFAULT true,
-
     version_no integer NOT NULL DEFAULT 1,
 
     is_latest boolean NOT NULL DEFAULT true,
@@ -124,9 +122,6 @@ CREATE TABLE IF NOT EXISTS public.learning_paths (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_learning_paths_user_track_role
     ON public.learning_paths (user_id, learning_track_id, role_id);
-
-CREATE INDEX IF NOT EXISTS idx_learning_paths_user_is_active
-    ON public.learning_paths (user_id, is_active);
 
 CREATE INDEX IF NOT EXISTS idx_learning_paths_status
     ON public.learning_paths (status);

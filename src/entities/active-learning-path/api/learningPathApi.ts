@@ -1,33 +1,42 @@
 import { z } from "zod";
 import { ApiError, apiFetch } from "@/shared/api";
-import type { ActiveLearningPath } from "@/shared/types/auth";
+import type { ActiveTrackDetail } from "@/shared/types/auth";
+
+const ActiveTrackRoleSchema = z.object({
+  roleId: z.string(),
+  roleName: z.string(),
+  learningPathId: z.string(),
+});
+
+const ActiveTrackDetailSchema = z.object({
+  learningTrackId: z.string(),
+  track: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? ""),
+  fit: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? ""),
+  matchScore: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? 0),
+  whyItFits: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? ""),
+  roles: z.array(ActiveTrackRoleSchema),
+});
 
 const ActiveLearningPathResponseSchema = z.object({
   success: z.literal(true),
   needsAssessment: z.boolean().optional(),
-  data: z
-    .object({
-      learningPathId: z.string(),
-      learningTrackId: z.string(),
-      roleId: z.string(),
-      track: z
-        .string()
-        .nullish()
-        .transform((v) => v ?? ""),
-      fit: z
-        .string()
-        .nullish()
-        .transform((v) => v ?? ""),
-      matchScore: z
-        .number()
-        .nullish()
-        .transform((v) => v ?? 0),
-    })
-    .nullable(),
+  data: ActiveTrackDetailSchema.nullable(),
 });
 
 export interface ActiveLearningPathResult {
-  data: ActiveLearningPath | null;
+  data: ActiveTrackDetail | null;
   needsAssessment: boolean;
 }
 
@@ -45,4 +54,11 @@ export async function fetchActiveLearningPath(): Promise<ActiveLearningPathResul
     data: parsed.data.data,
     needsAssessment: parsed.data.needsAssessment ?? false,
   };
+}
+
+export async function activateLearningTrack(trackId: string): Promise<void> {
+  await apiFetch("/api/v1/learning-paths/active-track", {
+    method: "PATCH",
+    body: JSON.stringify({ trackId }),
+  });
 }

@@ -118,7 +118,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-semibold tracking-wider text-brand-600 uppercase bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-100/60">
-                {course.category}
+                {course.roleName || course.category}
               </span>
               <span className="text-[11px] font-semibold text-content-secondary uppercase bg-surface-muted px-2.5 py-0.5 rounded-full">
                 {course.level}
@@ -187,7 +187,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
       <div className="flex flex-col flex-1 p-5 gap-2.5">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-semibold tracking-wide text-brand-600 uppercase">
-            {course.category}
+            {course.roleName || course.category}
           </span>
           <span className="text-[11px] font-medium text-content-muted uppercase">
             {course.level}

@@ -30,16 +30,23 @@ export interface LogoutResponse {
   success: boolean;
 }
 
-export interface ActiveLearningPath {
-  learningPathId: string;
-  learningTrackId: string;
+export interface ActiveTrackRole {
   roleId: string;
+  roleName: string;
+  learningPathId: string;
+}
+
+export interface ActiveTrackDetail {
+  learningTrackId: string;
   track: string;
   fit: string;
   matchScore: number;
+  whyItFits?: string;
+  roles: ActiveTrackRole[];
 }
 
 export interface ActiveLearningPathResponse {
   success: boolean;
-  data: ActiveLearningPath | null;
+  data: ActiveTrackDetail | null;
+  needsAssessment?: boolean;
 }

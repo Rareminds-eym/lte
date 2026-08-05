@@ -26,6 +26,8 @@ const mockCourses = vi.hoisted(() => [
     durationHours: 45,
     xp: 500,
     priority: "Core",
+    roleId: "role-backend",
+    roleName: "Backend Engineer",
   },
   {
     id: "2",
@@ -45,6 +47,8 @@ const mockCourses = vi.hoisted(() => [
     durationHours: 40,
     xp: 300,
     priority: "Important",
+    roleId: "role-backend",
+    roleName: "Backend Engineer",
   },
   {
     id: "3",
@@ -64,6 +68,8 @@ const mockCourses = vi.hoisted(() => [
     durationHours: 25,
     xp: 350,
     priority: "Supporting",
+    roleId: "role-backend",
+    roleName: "Backend Engineer",
   },
   {
     id: "4",
@@ -83,6 +89,8 @@ const mockCourses = vi.hoisted(() => [
     durationHours: 45,
     xp: 320,
     priority: "Core",
+    roleId: "role-frontend",
+    roleName: "Frontend Engineer",
   },
   {
     id: "5",
@@ -102,6 +110,8 @@ const mockCourses = vi.hoisted(() => [
     durationHours: 45,
     xp: 500,
     priority: "Core",
+    roleId: "role-frontend",
+    roleName: "Frontend Engineer",
   },
   {
     id: "6",
@@ -121,6 +131,8 @@ const mockCourses = vi.hoisted(() => [
     durationHours: 45,
     xp: 300,
     priority: "Core",
+    roleId: "role-frontend",
+    roleName: "Frontend Engineer",
   },
   {
     id: "7",
@@ -140,6 +152,8 @@ const mockCourses = vi.hoisted(() => [
     durationHours: 40,
     xp: 550,
     priority: "Important",
+    roleId: "role-qa",
+    roleName: "QA Engineer",
   },
   {
     id: "8",
@@ -159,6 +173,8 @@ const mockCourses = vi.hoisted(() => [
     durationHours: 25,
     xp: 350,
     priority: "Supporting",
+    roleId: "role-qa",
+    roleName: "QA Engineer",
   },
 ]);
 
@@ -173,6 +189,10 @@ vi.mock("@/entities/course", async (importOriginal) => {
     }),
   };
 });
+
+vi.mock("@/features/initialize-learning-path", () => ({
+  LearningPathInitializer: () => null,
+}));
 
 describe("Courses", () => {
   const renderCourses = () =>
@@ -198,14 +218,14 @@ describe("Courses", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders priority tabs", () => {
+  it("renders role tabs", () => {
     renderCourses();
     const tabs = screen.getAllByRole("tab");
     expect(tabs).toHaveLength(4);
-    expect(tabs[0]).toHaveTextContent("All");
-    expect(tabs[1]).toHaveTextContent("Core");
-    expect(tabs[2]).toHaveTextContent("Important");
-    expect(tabs[3]).toHaveTextContent("Supporting");
+    expect(tabs[0]).toHaveTextContent("All Roles");
+    expect(tabs[1]).toHaveTextContent("Backend Engineer");
+    expect(tabs[2]).toHaveTextContent("Frontend Engineer");
+    expect(tabs[3]).toHaveTextContent("QA Engineer");
   });
 
   it("shows 6 course cards on page 1 (PAGE_SIZE)", () => {
@@ -221,26 +241,26 @@ describe("Courses", () => {
     expect(cards.length).toBe(2);
   });
 
-  it("shows 4 Core courses after filtering", () => {
+  it("shows 3 Backend Engineer courses after filtering", () => {
     renderCourses();
     fireEvent.click(getRequiredTab(1));
     const cards = screen.getAllByTestId("course-card");
-    expect(cards.length).toBe(4);
+    expect(cards.length).toBe(3);
   });
 
-  it("shows 2 Supporting courses after filtering", () => {
+  it("shows 3 Frontend Engineer courses after filtering", () => {
     renderCourses();
-    fireEvent.click(getRequiredTab(3));
+    fireEvent.click(getRequiredTab(2));
     const cards = screen.getAllByTestId("course-card");
-    expect(cards.length).toBe(2);
+    expect(cards.length).toBe(3);
   });
 
-  it("resets to page 1 when filtering by priority", () => {
+  it("resets to page 1 when filtering by role", () => {
     renderCourses();
     fireEvent.click(screen.getByLabelText("Next page"));
     expect(screen.getAllByTestId("course-card").length).toBe(2);
     fireEvent.click(getRequiredTab(1));
-    expect(screen.getAllByTestId("course-card").length).toBe(4);
+    expect(screen.getAllByTestId("course-card").length).toBe(3);
   });
 
   it("updates course count text when filtering", () => {

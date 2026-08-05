@@ -24,9 +24,11 @@ CREATE TABLE IF NOT EXISTS public.learning_tracks (
     duration varchar NOT NULL,
     why_it_fits text NOT NULL,
 
+    is_active boolean NOT NULL DEFAULT false,
+
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-
+    
     CONSTRAINT fk_learning_tracks_user
         FOREIGN KEY (user_id)
         REFERENCES public.users(id)
@@ -59,6 +61,10 @@ CREATE INDEX IF NOT EXISTS idx_learning_tracks_assessment_id
 
 CREATE INDEX IF NOT EXISTS idx_learning_tracks_user_fit
     ON public.learning_tracks (user_id, fit);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_learning_tracks_one_active_per_user
+    ON public.learning_tracks (user_id)
+    WHERE (is_active = true);
 
 
 -- ============================================================================

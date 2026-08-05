@@ -77,6 +77,29 @@ describe("Skill Gateway client", () => {
     );
   });
 
+  it("should fall back to HTTP status code when gateway error payload lacks a code/message", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      status: 502,
+      json: async () => ({ ok: false }),
+    } as unknown as Response);
+
+    await expect(callSkill(env, "ping", {}, userId)).rejects.toThrow("Skill gateway returned 502");
+    await expect(callSkill(env, "ping", {}, userId)).rejects.toMatchObject({
+      code: "HTTP_502",
+    });
+  });
+
+  it("should throw GatewayCallError when gateway returns malformed JSON", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      status: 200,
+      json: async () => {
+        throw new SyntaxError("Unexpected token");
+      },
+    } as unknown as Response);
+
+    await expect(callSkill(env, "ping", {}, userId)).rejects.toThrow("Skill gateway returned 200");
+  });
+
   it("should throw GatewayCallError if fetch throws network error", async () => {
     vi.mocked(globalThis.fetch).mockRejectedValue(new Error("Network connection failure"));
 

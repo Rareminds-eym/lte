@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Course } from "@/entities/course";
-import { fetchUserCourses } from "@/entities/course/api/courseApi";
+import { fetchCapabilityLevels, fetchUserCourses } from "@/entities/course/api/courseApi";
 import { registerTokenGetter } from "@/shared/api";
 
 function mockFetch(status: number, body: unknown): void {
@@ -92,6 +92,52 @@ describe("courseApi", () => {
     it("throws on failed success flag", async () => {
       mockFetch(200, { success: false });
       await expect(fetchUserCourses()).rejects.toThrow("Invalid response format from server");
+    });
+  });
+
+  describe("fetchCapabilityLevels", () => {
+    const rawLevel = {
+      id: "lvl-1",
+      levelNumber: null,
+      code: null,
+      title: null,
+      description: ["Step 1", "Step 2"],
+      deliverables: null,
+      durationMinutes: null,
+      difficulty: null,
+      status: null,
+    };
+
+    it("fetches and parses capability levels correctly with transformations", async () => {
+      mockFetch(200, {
+        success: true,
+        capability: { id: "cap-1", code: "TS-101", name: "TS" },
+        levels: [rawLevel],
+      });
+
+      const levels = await fetchCapabilityLevels("TS-101");
+      expect(levels).toHaveLength(1);
+      expect(levels[0]).toEqual({
+        id: "lvl-1",
+        levelNumber: 1,
+        code: "",
+        title: "",
+        description: "Step 1 Step 2",
+        deliverables: [],
+        durationMinutes: 0,
+        difficulty: "intermediate",
+        status: "published",
+      });
+    });
+
+    it("throws ApiError on failed parse format", async () => {
+      mockFetch(200, {
+        success: false,
+      });
+
+      await expect(fetchCapabilityLevels("TS-101")).rejects.toThrow(
+        "Invalid response format from server",
+      );
     });
   });
 });

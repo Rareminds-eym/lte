@@ -3,16 +3,14 @@ import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import {
-  checkRoleExists,
-  deactivateOtherPaths,
-  syncUserCapabilities,
-  upsertLearningPath,
-  upsertLearningTrack,
-} from "./queries";
-import { InitializeLearningPathSchema } from "./schemas";
+import { z } from "zod";
+import { activateLearningTrack } from "./queries";
 
-export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
+const ActivateTrackSchema = z.object({
+  trackId: z.string().uuid("trackId must be a valid UUID"),
+});
+
+export async function onRequestPatch(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
   try {
     const user = await requireAuth(context.request, context.env);
@@ -29,7 +27,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       });
     }
 
-    const parsedBody = InitializeLearningPathSchema.safeParse(rawBody);
+    const parsedBody = ActivateTrackSchema.safeParse(rawBody);
     if (!parsedBody.success) {
       return jsonError(parsedBody.error.issues[0]?.message ?? "Invalid request body", 400, {
         code: "VALIDATION_ERROR",
@@ -37,48 +35,14 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       });
     }
 
-    const { fit, track, matchScore, whyItFits, attemptId, roleId, duration } = parsedBody.data;
-
+    const { trackId } = parsedBody.data;
     const supabase = createServiceSupabase(context.env);
 
-    const roleExists = await checkRoleExists(supabase, roleId);
-    if (!roleExists) {
-      return jsonError(`Target role context '${roleId}' does not exist in local database.`, 400, {
-        code: "ROLE_NOT_FOUND",
-        requestId,
-      });
-    }
-
-    const trackId = await upsertLearningTrack(supabase, {
-      userId,
-      attemptId,
-      fit,
-      track,
-      matchScore,
-      whyItFits,
-      duration,
-    });
-
-    await deactivateOtherPaths(supabase, userId);
-
-    const pathId = await upsertLearningPath(supabase, {
-      userId,
-      trackId,
-      roleId,
-    });
-
-    // Synchronize user capabilities for this new learning path
-    await syncUserCapabilities(supabase, {
-      userId,
-      learningPathId: pathId,
-      roleId,
-    });
+    await activateLearningTrack(supabase, userId, trackId);
 
     return jsonResponse(
       {
         success: true,
-        learningTrackId: trackId,
-        learningPathId: pathId,
       },
       { status: 200 },
     );
@@ -90,7 +54,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       });
     }
 
-    apiLogger.error("Unhandled error", error, { requestId });
+    apiLogger.error("Unhandled error in active-track PATCH", error, { requestId });
     const message = error instanceof Error ? error.message : "Internal server error";
     return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
   }

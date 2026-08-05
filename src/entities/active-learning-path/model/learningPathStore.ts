@@ -1,13 +1,13 @@
 import { create } from "zustand";
 import { getLogger } from "@/shared";
-import type { ActiveLearningPath } from "@/shared/types/auth";
+import type { ActiveTrackDetail } from "@/shared/types/auth";
 import { fetchActiveLearningPath } from "../api/learningPathApi";
 
 const logger = getLogger("learningPathStore");
 
 interface LearningPathState {
   userId: string | null;
-  activeLearningPath: ActiveLearningPath | null;
+  activeTrack: ActiveTrackDetail | null;
   activeLearningPathLoading: boolean;
   needsAssessment: boolean;
   error: string | null;
@@ -17,7 +17,7 @@ interface LearningPathState {
 
 export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   userId: null,
-  activeLearningPath: null,
+  activeTrack: null,
   activeLearningPathLoading: false,
   needsAssessment: false,
   error: null,
@@ -32,7 +32,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         return;
       }
       set({
-        activeLearningPath: result.data,
+        activeTrack: result.data,
         needsAssessment: result.needsAssessment,
         activeLearningPathLoading: false,
       });
@@ -54,7 +54,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         error instanceof Error ? error : new Error(message),
       );
       set({
-        activeLearningPath: null,
+        activeTrack: null,
         activeLearningPathLoading: false,
         needsAssessment: false,
         error: message,
@@ -66,7 +66,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     logger.info("clearActiveLearningPath");
     set({
       userId: null,
-      activeLearningPath: null,
+      activeTrack: null,
       activeLearningPathLoading: false,
       needsAssessment: false,
       error: null,

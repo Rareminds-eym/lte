@@ -18,14 +18,14 @@ import { fetchCapabilityLevels } from "../api/courseApi";
 export const useCapabilityLevels = (capabilityCode: string) => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const accessToken = useAuthStore((s) => s.accessToken);
-  const activeLearningPath = useLearningPathStore((s) => s.activeLearningPath);
+  const activeTrack = useLearningPathStore((s) => s.activeTrack);
   const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
 
-  // Wait for auth + active learning path before firing the levels query.
+  // Wait for auth + active learning track before firing the levels query.
   // This avoids the race condition where levels are fetched before the
   // learning path is initialised (resulting in a 404 that can't be retried).
   const hasAuth = isAuthenticated || Boolean(accessToken);
-  const learningPathReady = Boolean(activeLearningPath) && !activeLearningPathLoading;
+  const learningPathReady = Boolean(activeTrack) && !activeLearningPathLoading;
 
   return useQuery({
     queryKey: ["capabilityLevels", capabilityCode],

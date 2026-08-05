@@ -89,44 +89,27 @@ describe("LearningPathInitializer Feature", () => {
   describe("initializeLearningPathSchema (Validation)", () => {
     it("validates correct payloads", () => {
       const payload = {
-        fit: "High",
-        track: "Frontend",
-        matchScore: "85",
-        whyItFits: "Good match",
-        attemptId: "777b7ccb-ca18-4770-bc2f-6893608cc738",
-        roleId: "888b7ccb-ca18-4770-bc2f-6893608cc739",
+        trackId: "11111111-1111-4111-a111-111111111111",
       };
 
       const result = initializeLearningPathSchema.safeParse(payload);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.matchScore).toBe(85);
+        expect(result.data.trackId).toBe("11111111-1111-4111-a111-111111111111");
       }
     });
 
-    it("fails on invalid match score range", () => {
+    it("fails on non-UUID trackId", () => {
       const payload = {
-        fit: "High",
-        track: "Frontend",
-        matchScore: "150",
-        whyItFits: "Too high",
-        attemptId: "777b7ccb-ca18-4770-bc2f-6893608cc738",
-        roleId: "888b7ccb-ca18-4770-bc2f-6893608cc739",
+        trackId: "not-a-uuid",
       };
 
       const result = initializeLearningPathSchema.safeParse(payload);
       expect(result.success).toBe(false);
     });
 
-    it("fails on non-UUID attemptId/roleId", () => {
-      const payload = {
-        fit: "High",
-        track: "Frontend",
-        matchScore: "85",
-        whyItFits: "Invalid UUIDs",
-        attemptId: "not-a-uuid",
-        roleId: "not-a-uuid",
-      };
+    it("fails when trackId is missing", () => {
+      const payload = {};
 
       const result = initializeLearningPathSchema.safeParse(payload);
       expect(result.success).toBe(false);
@@ -149,9 +132,7 @@ describe("LearningPathInitializer Feature", () => {
     });
 
     it("redirects with validation error when query parameters are invalid", async () => {
-      renderInitializer(
-        "fit=High&track=Frontend&matchScore=invalid_score&attemptId=not-uuid&roleId=not-uuid",
-      );
+      renderInitializer("trackId=invalid-uuid");
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith(
@@ -173,27 +154,15 @@ describe("LearningPathInitializer Feature", () => {
         isPending: true,
       });
 
-      const params = [
-        "fit=High",
-        "track=Frontend",
-        "matchScore=92",
-        "attemptId=777b7ccb-ca18-4770-bc2f-6893608cc738",
-        "roleId=888b7ccb-ca18-4770-bc2f-6893608cc739",
-      ].join("&");
+      const params = "trackId=777b7ccb-ca18-4770-bc2f-6893608cc738";
 
       renderInitializer(params);
 
-      expect(screen.getByText("Initializing learning path...")).toBeInTheDocument();
+      expect(screen.getByText("Activating learning track...")).toBeInTheDocument();
       expect(mockMutate).toHaveBeenCalledWith(
         {
           payload: {
-            fit: "High",
-            track: "Frontend",
-            matchScore: 92,
-            whyItFits: "",
-            attemptId: "777b7ccb-ca18-4770-bc2f-6893608cc738",
-            roleId: "888b7ccb-ca18-4770-bc2f-6893608cc739",
-            duration: "6 months",
+            trackId: "777b7ccb-ca18-4770-bc2f-6893608cc738",
           },
         },
         expect.any(Object),
@@ -206,13 +175,7 @@ describe("LearningPathInitializer Feature", () => {
         isPending: false,
       });
 
-      const params = [
-        "fit=High",
-        "track=Frontend",
-        "matchScore=92",
-        "attemptId=777b7ccb-ca18-4770-bc2f-6893608cc738",
-        "roleId=888b7ccb-ca18-4770-bc2f-6893608cc739",
-      ].join("&");
+      const params = "trackId=777b7ccb-ca18-4770-bc2f-6893608cc738";
 
       render(
         <MemoryRouter initialEntries={[`/my-courses?${params}`]}>

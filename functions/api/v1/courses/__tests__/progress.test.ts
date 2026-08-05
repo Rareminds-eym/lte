@@ -1,4 +1,4 @@
-import { requireAuth } from "@functions/lib/auth";
+import { AuthError, requireAuth } from "@functions/lib/auth";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -30,7 +30,7 @@ interface MockQueryChain {
   single: () => Promise<{ data: unknown; error: unknown }>;
   order: (col: string, options?: unknown) => MockQueryChain;
   toPromise?: () => Promise<{ data: unknown; error: unknown }>;
-  then?: typeof Promise.prototype.then;
+  then?: (resolve: (value: unknown) => unknown) => Promise<unknown>;
 }
 
 function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): MockQueryChain {
@@ -47,6 +47,10 @@ function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): Mo
     order: vi.fn().mockImplementation(() => chain),
     toPromise() {
       return Promise.resolve({ data: resolveVal, error: errorVal });
+    },
+    // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
+    then(resolve) {
+      return Promise.resolve({ data: resolveVal, error: errorVal }).then(resolve);
     },
   };
   return chain as unknown as MockQueryChain;
@@ -72,8 +76,11 @@ describe("Progress API Endpoints", () => {
 
       const mockSupabase = {
         from: vi.fn().mockImplementation((table: string) => {
+          if (table === "learning_tracks") {
+            return createMockQueryChain({ id: "track-123" });
+          }
           if (table === "learning_paths") {
-            return createMockQueryChain({ id: "path-123", role_id: "role-123" });
+            return createMockQueryChain([{ id: "path-123", role_id: "role-123" }]);
           }
           if (table === "levels") {
             return createMockQueryChain({
@@ -90,11 +97,16 @@ describe("Progress API Endpoints", () => {
             return chain;
           }
           if (table === "role_capability_sequence") {
-            return createMockQueryChain({
-              id: "seq-123",
-              required_level: "L3",
-              capability_priority: "core",
+            const chain = createMockQueryChain([{ role_id: "role-123" }]);
+            chain.maybeSingle = vi.fn().mockResolvedValue({
+              data: {
+                id: "seq-123",
+                required_level: "L3",
+                capability_priority: "core",
+              },
+              error: null,
             });
+            return chain;
           }
           if (table === "user_capabilities") {
             return createMockQueryChain({ current_level: 1 });
@@ -134,8 +146,11 @@ describe("Progress API Endpoints", () => {
 
       const mockSupabase = {
         from: vi.fn().mockImplementation((table: string) => {
+          if (table === "learning_tracks") {
+            return createMockQueryChain({ id: "track-123" });
+          }
           if (table === "learning_paths") {
-            return createMockQueryChain({ id: "path-123", role_id: "role-123" });
+            return createMockQueryChain([{ id: "path-123", role_id: "role-123" }]);
           }
           if (table === "levels") {
             return createMockQueryChain({
@@ -152,11 +167,16 @@ describe("Progress API Endpoints", () => {
             return chain;
           }
           if (table === "role_capability_sequence") {
-            return createMockQueryChain({
-              id: "seq-123",
-              required_level: "L3",
-              capability_priority: "core",
+            const chain = createMockQueryChain([{ role_id: "role-123" }]);
+            chain.maybeSingle = vi.fn().mockResolvedValue({
+              data: {
+                id: "seq-123",
+                required_level: "L3",
+                capability_priority: "core",
+              },
+              error: null,
             });
+            return chain;
           }
           if (table === "user_capabilities") {
             const chain = createMockQueryChain(null);
@@ -194,6 +214,80 @@ describe("Progress API Endpoints", () => {
 
       expect(mockSupabase.from).toHaveBeenCalledWith("user_capabilities");
     });
+
+    it("should return 400 when levelId route parameter is invalid", async () => {
+      vi.mocked(requireAuth).mockResolvedValueOnce(
+        mockUser as unknown as Awaited<ReturnType<typeof requireAuth>>,
+      );
+
+      const request = new Request("http://localhost/api/v1/courses//progress", {
+        method: "POST",
+      });
+
+      const context = {
+        request,
+        env: {} as LteEnv,
+        params: { levelId: "" },
+      } as unknown as PagesContext<LteEnv>;
+
+      const response = await onLevelProgressPost(context);
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("should return 403 Forbidden when requireAuth throws a FORBIDDEN error", async () => {
+      vi.mocked(requireAuth).mockRejectedValueOnce(new AuthError("Forbidden action", "FORBIDDEN"));
+
+      const request = new Request("http://localhost/api/v1/courses/level-123/progress", {
+        method: "POST",
+      });
+
+      const context = {
+        request,
+        env: {} as LteEnv,
+        params: { levelId: "level-123" },
+      } as unknown as PagesContext<LteEnv>;
+
+      const response = await onLevelProgressPost(context);
+      expect(response.status).toBe(403);
+      const body = await response.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("FORBIDDEN");
+    });
+
+    it("should return 500 when upsertLevelProgress throws database error", async () => {
+      vi.mocked(requireAuth).mockResolvedValueOnce(
+        mockUser as unknown as Awaited<ReturnType<typeof requireAuth>>,
+      );
+
+      const mockSupabase = {
+        from: vi.fn().mockImplementation(() => {
+          return createMockQueryChain(null, { message: "DB Connection timeout" });
+        }),
+      };
+
+      vi.mocked(createServiceSupabase).mockReturnValueOnce(
+        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
+      );
+
+      const request = new Request("http://localhost/api/v1/courses/level-123/progress", {
+        method: "POST",
+      });
+
+      const context = {
+        request,
+        env: {} as LteEnv,
+        params: { levelId: "level-123" },
+      } as unknown as PagesContext<LteEnv>;
+
+      const response = await onLevelProgressPost(context);
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("SERVER_ERROR");
+    });
   });
 
   describe("POST /api/v1/courses/:levelId/modules/:moduleNo/progress", () => {
@@ -204,8 +298,11 @@ describe("Progress API Endpoints", () => {
 
       const mockSupabase = {
         from: vi.fn().mockImplementation((table: string) => {
+          if (table === "learning_tracks") {
+            return createMockQueryChain({ id: "track-123" });
+          }
           if (table === "learning_paths") {
-            return createMockQueryChain({ id: "path-123", role_id: "role-123" });
+            return createMockQueryChain([{ id: "path-123", role_id: "role-123" }]);
           }
           if (table === "levels") {
             return createMockQueryChain({
@@ -216,6 +313,18 @@ describe("Progress API Endpoints", () => {
           }
           if (table === "user_capability_level_progress") {
             return createMockQueryChain({ id: "progress-123" });
+          }
+          if (table === "role_capability_sequence") {
+            const chain = createMockQueryChain([{ role_id: "role-123" }]);
+            chain.maybeSingle = vi.fn().mockResolvedValue({
+              data: {
+                id: "seq-123",
+                required_level: "L3",
+                capability_priority: "core",
+              },
+              error: null,
+            });
+            return chain;
           }
           if (table === "modules") {
             return createMockQueryChain({ id: "module-123" });
@@ -254,6 +363,63 @@ describe("Progress API Endpoints", () => {
       expect(body.success).toBe(true);
       expect(body.moduleProgressId).toBe("mod-progress-123");
     });
+
+    it("should return 400 when route parameters are invalid", async () => {
+      vi.mocked(requireAuth).mockResolvedValueOnce(
+        mockUser as unknown as Awaited<ReturnType<typeof requireAuth>>,
+      );
+
+      const request = new Request(
+        "http://localhost/api/v1/courses/level-123/modules/invalid-no/progress",
+        {
+          method: "POST",
+        },
+      );
+
+      const context = {
+        request,
+        env: {} as LteEnv,
+        params: { levelId: "level-123", moduleNo: "invalid-no" },
+      } as unknown as PagesContext<LteEnv>;
+
+      const response = await onModuleProgressPost(context);
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("should return 500 when upsertModuleProgress throws database error", async () => {
+      vi.mocked(requireAuth).mockResolvedValueOnce(
+        mockUser as unknown as Awaited<ReturnType<typeof requireAuth>>,
+      );
+
+      const mockSupabase = {
+        from: vi.fn().mockImplementation(() => {
+          return createMockQueryChain(null, { message: "DB Connection timeout" });
+        }),
+      };
+
+      vi.mocked(createServiceSupabase).mockReturnValueOnce(
+        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
+      );
+
+      const request = new Request("http://localhost/api/v1/courses/level-123/modules/1/progress", {
+        method: "POST",
+      });
+
+      const context = {
+        request,
+        env: {} as LteEnv,
+        params: { levelId: "level-123", moduleNo: "1" },
+      } as unknown as PagesContext<LteEnv>;
+
+      const response = await onModuleProgressPost(context);
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("SERVER_ERROR");
+    });
   });
 
   describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () => {
@@ -274,8 +440,11 @@ describe("Progress API Endpoints", () => {
               stage_order: 1,
             });
           }
+          if (table === "learning_tracks") {
+            return createMockQueryChain({ id: "track-123" });
+          }
           if (table === "learning_paths") {
-            return createMockQueryChain({ id: "path-123", role_id: "role-123" });
+            return createMockQueryChain([{ id: "path-123", role_id: "role-123" }]);
           }
           if (table === "levels") {
             return createMockQueryChain({
@@ -286,6 +455,18 @@ describe("Progress API Endpoints", () => {
           }
           if (table === "user_capability_level_progress") {
             return createMockQueryChain({ id: "progress-123" });
+          }
+          if (table === "role_capability_sequence") {
+            const chain = createMockQueryChain([{ role_id: "role-123" }]);
+            chain.maybeSingle = vi.fn().mockResolvedValue({
+              data: {
+                id: "seq-123",
+                required_level: "L3",
+                capability_priority: "core",
+              },
+              error: null,
+            });
+            return chain;
           }
           if (table === "modules") {
             return createMockQueryChain({ id: "module-123" });
@@ -298,9 +479,24 @@ describe("Progress API Endpoints", () => {
             });
           }
           if (table === "user_stage_progress") {
-            const chain = createMockQueryChain({
-              id: "stage-progress-123",
-              user_module_progress_id: "mod-progress-123",
+            const chain = createMockQueryChain([
+              {
+                id: "stage-progress-123",
+                user_module_progress_id: "mod-progress-123",
+                stage_name: "engage",
+              },
+            ]);
+            chain.maybeSingle = vi.fn().mockResolvedValue({
+              data: null,
+              error: null,
+            });
+            chain.single = vi.fn().mockResolvedValue({
+              data: {
+                id: "stage-progress-123",
+                user_module_progress_id: "mod-progress-123",
+                stage_name: "engage",
+              },
+              error: null,
             });
             chain.insert = vi
               .fn()
@@ -341,6 +537,103 @@ describe("Progress API Endpoints", () => {
       expect(body.success).toBe(true);
       expect(body.stageProgressId).toBe("stage-progress-123");
       expect(body.stagesCompleted).toBe(2);
+    });
+
+    it("should return 409 Conflict when stage sequence is violated", async () => {
+      vi.mocked(requireAuth).mockResolvedValueOnce(
+        mockUser as unknown as Awaited<ReturnType<typeof requireAuth>>,
+      );
+
+      const mockSupabase = {
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === "e_content") {
+            return createMockQueryChain({ id: "econtent-123", modules_content_id: "mc-123" });
+          }
+          if (table === "modules_content") {
+            return createMockQueryChain({
+              module_id: "module-123",
+              stage_name: "express",
+              stage_order: 4,
+            });
+          }
+          if (table === "learning_tracks") {
+            return createMockQueryChain({ id: "track-123" });
+          }
+          if (table === "learning_paths") {
+            return createMockQueryChain([{ id: "path-123", role_id: "role-123" }]);
+          }
+          if (table === "levels") {
+            return createMockQueryChain({
+              id: "level-123",
+              level_code: "RCP-L1",
+              capability_id: "cap-123",
+            });
+          }
+          if (table === "user_capability_level_progress") {
+            return createMockQueryChain({ id: "progress-123" });
+          }
+          if (table === "role_capability_sequence") {
+            const chain = createMockQueryChain([{ role_id: "role-123" }]);
+            chain.maybeSingle = vi.fn().mockResolvedValue({
+              data: {
+                id: "seq-123",
+                required_level: "L3",
+                capability_priority: "core",
+              },
+              error: null,
+            });
+            return chain;
+          }
+          if (table === "modules") {
+            return createMockQueryChain({ id: "module-123" });
+          }
+          if (table === "user_module_progress") {
+            return createMockQueryChain({
+              id: "mod-progress-123",
+              stages_completed: 0,
+              completion_percentage: 0,
+            });
+          }
+          if (table === "user_stage_progress") {
+            const chain = createMockQueryChain([]);
+            chain.maybeSingle = vi.fn().mockResolvedValue({
+              data: null,
+              error: null,
+            });
+            return chain;
+          }
+          return createMockQueryChain(null);
+        }),
+      };
+
+      vi.mocked(createServiceSupabase).mockReturnValueOnce(
+        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
+      );
+
+      const request = new Request(
+        "http://localhost/api/v1/courses/level-123/modules/1/stages/progress",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eContentId: "00000000-0000-0000-0000-000000000000",
+            stageName: "express",
+            status: "completed",
+          }),
+        },
+      );
+
+      const context = {
+        request,
+        env: {} as LteEnv,
+        params: { levelId: "level-123", moduleNo: "1" },
+      } as unknown as PagesContext<LteEnv>;
+
+      const response = await onStageProgressPost(context);
+      expect(response.status).toBe(409);
+      const body = await response.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("STAGE_SEQUENCE_LOCKED");
     });
   });
 });

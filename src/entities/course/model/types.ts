@@ -20,4 +20,6 @@ export interface Course {
   badge?: string;
   priority: string;
   qualified?: boolean;
+  roleId?: string;
+  roleName?: string;
 }

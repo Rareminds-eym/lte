@@ -99,6 +99,7 @@ export default defineConfig({
 				"src/setupTests.ts",
 				"**/*.d.ts",
 				"src/shared/config/env.ts",
+				"src/entities/**/model/types.ts",
 				"src/index.tsx",
 				"**/*.css",
 				"**/*.svg",
