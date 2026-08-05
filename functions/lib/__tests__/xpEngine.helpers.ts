@@ -10,6 +10,7 @@ export const mockSelect = vi.fn();
 export const mockUpdate = vi.fn();
 export const mockInsert = vi.fn();
 export const mockOrder = vi.fn();
+export const mockGte = vi.fn();
 
 interface XpMockChain {
   select: (...args: unknown[]) => unknown;
@@ -22,6 +23,7 @@ interface XpMockChain {
   maybeSingle: (...args: unknown[]) => unknown;
   single: (...args: unknown[]) => unknown;
   order: (...args: unknown[]) => unknown;
+  gte?: (...args: unknown[]) => unknown;
   then?: (resolve: (val: unknown) => unknown) => Promise<unknown>;
 }
 
@@ -37,6 +39,7 @@ export function createMockQueryChain(resolveVal: unknown, errorVal: unknown = nu
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     order: vi.fn().mockImplementation(() => chain),
+    gte: vi.fn().mockImplementation(() => chain),
     // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
     then: (resolve: (val: unknown) => unknown) =>
       Promise.resolve({ data: resolveVal, error: errorVal }).then(resolve),
@@ -53,6 +56,7 @@ export function createChain(): XpMockChain {
     in: (...args: unknown[]) => mockIn(...args) ?? chain,
     limit: (...args: unknown[]) => mockLimit(...args) ?? chain,
     order: (...args: unknown[]) => mockOrder(...args) ?? chain,
+    gte: (...args: unknown[]) => mockGte(...args) ?? chain,
     single: mockSingle,
     maybeSingle: mockMaybeSingle,
   };

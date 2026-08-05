@@ -1,3 +1,4 @@
+import { apiFetch } from "@/shared/api";
 import type { DashboardData } from "../model/types";
 
 export const MOCK_DASHBOARD_DATA: DashboardData = {
@@ -189,4 +190,37 @@ export const MOCK_DASHBOARD_DATA: DashboardData = {
   },
 };
 
-export const fetchDashboardData = async (): Promise<DashboardData> => MOCK_DASHBOARD_DATA;
+export const fetchDashboardData = async (): Promise<DashboardData> => {
+  try {
+    const now = new Date();
+    const localMonday = new Date(now);
+    localMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    localMonday.setHours(0, 0, 0, 0);
+    const localToday = new Date(now);
+    localToday.setHours(0, 0, 0, 0);
+
+    const { totalXp, xpThisWeek, todayXp } = await apiFetch<{
+      success: boolean;
+      totalXp: number;
+      xpThisWeek: number;
+      todayXp: number;
+    }>(
+      `/api/v1/dashboard/xp?since=${encodeURIComponent(localMonday.toISOString())}&todaySince=${encodeURIComponent(localToday.toISOString())}`,
+    );
+    return {
+      ...MOCK_DASHBOARD_DATA,
+      careerTarget: {
+        ...MOCK_DASHBOARD_DATA.careerTarget,
+        xp: totalXp,
+        xpThisWeek,
+      },
+      priorities: {
+        ...MOCK_DASHBOARD_DATA.priorities,
+        currentXp: todayXp,
+      },
+    };
+  } catch {
+    // ponytail: dashboard is otherwise mock; don't brick the page over one stat
+    return MOCK_DASHBOARD_DATA;
+  }
+};

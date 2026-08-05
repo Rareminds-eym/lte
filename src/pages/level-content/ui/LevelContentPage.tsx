@@ -18,6 +18,7 @@ import {
   useStartModuleProgress,
   useUpdateStageProgress,
 } from "@/entities/course";
+import { DASHBOARD_QUERY_KEY } from "@/entities/dashboard";
 import { XpRewardModal } from "@/features/xp-reward";
 import {
   Button,
@@ -580,6 +581,7 @@ export const LevelContentPage: React.FC = () => {
         },
         {
           onSuccess: (data) => {
+            void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
             const completedStageSetAfterSave = new Set([...completedStageSet, activeStage]);
 
             setOptimisticCompletedStages((currentStages) =>

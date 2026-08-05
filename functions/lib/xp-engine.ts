@@ -322,14 +322,19 @@ export async function completeStage(
     );
     const completionPercentage = Math.round((nextStagesCompleted / 6) * 100);
 
+    const updatePayload: Record<string, unknown> = {
+      stages_completed: nextStagesCompleted,
+      completion_percentage: completionPercentage,
+      current_stage: stageContent.stage_name,
+      last_activity_at: new Date().toISOString(),
+    };
+    if (nextStagesCompleted >= 6) {
+      updatePayload["module_status"] = "completed";
+    }
+
     const { error: updateError } = await supabase
       .from("user_module_progress")
-      .update({
-        stages_completed: nextStagesCompleted,
-        completion_percentage: completionPercentage,
-        current_stage: stageContent.stage_name,
-        last_activity_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", (progressRecord as NonNullable<typeof progressRecord>).id);
 
     if (updateError) throw updateError;
@@ -871,12 +876,20 @@ export async function calculateReadiness(
 
 /**
  * Calculates the total XP for a user from the xp_events table.
+ * Optionally filters to events created at or after `since`.
  */
-export async function getUserTotalXp(supabase: SupabaseClient, userId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from("xp_events")
-    .select("xp_amount")
-    .eq("user_id", userId);
+export async function getUserTotalXp(
+  supabase: SupabaseClient,
+  userId: string,
+  since?: Date,
+): Promise<number> {
+  let query = supabase.from("xp_events").select("xp_amount").eq("user_id", userId);
+
+  if (since) {
+    query = query.gte("created_at", since.toISOString());
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;

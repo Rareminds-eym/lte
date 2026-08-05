@@ -148,7 +148,7 @@ export async function getLevelWithModules(
         for (const p of progresses) {
           const entry = {
             completionPercentage: p.completion_percentage || 0,
-            isCompleted: p.module_status === "completed",
+            isCompleted: p.module_status === "completed" || p.module_status === "mastered",
             completedStages: [] as string[],
           };
           moduleProgressMap[p.module_id] = entry;

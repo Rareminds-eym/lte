@@ -535,5 +535,28 @@ describe("XP Engine Core logic", () => {
         message: "query failed",
       });
     });
+
+    it("should filter by since and sum only recent XP", async () => {
+      const mockSupabase = createXpMock([{ xp_amount: 5 }, { xp_amount: 15 }]);
+      const since = new Date("2026-08-03T00:00:00.000Z");
+
+      await expect(getUserTotalXp(mockSupabase, "user-1", since)).resolves.toBe(20);
+
+      const chain = (mockSupabase.from as ReturnType<typeof vi.fn>).mock.results[0]?.value as {
+        gte: ReturnType<typeof vi.fn>;
+      };
+      expect(chain.gte).toHaveBeenCalledWith("created_at", since.toISOString());
+    });
+
+    it("should not apply a date filter when since is omitted", async () => {
+      const mockSupabase = createXpMock([{ xp_amount: 5 }]);
+
+      await expect(getUserTotalXp(mockSupabase, "user-1")).resolves.toBe(5);
+
+      const chain = (mockSupabase.from as ReturnType<typeof vi.fn>).mock.results[0]?.value as {
+        gte: ReturnType<typeof vi.fn>;
+      };
+      expect(chain.gte).not.toHaveBeenCalled();
+    });
   });
 });

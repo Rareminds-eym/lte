@@ -122,7 +122,7 @@ describe("getLevelWithModules", () => {
     ];
     const progresses = [
       { id: "mp-1", module_id: "mod-1", completion_percentage: 50, module_status: "completed" },
-      { id: "mp-2", module_id: "mod-2", completion_percentage: null, module_status: "in_progress" },
+      { id: "mp-2", module_id: "mod-2", completion_percentage: null, module_status: "mastered" },
     ];
     const supabase = makeSupabase(
       levelChains({
@@ -142,7 +142,7 @@ describe("getLevelWithModules", () => {
     expect(result?.modules[1]).toMatchObject({
       id: "mod-2",
       progressPercentage: 0,
-      isCompleted: false,
+      isCompleted: true,
       completedStages: [],
     });
   });
