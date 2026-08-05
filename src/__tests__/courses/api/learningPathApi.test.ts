@@ -23,17 +23,23 @@ describe("learningPathApi", () => {
 
   describe("fetchActiveLearningPath", () => {
     it("returns active learning path on success", async () => {
-      const path = {
-        learningPathId: "lp-1",
+      const trackDetail = {
         learningTrackId: "lt-1",
-        roleId: "role-1",
         track: "Frontend",
         fit: "Strong",
         matchScore: 85,
+        whyItFits: "Good match",
+        roles: [
+          {
+            roleId: "role-1",
+            roleName: "Frontend Engineer",
+            learningPathId: "lp-1",
+          },
+        ],
       };
-      mockFetch(200, { success: true, data: path, needsAssessment: false });
+      mockFetch(200, { success: true, data: trackDetail, needsAssessment: false });
       const result = await fetchActiveLearningPath();
-      expect(result).toEqual({ data: path, needsAssessment: false });
+      expect(result).toEqual({ data: trackDetail, needsAssessment: false });
     });
 
     it("returns null when no active path exists", async () => {

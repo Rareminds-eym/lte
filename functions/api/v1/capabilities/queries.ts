@@ -79,38 +79,44 @@ export async function getLevelStatsForCapabilities(
   return { counts, xpSums };
 }
 
-export async function getLevelCountsForCapabilities(
+export async function getUserCapabilitiesForRoles(
   supabase: SupabaseClient,
-  capabilityIds: string[],
-): Promise<Record<string, number>> {
-  const { counts } = await getLevelStatsForCapabilities(supabase, capabilityIds);
-  return counts;
-}
-
-export async function getUserCapabilities(
-  supabase: SupabaseClient,
-  roleId: string,
+  roleIds: string[],
+  rolesInfo: Array<{ roleId: string; roleName: string }>,
 ): Promise<UserCapability[]> {
-  const capabilities = await getCapabilitiesByRoleId(supabase, roleId);
-  if (capabilities.length === 0) return [];
+  if (roleIds.length === 0) return [];
 
-  const capIds = capabilities.map((c) => c.id);
-  const { counts: levelCounts, xpSums } = await getLevelStatsForCapabilities(supabase, capIds);
+  const combinedCapabilities: UserCapability[] = [];
+  const roleNameMap = new Map<string, string>(rolesInfo.map((r) => [r.roleId, r.roleName]));
 
-  return capabilities.map((cap) => ({
-    id: cap.id,
-    name: cap.name,
-    description: cap.description,
-    code: cap.code,
-    level: cap.level,
-    priority: cap.priority ?? "",
-    step: cap.step,
-    totalLevels: levelCounts[cap.id] ?? 0,
-    currentLevel: 0,
-    status: "not_started",
-    progress: 0,
-    xp: xpSums[cap.id] ?? 0,
-  }));
+  for (const roleId of roleIds) {
+    const capabilities = await getCapabilitiesByRoleId(supabase, roleId);
+    if (capabilities.length === 0) continue;
+
+    const capIds = capabilities.map((c) => c.id);
+    const { counts: levelCounts, xpSums } = await getLevelStatsForCapabilities(supabase, capIds);
+    const roleName = roleNameMap.get(roleId) ?? "";
+
+    const userCaps = capabilities.map((cap) => ({
+      id: cap.id,
+      name: cap.name,
+      description: cap.description,
+      code: cap.code,
+      level: cap.level,
+      priority: cap.priority ?? "",
+      step: cap.step,
+      totalLevels: levelCounts[cap.id] ?? 0,
+      currentLevel: 0,
+      status: "not_started",
+      progress: 0,
+      xp: xpSums[cap.id] ?? 0,
+      roleId,
+      roleName,
+    }));
+    combinedCapabilities.push(...userCaps);
+  }
+
+  return combinedCapabilities;
 }
 
 export async function getLevelsForCapability(

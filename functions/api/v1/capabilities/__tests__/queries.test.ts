@@ -1,12 +1,7 @@
 import { apiLogger } from "@functions/lib/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  getCapabilitiesByRoleId,
-  getLevelCountsForCapabilities,
-  getLevelsForCapability,
-  getUserCapabilities,
-} from "../queries";
+import { getCapabilitiesByRoleId, getLevelsForCapability } from "../queries";
 
 interface QueryChain {
   select: ReturnType<typeof vi.fn>;
@@ -133,85 +128,6 @@ describe("capabilities queries", () => {
       await expect(getCapabilitiesByRoleId(supabase, "role-1")).rejects.toThrow(
         "Failed to fetch role capabilities: boom",
       );
-    });
-  });
-
-  describe("getLevelCountsForCapabilities", () => {
-    it("returns {} for an empty capability id list", async () => {
-      await expect(getLevelCountsForCapabilities(supabaseWith({}), [])).resolves.toEqual({});
-    });
-
-    it("counts duplicate capability ids", async () => {
-      const supabase = supabaseWith({
-        levels: {
-          data: [
-            { capability_id: "c1", id: "l1" },
-            { capability_id: "c1", id: "l2" },
-            { capability_id: "c2", id: "l3" },
-          ],
-        },
-      });
-
-      await expect(getLevelCountsForCapabilities(supabase, ["c1", "c2"])).resolves.toEqual({
-        c1: 2,
-        c2: 1,
-      });
-    });
-
-    it("returns {} when levels data is null", async () => {
-      await expect(
-        getLevelCountsForCapabilities(supabaseWith({ levels: { data: null } }), ["c1"]),
-      ).resolves.toEqual({});
-    });
-
-    it("throws when the query errors", async () => {
-      const supabase = supabaseWith({ levels: { error: new Error("boom") } });
-      await expect(getLevelCountsForCapabilities(supabase, ["c1"])).rejects.toThrow(
-        "Failed to fetch level counts: boom",
-      );
-    });
-  });
-
-  describe("getUserCapabilities", () => {
-    it("returns [] when no role capabilities exist", async () => {
-      const supabase = supabaseWith({ role_capability_sequence: { data: [] } });
-      await expect(getUserCapabilities(supabase, "role-1")).resolves.toEqual([]);
-    });
-
-    it("maps capabilities with priority and level-count fallbacks", async () => {
-      const supabase = supabaseWith({
-        role_capability_sequence: {
-          data: [
-            arrayCapabilityRow,
-            {
-              ...objectCapabilityRow,
-              id: "s2",
-              capabilities: [{ id: "c2", code: "C2", name: "Two", description: "Desc2" }],
-            },
-          ],
-        },
-        levels: { data: [{ capability_id: "c1", id: "l1" }] },
-      });
-
-      const result = await getUserCapabilities(supabase, "role-1");
-      expect(result).toMatchObject([
-        {
-          id: "c1",
-          priority: "core",
-          totalLevels: 1,
-          currentLevel: 0,
-          status: "not_started",
-          progress: 0,
-        },
-        {
-          id: "c2",
-          priority: "",
-          totalLevels: 0,
-          currentLevel: 0,
-          status: "not_started",
-          progress: 0,
-        },
-      ]);
     });
   });
 

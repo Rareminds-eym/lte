@@ -42,26 +42,15 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
   // Parse parameters from query string
   const parsedParams = useMemo(() => {
     const params = new URLSearchParams(searchParamsString);
-    const fit = params.get("fit");
-    const track = params.get("track");
-    const matchScore = params.get("matchScore");
-    const attemptId = params.get("attemptId");
-    const roleId = params.get("roleId");
-    const duration = params.get("duration");
+    const trackId = params.get("trackId");
 
-    // If none of the main params exist, we are not trying to initialize
-    if (!fit && !track && !matchScore && !attemptId && !roleId) {
+    // If no trackId exists, we are not trying to initialize
+    if (!trackId) {
       return null;
     }
 
     return initializeLearningPathSchema.safeParse({
-      fit,
-      track,
-      matchScore,
-      whyItFits: params.get("whyItFits") ?? "",
-      attemptId,
-      roleId,
-      duration: duration || undefined,
+      trackId,
     });
   }, [searchParamsString]);
 
@@ -161,9 +150,7 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
       >
         <span className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-brand-200 border-t-brand-600" />
         <div>
-          <p className="text-sm font-semibold text-content-primary">
-            Initializing learning path...
-          </p>
+          <p className="text-sm font-semibold text-content-primary">Activating learning track...</p>
           <p className="text-xs text-content-secondary mt-1">
             Please wait while we provision your course progress state.
           </p>

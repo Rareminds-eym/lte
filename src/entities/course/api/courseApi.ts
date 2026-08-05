@@ -51,6 +51,8 @@ const UserCapabilitySchema = z.object({
     .number()
     .nullish()
     .transform((v) => v ?? 0),
+  roleId: z.string().optional(),
+  roleName: z.string().optional(),
 });
 
 const UserCapabilitiesResponseSchema = z.object({
@@ -150,6 +152,8 @@ function mapCapabilityToCourse(cap: UserCapabilityResponse, index: number): Cour
     xp: cap.xp ?? 0,
     priority: cap.priority ?? "",
     qualified: cap.status === "completed",
+    roleId: cap.roleId,
+    roleName: cap.roleName,
   };
 }
 

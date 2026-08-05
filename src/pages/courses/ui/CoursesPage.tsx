@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { CourseCard, CourseCardGridSkeleton, useCourses } from "@/entities/course";
@@ -10,20 +10,7 @@ import { cn } from "@/shared/lib";
 import { Button, SegmentedControl } from "@/shared/ui";
 import { Pagination } from "@/widgets";
 import { LearningPathEmptyState } from "@/widgets/learning-path";
-import {
-  COURSE_PAGE_SIZE,
-  filterCoursesByPriority,
-  getSafeCoursePage,
-  paginateCourses,
-} from "../model/courseFilters";
-
-const PRIORITIES = ["Core", "Important", "Supporting"] as const;
-type Priority = (typeof PRIORITIES)[number];
-
-const PRIORITY_TABS = [
-  { id: null as Priority | null, label: "All" },
-  ...PRIORITIES.map((p) => ({ id: p as Priority, label: p })),
-];
+import { COURSE_PAGE_SIZE, getSafeCoursePage, paginateCourses } from "../model/courseFilters";
 
 const STATS_PILL_STYLES = {
   enrolled: "bg-brand-50 border-brand-100 text-brand-700 [&_svg]:text-brand-500",
@@ -32,7 +19,7 @@ const STATS_PILL_STYLES = {
 } as const;
 
 export const CoursesPage = () => {
-  const [activePriority, setActivePriority] = useState<Priority | null>(null);
+  const [activeRoleFilter, setActiveRoleFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchParams] = useSearchParams();
@@ -43,19 +30,39 @@ export const CoursesPage = () => {
   const userId = user?.id;
   const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
 
-  const hasInitParams = Boolean(
-    searchParams.get("fit") ||
-      searchParams.get("track") ||
-      searchParams.get("attemptId") ||
-      searchParams.get("roleId"),
-  );
+  const hasInitParams = Boolean(searchParams.get("trackId"));
 
   const { data: courses, isPending, error, refetch } = useCourses(userId ?? undefined);
 
   const isCoursesLoading =
     !courses && ((Boolean(userId) && isPending) || (authLoading && !authInitialized));
 
-  const filteredCourses = filterCoursesByPriority(courses ?? [], activePriority);
+  const uniqueRoles = useMemo(() => {
+    if (!courses) return [];
+    const rolesMap = new Map<string, string>();
+    for (const c of courses) {
+      if (c.roleId && c.roleName) {
+        rolesMap.set(c.roleId, c.roleName);
+      }
+    }
+    return Array.from(rolesMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [courses]);
+
+  const roleTabs = useMemo(() => {
+    return [
+      { id: null as string | null, label: "All Roles" },
+      ...uniqueRoles.map((r) => ({ id: r.id, label: r.name })),
+    ];
+  }, [uniqueRoles]);
+
+  const filteredCourses = useMemo(() => {
+    let result = courses ?? [];
+    if (activeRoleFilter) {
+      result = result.filter((c) => c.roleId === activeRoleFilter);
+    }
+    return result;
+  }, [courses, activeRoleFilter]);
+
   const totalPages = Math.ceil(filteredCourses.length / COURSE_PAGE_SIZE);
   const safePage = getSafeCoursePage(currentPage, totalPages);
   const paginatedCourses = paginateCourses(filteredCourses, safePage);
@@ -64,12 +71,17 @@ export const CoursesPage = () => {
   const completed = courses?.filter((c) => c.status === "completed").length ?? 0;
   const inProgress = courses?.filter((c) => c.status === "in_progress").length ?? 0;
 
-  const priorityCounts: Record<string, number> = {};
-  if (courses) {
-    for (const p of PRIORITIES) {
-      priorityCounts[p] = courses.filter((c) => c.priority === p).length;
+  const roleCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (courses) {
+      for (const c of courses) {
+        if (c.roleId) {
+          counts[c.roleId] = (counts[c.roleId] ?? 0) + 1;
+        }
+      }
     }
-  }
+    return counts;
+  }, [courses]);
 
   if (isCoursesLoading) {
     return (
@@ -184,47 +196,50 @@ export const CoursesPage = () => {
         </div>
       </header>
 
-      <div
-        role="tablist"
-        aria-label="Course priority"
-        className="flex items-center gap-6 border-b border-line-default"
-      >
-        {PRIORITY_TABS.map((tab) => {
-          const count = tab.id === null ? total : (priorityCounts[tab.id] ?? 0);
-          const isActive = activePriority === tab.id;
-          return (
-            <button
-              key={tab.label}
-              role="tab"
-              type="button"
-              aria-selected={isActive}
-              onClick={() => {
-                setActivePriority(tab.id);
-                setCurrentPage(1);
-              }}
-              className={cn(
-                "relative pb-3 text-sm font-medium transition-colors cursor-pointer",
-                isActive ? "text-brand-600" : "text-content-secondary hover:text-content-primary",
-              )}
-            >
-              {tab.label}
-              <span
+      {/* Role Tabs */}
+      {uniqueRoles.length > 0 && (
+        <div
+          role="tablist"
+          aria-label="Filter by role"
+          className="flex items-center gap-6 border-b border-line-default"
+        >
+          {roleTabs.map((tab) => {
+            const count = tab.id === null ? total : (roleCounts[tab.id] ?? 0);
+            const isActive = activeRoleFilter === tab.id;
+            return (
+              <button
+                key={tab.label}
+                role="tab"
+                type="button"
+                aria-selected={isActive}
+                onClick={() => {
+                  setActiveRoleFilter(tab.id);
+                  setCurrentPage(1);
+                }}
                 className={cn(
-                  "ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold rounded-full",
-                  isActive
-                    ? "bg-brand-100 text-brand-600"
-                    : "bg-surface-muted text-content-secondary",
+                  "relative pb-3 text-sm font-medium transition-colors cursor-pointer",
+                  isActive ? "text-brand-600" : "text-content-secondary hover:text-content-primary",
                 )}
               >
-                {count}
-              </span>
-              {isActive && (
-                <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-brand-600 rounded-full z-10" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+                {tab.label}
+                <span
+                  className={cn(
+                    "ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold rounded-full",
+                    isActive
+                      ? "bg-brand-100 text-brand-600"
+                      : "bg-surface-muted text-content-secondary",
+                  )}
+                >
+                  {count}
+                </span>
+                {isActive && (
+                  <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-brand-600 rounded-full z-10" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <Button variant="outline" size="sm" icon={<FilterIcon />} className="rounded-full">

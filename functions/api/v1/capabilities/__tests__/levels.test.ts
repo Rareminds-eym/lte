@@ -20,6 +20,7 @@ interface Chainable extends Record<string, unknown> {
   in: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
+  then?: (resolve: (val: unknown) => unknown) => Promise<unknown>;
 }
 
 function chainable(resolveVal: unknown = null, errorVal: unknown = null) {
@@ -30,6 +31,12 @@ function chainable(resolveVal: unknown = null, errorVal: unknown = null) {
     in: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
+    // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
+    then: vi
+      .fn()
+      .mockImplementation((resolve) =>
+        Promise.resolve({ data: resolveVal, error: errorVal }).then(resolve),
+      ),
   };
   return chain;
 }
@@ -63,8 +70,11 @@ describe("GET /api/v1/capabilities/:capabilityCode/levels", () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const mockSupabase = {
       from: vi.fn().mockImplementation((table: string) => {
+        if (table === "learning_tracks") {
+          return chainable({ id: "track-1", track: "React", fit: "high", match_score: 87 });
+        }
         if (table === "learning_paths") {
-          return chainable({ role_id: "role-1" });
+          return chainable([{ id: "lp-1", role_id: "role-1", roles: { role_name: "Developer" } }]);
         }
         return chainable([
           {
@@ -91,8 +101,11 @@ describe("GET /api/v1/capabilities/:capabilityCode/levels", () => {
     const eqArgs: Array<[string, unknown]> = [];
     const mockSupabase = {
       from: vi.fn().mockImplementation((table: string) => {
+        if (table === "learning_tracks") {
+          return chainable({ id: "track-1", track: "React", fit: "high", match_score: 87 });
+        }
         if (table === "learning_paths") {
-          return chainable({ role_id: "role-1" });
+          return chainable([{ id: "lp-1", role_id: "role-1", roles: { role_name: "Developer" } }]);
         }
         if (table === "role_capability_sequence") {
           return chainable([

@@ -1,51 +1,70 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export interface ActiveLearningPath {
-  learningPathId: string;
-  learningTrackId: string;
+export interface ActiveTrackRole {
   roleId: string;
+  roleName: string;
+  learningPathId: string;
+}
+
+export interface ActiveTrackDetail {
+  learningTrackId: string;
   track: string;
   fit: string;
   matchScore: number;
+  whyItFits: string;
+  roles: ActiveTrackRole[];
 }
 
-export async function getActiveLearningPath(
+export async function getActiveLearningTrack(
   supabase: SupabaseClient,
   userId: string,
-): Promise<ActiveLearningPath | null> {
-  const { data, error } = await supabase
-    .from("learning_paths")
-    .select(`
-      id,
-      learning_track_id,
-      role_id,
-      learning_tracks (
-        track,
-        fit,
-        match_score
-      )
-    `)
+): Promise<ActiveTrackDetail | null> {
+  // 1. Fetch active track for this user
+  const { data: trackData, error: trackError } = await supabase
+    .from("learning_tracks")
+    .select("id, track, fit, match_score, why_it_fits")
     .eq("user_id", userId)
     .eq("is_active", true)
     .maybeSingle();
 
-  if (error) {
-    throw new Error(`Failed to fetch active learning path: ${error.message}`);
+  if (trackError) {
+    throw new Error(`Failed to fetch active learning track: ${trackError.message}`);
   }
 
-  if (!data) return null;
+  if (!trackData) return null;
 
-  const trackData = Array.isArray(data.learning_tracks)
-    ? data.learning_tracks[0]
-    : data.learning_tracks;
+  // 2. Fetch all learning paths (roles) under this track
+  const { data: pathsData, error: pathsError } = await supabase
+    .from("learning_paths")
+    .select(`
+      id,
+      role_id,
+      roles (
+        role_name
+      )
+    `)
+    .eq("learning_track_id", trackData.id);
+
+  if (pathsError) {
+    throw new Error(`Failed to fetch paths for active track: ${pathsError.message}`);
+  }
+
+  const roles: ActiveTrackRole[] = (pathsData ?? []).map((p) => {
+    const roleData = Array.isArray(p.roles) ? p.roles[0] : p.roles;
+    return {
+      roleId: p.role_id,
+      roleName: roleData?.role_name ?? "",
+      learningPathId: p.id,
+    };
+  });
 
   return {
-    learningPathId: data.id,
-    learningTrackId: data.learning_track_id,
-    roleId: data.role_id,
-    track: trackData?.track ?? "",
-    fit: trackData?.fit ?? "",
-    matchScore: trackData?.match_score ?? 0,
+    learningTrackId: trackData.id,
+    track: trackData.track,
+    fit: trackData.fit,
+    matchScore: trackData.match_score,
+    whyItFits: trackData.why_it_fits ?? "",
+    roles,
   };
 }
 
@@ -71,8 +90,10 @@ export async function upsertLearningTrack(
     matchScore: number;
     whyItFits: string;
     duration?: string;
+    isActive?: boolean;
   },
 ): Promise<string> {
+  const isActive = params.isActive ?? false;
   const { data: inserted, error: insertError } = await supabase
     .from("learning_tracks")
     .insert({
@@ -84,6 +105,7 @@ export async function upsertLearningTrack(
       why_it_fits: params.whyItFits,
       duration: params.duration ?? "6 months",
       topics: [],
+      is_active: isActive,
     })
     .select("id")
     .single();
@@ -99,6 +121,7 @@ export async function upsertLearningTrack(
         match_score: params.matchScore,
         why_it_fits: params.whyItFits,
         duration: params.duration ?? "6 months",
+        is_active: isActive,
       })
       .eq("user_id", params.userId)
       .eq("assessment_id", params.attemptId)
@@ -116,18 +139,36 @@ export async function upsertLearningTrack(
   throw new Error(`Failed to upsert learning track: ${insertError.message}`);
 }
 
-export async function deactivateOtherPaths(
+export async function deactivateOtherTracks(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<void> {
   const { error } = await supabase
-    .from("learning_paths")
+    .from("learning_tracks")
     .update({ is_active: false })
     .eq("user_id", userId)
     .eq("is_active", true);
 
   if (error) {
-    throw new Error(`Failed to deactivate other active paths: ${error.message}`);
+    throw new Error(`Failed to deactivate other active tracks: ${error.message}`);
+  }
+}
+
+export async function activateLearningTrack(
+  supabase: SupabaseClient,
+  userId: string,
+  trackId: string,
+): Promise<void> {
+  await deactivateOtherTracks(supabase, userId);
+
+  const { error } = await supabase
+    .from("learning_tracks")
+    .update({ is_active: true })
+    .eq("user_id", userId)
+    .eq("id", trackId);
+
+  if (error) {
+    throw new Error(`Failed to activate learning track: ${error.message}`);
   }
 }
 
@@ -137,10 +178,8 @@ export async function upsertLearningPath(
     userId: string;
     trackId: string;
     roleId: string;
-    isActive?: boolean;
   },
 ): Promise<string> {
-  const isActive = params.isActive ?? true;
   const { data: inserted, error: insertError } = await supabase
     .from("learning_paths")
     .insert({
@@ -150,26 +189,26 @@ export async function upsertLearningPath(
       role_readiness_percentage: 0.0,
       level: 1,
       status: "not_started",
-      is_active: isActive,
     })
     .select("id")
     .single();
 
   if (!insertError) return inserted.id;
 
-  // 23505 = unique_violation — row already exists, update active status
+  // 23505 = unique_violation — row already exists, just retrieve the existing ID
   if (insertError.code === PG_UNIQUE_VIOLATION) {
     const { data: updated, error: updateError } = await supabase
       .from("learning_paths")
-      .update({ is_active: isActive })
+      .select("id")
       .eq("user_id", params.userId)
       .eq("learning_track_id", params.trackId)
       .eq("role_id", params.roleId)
-      .select("id")
-      .single();
+      .maybeSingle();
 
-    if (updateError) {
-      throw new Error(`Failed to reactivate learning path: ${updateError.message}`);
+    if (updateError || !updated) {
+      throw new Error(
+        `Failed to retrieve existing learning path: ${updateError?.message ?? "Not found"}`,
+      );
     }
 
     return updated.id;

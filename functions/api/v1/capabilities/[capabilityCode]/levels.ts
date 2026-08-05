@@ -1,4 +1,4 @@
-import { getActiveLearningPath } from "@functions/api/v1/learning-paths/queries";
+import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
 import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
@@ -23,15 +23,23 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
     const capabilityCode = parsedParams.data.capabilityCode;
 
-    const activePath = await getActiveLearningPath(supabase, user.sub);
-    if (!activePath) {
+    const activeTrack = await getActiveLearningTrack(supabase, user.sub);
+    if (!activeTrack || !capabilityCode) {
       return jsonError("Capability not found", 404, { code: "NOT_FOUND", requestId });
     }
 
-    const capabilities = await getCapabilitiesByRoleId(supabase, activePath.roleId);
-    const capability = capabilities.find(
-      (c) => c.code?.toLowerCase() === capabilityCode.toLowerCase(),
-    );
+    let capability = null;
+    for (const role of activeTrack.roles) {
+      const capabilities = await getCapabilitiesByRoleId(supabase, role.roleId);
+      const found = capabilities.find(
+        (c) => c.code?.toLowerCase() === capabilityCode.toLowerCase(),
+      );
+      if (found) {
+        capability = found;
+        break;
+      }
+    }
+
     if (!capability) {
       return jsonError("Capability not found", 404, { code: "NOT_FOUND", requestId });
     }

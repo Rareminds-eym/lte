@@ -5,7 +5,10 @@ import { err, makeSupabase, mockChain, ok, upsertUpstream } from "./helpers";
 describe("upsertLevelProgress", () => {
   it("throws when the learning path query fails", async () => {
     const chains = {
-      learning_paths: mockChain({ maybeSingle: err("path down") }),
+      learning_tracks: mockChain({ maybeSingle: ok({ id: "track-1" }) }),
+      learning_paths: mockChain({
+        thenVal: err("path down"),
+      }),
       levels: mockChain({
         single: ok({ id: "level-1", level_code: "RCP-L1", capability_id: "cap-1" }),
       }),
@@ -17,7 +20,7 @@ describe("upsertLevelProgress", () => {
 
   it("throws when no active learning path exists", async () => {
     const chains = {
-      learning_paths: mockChain({ maybeSingle: { data: null, error: null } }),
+      learning_tracks: mockChain({ maybeSingle: { data: null, error: null } }),
       levels: mockChain({
         single: ok({ id: "level-1", level_code: "RCP-L1", capability_id: "cap-1" }),
       }),

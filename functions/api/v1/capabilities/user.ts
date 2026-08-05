@@ -1,10 +1,10 @@
-import { getActiveLearningPath } from "@functions/api/v1/learning-paths/queries";
+import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
 import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { getUserCapabilities } from "./queries";
+import { getUserCapabilitiesForRoles } from "./queries";
 import type { UserCapabilitiesResponse } from "./types";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
@@ -15,8 +15,8 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     const supabase = createServiceSupabase(context.env);
 
-    const activePath = await getActiveLearningPath(supabase, userId);
-    if (!activePath) {
+    const activeTrack = await getActiveLearningTrack(supabase, userId);
+    if (!activeTrack || activeTrack.roles.length === 0) {
       return jsonResponse<UserCapabilitiesResponse>({
         success: true,
         capabilities: [],
@@ -24,7 +24,8 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       });
     }
 
-    const capabilities = await getUserCapabilities(supabase, activePath.roleId);
+    const roleIds = activeTrack.roles.map((r) => r.roleId);
+    const capabilities = await getUserCapabilitiesForRoles(supabase, roleIds, activeTrack.roles);
 
     return jsonResponse<UserCapabilitiesResponse>({
       success: true,

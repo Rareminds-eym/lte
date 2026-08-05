@@ -516,25 +516,7 @@ export async function upsertLevelProgress(
   levelId: string,
   status: string = "in_progress",
 ): Promise<string> {
-  // 1. Fetch active learning path
-  const { data: pathData, error: pathError } = await supabase
-    .from("learning_paths")
-    .select("id, role_id")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (pathError) {
-    throw new Error(`Failed to query active learning path: ${pathError.message}`);
-  }
-  if (!pathData) {
-    throw new Error("No active learning path found for this user");
-  }
-
-  const learningPathId = pathData.id;
-  const roleId = pathData.role_id;
-
-  // 2. Fetch level details to extract level number and capability
+  // 1. Fetch level details to extract level number and capability
   const { data: levelData, error: levelError } = await supabase
     .from("levels")
     .select("id, level_code, capability_id")
@@ -548,6 +530,57 @@ export async function upsertLevelProgress(
   const levelCodeMatch = levelData.level_code.match(/L(\d+)/i);
   const sequenceNo = parseInt(levelCodeMatch?.[1] ?? "1", 10);
   const capabilityId = levelData.capability_id;
+
+  // 2. Fetch active learning track
+  const { data: trackData, error: trackError } = await supabase
+    .from("learning_tracks")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (trackError) {
+    throw new Error(`Failed to query active learning path: ${trackError.message}`);
+  }
+  if (!trackData) {
+    throw new Error("No active learning path found for this user");
+  }
+
+  // 3. Fetch learning paths under active track
+  const { data: pathsData, error: pathsError } = await supabase
+    .from("learning_paths")
+    .select("id, role_id")
+    .eq("user_id", userId)
+    .eq("learning_track_id", trackData.id);
+
+  if (pathsError) {
+    throw new Error(`Failed to query active learning path: ${pathsError.message}`);
+  }
+  if (!pathsData || pathsData.length === 0) {
+    throw new Error("No active learning path found for this user");
+  }
+
+  // 4. Fetch role capability sequence to match the capability to the correct role
+  const roleIds = pathsData.map((p) => p.role_id);
+  const { data: seqRoleData, error: seqRoleError } = await supabase
+    .from("role_capability_sequence")
+    .select("role_id")
+    .in("role_id", roleIds)
+    .eq("capability_id", capabilityId);
+
+  if (seqRoleError) {
+    throw new Error(`Failed to query active learning path: ${seqRoleError.message}`);
+  }
+
+  const matchingRoleId = seqRoleData && seqRoleData.length > 0 ? seqRoleData[0]?.role_id : null;
+  const activePath = pathsData.find((p) => p.role_id === matchingRoleId) ?? pathsData[0];
+
+  if (!activePath) {
+    throw new Error("No active learning path found for this user");
+  }
+
+  const learningPathId = activePath.id;
+  const roleId = activePath.role_id;
 
   // 3. Check for existing progress
   const { data: existingProgress, error: fetchError } = await supabase

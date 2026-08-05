@@ -55,6 +55,8 @@ export interface UserCapability {
   status: string;
   progress: number;
   xp?: number;
+  roleId?: string;
+  roleName?: string;
 }
 
 export interface UserCapabilitiesResponse {
