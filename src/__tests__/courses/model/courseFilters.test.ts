@@ -13,16 +13,21 @@ const courses = Array.from({ length: COURSE_PAGE_SIZE + 2 }, (_, index) => ({
 
 describe("courseFilters", () => {
   it("returns the original course list when no priority filter is selected", () => {
-    expect(filterCoursesByPriority(courses as any, null)).toBe(courses);
+    expect(
+      filterCoursesByPriority(
+        courses as unknown as Parameters<typeof filterCoursesByPriority>[0],
+        null,
+      ),
+    ).toBe(courses);
   });
 
   it("filters courses by priority", () => {
-    expect(filterCoursesByPriority(courses as any, "Core").map((course) => course.id)).toEqual([
-      "course-1",
-      "course-3",
-      "course-5",
-      "course-7",
-    ]);
+    expect(
+      filterCoursesByPriority(
+        courses as unknown as Parameters<typeof filterCoursesByPriority>[0],
+        "Core",
+      ).map((course) => course.id),
+    ).toEqual(["course-1", "course-3", "course-5", "course-7"]);
   });
 
   it("clamps the current page to at least one and at most total pages", () => {
@@ -32,17 +37,15 @@ describe("courseFilters", () => {
   });
 
   it("returns the requested page of courses", () => {
-    expect(paginateCourses(courses as any, 1).map((course) => course.id)).toEqual([
-      "course-1",
-      "course-2",
-      "course-3",
-      "course-4",
-      "course-5",
-      "course-6",
-    ]);
-    expect(paginateCourses(courses as any, 2).map((course) => course.id)).toEqual([
-      "course-7",
-      "course-8",
-    ]);
+    expect(
+      paginateCourses(courses as unknown as Parameters<typeof paginateCourses>[0], 1).map(
+        (course) => course.id,
+      ),
+    ).toEqual(["course-1", "course-2", "course-3", "course-4", "course-5", "course-6"]);
+    expect(
+      paginateCourses(courses as unknown as Parameters<typeof paginateCourses>[0], 2).map(
+        (course) => course.id,
+      ),
+    ).toEqual(["course-7", "course-8"]);
   });
 });

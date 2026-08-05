@@ -34,7 +34,9 @@ describe("useCapabilityLevels", () => {
   it("should fetch capability levels on success when authenticated and track is ready", async () => {
     useAuthStore.setState({ isAuthenticated: true, accessToken: "token" });
     useLearningPathStore.setState({
-      activeTrack: { learningTrackId: "lt-1" } as any,
+      activeTrack: {
+        learningTrackId: "lt-1",
+      } as unknown as import("@/shared/types/auth").ActiveTrackDetail,
       activeLearningPathLoading: false,
     });
 

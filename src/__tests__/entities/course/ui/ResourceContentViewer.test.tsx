@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { EContentItem } from "@/entities/course/model/levelContentTypes";
 import { ResourceContentViewer } from "@/entities/course/ui/ResourceContentViewer/ResourceContentViewer";
 
 describe("ResourceContentViewer & Media players", () => {
@@ -10,7 +11,7 @@ describe("ResourceContentViewer & Media players", () => {
       url: "https://example.com/img.jpg",
       contentType: "image",
     };
-    const { container } = render(<ResourceContentViewer item={item as any} />);
+    const { container } = render(<ResourceContentViewer item={item as unknown as EContentItem} />);
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
     expect(img?.getAttribute("src")).toBe("https://example.com/img.jpg");
@@ -23,7 +24,7 @@ describe("ResourceContentViewer & Media players", () => {
       url: "https://example.com/audio.mp3",
       contentType: "audio",
     };
-    const { container } = render(<ResourceContentViewer item={item as any} />);
+    const { container } = render(<ResourceContentViewer item={item as unknown as EContentItem} />);
     const audio = container.querySelector("audio");
     expect(audio).not.toBeNull();
     expect(audio?.getAttribute("src")).toBe("https://example.com/audio.mp3");
@@ -38,7 +39,7 @@ describe("ResourceContentViewer & Media players", () => {
     };
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
 
-    render(<ResourceContentViewer item={item as any} />);
+    render(<ResourceContentViewer item={item as unknown as EContentItem} />);
     const btn = screen.getByText("Open Resource");
     expect(btn).toBeDefined();
 
@@ -58,7 +59,7 @@ describe("ResourceContentViewer & Media players", () => {
       contentType: "video",
     };
 
-    const { container } = render(<ResourceContentViewer item={item as any} />);
+    const { container } = render(<ResourceContentViewer item={item as unknown as EContentItem} />);
     const video = container.querySelector("video") as HTMLVideoElement;
     expect(video).not.toBeNull();
 
@@ -67,12 +68,12 @@ describe("ResourceContentViewer & Media players", () => {
     video.pause = vi.fn();
 
     // Play button click
-    const playBtn = screen.getAllByLabelText("Play video")[0];
+    const playBtn = screen.getAllByLabelText("Play video")[0] as HTMLElement;
     fireEvent.click(playBtn);
     expect(video.play).toHaveBeenCalled();
 
     // Controls play/pause toggle
-    const ctrlPlayBtn = screen.getAllByLabelText("Play video")[1] || playBtn;
+    const ctrlPlayBtn = screen.getAllByLabelText("Play video")[1] ?? playBtn;
     fireEvent.click(ctrlPlayBtn);
 
     // Speed toggle
@@ -106,6 +107,7 @@ describe("ResourceContentViewer & Media players", () => {
     // Mock getBoundingClientRect
     seekBtn.getBoundingClientRect = () => ({
       width: 100,
+      height: 10,
       left: 0,
       top: 0,
       bottom: 10,

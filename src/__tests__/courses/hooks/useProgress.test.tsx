@@ -8,9 +8,9 @@ const mockStartModuleProgress = vi.fn();
 const mockUpdateStageProgress = vi.fn();
 
 vi.mock("@/entities/course/api/progressApi", () => ({
-  startLevelProgress: (...args: any[]) => mockStartLevelProgress(...args),
-  startModuleProgress: (...args: any[]) => mockStartModuleProgress(...args),
-  updateStageProgress: (...args: any[]) => mockUpdateStageProgress(...args),
+  startLevelProgress: (...args: unknown[]) => mockStartLevelProgress(...args),
+  startModuleProgress: (...args: unknown[]) => mockStartModuleProgress(...args),
+  updateStageProgress: (...args: unknown[]) => mockUpdateStageProgress(...args),
 }));
 
 import {

@@ -7,8 +7,8 @@ const mockFetchLevelDetails = vi.fn();
 const mockFetchLevelModuleDetails = vi.fn();
 
 vi.mock("@/entities/course/api", () => ({
-  fetchLevelDetails: (...args: any[]) => mockFetchLevelDetails(...args),
-  fetchLevelModuleDetails: (...args: any[]) => mockFetchLevelModuleDetails(...args),
+  fetchLevelDetails: (...args: unknown[]) => mockFetchLevelDetails(...args),
+  fetchLevelModuleDetails: (...args: unknown[]) => mockFetchLevelModuleDetails(...args),
 }));
 
 import {

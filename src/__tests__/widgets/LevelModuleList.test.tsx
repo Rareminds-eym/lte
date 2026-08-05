@@ -15,7 +15,7 @@ vi.mock("react-router-dom", async () => {
 
 describe("LevelModuleList", () => {
   it("renders empty modules list correctly", () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <LevelModuleList modules={[]} levelId="lvl-1" />
       </MemoryRouter>,
@@ -66,7 +66,11 @@ describe("LevelModuleList", () => {
 
     render(
       <MemoryRouter>
-        <LevelModuleList modules={modulesData as any} levelId="lvl-1" moduleDurationMinutes={120} />
+        <LevelModuleList
+          modules={modulesData as unknown as Parameters<typeof LevelModuleList>[0]["modules"]}
+          levelId="lvl-1"
+          moduleDurationMinutes={120}
+        />
       </MemoryRouter>,
     );
 
@@ -101,7 +105,7 @@ describe("LevelModuleList", () => {
     const { rerender } = render(
       <MemoryRouter>
         <LevelModuleList
-          modules={modulesData as any}
+          modules={modulesData as unknown as Parameters<typeof LevelModuleList>[0]["modules"]}
           levelId="lvl-1"
           onSelectModule={onSelectModuleMock}
         />
@@ -116,7 +120,10 @@ describe("LevelModuleList", () => {
     // Rerender without select callback to check navigation fallback
     rerender(
       <MemoryRouter>
-        <LevelModuleList modules={modulesData as any} levelId="lvl-1" />
+        <LevelModuleList
+          modules={modulesData as unknown as Parameters<typeof LevelModuleList>[0]["modules"]}
+          levelId="lvl-1"
+        />
       </MemoryRouter>,
     );
 
@@ -139,7 +146,10 @@ describe("LevelModuleList", () => {
 
     render(
       <MemoryRouter>
-        <LevelModuleList modules={modulesData as any} levelId="lvl-1" />
+        <LevelModuleList
+          modules={modulesData as unknown as Parameters<typeof LevelModuleList>[0]["modules"]}
+          levelId="lvl-1"
+        />
       </MemoryRouter>,
     );
 

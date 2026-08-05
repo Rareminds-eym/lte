@@ -36,8 +36,8 @@ const renderPanel = (overrides: Record<string, unknown> = {}) => {
   const setIsScenarioExpanded = vi.fn();
   const result = render(
     <StageInfoPanel
-      level={level as any}
-      levelModule={richModule as any}
+      level={level as unknown as Parameters<typeof StageInfoPanel>[0]["level"]}
+      levelModule={richModule as unknown as Parameters<typeof StageInfoPanel>[0]["levelModule"]}
       activeStage="engage"
       activeArtifactType={null}
       stageDescription="Understand what is happening before selecting a fix."
@@ -46,13 +46,13 @@ const renderPanel = (overrides: Record<string, unknown> = {}) => {
         [
           { id: "item-1", title: "Walkthrough" },
           { id: "item-2", title: "Checklist" },
-        ] as any
+        ] as unknown as Parameters<typeof StageInfoPanel>[0]["previewItems"]
       }
       isScenarioExpanded={false}
       isScenarioOverflowing
       setIsScenarioExpanded={setIsScenarioExpanded}
       scenarioTextRef={createRef<HTMLParagraphElement>()}
-      formatStageLabel={(stage) => `${stage[0].toUpperCase()}${stage.slice(1)}`}
+      formatStageLabel={(stage) => `${stage.charAt(0).toUpperCase()}${stage.slice(1)}`}
       renderArtifactPanel={() => <section>Artifact requirements</section>}
       {...overrides}
     />,
@@ -106,8 +106,10 @@ describe("StageInfoPanel", () => {
 
   it("handles minimal module data and singular content count", () => {
     renderPanel({
-      levelModule: {} as any,
-      previewItems: [{ id: "item-1", title: "Solo" }] as any,
+      levelModule: {} as unknown as Parameters<typeof StageInfoPanel>[0]["levelModule"],
+      previewItems: [{ id: "item-1", title: "Solo" }] as unknown as Parameters<
+        typeof StageInfoPanel
+      >[0]["previewItems"],
       isScenarioOverflowing: false,
     });
 

@@ -353,7 +353,7 @@ describe("Learner Track Resolution (3-layer logic)", () => {
           if (table === "roles") {
             const chain = {
               select: () => chain,
-              ilike: vi.fn().mockImplementation((col, val) => {
+              ilike: vi.fn().mockImplementation((_col, val) => {
                 if (val === "Aerostructure doc assistant") {
                   return {
                     maybeSingle: async () => ({ data: null, error: null }),

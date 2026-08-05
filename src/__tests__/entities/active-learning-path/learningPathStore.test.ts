@@ -77,7 +77,7 @@ describe("learningPathStore", () => {
     });
 
     it("ignores fetch results if user changes during active fetch", async () => {
-      let resolveFetch: (val: any) => void = () => {};
+      let resolveFetch: (val: unknown) => void = () => {};
       const fetchPromise = new Promise((resolve) => {
         resolveFetch = resolve;
       });
