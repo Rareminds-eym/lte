@@ -1,4 +1,5 @@
 import type React from "react";
+import { useNavigate } from "react-router-dom";
 import type { CurrentJourneyData } from "@/entities/dashboard";
 import { Image } from "@/shared/ui";
 
@@ -7,6 +8,15 @@ export interface JourneyHeroProps {
 }
 
 export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
+  const navigate = useNavigate();
+  const continueUrl =
+    data.levelId !== undefined && data.moduleNo !== undefined
+      ? `/my-courses/${data.levelId}/modules/${data.moduleNo}`
+      : null;
+  const detailsUrl = data.capabilityCode
+    ? `/courses/${data.capabilityCode}/levels/${data.levelId}`
+    : null;
+
   return (
     <div className="relative bg-surface-hero text-content-inverse rounded-2xl p-6 lg:p-8 overflow-hidden shadow-lg flex flex-col justify-between min-h-[340px]">
       {/* Background Graphic: 3D Orb Mesh using shared Image component */}
@@ -124,7 +134,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <span>{data.timeRemaining}</span>
+              {data.timeRemaining && <span>{data.timeRemaining}</span>}
             </div>
           </div>
         </div>
@@ -133,6 +143,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
         <div className="flex flex-wrap items-center gap-3 pt-4">
           <button
             type="button"
+            onClick={() => continueUrl && navigate(continueUrl)}
             className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-content-inverse font-semibold text-sm rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
           >
             <span>Continue Challenge</span>
@@ -149,6 +160,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
           </button>
           <button
             type="button"
+            onClick={() => detailsUrl && navigate(detailsUrl)}
             className="px-6 py-2.5 bg-surface-hero-button hover:bg-surface-hero-elevated text-content-on-dark font-semibold text-sm rounded-lg border border-surface-hero-elevated transition-colors cursor-pointer"
           >
             View Details

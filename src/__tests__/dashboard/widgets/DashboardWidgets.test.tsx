@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { MOCK_DASHBOARD_DATA } from "@/entities/dashboard";
 import {
@@ -25,7 +26,11 @@ describe("Dashboard Widgets", () => {
   });
 
   it("renders JourneyHero with progress percentage and action buttons", () => {
-    render(<JourneyHero data={MOCK_DASHBOARD_DATA.journey} />);
+    render(
+      <MemoryRouter>
+        <JourneyHero data={MOCK_DASHBOARD_DATA.journey} />
+      </MemoryRouter>,
+    );
     expect(screen.getByText("CONTINUE YOUR JOURNEY")).toBeInTheDocument();
     expect(screen.getByText("Debugging API Latency Issues")).toBeInTheDocument();
     expect(screen.getByText("Module 3 of 7")).toBeInTheDocument();

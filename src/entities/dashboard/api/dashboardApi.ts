@@ -1,5 +1,5 @@
 import { apiFetch } from "@/shared/api";
-import type { DashboardData } from "../model/types";
+import type { CurrentJourneyData, DashboardData } from "../model/types";
 
 export const MOCK_DASHBOARD_DATA: DashboardData = {
   careerTarget: {
@@ -190,37 +190,44 @@ export const MOCK_DASHBOARD_DATA: DashboardData = {
   },
 };
 
-export const fetchDashboardData = async (): Promise<DashboardData> => {
-  try {
-    const now = new Date();
-    const localMonday = new Date(now);
-    localMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-    localMonday.setHours(0, 0, 0, 0);
-    const localToday = new Date(now);
-    localToday.setHours(0, 0, 0, 0);
+const localMidnight = (date: Date): Date => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
 
-    const { totalXp, xpThisWeek, todayXp } = await apiFetch<{
+export const fetchDashboardData = async (): Promise<DashboardData> => {
+  const now = new Date();
+  const localMonday = new Date(now);
+  localMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+
+  const [xpResult, journeyResult] = await Promise.allSettled([
+    apiFetch<{
       success: boolean;
       totalXp: number;
       xpThisWeek: number;
       todayXp: number;
     }>(
-      `/api/v1/dashboard/xp?since=${encodeURIComponent(localMonday.toISOString())}&todaySince=${encodeURIComponent(localToday.toISOString())}`,
-    );
-    return {
-      ...MOCK_DASHBOARD_DATA,
-      careerTarget: {
-        ...MOCK_DASHBOARD_DATA.careerTarget,
-        xp: totalXp,
-        xpThisWeek,
-      },
-      priorities: {
-        ...MOCK_DASHBOARD_DATA.priorities,
-        currentXp: todayXp,
-      },
+      `/api/v1/dashboard/xp?since=${encodeURIComponent(localMidnight(localMonday).toISOString())}&todaySince=${encodeURIComponent(localMidnight(now).toISOString())}`,
+    ),
+    apiFetch<{ success: boolean; data: CurrentJourneyData | null }>("/api/v1/dashboard/journey"),
+  ]);
+
+  const base = { ...MOCK_DASHBOARD_DATA };
+  if (xpResult.status === "fulfilled" && xpResult.value.success) {
+    const { totalXp, xpThisWeek, todayXp } = xpResult.value;
+    base.careerTarget = {
+      ...base.careerTarget,
+      xp: totalXp,
+      xpThisWeek,
     };
-  } catch {
-    // ponytail: dashboard is otherwise mock; don't brick the page over one stat
-    return MOCK_DASHBOARD_DATA;
+    base.priorities = {
+      ...base.priorities,
+      currentXp: todayXp,
+    };
   }
+  if (journeyResult.status === "fulfilled" && journeyResult.value.data) {
+    base.journey = journeyResult.value.data;
+  }
+  return base;
 };

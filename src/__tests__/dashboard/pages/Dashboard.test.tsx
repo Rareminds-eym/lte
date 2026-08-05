@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { Dashboard } from "@/pages/dashboard";
 
@@ -16,9 +17,11 @@ describe("Dashboard Page", () => {
   it("renders full dashboard widgets when data resolves", async () => {
     const queryClient = createTestQueryClient();
     render(
-      <QueryClientProvider client={queryClient}>
-        <Dashboard />
-      </QueryClientProvider>,
+      <MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <Dashboard />
+        </QueryClientProvider>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {

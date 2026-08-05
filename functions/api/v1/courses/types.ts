@@ -73,6 +73,9 @@ export interface LevelModuleSummary {
   description: string;
   isPublished: boolean;
   progressPercentage?: number;
+  isCompleted: boolean;
+  completedStages: string[];
+  industry_challenge: string | null;
 }
 
 export interface LevelDetailsResponse {

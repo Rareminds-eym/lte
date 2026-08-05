@@ -13,12 +13,9 @@ describe("dashboardApi", () => {
   });
 
   it("overrides the mock XP with the real totals from the API", async () => {
-    vi.mocked(apiFetch).mockResolvedValueOnce({
-      success: true,
-      totalXp: 430,
-      xpThisWeek: 75,
-      todayXp: 20,
-    });
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({ success: true, totalXp: 430, xpThisWeek: 75, todayXp: 20 })
+      .mockResolvedValueOnce({ success: true, data: null });
     const data = await fetchDashboardData();
 
     expect(data.careerTarget.xp).toBe(430);
@@ -36,19 +33,55 @@ describe("dashboardApi", () => {
     expect(Number.isNaN(Date.parse(params.get("todaySince") ?? ""))).toBe(false);
   });
 
+  it("replaces the mock journey with the real current module", async () => {
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({ success: true, totalXp: 0, xpThisWeek: 0, todayXp: 0 })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          levelId: "lvl-1",
+          capabilityCode: "CAP037",
+          capability: "Support exchange handoffs",
+          title: "Before You Trust the Answer",
+          moduleInfo: "Module 1 of 2",
+          output: "Root-cause analysis artifact",
+          whyItMatters: "Northstar Retail needs a safe review handoff.",
+          progressPercentage: 34,
+          completedCount: 0,
+          inProgressCount: 1,
+          remainingCount: 1,
+          moduleNo: 0,
+        },
+      });
+    const data = await fetchDashboardData();
+
+    expect(data.journey.title).toBe("Before You Trust the Answer");
+    expect(data.journey.moduleInfo).toBe("Module 1 of 2");
+    expect(data.journey.levelId).toBe("lvl-1");
+    expect(data.journey.moduleNo).toBe(0);
+    expect((vi.mocked(apiFetch).mock.calls[1]?.[0] as string) ?? "").toBe(
+      "/api/v1/dashboard/journey",
+    );
+  });
+
+  it("keeps the mock journey when the journey API returns null", async () => {
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({ success: true, totalXp: 0, xpThisWeek: 0, todayXp: 0 })
+      .mockResolvedValueOnce({ success: true, data: null });
+    const data = await fetchDashboardData();
+    expect(data.journey).toEqual(MOCK_DASHBOARD_DATA.journey);
+  });
+
   it("falls back to the mock XP when the API call fails", async () => {
-    vi.mocked(apiFetch).mockRejectedValueOnce(new Error("network down"));
+    vi.mocked(apiFetch).mockRejectedValue(new Error("network down"));
     const data = await fetchDashboardData();
     expect(data).toEqual(MOCK_DASHBOARD_DATA);
   });
 
   it("returns a well-formed payload with all dashboard sections", async () => {
-    vi.mocked(apiFetch).mockResolvedValueOnce({
-      success: true,
-      totalXp: 0,
-      xpThisWeek: 0,
-      todayXp: 0,
-    });
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({ success: true, totalXp: 0, xpThisWeek: 0, todayXp: 0 })
+      .mockResolvedValueOnce({ success: true, data: null });
     const data = await fetchDashboardData();
 
     expect(data.careerTarget.readinessPercentage).toBeGreaterThanOrEqual(0);
@@ -64,12 +97,9 @@ describe("dashboardApi", () => {
   });
 
   it("keeps priority item types within the allowed union", async () => {
-    vi.mocked(apiFetch).mockResolvedValueOnce({
-      success: true,
-      totalXp: 0,
-      xpThisWeek: 0,
-      todayXp: 0,
-    });
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({ success: true, totalXp: 0, xpThisWeek: 0, todayXp: 0 })
+      .mockResolvedValueOnce({ success: true, data: null });
     const data = await fetchDashboardData();
     const allowed = new Set(["green", "purple", "amber"]);
     for (const item of data.priorities.items) {

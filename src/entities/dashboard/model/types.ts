@@ -22,7 +22,10 @@ export interface CurrentJourneyData {
   completedCount: number;
   inProgressCount: number;
   remainingCount: number;
-  timeRemaining: string;
+  timeRemaining: string | null;
+  levelId?: string;
+  moduleNo?: number;
+  capabilityCode?: string;
 }
 
 export interface PriorityItem {

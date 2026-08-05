@@ -184,7 +184,7 @@ export async function getLevelWithModules(
         module_problem_statement: m.module_problem_statement,
         pressure_points: m.pressure_points,
         user_confusion: m.user_confusion,
-        industry_challenge: m.industry_challenge,
+        industry_challenge: m.industry_challenge ?? null,
         prerequisites: m.prerequisites,
         what_youll_learn: m.what_youll_learn,
         when_to_apply: m.when_to_apply,
