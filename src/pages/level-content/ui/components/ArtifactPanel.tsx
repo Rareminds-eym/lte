@@ -1,47 +1,67 @@
 import type React from "react";
-import type {
-  ModuleArtifact,
-  ModuleArtifactQuestion,
-  ModuleArtifactTemplate,
-} from "@/entities/course";
-import {
-  Button,
-  ChevronRightIcon,
-  DownloadIcon,
-  LabFlaskIcon,
-  LightbulbIcon,
-  LightningBoltIcon,
-} from "@/shared/ui";
+import { useMemo, useState } from "react";
+import type { ModuleArtifact, ModuleArtifactSubmittedFile } from "@/entities/course";
+import type { SubmitArtifactResponse } from "@/features/submit-artifact";
+import { Button, LabFlaskIcon, LightningBoltIcon } from "@/shared/ui";
+import { ArtifactFeedbackTab, type SubmittedArtifactAttempt } from "./ArtifactFeedbackTab";
+import { ArtifactSubmitTab } from "./ArtifactSubmitTab";
 
 interface ArtifactPanelProps {
   activeArtifact: ModuleArtifact | null | undefined;
   activeArtifactType: "practice" | "final" | null;
   rightPanelTitle: string;
+  isPanelExpanded?: boolean;
   expandedArtifactQuestionId: string | null | undefined;
   setExpandedArtifactQuestionId: React.Dispatch<React.SetStateAction<string | null | undefined>>;
 }
-
-const getInstructionValue = (instructions: ModuleArtifactQuestion["instructions"], key: string) => {
-  if (typeof instructions === "string") return key === "instructions" ? instructions : null;
-  const value = instructions[key];
-  return typeof value === "string" && value.trim().length ? value : null;
-};
-
-const getQuestionTemplates = (
-  question: ModuleArtifactQuestion,
-  templates: ModuleArtifactTemplate[],
-) =>
-  templates.filter(
-    (template) => template.questionId === question.id || template.questionId === null,
-  );
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   activeArtifact,
   activeArtifactType,
   rightPanelTitle,
+  isPanelExpanded = false,
   expandedArtifactQuestionId,
   setExpandedArtifactQuestionId,
 }) => {
+  const [submittedFilesByArtifactId, setSubmittedFilesByArtifactId] = useState<
+    Record<string, ModuleArtifactSubmittedFile[]>
+  >({});
+  const [activeArtifactTab, setActiveArtifactTab] = useState<"submit" | "feedback">("submit");
+  const [activeFeedbackAttemptNo, setActiveFeedbackAttemptNo] = useState<number | null>(null);
+
+  const submittedFileVersions = useMemo(() => {
+    const baseFiles = activeArtifact?.submittedFiles ?? [];
+    const localFiles = activeArtifact ? (submittedFilesByArtifactId[activeArtifact.id] ?? []) : [];
+    const syncedBaseFiles = localFiles.length
+      ? baseFiles.map((file) => ({ ...file, isLatest: false }))
+      : baseFiles;
+    return [...syncedBaseFiles, ...localFiles];
+  }, [activeArtifact, submittedFilesByArtifactId]);
+
+  const submittedAttempts = useMemo<SubmittedArtifactAttempt[]>(() => {
+    const attemptsByNo = new Map<number, SubmittedArtifactAttempt>();
+
+    for (const file of submittedFileVersions) {
+      const existing = attemptsByNo.get(file.attemptNo);
+      if (existing) {
+        existing.files.push(file);
+        existing.isLatest = existing.isLatest || file.isLatest;
+        existing.submittedAt = existing.submittedAt ?? file.submittedAt ?? file.uploadedAt;
+        continue;
+      }
+
+      attemptsByNo.set(file.attemptNo, {
+        attemptNo: file.attemptNo,
+        versionLabel: file.versionLabel,
+        isLatest: file.isLatest,
+        submittedAt: file.submittedAt ?? file.uploadedAt,
+        files: [file],
+      });
+    }
+
+    return [...attemptsByNo.values()].sort((a, b) => b.attemptNo - a.attemptNo);
+  }, [submittedFileVersions]);
+
   if (!activeArtifact || !activeArtifactType) {
     return (
       <div className="rounded-xl border border-line-default bg-surface-primary p-4 shadow-2xs">
@@ -55,20 +75,49 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
   const isPractice = activeArtifact.artifactType === "practice";
   const ArtifactIcon = isPractice ? LabFlaskIcon : LightningBoltIcon;
-  const artifactTemplates = activeArtifact.templates;
   const firstQuestionId = activeArtifact.questions[0]?.id ?? null;
   const activeQuestionId =
     expandedArtifactQuestionId === undefined
       ? firstQuestionId
       : expandedArtifactQuestionId &&
-          activeArtifact.questions.some((q) => q.id === expandedArtifactQuestionId)
+          activeArtifact.questions.some((question) => question.id === expandedArtifactQuestionId)
         ? expandedArtifactQuestionId
         : null;
+  const hasSubmittedArtifact = submittedAttempts.length > 0;
+  const visibleArtifactTab =
+    activeArtifactTab === "feedback" && hasSubmittedArtifact ? "feedback" : "submit";
+
+  const handleSubmitted = (response: SubmitArtifactResponse) => {
+    const submittedAt = response.submitted_at ?? new Date().toISOString();
+    const submittedFiles = response.files.map((file) => ({
+      id: file.file_id,
+      submissionId: response.submission_id,
+      questionId: file.question_id,
+      fileName: file.file_name,
+      fileType: file.file_name.includes(".") ? (file.file_name.split(".").pop() ?? "file") : "file",
+      fileSizeBytes: null,
+      downloadUrl: `/api/v1/artifacts/files/${file.file_id}/download`,
+      attemptNo: response.attempt_no,
+      versionLabel: response.version_label,
+      isLatest: true,
+      submittedAt,
+      uploadedAt: submittedAt,
+    }));
+    setSubmittedFilesByArtifactId((current) => ({
+      ...current,
+      [activeArtifact.id]: [
+        ...(current[activeArtifact.id] ?? []).map((file) => ({ ...file, isLatest: false })),
+        ...submittedFiles,
+      ],
+    }));
+    setActiveFeedbackAttemptNo(response.attempt_no);
+    setActiveArtifactTab("feedback");
+  };
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-2">
-        <div>
+      <div className="space-y-3">
+        <div className="min-w-0">
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
               isPractice ? "bg-warning-50 text-warning-700" : "bg-brand-50 text-brand-600"
@@ -87,132 +136,73 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             </span>
           </div>
         </div>
-        <div className="rounded-md bg-surface-muted px-2 py-1 text-[11px] font-bold text-content-secondary">
-          {activeArtifact.totalScore} pts
+        <div
+          className="flex border-b border-line-subtle"
+          role="tablist"
+          aria-label="Artifact panel"
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            role="tab"
+            aria-selected={visibleArtifactTab === "submit"}
+            className={`relative -mb-px h-9 flex-1 cursor-pointer rounded-none border-0 border-b-2 bg-transparent px-3 py-0 text-[12px] font-bold shadow-none transition hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 ${
+              visibleArtifactTab === "submit"
+                ? "border-brand-600 text-brand-600"
+                : "border-transparent text-content-muted hover:text-content-primary"
+            }`}
+            onClick={() => setActiveArtifactTab("submit")}
+          >
+            Submit
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            role="tab"
+            aria-selected={visibleArtifactTab === "feedback"}
+            disabled={!hasSubmittedArtifact}
+            className={`relative -mb-px inline-flex h-9 flex-1 cursor-pointer items-center justify-center gap-1 rounded-none border-0 border-b-2 bg-transparent px-3 py-0 text-[12px] font-bold shadow-none transition hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent ${
+              visibleArtifactTab === "feedback"
+                ? "border-brand-600 text-brand-600"
+                : "border-transparent text-content-muted hover:text-content-primary"
+            }`}
+            onClick={() => setActiveArtifactTab("feedback")}
+          >
+            Feedback
+            <span
+              className={`flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none ${
+                visibleArtifactTab === "feedback"
+                  ? "bg-brand-600 text-white"
+                  : "bg-surface-secondary text-content-muted"
+              }`}
+            >
+              {submittedAttempts.length}
+            </span>
+          </Button>
         </div>
       </div>
 
-      {isPractice ? (
-        <div className="flex items-start gap-2 rounded-lg border-l-4 border-l-brand-600 bg-brand-50 px-3 py-2 text-[12px] font-semibold leading-relaxed text-brand-700">
-          <LightbulbIcon size={14} className="mt-0.5 shrink-0" />
-          <span>
-            This is a practice artifact. Complete it to understand the concepts - no evaluation or
-            scoring.
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-start gap-2 rounded-lg border-l-4 border-l-brand-600 bg-brand-50 px-3 py-2 text-[12px] font-semibold leading-relaxed text-brand-700">
-          <LightningBoltIcon size={14} className="mt-0.5 shrink-0" />
-          <span>Build and submit your final evaluated artifact.</span>
-        </div>
-      )}
+      {visibleArtifactTab === "feedback" ? (
+        <ArtifactFeedbackTab
+          submittedAttempts={submittedAttempts}
+          activeFeedbackAttemptNo={activeFeedbackAttemptNo}
+          isPanelExpanded={isPanelExpanded}
+          onSelectAttempt={setActiveFeedbackAttemptNo}
+        />
+      ) : null}
 
-      {activeArtifact.questions.map((question) => {
-        const requiredFields = getInstructionValue(question.instructions, "required_fields");
-        const instructions = getInstructionValue(question.instructions, "instructions");
-        const questionTemplates = getQuestionTemplates(question, artifactTemplates);
-        const isExpanded = question.id === activeQuestionId;
-
-        return (
-          <div
-            key={question.id}
-            className="overflow-hidden rounded-xl border border-line-default bg-surface-primary shadow-2xs"
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="flex h-auto w-full justify-between rounded-none border-0 border-b border-line-subtle bg-surface-muted px-3.5 py-3 text-left font-sans hover:bg-surface-secondary"
-              aria-expanded={isExpanded}
-              onClick={() =>
-                setExpandedArtifactQuestionId((current) =>
-                  current === question.id ? null : question.id,
-                )
-              }
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="rounded-md bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  Q{question.questionOrder}
-                </span>
-                <span className="truncate text-[13px] font-bold leading-snug text-content-primary">
-                  {question.title}
-                </span>
-                {!isPractice ? (
-                  <span className="rounded bg-warning-50 px-1.5 py-0.5 text-[10px] font-bold text-warning-700">
-                    Required
-                  </span>
-                ) : null}
-              </span>
-              <ChevronRightIcon
-                size={14}
-                className={`shrink-0 text-content-muted transition-transform ${
-                  isExpanded ? "rotate-90" : ""
-                }`}
-              />
-            </Button>
-
-            {isExpanded ? (
-              <div className="space-y-3 bg-surface-primary p-3.5">
-                <p className="text-[13px] leading-relaxed text-content-primary">
-                  {question.description}
-                </p>
-
-                {requiredFields || instructions ? (
-                  <div className="flex items-start gap-2 rounded-md bg-surface-muted px-3 py-2 text-[12px] leading-relaxed text-content-secondary">
-                    <LightbulbIcon size={13} className="mt-0.5 shrink-0 text-brand-600" />
-                    <span>{requiredFields ?? instructions}</span>
-                  </div>
-                ) : null}
-
-                {questionTemplates.length ? (
-                  <div className="space-y-2">
-                    <div className="text-[11px] font-bold text-content-muted">Templates:</div>
-                    <div className="flex flex-wrap gap-2">
-                      {questionTemplates.map((template) => (
-                        <Button
-                          key={template.id}
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-7 max-w-full justify-start rounded-md px-2 text-[11px]"
-                          icon={<DownloadIcon size={12} />}
-                          onClick={() =>
-                            window.open(template.fileUrl, "_blank", "noopener,noreferrer")
-                          }
-                        >
-                          <span className="truncate">{template.fileName}</span>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="relative">
-                  <textarea
-                    className="min-h-24 w-full resize-y rounded-lg border border-line-default bg-surface-primary px-3 py-2 text-[13px] leading-relaxed text-content-primary outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                    placeholder="Write your response here..."
-                  />
-                  <div className="mt-2 flex items-center justify-end gap-2">
-                    {!isPractice ? (
-                      <span className="text-[11px] font-medium text-content-muted">
-                        {activeArtifact.passingScore ?? "-"} / {activeArtifact.totalScore} pass
-                      </span>
-                    ) : null}
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-8 rounded-md px-3 text-xs"
-                      disabled
-                    >
-                      {isPractice ? "Save Practice Work" : "Submit Artifact"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
+      {visibleArtifactTab === "submit" ? (
+        <ArtifactSubmitTab
+          activeArtifact={activeArtifact}
+          artifactTemplates={activeArtifact.templates}
+          activeQuestionId={activeQuestionId}
+          setExpandedArtifactQuestionId={setExpandedArtifactQuestionId}
+          submittedFiles={submittedFileVersions}
+          onSubmitted={handleSubmitted}
+        />
+      ) : null}
     </div>
   );
 };

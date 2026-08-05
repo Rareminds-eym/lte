@@ -1,4 +1,5 @@
 import type React from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/shared/ui/Button";
 import { ArrowLeftIcon, ChevronRightIcon, ShareLinkIcon } from "@/shared/ui/icons";
@@ -35,6 +36,9 @@ export const LevelHeroBanner: React.FC<LevelHeroBannerProps> = ({
   onShare,
   onBookmark,
 }) => {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const shouldCollapseDescription = description.length > 260;
+
   return (
     <div
       className="relative w-full p-6 sm:p-10 text-white overflow-hidden shadow-xl pb-16 sm:pb-20"
@@ -72,9 +76,32 @@ export const LevelHeroBanner: React.FC<LevelHeroBannerProps> = ({
           </h1>
 
           {/* Course Subtitle Description */}
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl font-normal">
-            {description}
-          </p>
+          <div className="max-w-xl">
+            <p
+              id="level-hero-description"
+              className={`text-sm font-normal leading-relaxed text-slate-300 transition-all duration-300 sm:text-base ${
+                shouldCollapseDescription && !isDescriptionExpanded ? "line-clamp-3" : ""
+              }`}
+            >
+              {description}
+            </p>
+            {shouldCollapseDescription ? (
+              <button
+                type="button"
+                aria-controls="level-hero-description"
+                aria-expanded={isDescriptionExpanded}
+                className="mt-2 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-xs font-bold text-white underline-offset-4 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                onClick={() => setIsDescriptionExpanded((current) => !current)}
+              >
+                {isDescriptionExpanded ? "Show less" : "Show more"}
+                <ChevronRightIcon
+                  className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                    isDescriptionExpanded ? "-rotate-90" : "rotate-90"
+                  }`}
+                />
+              </button>
+            ) : null}
+          </div>
 
           {/* Action CTAs using Shared Button with aligned height & styling */}
           <div className="flex flex-wrap items-center gap-3 pt-4 sm:pt-6">

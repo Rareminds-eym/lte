@@ -1,0 +1,261 @@
+import type React from "react";
+import { useState } from "react";
+import type { ModuleArtifactSubmittedFile } from "@/entities/course";
+import { downloadArtifactFile } from "@/features/submit-artifact";
+import {
+  ArtifactsIcon,
+  Button,
+  CheckIcon,
+  ChevronRightIcon,
+  DocumentIcon,
+  MessageSquareIcon,
+  toast,
+} from "@/shared/ui";
+
+export interface SubmittedArtifactAttempt {
+  attemptNo: number;
+  versionLabel: string;
+  isLatest: boolean;
+  submittedAt: string | null;
+  files: ModuleArtifactSubmittedFile[];
+}
+
+interface ArtifactFeedbackTabProps {
+  submittedAttempts: SubmittedArtifactAttempt[];
+  activeFeedbackAttemptNo: number | null;
+  isPanelExpanded: boolean;
+  onSelectAttempt: (attemptNo: number) => void;
+}
+
+const formatSubmittedDate = (uploadedAt: string | null | undefined) => {
+  if (!uploadedAt) return "Submitted";
+  return `Submitted ${new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(uploadedAt))}`;
+};
+
+const rubricRows = [
+  { label: "Clarity & Structure", score: 3, total: 4, tone: "success" },
+  { label: "Evidence & Accuracy", score: 2, total: 4, tone: "warning" },
+  { label: "Depth of Analysis", score: 2, total: 4, tone: "warning" },
+  { label: "Completeness", score: 3, total: 4, tone: "success" },
+] as const;
+
+const mockArtifactFeedback = {
+  getScore: (attemptNo: number | null | undefined) => (attemptNo === 1 ? 87 : 85),
+  latestStatus: "Approved",
+  submittedStatus: "Submitted",
+  reviewMode: "normal",
+  rubricRows,
+  staffFeedback:
+    "Reviewed and approved. Good application of the concepts; tighten the conclusion next time.",
+  staffSuggestion: "Consider expanding on edge cases for an even higher score.",
+} as const;
+
+export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
+  submittedAttempts,
+  activeFeedbackAttemptNo,
+  isPanelExpanded,
+  onSelectAttempt,
+}) => {
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
+  const selectedAttempt =
+    submittedAttempts.find((attempt) => attempt.attemptNo === activeFeedbackAttemptNo) ??
+    submittedAttempts[0] ??
+    null;
+  const submittedFileList = selectedAttempt?.files ?? [];
+  const selectedScore = mockArtifactFeedback.getScore(selectedAttempt?.attemptNo);
+
+  const handleDownload = async (
+    file: Pick<ModuleArtifactSubmittedFile, "id" | "fileName" | "downloadUrl">,
+  ) => {
+    setDownloadingFileId(file.id);
+    try {
+      const blob = await downloadArtifactFile(file.downloadUrl);
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = file.fileName;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to download file.");
+    } finally {
+      setDownloadingFileId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3" role="tabpanel">
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Submitted artifact versions">
+        {submittedAttempts.map((attempt) => {
+          const isSelected = attempt.attemptNo === selectedAttempt?.attemptNo;
+          return (
+            <Button
+              key={attempt.attemptNo}
+              type="button"
+              variant="outline"
+              size="sm"
+              role="tab"
+              aria-selected={isSelected}
+              className={`inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 ${
+                isSelected
+                  ? "border-success-500 bg-success-50 text-success-700"
+                  : "border-line-default bg-surface-muted text-content-secondary hover:bg-surface-secondary"
+              }`}
+              onClick={() => onSelectAttempt(attempt.attemptNo)}
+            >
+              <span>{attempt.versionLabel}</span>
+              <span
+                className={`rounded px-1.5 py-0.5 text-[10px] ${
+                  isSelected
+                    ? "bg-surface-primary text-success-700"
+                    : "bg-surface-primary text-content-muted"
+                }`}
+              >
+                {mockArtifactFeedback.getScore(attempt.attemptNo)}
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+
+      <div className="rounded-xl border border-line-default bg-brand-50/30 p-3.5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-success-500 bg-surface-primary text-sm font-bold text-success-700">
+            {selectedScore}
+          </div>
+          <div className="min-w-0 space-y-1">
+            <span className="inline-flex rounded-md bg-success-50 px-2 py-0.5 text-[11px] font-bold text-success-700">
+              {selectedAttempt?.isLatest
+                ? mockArtifactFeedback.latestStatus
+                : mockArtifactFeedback.submittedStatus}
+            </span>
+            <p className="text-[11px] font-medium text-content-muted">
+              {formatSubmittedDate(selectedAttempt?.submittedAt)}
+            </p>
+            <p className="text-[11px] font-medium text-content-muted">
+              Mode: {mockArtifactFeedback.reviewMode}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`flex items-center rounded-xl border border-line-default bg-surface-primary px-3 py-2 text-[11px] font-bold transition-all duration-300 ${
+          isPanelExpanded ? "flex-nowrap gap-2" : "flex-wrap gap-x-3 gap-y-2"
+        }`}
+      >
+        <span
+          className={`inline-flex items-center gap-1.5 text-success-700 transition-all duration-300 ${
+            isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"
+          }`}
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success-50 transition-transform duration-300 hover:scale-105">
+            <CheckIcon size={12} />
+          </span>
+          AI Review
+        </span>
+        {isPanelExpanded ? (
+          <span className="h-px min-w-8 flex-1 bg-success-500 transition-all duration-300" />
+        ) : null}
+        <span
+          className={`inline-flex items-center gap-1.5 text-brand-600 transition-all duration-300 ${
+            isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"
+          }`}
+        >
+          <span className="h-5 w-5 rounded-full border-2 border-brand-200 border-t-brand-600 transition-transform duration-300 motion-safe:animate-spin" />
+          Staff Review
+        </span>
+        {isPanelExpanded ? (
+          <span className="h-px min-w-8 flex-1 bg-line-subtle transition-all duration-300" />
+        ) : null}
+        <span
+          className={`inline-flex items-center gap-1.5 text-content-muted transition-all duration-300 ${
+            isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"
+          }`}
+        >
+          <span className="h-5 w-5 rounded-full border border-line-strong" />
+          Industry Review
+        </span>
+      </div>
+
+      <div className="rounded-xl border border-line-default bg-surface-primary p-3.5">
+        <div className="mb-2 inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-600">
+          <ArtifactsIcon size={12} />
+          File Upload
+        </div>
+        <div className="space-y-2">
+          {submittedFileList.map((file) => (
+            <Button
+              key={file.id}
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-10 w-full justify-start rounded-md px-2 py-2 text-[11px] font-medium text-brand-600"
+              icon={<DocumentIcon size={13} />}
+              disabled={downloadingFileId === file.id}
+              onClick={() => void handleDownload(file)}
+            >
+              <span className="min-w-0 flex-1 truncate text-left">{file.fileName}</span>
+              <span className="ml-2 inline-flex shrink-0 flex-wrap items-center justify-end gap-1">
+                <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] text-content-muted">
+                  {file.versionLabel}
+                </span>
+                {file.isLatest ? (
+                  <span className="rounded bg-success-50 px-1.5 py-0.5 text-[10px] font-bold text-success-700">
+                    Latest
+                  </span>
+                ) : null}
+              </span>
+              <ChevronRightIcon size={12} className="ml-1 shrink-0" />
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-line-default bg-surface-primary p-3.5">
+        <h5 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-content-primary">
+          Rubric Breakdown
+        </h5>
+        <div className="space-y-2.5">
+          {mockArtifactFeedback.rubricRows.map((row) => (
+            <div key={row.label}>
+              <div className="mb-1 flex items-center justify-between gap-2 text-[11px]">
+                <span className="font-medium text-content-secondary">{row.label}</span>
+                <span className="font-bold text-content-primary">
+                  {row.score}/{row.total}
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-line-subtle">
+                <div
+                  className={`h-full rounded-full ${
+                    row.tone === "success" ? "bg-success-500" : "bg-warning-500"
+                  }`}
+                  style={{ width: `${(row.score / row.total) * 100}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-brand-100 bg-brand-50 p-3.5">
+        <h5 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-600">
+          <MessageSquareIcon size={13} />
+          Staff Feedback
+        </h5>
+        <p className="text-[12px] leading-relaxed text-content-primary">
+          {mockArtifactFeedback.staffFeedback}
+        </p>
+        <div className="mt-2 rounded-md bg-warning-50 px-2.5 py-2 text-[11px] font-medium text-warning-700">
+          {mockArtifactFeedback.staffSuggestion}
+        </div>
+      </div>
+    </div>
+  );
+};

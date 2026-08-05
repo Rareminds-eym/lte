@@ -115,7 +115,7 @@ describe("LevelModuleList", () => {
     // Trigger learning button click
     const btn = screen.getByText("Start Learning");
     fireEvent.click(btn);
-    expect(onSelectModuleMock).toHaveBeenCalledWith(1);
+    expect(onSelectModuleMock).toHaveBeenCalledWith(1, "engage");
 
     // Rerender without select callback to check navigation fallback
     rerender(
@@ -129,7 +129,7 @@ describe("LevelModuleList", () => {
 
     const btnNav = screen.getByText("Start Learning");
     fireEvent.click(btnNav);
-    expect(mockNavigate).toHaveBeenCalledWith("/my-courses/lvl-1/modules/1");
+    expect(mockNavigate).toHaveBeenCalledWith("/my-courses/lvl-1/modules/1?stage=engage");
   });
 
   it("shows course completed when all modules are complete", () => {

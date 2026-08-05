@@ -7,6 +7,12 @@ import {
   normalizeStageName,
 } from "@functions/lib/stage-sequence";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  getArtifactTypeByStage,
+  getSubmittedFilesByArtifactId,
+  mapArtifactRow,
+  pickArtifactType,
+} from "./artifact-helpers";
 import type {
   EContentItem,
   LevelDetailsResponse,
@@ -15,7 +21,6 @@ import type {
   LevelRow,
   Lte6eStage,
   ModuleArtifact,
-  ModuleArtifactQuestion,
   ModuleContentRow,
   ModuleRow,
   ModuleStageContent,
@@ -380,7 +385,11 @@ export async function getModuleDetails(
           question_order,
           title,
           description,
-          instructions
+          instructions,
+          response_type,
+          allowed_file_types,
+          max_file_size_mb,
+          response_required
         ),
         artifact_templates (
           id,
@@ -401,7 +410,18 @@ export async function getModuleDetails(
     throw new Error(`Failed to fetch module stage content: ${modulesContentError.message}`);
   }
 
+  const artifactTypeByStage = await getArtifactTypeByStage(supabase, rawModule.id, ALL_STAGES);
+
   rawModule.modules_content = modulesContentData as unknown as ModuleContentRow[];
+  const artifactIds = (rawModule.modules_content || [])
+    .flatMap((mc) => mc.module_artifacts || [])
+    .filter((artifact) => artifact.is_active)
+    .map((artifact) => artifact.id);
+  const submittedFilesByArtifactId = await getSubmittedFilesByArtifactId(
+    supabase,
+    userId,
+    artifactIds,
+  );
 
   const rawStagesMap = new Map<string, ModuleStageContent>();
 
@@ -426,36 +446,11 @@ export async function getModuleDetails(
 
       const artifacts: ModuleArtifact[] = (mc.module_artifacts || [])
         .filter((art) => art.is_active === true)
-        .map((art) => {
-          const questions: ModuleArtifactQuestion[] = (art.artifact_questions || [])
-            .sort((a, b) => a.question_order - b.question_order)
-            .map((q) => ({
-              id: q.id,
-              questionOrder: q.question_order,
-              title: q.title,
-              description: q.description,
-              instructions: q.instructions,
-            }));
-          const templates = (art.artifact_templates || []).map((template) => ({
-            id: template.id,
-            questionId: template.question_id,
-            fileName: template.file_name,
-            fileUrl: template.file_url,
-            fileType: template.file_type,
-            version: template.version,
-            isDownloadable: template.is_downloadable,
-          }));
-
-          return {
-            id: art.id,
-            artifactType: art.artifact_type,
-            totalScore: art.total_score,
-            passingScore: art.passing_score,
-            questions,
-            templates,
-            isActive: art.is_active,
-          };
-        });
+        .map((art) => mapArtifactRow(art, submittedFilesByArtifactId));
+      const artifactType = artifacts.reduce<"practice" | "final" | null>(
+        (current, artifact) => pickArtifactType(current, artifact.artifactType),
+        artifactTypeByStage.get(mc.stage_name) ?? null,
+      );
 
       rawStagesMap.set(mc.stage_name, {
         id: mc.id,
@@ -464,6 +459,7 @@ export async function getModuleDetails(
         stageDescription: mc.stage_description || "",
         items,
         artifacts,
+        artifactType,
         isActive: mc.is_active,
       });
     });
@@ -481,6 +477,7 @@ export async function getModuleDetails(
       stageDescription: "",
       items: [] as EContentItem[],
       artifacts: [] as ModuleArtifact[],
+      artifactType: artifactTypeByStage.get(stageName) ?? null,
       isActive: false,
     };
   });

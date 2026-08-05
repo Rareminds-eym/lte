@@ -5,6 +5,23 @@ const backendEnvSchema = z.object({
   SSO_SERVICE: z.any().refine((val) => val !== undefined && val !== null, {
     message: "SSO_SERVICE service binding is required",
   }),
+  STORAGE_BUCKET: z
+    .any()
+    .refine((val) => val !== undefined && val !== null, {
+      message: "STORAGE_BUCKET R2 binding is required",
+    })
+    .refine(
+      (val) =>
+        typeof val === "object" &&
+        typeof val.put === "function" &&
+        typeof val.get === "function" &&
+        typeof val.head === "function" &&
+        typeof val.delete === "function",
+      {
+        message: "STORAGE_BUCKET must be a valid R2 bucket binding",
+      },
+    ),
+  R2_PUBLIC_DOMAIN: z.string().url("R2_PUBLIC_DOMAIN must be a valid URL").optional(),
   SUPABASE_URL: z.string().url("SUPABASE_URL must be a valid URL"),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY must not be empty"),
   COOKIE_DOMAIN: z.string().optional(),

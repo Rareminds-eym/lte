@@ -226,15 +226,15 @@ describe("SettingsPage", () => {
     await user.click(updateButton);
     expect(toast).toHaveBeenLastCalledWith("Please enter your current password");
 
-    await user.type(current, "oldpass");
+    fireEvent.change(current, { target: { value: "oldpass" } });
     await user.click(updateButton);
     expect(toast).toHaveBeenLastCalledWith("New password must be at least 8 characters");
 
-    await user.type(next, "newpass123");
+    fireEvent.change(next, { target: { value: "newpass123" } });
     await user.click(updateButton);
     expect(toast).toHaveBeenLastCalledWith("New password and confirm password do not match");
 
-    await user.type(confirm, "newpass123");
+    fireEvent.change(confirm, { target: { value: "newpass123" } });
     await user.click(updateButton);
     expect(mockPasswordMutate).toHaveBeenCalledWith(
       {

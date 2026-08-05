@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { StageInfoPanel } from "@/pages/level-content/ui/components/StageInfoPanel";
 
@@ -51,7 +50,6 @@ const renderPanel = (overrides: Record<string, unknown> = {}) => {
       isScenarioExpanded={false}
       isScenarioOverflowing
       setIsScenarioExpanded={setIsScenarioExpanded}
-      scenarioTextRef={createRef<HTMLParagraphElement>()}
       formatStageLabel={(stage) => `${stage.charAt(0).toUpperCase()}${stage.slice(1)}`}
       renderArtifactPanel={() => <section>Artifact requirements</section>}
       {...overrides}

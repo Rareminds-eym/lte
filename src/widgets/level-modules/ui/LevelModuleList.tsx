@@ -1,4 +1,11 @@
 import type React from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  formatLteStageLabel,
+  type LevelModuleSummary,
+  LTE_STAGE_SEQUENCE,
+  normalizeLteStageName,
+} from "@/entities/course";
 import { Button } from "@/shared/ui/Button";
 import {
   BeakerIcon,
@@ -49,20 +56,19 @@ export interface ModuleItem {
   completedStages?: string[];
 }
 
-import { useNavigate } from "react-router-dom";
-import {
-  formatLteStageLabel,
-  type LevelModuleSummary,
-  LTE_STAGE_SEQUENCE,
-  normalizeLteStageName,
-} from "@/entities/course";
-
 export interface LevelModuleListProps {
   modules?: LevelModuleSummary[];
   levelId?: string;
   moduleDurationMinutes?: number;
-  onSelectModule?: (moduleNo: number) => void;
+  onSelectModule?: (moduleNo: number, stageName: string) => void;
 }
+
+const getResumeStage = (completedStages: string[] | undefined, progressPercentage = 0) => {
+  if (progressPercentage >= 100) return "engage";
+
+  const completedStageSet = new Set((completedStages ?? []).map(normalizeLteStageName));
+  return LTE_STAGE_SEQUENCE.find((stage) => !completedStageSet.has(stage)) ?? "engage";
+};
 
 export const LevelModuleList: React.FC<LevelModuleListProps> = ({
   modules,
@@ -492,11 +498,15 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                           variant="primary"
                           size="md"
                           onClick={() => {
+                            const resumeStage = getResumeStage(
+                              item.completedStages,
+                              item.progressPercentage,
+                            );
                             if (onSelectModule) {
-                              onSelectModule(item.moduleNumber);
+                              onSelectModule(item.moduleNumber, resumeStage);
                             } else if (levelId) {
                               navigate(
-                                `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}`,
+                                `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}?stage=${resumeStage}`,
                               );
                             }
                           }}
@@ -516,11 +526,15 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                           variant="primary"
                           size="md"
                           onClick={() => {
+                            const resumeStage = getResumeStage(
+                              item.completedStages,
+                              item.progressPercentage,
+                            );
                             if (onSelectModule) {
-                              onSelectModule(item.moduleNumber);
+                              onSelectModule(item.moduleNumber, resumeStage);
                             } else if (levelId) {
                               navigate(
-                                `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}`,
+                                `/my-courses/${encodeURIComponent(levelId)}/modules/${item.moduleNumber}?stage=${resumeStage}`,
                               );
                             }
                           }}

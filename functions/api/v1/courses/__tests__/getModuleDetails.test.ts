@@ -82,6 +82,7 @@ describe("getModuleDetails", () => {
       status: "published",
     });
     expect(explain?.artifacts.map((a) => a.id)).toEqual(["art-1"]);
+    expect(explain?.artifactType).toBe("practice");
     expect(explain?.artifacts[0]?.questions.map((q) => q.id)).toEqual(["q-1", "q-2"]);
     expect(explain?.artifacts[0]?.templates).toHaveLength(1);
     expect(explain?.artifacts[0]?.templates[0]).toMatchObject({
@@ -96,6 +97,7 @@ describe("getModuleDetails", () => {
       id: "mc-3",
       stageDescription: "",
       isActive: true,
+      artifactType: "practice",
       items: [],
       artifacts: [{ id: "art-3", questions: [], templates: [], isActive: true }],
     });
@@ -105,6 +107,7 @@ describe("getModuleDetails", () => {
       id: "virtual-empower",
       stageOrder: 5,
       isActive: false,
+      artifactType: "final",
       artifacts: [],
     });
 
@@ -129,6 +132,72 @@ describe("getModuleDetails", () => {
     const result = await getModuleDetails(supabase, "level-1", 2, "user-1");
     expect(result?.progressPercentage).toBe(33);
     expect(result?.completedStages).toEqual(["explore", "engage"]);
+  });
+
+  it("includes submitted artifact file versions for every submitted attempt", async () => {
+    const supabase = makeSupabase(
+      moduleDetailsChains({
+        moduleProgress: ok({ id: "mp-1", completion_percentage: 33 }),
+        artifactSubmissions: ok([
+          {
+            id: "sub-2",
+            artifact_id: "art-1",
+            attempt_no: 2,
+            version_label: "v2",
+            is_latest: true,
+            submitted_at: "2026-08-05T11:00:00.000Z",
+            artifact_submission_files: [
+              {
+                id: "file-2",
+                question_id: "q-1",
+                file_name: "answer-v2.xlsx",
+                file_type: "xlsx",
+                file_size_bytes: 200,
+              },
+            ],
+          },
+          {
+            id: "sub-1",
+            artifact_id: "art-1",
+            attempt_no: 1,
+            version_label: "v1",
+            is_latest: false,
+            submitted_at: "2026-08-05T10:00:00.000Z",
+            artifact_submission_files: [
+              {
+                id: "file-1",
+                question_id: "q-1",
+                file_name: "answer-v1.xlsx",
+                file_type: "xlsx",
+                file_size_bytes: 100,
+              },
+            ],
+          },
+        ]),
+      }),
+    );
+
+    const result = await getModuleDetails(supabase, "level-1", 2, "user-1");
+    const files = result?.stages[2]?.artifacts[0]?.submittedFiles;
+
+    expect(files).toEqual([
+      expect.objectContaining({
+        id: "file-2",
+        submissionId: "sub-2",
+        versionLabel: "v2",
+        attemptNo: 2,
+        isLatest: true,
+        downloadUrl: "/api/v1/artifacts/files/file-2/download",
+      }),
+      expect.objectContaining({
+        id: "file-1",
+        submissionId: "sub-1",
+        versionLabel: "v1",
+        attemptNo: 1,
+        isLatest: false,
+        downloadUrl: "/api/v1/artifacts/files/file-1/download",
+      }),
+    ]);
   });
 
   it("keeps progress at zero when module progress is missing", async () => {

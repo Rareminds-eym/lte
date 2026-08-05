@@ -22,14 +22,7 @@ export interface ApiFetchOptions extends RequestInit {
   _isRetry?: boolean;
 }
 
-/**
- * Generic API Fetch client designed for LTE domain requests.
- * Automatically injects authorization headers, logs queries, and handles errors.
- */
-export async function apiFetch<T = unknown>(
-  path: string,
-  options: ApiFetchOptions = {},
-): Promise<T> {
+async function apiRequest(path: string, options: ApiFetchOptions = {}): Promise<Response> {
   const token = getToken();
   const headers = new Headers(options.headers);
 
@@ -37,8 +30,9 @@ export async function apiFetch<T = unknown>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  // Ensure content-type defaults to application/json if sending a body
-  if (options.body && !headers.has("Content-Type")) {
+  // Ensure content-type defaults to application/json if sending a body.
+  // FormData must let the browser set its own multipart boundary.
+  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -93,13 +87,14 @@ export async function apiFetch<T = unknown>(
         logger.info(`Retrying request ${path} with refreshed access token`);
         const retryHeaders = new Headers(options.headers);
         retryHeaders.set("Authorization", `Bearer ${refreshedToken}`);
-        return apiFetch<T>(path, {
+        return apiRequest(path, {
           ...options,
           headers: retryHeaders,
           _isRetry: true,
         });
       }
     }
+
     let errorMessage = `API Request failed with status ${response.status}`;
     try {
       const clonedResponse = typeof response.clone === "function" ? response.clone() : response;
@@ -138,6 +133,18 @@ export async function apiFetch<T = unknown>(
   }
 
   logger.info(`Response Success: ${response.status} ${path}`);
+  return response;
+}
+
+/**
+ * Generic API Fetch client designed for LTE domain requests.
+ * Automatically injects authorization headers, logs queries, and handles errors.
+ */
+export async function apiFetch<T = unknown>(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<T> {
+  const response = await apiRequest(path, options);
 
   // Handle empty responses or 204 No Content
   if (response.status === 204) {
@@ -152,4 +159,9 @@ export async function apiFetch<T = unknown>(
     );
     throw error instanceof Error ? error : new Error("Invalid JSON response from server");
   }
+}
+
+export async function apiFetchBlob(path: string, options: ApiFetchOptions = {}): Promise<Blob> {
+  const response = await apiRequest(path, options);
+  return response.blob();
 }
