@@ -19,7 +19,6 @@ export const verifyAuthToken = (token: string): AuthContext => {
 };
 
 export const extractAuthToken = (headers: Record<string, string>): string | null => {
-  // biome-ignore lint/complexity/useLiteralKeys: TS noPropertyAccessFromIndexSignature requires bracket notation
   const authHeader = headers["authorization"] || "";
   const token = authHeader.replace("Bearer ", "");
   return token || null;

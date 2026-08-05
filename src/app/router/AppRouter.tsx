@@ -22,6 +22,7 @@ const LevelModules = lazy(() =>
   import("@/pages/level-modules").then((m) => ({ default: m.LevelModulesPage })),
 );
 const NotFound = lazy(() => import("@/pages/not-found").then((m) => ({ default: m.NotFound })));
+const Settings = lazy(() => import("@/pages/settings").then((m) => ({ default: m.Settings })));
 
 export const AppRouter: React.FC = () => {
   return (
@@ -76,6 +77,14 @@ export const AppRouter: React.FC = () => {
             element={
               <RouteLoadingBoundary fallback={<PageLoader message="Loading course modules..." />}>
                 <LevelModules />
+              </RouteLoadingBoundary>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <RouteLoadingBoundary fallback={<PageLoader message="Loading settings..." />}>
+                <Settings />
               </RouteLoadingBoundary>
             }
           />

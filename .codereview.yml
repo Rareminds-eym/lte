@@ -198,6 +198,10 @@ current_src_structure: |
         index.ts
         ui/
           NotFoundPage.tsx
+      settings/
+        index.ts
+        ui/
+          SettingsPage.tsx
     widgets/
     features/
     entities/
@@ -1884,4 +1888,12 @@ primary_rule: |
       The generic parameter `T` of `apiFetch` must be constrained to `extends unknown = unknown`.
       Always omit the explicit `<unknown>` generic type parameter in calls to `apiFetch`, allowing
       TypeScript to infer it from default constraints, or type it to the exact response schema structure.
+    severity: high
+
+  - category: architecture
+    title: "Use typed Service Binding RPC for cross-worker communication"
+    description: |
+      All cross-worker calls (e.g. to sso-worker) must use Cloudflare Workers Service Binding RPC
+      methods (env.SSO_SERVICE.<method>()) rather than direct REST HTTP calls.
+      Method calls must be typed via SsoRpcService interface in functions/shared/types.ts.
     severity: high
