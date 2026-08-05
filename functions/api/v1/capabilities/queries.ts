@@ -51,15 +51,15 @@ export async function getCapabilitiesByRoleId(
   });
 }
 
-export async function getLevelCountsForCapabilities(
+export async function getLevelStatsForCapabilities(
   supabase: SupabaseClient,
   capabilityIds: string[],
-): Promise<Record<string, number>> {
-  if (capabilityIds.length === 0) return {};
+): Promise<{ counts: Record<string, number>; xpSums: Record<string, number> }> {
+  if (capabilityIds.length === 0) return { counts: {}, xpSums: {} };
 
   const { data, error } = await supabase
     .from("levels")
-    .select("capability_id, id")
+    .select("capability_id, id, total_xp")
     .in("capability_id", capabilityIds);
 
   if (error) {
@@ -67,9 +67,23 @@ export async function getLevelCountsForCapabilities(
   }
 
   const counts: Record<string, number> = {};
-  for (const row of data ?? []) {
+  const xpSums: Record<string, number> = {};
+  for (const row of (data ?? []) as Array<{
+    capability_id: string;
+    id: string;
+    total_xp?: number;
+  }>) {
     counts[row.capability_id] = (counts[row.capability_id] ?? 0) + 1;
+    xpSums[row.capability_id] = (xpSums[row.capability_id] ?? 0) + (row.total_xp ?? 0);
   }
+  return { counts, xpSums };
+}
+
+export async function getLevelCountsForCapabilities(
+  supabase: SupabaseClient,
+  capabilityIds: string[],
+): Promise<Record<string, number>> {
+  const { counts } = await getLevelStatsForCapabilities(supabase, capabilityIds);
   return counts;
 }
 
@@ -81,7 +95,7 @@ export async function getUserCapabilities(
   if (capabilities.length === 0) return [];
 
   const capIds = capabilities.map((c) => c.id);
-  const levelCounts = await getLevelCountsForCapabilities(supabase, capIds);
+  const { counts: levelCounts, xpSums } = await getLevelStatsForCapabilities(supabase, capIds);
 
   return capabilities.map((cap) => ({
     id: cap.id,
@@ -95,6 +109,7 @@ export async function getUserCapabilities(
     currentLevel: 0,
     status: "not_started",
     progress: 0,
+    xp: xpSums[cap.id] ?? 0,
   }));
 }
 

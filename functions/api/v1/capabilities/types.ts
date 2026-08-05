@@ -54,6 +54,7 @@ export interface UserCapability {
   currentLevel: number;
   status: string;
   progress: number;
+  xp?: number;
 }
 
 export interface UserCapabilitiesResponse {

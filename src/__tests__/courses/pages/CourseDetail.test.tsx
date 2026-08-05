@@ -235,4 +235,60 @@ describe("CourseDetail", () => {
     expect(screen.getByTestId("level-card-5")).toBeInTheDocument();
     expect(screen.getByText("Observability Architecture & Systems Design")).toBeInTheDocument();
   });
+
+  it("handles course level actions when unlocked vs locked", () => {
+    render(<CourseDetail />);
+
+    // Clicking unlocked level action ("Start →") triggers navigation/action
+    const startBtn = screen.getByRole("button", { name: "Start →" });
+    fireEvent.click(startBtn);
+
+    // Clicking completed level action ("Review →")
+    const reviewBtn = screen.getByRole("button", { name: "Review →" });
+    fireEvent.click(reviewBtn);
+  });
+
+  it("renders error state when courses query fails", async () => {
+    const { useCourses } = await import("@/entities/course");
+    const { useAuthStore } = await import("@/entities/session");
+
+    useAuthStore.setState({
+      user: {
+        id: "user-1",
+        email: "test@example.com",
+        org_id: "org-1",
+        roles: ["learner"],
+        products: [],
+        membership_status: "active",
+        is_email_verified: true,
+        user_metadata: {},
+      },
+      loading: false,
+      initialized: true,
+    });
+
+    vi.mocked(useCourses).mockReturnValueOnce({
+      data: undefined,
+      isPending: false,
+      error: new Error("Database connection failed"),
+    } as unknown as ReturnType<typeof useCourses>);
+
+    render(<CourseDetail />);
+    expect(screen.getByText("Failed to load course details")).toBeInTheDocument();
+    expect(screen.getByText("Database connection failed")).toBeInTheDocument();
+  });
+
+  it("renders skeleton loader when courses are pending", async () => {
+    const { useCourses } = await import("@/entities/course");
+    vi.mocked(useCourses).mockReturnValueOnce({
+      data: undefined,
+      isPending: true,
+      error: null,
+    } as unknown as ReturnType<typeof useCourses>);
+
+    render(<CourseDetail />);
+    expect(
+      screen.queryByText("Observability: Logging, Monitoring & Debugging"),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -47,6 +47,10 @@ const UserCapabilitySchema = z.object({
     .number()
     .nullish()
     .transform((v) => v ?? 0),
+  xp: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? 0),
 });
 
 const UserCapabilitiesResponseSchema = z.object({
@@ -143,7 +147,7 @@ function mapCapabilityToCourse(cap: UserCapabilityResponse, index: number): Cour
     totalLevels: cap.totalLevels,
     targetLevel,
     durationHours: 0,
-    xp: 0,
+    xp: cap.xp ?? 0,
     priority: cap.priority ?? "",
     qualified: cap.status === "completed",
   };
