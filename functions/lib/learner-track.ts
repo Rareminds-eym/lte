@@ -1,6 +1,7 @@
 import {
-  deactivateOtherPaths,
-  getActiveLearningPath,
+  type ActiveTrackDetail,
+  deactivateOtherTracks,
+  getActiveLearningTrack,
   syncUserCapabilities,
   upsertLearningPath,
   upsertLearningTrack,
@@ -41,19 +42,17 @@ const LearningTrackDataSchema = z.object({
     .optional(),
 });
 
-export type ActiveLearningPath = NonNullable<Awaited<ReturnType<typeof getActiveLearningPath>>>;
-
 export interface ResolvedTrack {
-  data: ActiveLearningPath | null;
+  data: ActiveTrackDetail | null;
   needsAssessment: boolean;
 }
 
 /**
  * Resolve the learner's track in 3 layers:
- *  1. LTE local state (active learning path; history re-activation is handled
- *     by getActiveLearningPath callers — here we only check the active row).
+ *  1. LTE local state (active learning track; history re-activation is handled
+ *     by active track queries — here we only check the active track row).
  *  2. SkillPassport gateway (read-only, no sso in the data path) — on hit,
- *     map the Skill role title to the LTE roles catalog and persist track/path.
+ *     map the Skill role title to the LTE roles catalog and persist track/paths.
  *  3. Nothing found -> { data: null, needsAssessment: true } (UI shows
  *     "Take Assessment").
  *
@@ -66,50 +65,30 @@ export async function resolveActiveTrack(
   userId: string,
 ): Promise<ResolvedTrack> {
   // Layer 1 — LTE local state.
-  const local = await getActiveLearningPath(supabase, userId);
+  const local = await getActiveLearningTrack(supabase, userId);
   if (local) return { data: local, needsAssessment: false };
 
-  // Search for any inactive learning path for this user and reactivate it
-  const { data: inactivePath, error: inactiveError } = await supabase
-    .from("learning_paths")
-    .select(`
-      id,
-      learning_track_id,
-      role_id,
-      learning_tracks (
-        track,
-        fit,
-        match_score
-      )
-    `)
+  // Search for any inactive learning track for this user and reactivate it
+  const { data: inactiveTrack, error: inactiveError } = await supabase
+    .from("learning_tracks")
+    .select("id, track, fit, match_score, why_it_fits")
     .eq("user_id", userId)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (inactivePath && !inactiveError) {
-    // Reactivate this path by setting is_active = true
+  if (inactiveTrack && !inactiveError) {
+    // Reactivate this track by setting is_active = true
     const { error: reactivateError } = await supabase
-      .from("learning_paths")
+      .from("learning_tracks")
       .update({ is_active: true })
-      .eq("id", inactivePath.id);
+      .eq("id", inactiveTrack.id);
 
     if (!reactivateError) {
-      const trackData = Array.isArray(inactivePath.learning_tracks)
-        ? inactivePath.learning_tracks[0]
-        : inactivePath.learning_tracks;
-
-      return {
-        data: {
-          learningPathId: inactivePath.id,
-          learningTrackId: inactivePath.learning_track_id,
-          roleId: inactivePath.role_id,
-          track: trackData?.track ?? "",
-          fit: trackData?.fit ?? "",
-          matchScore: trackData?.match_score ?? 0,
-        },
-        needsAssessment: false,
-      };
+      const refreshed = await getActiveLearningTrack(supabase, userId);
+      if (refreshed) {
+        return { data: refreshed, needsAssessment: false };
+      }
     }
   }
 
@@ -120,34 +99,43 @@ export async function resolveActiveTrack(
     if (parsed.success && parsed.data.found) {
       const tracks = parsed.data.tracks || (parsed.data.track ? [parsed.data.track] : []);
       if (tracks.length > 0) {
-        // Deactivate other paths first to ensure only the new primary path is active
-        await deactivateOtherPaths(supabase, userId);
+        // Deactivate other tracks first to ensure only the new primary track is active
+        await deactivateOtherTracks(supabase, userId);
 
-        for (const [i, track] of tracks.entries()) {
-          const roleId = track.roleId || (await resolveRoleId(supabase, track.roleName));
-          const trackId = await upsertLearningTrack(supabase, {
-            userId,
-            attemptId: track.attemptId,
-            fit: track.fit,
-            track: track.trackName,
-            matchScore: track.matchScore,
-            whyItFits: track.whyItFits,
-          });
+        const primaryTrackName = tracks[0]?.trackName;
+        const trackMap = new Map<string, string>(); // trackName -> trackId
 
-          const isActive = i === 0;
+        for (const trackItem of tracks) {
+          const roleId = trackItem.roleId || (await resolveRoleId(supabase, trackItem.roleName));
+          const isActiveTrack = trackItem.trackName === primaryTrackName;
+
+          let trackId = trackMap.get(trackItem.trackName);
+          if (!trackId) {
+            trackId = await upsertLearningTrack(supabase, {
+              userId,
+              attemptId: trackItem.attemptId,
+              fit: trackItem.fit,
+              track: trackItem.trackName,
+              matchScore: trackItem.matchScore,
+              whyItFits: trackItem.whyItFits,
+              isActive: isActiveTrack,
+            });
+            trackMap.set(trackItem.trackName, trackId);
+          }
+
           const learningPathId = await upsertLearningPath(supabase, {
             userId,
             trackId,
             roleId,
-            isActive,
           });
 
-          if (isActive) {
+          // Sync capabilities for any role belonging to the active track
+          if (isActiveTrack) {
             await syncUserCapabilities(supabase, { userId, learningPathId, roleId });
           }
         }
 
-        const refreshed = await getActiveLearningPath(supabase, userId);
+        const refreshed = await getActiveLearningTrack(supabase, userId);
         return { data: refreshed, needsAssessment: false };
       }
     }

@@ -98,6 +98,45 @@ export async function getUserCapabilities(
   }));
 }
 
+export async function getUserCapabilitiesForRoles(
+  supabase: SupabaseClient,
+  roleIds: string[],
+  rolesInfo: Array<{ roleId: string; roleName: string }>,
+): Promise<UserCapability[]> {
+  if (roleIds.length === 0) return [];
+
+  const combinedCapabilities: UserCapability[] = [];
+  const roleNameMap = new Map<string, string>(rolesInfo.map((r) => [r.roleId, r.roleName]));
+
+  for (const roleId of roleIds) {
+    const capabilities = await getCapabilitiesByRoleId(supabase, roleId);
+    if (capabilities.length === 0) continue;
+
+    const capIds = capabilities.map((c) => c.id);
+    const levelCounts = await getLevelCountsForCapabilities(supabase, capIds);
+    const roleName = roleNameMap.get(roleId) ?? "";
+
+    const userCaps = capabilities.map((cap) => ({
+      id: cap.id,
+      name: cap.name,
+      description: cap.description,
+      code: cap.code,
+      level: cap.level,
+      priority: cap.priority ?? "",
+      step: cap.step,
+      totalLevels: levelCounts[cap.id] ?? 0,
+      currentLevel: 0,
+      status: "not_started",
+      progress: 0,
+      roleId,
+      roleName,
+    }));
+    combinedCapabilities.push(...userCaps);
+  }
+
+  return combinedCapabilities;
+}
+
 export async function getLevelsForCapability(
   supabase: SupabaseClient,
   capabilityId: string,

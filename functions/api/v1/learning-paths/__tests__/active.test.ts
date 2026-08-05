@@ -20,18 +20,25 @@ interface Chainable extends Record<string, unknown> {
   limit: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
+  then?: (onfulfilled: unknown) => unknown;
 }
 
-function chainable(terminal: Record<string, unknown> = {}) {
+function chainable(resolveVal: unknown = null, errorVal: unknown = null) {
   const chain: Chainable = {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
     order: vi.fn().mockImplementation(() => chain),
     limit: vi.fn().mockImplementation(() => chain),
-    single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
+    // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
+    then: vi
+      .fn()
+      .mockImplementation((onfulfilled) =>
+        Promise.resolve({ data: resolveVal, error: errorVal }).then(onfulfilled),
+      ),
   };
-  return Object.assign(chain, terminal);
+  return chain;
 }
 
 describe("GET /api/v1/learning-paths/active", () => {
@@ -63,11 +70,7 @@ describe("GET /api/v1/learning-paths/active", () => {
   it("returns null data when no active path", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const mockSupabase = {
-      from: vi
-        .fn()
-        .mockReturnValue(
-          chainable({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }),
-        ),
+      from: vi.fn().mockReturnValue(chainable(null)),
     };
     vi.mocked(createServiceSupabase).mockReturnValueOnce(mockSupabase as unknown as SupabaseClient);
     const response = await onRequestGet({
@@ -83,19 +86,23 @@ describe("GET /api/v1/learning-paths/active", () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const mockSupabase = {
       from: vi.fn().mockImplementation((table: string) => {
-        if (table === "learning_paths") {
+        if (table === "learning_tracks") {
           return chainable({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: {
-                id: "path-1",
-                learning_track_id: "track-1",
-                role_id: "role-1",
-                is_active: true,
-                learning_tracks: { track: "Frontend", fit: "Strong", match_score: 85 },
-              },
-              error: null,
-            }),
+            id: "track-1",
+            track: "Frontend",
+            fit: "Strong",
+            match_score: 85,
+            why_it_fits: "Good fit.",
           });
+        }
+        if (table === "learning_paths") {
+          return chainable([
+            {
+              id: "path-1",
+              role_id: "role-1",
+              roles: { role_name: "Frontend Engineer" },
+            },
+          ]);
         }
         return chainable();
       }),
@@ -108,7 +115,9 @@ describe("GET /api/v1/learning-paths/active", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.data).toBeDefined();
-    expect(body.data.learningPathId).toBe("path-1");
+    expect(body.data.learningTrackId).toBe("track-1");
     expect(body.data.track).toBe("Frontend");
+    expect(body.data.roles).toHaveLength(1);
+    expect(body.data.roles[0].roleName).toBe("Frontend Engineer");
   });
 });

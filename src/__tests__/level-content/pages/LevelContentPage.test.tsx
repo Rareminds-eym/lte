@@ -440,6 +440,125 @@ describe("LevelContentPage", () => {
     expect(useLevelModuleDetailsMock).toHaveBeenCalledWith(levelId, 2);
   });
 
+  it("handles toggling modules drawer and expanding/collapsing stage info", async () => {
+    const data = {
+      level: mockLevelContentData.level,
+      module: {
+        ...mockLevelContentData.module,
+        stages: [
+          {
+            id: "stage-engage",
+            stageName: "engage",
+            stageOrder: 1,
+            stageDescription: "Understand the context.",
+            isActive: true,
+            items: [
+              {
+                id: "content-1",
+                contentType: "video",
+                title: "Walkthrough",
+                url: "https://example.com/v",
+              },
+              {
+                id: "content-2",
+                contentType: "document",
+                title: "Doc details",
+                url: "https://example.com/doc",
+              },
+            ],
+            artifacts: [
+              {
+                artifactType: "practice",
+                passingScore: 8,
+                totalScore: 10,
+                questions: [
+                  {
+                    id: "q-1",
+                    questionOrder: 1,
+                    title: "Practice Question",
+                    description: "Solve it.",
+                    instructions: "Do it well.",
+                  },
+                ],
+                templates: [
+                  {
+                    id: "t-1",
+                    questionId: "q-1",
+                    fileName: "template.xlsx",
+                    fileUrl: "https://example.com/t.xlsx",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    useLevelDetailsMock.mockReturnValue({
+      data: data.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: data.module,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage(`/my-courses/${levelId}/modules/1?stage=engage`);
+
+    // Wait for the main page to load
+    await screen.findByText("Incident Signals");
+
+    // Click resource tab to switch selected content
+    const docTab = screen.getByRole("button", { name: "Doc details" });
+    fireEvent.click(docTab);
+
+    // Click download resource button
+    const downloadBtn = screen.getByLabelText("Download selected resource");
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    fireEvent.click(downloadBtn);
+    await waitFor(() =>
+      expect(openSpy).toHaveBeenCalledWith(
+        "https://example.com/doc",
+        "_blank",
+        "noopener,noreferrer",
+      ),
+    );
+
+    // Click expand resource button
+    const expandBtn = screen.getByLabelText("Expand selected resource");
+    fireEvent.click(expandBtn);
+
+    // Expand stage info right-panel check
+    const expandInfoBtn = screen.getByLabelText("Expand stage info");
+    fireEvent.click(expandInfoBtn);
+
+    // Close stage info right-panel check
+    const closeInfoBtn = screen.getByLabelText("Close stage info");
+    fireEvent.click(closeInfoBtn);
+
+    // Toggling artifact panel question accordion
+    const questionBtn = screen.getByText("Practice Question");
+    fireEvent.click(questionBtn);
+
+    // Download template template.xlsx click
+    const templateBtn = screen.getByText("template.xlsx");
+    fireEvent.click(templateBtn);
+    await waitFor(() =>
+      expect(openSpy).toHaveBeenCalledWith(
+        "https://example.com/t.xlsx",
+        "_blank",
+        "noopener,noreferrer",
+      ),
+    );
+
+    fireEvent.click(questionBtn);
+  });
+
   it("shows an error state when the API fails", () => {
     useLevelDetailsMock.mockReturnValue({
       data: mockLevelContentData.level,

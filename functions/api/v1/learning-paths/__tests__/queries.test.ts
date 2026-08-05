@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  activateLearningTrack,
   checkRoleExists,
-  deactivateOtherPaths,
-  getActiveLearningPath,
+  deactivateOtherTracks,
+  getActiveLearningTrack,
   syncUserCapabilities,
   upsertLearningPath,
   upsertLearningTrack,
@@ -81,80 +82,59 @@ describe("learning-paths queries", () => {
     vi.clearAllMocks();
   });
 
-  describe("getActiveLearningPath", () => {
-    it("returns null when no path exists", async () => {
+  describe("getActiveLearningTrack", () => {
+    it("returns null when no track exists", async () => {
       await expect(
-        getActiveLearningPath(supabaseWith({ learning_paths: { query: { data: null } } }), "u1"),
+        getActiveLearningTrack(supabaseWith({ learning_tracks: { query: { data: null } } }), "u1"),
       ).resolves.toBeNull();
     });
 
-    it("maps array learning_tracks", async () => {
+    it("maps active track and roles correctly", async () => {
       const supabase = supabaseWith({
-        learning_paths: {
+        learning_tracks: {
           query: {
             data: {
-              id: "lp1",
-              learning_track_id: "lt1",
-              role_id: "r1",
-              learning_tracks: [{ track: "React", fit: "high", match_score: 87 }],
+              id: "track-1",
+              track: "React",
+              fit: "high",
+              match_score: 87,
+              why_it_fits: "Good match",
             },
+          },
+        },
+        learning_paths: {
+          query: {
+            data: [
+              {
+                id: "lp-1",
+                role_id: "role-1",
+                roles: [{ role_name: "React Developer" }],
+              },
+            ],
           },
         },
       });
 
-      await expect(getActiveLearningPath(supabase, "u1")).resolves.toEqual({
-        learningPathId: "lp1",
-        learningTrackId: "lt1",
-        roleId: "r1",
+      await expect(getActiveLearningTrack(supabase, "u1")).resolves.toEqual({
+        learningTrackId: "track-1",
         track: "React",
         fit: "high",
         matchScore: 87,
-      });
-    });
-
-    it("maps object learning_tracks with null fallbacks", async () => {
-      const supabase = supabaseWith({
-        learning_paths: {
-          query: {
-            data: {
-              id: "lp1",
-              learning_track_id: "lt1",
-              role_id: "r1",
-              learning_tracks: { track: null, fit: null, match_score: null },
-            },
+        whyItFits: "Good match",
+        roles: [
+          {
+            roleId: "role-1",
+            roleName: "React Developer",
+            learningPathId: "lp-1",
           },
-        },
-      });
-
-      await expect(getActiveLearningPath(supabase, "u1")).resolves.toEqual({
-        learningPathId: "lp1",
-        learningTrackId: "lt1",
-        roleId: "r1",
-        track: "",
-        fit: "",
-        matchScore: 0,
+        ],
       });
     });
 
-    it("defaults when learning_tracks is missing", async () => {
-      const supabase = supabaseWith({
-        learning_paths: { query: { data: { id: "lp1", learning_track_id: "lt1", role_id: "r1" } } },
-      });
-
-      await expect(getActiveLearningPath(supabase, "u1")).resolves.toEqual({
-        learningPathId: "lp1",
-        learningTrackId: "lt1",
-        roleId: "r1",
-        track: "",
-        fit: "",
-        matchScore: 0,
-      });
-    });
-
-    it("throws when the query errors", async () => {
-      const supabase = supabaseWith({ learning_paths: { query: { error: new Error("boom") } } });
-      await expect(getActiveLearningPath(supabase, "u1")).rejects.toThrow(
-        "Failed to fetch active learning path: boom",
+    it("throws when the track query errors", async () => {
+      const supabase = supabaseWith({ learning_tracks: { query: { error: new Error("boom") } } });
+      await expect(getActiveLearningTrack(supabase, "u1")).rejects.toThrow(
+        "Failed to fetch active learning track: boom",
       );
     });
   });
@@ -249,18 +229,32 @@ describe("learning-paths queries", () => {
     });
   });
 
-  describe("deactivateOtherPaths", () => {
-    it("deactivates active paths", async () => {
-      const supabase = supabaseWith({ learning_paths: { query: { data: null } } });
-      await expect(deactivateOtherPaths(supabase, "u1")).resolves.toBeUndefined();
+  describe("deactivateOtherTracks", () => {
+    it("deactivates active tracks", async () => {
+      const supabase = supabaseWith({ learning_tracks: { query: { data: null } } });
+      await expect(deactivateOtherTracks(supabase, "u1")).resolves.toBeUndefined();
       expect(fromChain(supabase)?.update).toHaveBeenCalledWith({ is_active: false });
     });
 
     it("throws when the update errors", async () => {
-      const supabase = supabaseWith({ learning_paths: { query: { error: new Error("boom") } } });
-      await expect(deactivateOtherPaths(supabase, "u1")).rejects.toThrow(
-        "Failed to deactivate other active paths: boom",
+      const supabase = supabaseWith({ learning_tracks: { query: { error: new Error("boom") } } });
+      await expect(deactivateOtherTracks(supabase, "u1")).rejects.toThrow(
+        "Failed to deactivate other active tracks: boom",
       );
+    });
+  });
+
+  describe("activateLearningTrack", () => {
+    it("activates the specified track and deactivates others", async () => {
+      const supabase = supabaseWith({
+        learning_tracks: {
+          query: { data: null },
+          update: { data: null },
+        },
+      });
+      await expect(activateLearningTrack(supabase, "u1", "track-1")).resolves.toBeUndefined();
+      expect(fromChain(supabase, 0)?.update).toHaveBeenCalledWith({ is_active: false });
+      expect(fromChain(supabase, 1)?.update).toHaveBeenCalledWith({ is_active: true });
     });
   });
 
@@ -273,32 +267,36 @@ describe("learning-paths queries", () => {
       const id = await upsertLearningPath(supabase, params);
       expect(id).toBe("lp1");
       expect(fromChain(supabase)?.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ is_active: true }),
+        expect.objectContaining({
+          user_id: "u1",
+          learning_track_id: "lt1",
+          role_id: "r1",
+        }),
       );
     });
 
-    it("reactivates the existing path on a unique violation", async () => {
+    it("retrieves the existing path on a unique violation", async () => {
       const supabase = supabaseWith({
         learning_paths: {
-          query: { data: { id: "lp1" }, error: uniqueViolation },
-          update: { data: { id: "lp1-again" } },
+          insert: { error: uniqueViolation },
+          query: { data: { id: "lp1" } },
         },
       });
 
       const id = await upsertLearningPath(supabase, params);
-      expect(id).toBe("lp1-again");
+      expect(id).toBe("lp1");
     });
 
-    it("throws when the reactivation update fails", async () => {
+    it("throws when the retrieval fails on a unique violation", async () => {
       const supabase = supabaseWith({
         learning_paths: {
-          query: { data: { id: "lp1" }, error: uniqueViolation },
-          update: { error: new Error("boom") },
+          insert: { error: uniqueViolation },
+          query: { error: new Error("boom") },
         },
       });
 
       await expect(upsertLearningPath(supabase, params)).rejects.toThrow(
-        "Failed to reactivate learning path: boom",
+        "Failed to retrieve existing learning path: boom",
       );
     });
 

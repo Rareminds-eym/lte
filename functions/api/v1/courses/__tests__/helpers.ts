@@ -22,6 +22,7 @@ export interface ChainOptions {
   maybeSingle?: QueryResult;
   single?: QueryResult;
   thenQueue?: QueryResult[];
+  thenVal?: QueryResult;
   insert?: QueryResult;
 }
 
@@ -41,7 +42,7 @@ export function mockChain(options: ChainOptions = {}): MockChain {
     single: vi.fn().mockResolvedValue(options.single ?? { data: null, error: null }),
     // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
     then: vi.fn().mockImplementation((resolve: (value: unknown) => unknown) => {
-      const result = options.thenQueue?.shift() ?? { data: null, error: null };
+      const result = options.thenQueue?.shift() ?? options.thenVal ?? { data: null, error: null };
       return Promise.resolve(result).then(resolve);
     }),
   };
@@ -143,6 +144,7 @@ export interface MockChains extends Record<string, MockChain | undefined> {
   modules_content?: MockChain;
   module_artifacts?: MockChain;
   learning_paths?: MockChain;
+  learning_tracks?: MockChain;
   role_capability_sequence?: MockChain;
 }
 
@@ -303,7 +305,11 @@ export function moduleDetailsChains(
 
 export function upsertUpstream(levelCode = "RCP-L1"): MockChains {
   return {
-    learning_paths: mockChain({ maybeSingle: ok({ id: "path-1", role_id: "role-1" }) }),
+    learning_tracks: mockChain({ maybeSingle: ok({ id: "track-1" }) }),
+    learning_paths: mockChain({
+      maybeSingle: ok({ id: "path-1", role_id: "role-1" }),
+      thenVal: ok([{ id: "path-1", role_id: "role-1" }]),
+    }),
     levels: mockChain({
       single: ok({ id: "level-1", level_code: levelCode, capability_id: "cap-1" }),
     }),
@@ -311,7 +317,10 @@ export function upsertUpstream(levelCode = "RCP-L1"): MockChains {
       maybeSingle: { data: null, error: null },
       insert: ok({ id: "lvl-prog-1" }),
     }),
-    role_capability_sequence: mockChain({ maybeSingle: { data: null, error: null } }),
+    role_capability_sequence: mockChain({
+      maybeSingle: { data: null, error: null },
+      thenVal: ok([{ role_id: "role-1" }]),
+    }),
   };
 }
 
