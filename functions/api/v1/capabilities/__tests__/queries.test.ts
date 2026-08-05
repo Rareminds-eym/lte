@@ -294,5 +294,45 @@ describe("capabilities queries", () => {
       });
       warnSpy.mockRestore();
     });
+
+    it("reads totalXp directly from the total_xp column (set by DB trigger)", async () => {
+      const supabase = supabaseWith({
+        levels: {
+          data: [
+            {
+              id: "lvl-1",
+              level_code: "L1",
+              title: "Level 1",
+              description: "Desc 1",
+              total_xp: 42,
+              status: "published",
+            },
+          ],
+        },
+      });
+
+      const result = await getLevelsForCapability(supabase, "cap-1");
+      expect(result).toHaveLength(1);
+      expect(result[0]?.totalXp).toBe(42);
+    });
+
+    it("defaults totalXp to 0 when total_xp is missing", async () => {
+      const supabase = supabaseWith({
+        levels: {
+          data: [
+            {
+              id: "lvl-1",
+              level_code: "L1",
+              title: "Level 1",
+              description: "Desc 1",
+              status: "published",
+            },
+          ],
+        },
+      });
+
+      const result = await getLevelsForCapability(supabase, "cap-1");
+      expect(result[0]?.totalXp).toBe(0);
+    });
   });
 });

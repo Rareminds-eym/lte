@@ -5,6 +5,7 @@ import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getCapabilitiesByRoleId, getLevelsForCapability } from "../queries";
+import { CapabilityCodeParamsSchema } from "../schemas";
 import type { CapabilityLevelsResponse } from "../types";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
@@ -12,10 +13,18 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
   try {
     const user = await requireAuth(context.request, context.env);
     const supabase = createServiceSupabase(context.env);
-    const capabilityCode = context.params["capabilityCode"] ?? "";
+
+    const parsedParams = CapabilityCodeParamsSchema.safeParse(context.params);
+    if (!parsedParams.success) {
+      return jsonError(parsedParams.error.issues[0]?.message ?? "Invalid route parameters", 400, {
+        code: "VALIDATION_ERROR",
+        requestId,
+      });
+    }
+    const capabilityCode = parsedParams.data.capabilityCode;
 
     const activePath = await getActiveLearningPath(supabase, user.sub);
-    if (!activePath || !capabilityCode) {
+    if (!activePath) {
       return jsonError("Capability not found", 404, { code: "NOT_FOUND", requestId });
     }
 

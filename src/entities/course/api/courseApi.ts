@@ -95,6 +95,10 @@ export const CapabilityLevelSchema = z.object({
     .string()
     .nullish()
     .transform((v) => v ?? "published"),
+  totalXp: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? undefined),
 });
 
 export type CapabilityLevel = z.infer<typeof CapabilityLevelSchema>;

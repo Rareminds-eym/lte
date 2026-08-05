@@ -10,14 +10,10 @@ const LEVEL_API_BASE = "/api/v1/courses";
 export async function fetchLevelDetails(
   levelId: string,
   capabilityCode?: string,
-  userId?: string,
 ): Promise<LevelDetailsResponse> {
-  let url = capabilityCode
+  const url = capabilityCode
     ? `${LEVEL_API_BASE}/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`
     : `${LEVEL_API_BASE}/${encodeURIComponent(levelId)}`;
-  if (userId) {
-    url += `?userId=${encodeURIComponent(userId)}`;
-  }
   const payload = await apiGet<unknown>(url);
   try {
     const parsedPayload = LevelDetailsPayloadSchema.parse(payload);

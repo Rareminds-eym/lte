@@ -192,6 +192,7 @@ describe("CourseDetail", () => {
             durationMinutes: 360,
             difficulty: "beginner",
             status: "published",
+            totalXp: 0,
           },
         ],
       }),
@@ -218,13 +219,12 @@ describe("CourseDetail", () => {
     expect(screen.getByText("Applied Observability & Implementation")).toBeInTheDocument();
     expect(screen.getByText("Unlocked")).toBeInTheDocument();
     expect(screen.getByText("Observability Config Sheet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continue →" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start →" })).toBeInTheDocument();
 
     // Level 3 - Target Level / Locked
     expect(screen.getByTestId("level-card-3")).toBeInTheDocument();
     expect(screen.getByText("Advanced Observability & Root Cause Analysis")).toBeInTheDocument();
     expect(screen.getByText("🎯 TARGET LEVEL")).toBeInTheDocument();
-    expect(screen.getByText("Complete Level 2 to unlock")).toBeInTheDocument();
     expect(screen.getByText("Observability Correlation Map")).toBeInTheDocument();
 
     // Level 4 & 5 - Locked

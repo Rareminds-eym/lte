@@ -79,6 +79,7 @@ export interface CapabilityLevel {
   durationMinutes: number;
   difficulty: string;
   status: string;
+  totalXp?: number;
 }
 
 export interface CapabilityLevelsResponse {

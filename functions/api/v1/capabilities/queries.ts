@@ -105,7 +105,7 @@ export async function getLevelsForCapability(
   const { data, error } = await supabase
     .from("levels")
     .select(
-      "id, level_code, title, description, example_outputs, duration_minutes, difficulty_level, status",
+      "id, level_code, title, description, example_outputs, duration_minutes, difficulty_level, status, total_xp",
     )
     .eq("capability_id", capabilityId)
     .eq("is_active", true)
@@ -144,6 +144,7 @@ export async function getLevelsForCapability(
         durationMinutes: row.duration_minutes ?? 0,
         difficulty: row.difficulty_level ?? "intermediate",
         status: row.status,
+        totalXp: (row as { total_xp?: number }).total_xp ?? 0,
       };
     })
     .sort((a, b) => a.levelNumber - b.levelNumber);
