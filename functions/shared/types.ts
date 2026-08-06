@@ -1,7 +1,20 @@
 import type { AuthUser, MembershipStatus } from "@rareminds-eym/auth-core";
 
+export interface R2BucketBinding {
+  put(
+    key: string,
+    value: ReadableStream | ArrayBuffer | ArrayBufferView | string | Blob | null,
+    options?: unknown,
+  ): Promise<unknown>;
+  get(key: string, options?: unknown): Promise<unknown>;
+  head(key: string): Promise<unknown>;
+  delete(key: string): Promise<void>;
+}
+
 export interface LteEnv {
   SSO_SERVICE: SsoRpcService;
+  STORAGE_BUCKET: R2BucketBinding;
+  R2_PUBLIC_DOMAIN?: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   COOKIE_DOMAIN?: string;

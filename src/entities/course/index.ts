@@ -1,5 +1,6 @@
 export { fetchLevelDetails, fetchLevelModuleDetails } from "./api";
 export {
+  ArtifactResponseTypeSchema,
   ContentTypeSchema,
   EContentItemSchema,
   LevelDetailsPayloadSchema,
@@ -14,6 +15,7 @@ export {
   ModuleStageContentSchema,
 } from "./model/levelContentSchemas";
 export type {
+  ArtifactResponseType,
   ContentType,
   EContentItem,
   LevelDetailsResponse,
@@ -22,6 +24,7 @@ export type {
   Lte6eStage,
   ModuleArtifact,
   ModuleArtifactQuestion,
+  ModuleArtifactSubmittedFile,
   ModuleArtifactTemplate,
   ModuleDetailsResponse,
   ModuleStageContent,

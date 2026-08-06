@@ -3,3 +3,4 @@
 // Each feature should have its own directory with api, model, schemas, and ui
 
 export * from "./initialize-learning-path";
+export * from "./submit-artifact";

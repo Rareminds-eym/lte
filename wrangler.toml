@@ -25,6 +25,14 @@ service = "sso-api"
 entrypoint = "SsoWorker"
 
 # ============================================================================
+# R2 BUCKET BINDINGS
+# ============================================================================
+
+[[r2_buckets]]
+binding = "STORAGE_BUCKET"
+bucket_name = "lte"
+
+# ============================================================================
 # VARIABLES
 # ============================================================================
 
@@ -33,6 +41,7 @@ ENVIRONMENT = "production"
 SSO_WORKER_LOCAL_URL = "http://127.0.0.1:8787"
 COOKIE_DOMAIN = ".rareminds.in"
 SKILLPASSPORT_INTERNAL_URL = "http://127.0.0.1:8788"
+R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 
 # ============================================================================
 # SECRETS

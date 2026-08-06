@@ -62,6 +62,7 @@ const modulePayload = {
         stageDescription: "Understand the incident context before taking action.",
         items: [],
         artifacts: [],
+        artifactType: null,
         isActive: true,
       },
     ],

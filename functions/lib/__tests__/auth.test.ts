@@ -20,6 +20,12 @@ const mockUser: AuthUser = {
 
 const mockEnv = {
   SSO_SERVICE: {},
+  STORAGE_BUCKET: {
+    put: () => Promise.resolve({}),
+    get: () => Promise.resolve(null),
+    head: () => Promise.resolve(null),
+    delete: () => Promise.resolve(undefined),
+  },
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   SKILLPASSPORT_INTERNAL_URL: "https://skillpassport.example.com",
