@@ -1,6 +1,7 @@
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 import type { CurrentJourneyData, JourneyState } from "@/entities/dashboard";
+import { ROUTES, routeForLevel, routeForModule } from "@/shared/config";
 import { Image } from "@/shared/ui";
 
 export interface JourneyHeroProps {
@@ -12,11 +13,10 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
   const navigate = useNavigate();
   const continueUrl =
     data?.levelId !== undefined && data?.moduleNo !== undefined
-      ? `/my-courses/${data.levelId}/modules/${data.moduleNo}`
+      ? routeForModule(data.levelId, data.moduleNo)
       : null;
-  const detailsUrl = data?.capabilityCode
-    ? `/courses/${data.capabilityCode}/levels/${data.levelId}`
-    : null;
+  const detailsUrl =
+    data?.capabilityCode && data?.levelId ? routeForLevel(data.capabilityCode, data.levelId) : null;
 
   if (!data) {
     return (
@@ -25,7 +25,6 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
           <Image
             src="/assets/images/mesh_orb.png"
             alt="3D Mesh Sphere Graphic"
-            loading="eager"
             priority
             className="w-full h-full object-contain"
           />
@@ -49,7 +48,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
           <div className="flex flex-wrap items-center gap-3 pt-4">
             <button
               type="button"
-              onClick={() => navigate("/my-courses")}
+              onClick={() => navigate(ROUTES.MY_COURSES)}
               className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-content-inverse font-semibold text-sm rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
             >
               {state === "completed" ? "Choose Next Capability" : "Explore Career Paths"}

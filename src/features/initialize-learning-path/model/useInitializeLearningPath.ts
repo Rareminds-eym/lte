@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { DASHBOARD_QUERY_KEY } from "@/entities/dashboard/model/useDashboardData";
+import { DASHBOARD_QUERY_KEY } from "@/entities/dashboard";
 import { ApiError } from "@/shared";
 import { initializeLearningPath } from "../api/initializeLearningPath";
 import type { InitializeLearningPathPayload } from "./initializeLearningPath.schema";

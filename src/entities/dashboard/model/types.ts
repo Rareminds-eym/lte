@@ -22,7 +22,8 @@ export interface CurrentJourneyData {
   completedCount: number;
   inProgressCount: number;
   remainingCount: number;
-  timeRemaining: string | null;
+  /** backend does not send this today; present only in the mock base */
+  timeRemaining?: string | null;
   levelId?: string;
   moduleNo?: number;
   capabilityCode?: string;

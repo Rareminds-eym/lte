@@ -1,9 +1,13 @@
+import type { z } from "zod";
 import { apiGet } from "@/shared/api";
 import {
   LevelDetailsPayloadSchema,
   ModuleDetailsPayloadSchema,
 } from "../model/levelContentSchemas";
 import type { LevelDetailsResponse, ModuleDetailsResponse } from "../model/levelContentTypes";
+
+type LevelDetailsPayload = z.infer<typeof LevelDetailsPayloadSchema>;
+type ModuleDetailsPayload = z.infer<typeof ModuleDetailsPayloadSchema>;
 
 const LEVEL_API_BASE = "/api/v1/courses";
 
@@ -14,7 +18,7 @@ export async function fetchLevelDetails(
   const url = capabilityCode
     ? `${LEVEL_API_BASE}/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`
     : `${LEVEL_API_BASE}/${encodeURIComponent(levelId)}`;
-  const payload = await apiGet<unknown>(url);
+  const payload = await apiGet<LevelDetailsPayload>(url);
   try {
     const parsedPayload = LevelDetailsPayloadSchema.parse(payload);
     return parsedPayload.level;
@@ -30,7 +34,7 @@ export async function fetchLevelModuleDetails(
   levelId: string,
   moduleNo: number,
 ): Promise<ModuleDetailsResponse> {
-  const payload = await apiGet<unknown>(
+  const payload = await apiGet<ModuleDetailsPayload>(
     `${LEVEL_API_BASE}/${encodeURIComponent(levelId)}/modules/${moduleNo}`,
   );
   const parsedPayload = ModuleDetailsPayloadSchema.parse(payload);

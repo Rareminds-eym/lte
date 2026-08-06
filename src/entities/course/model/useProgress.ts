@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { DASHBOARD_QUERY_KEY } from "../../dashboard/model/useDashboardData";
+import { DASHBOARD_QUERY_KEY } from "@/entities/dashboard";
 import { startLevelProgress, startModuleProgress, updateStageProgress } from "../api/progressApi";
 import {
   getLevelContentQueryKey,

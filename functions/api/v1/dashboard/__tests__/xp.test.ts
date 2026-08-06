@@ -32,6 +32,7 @@ describe("GET /api/v1/dashboard/xp", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(getUserTotalXp).mockClear();
   });
 
   it("returns 401 when requireAuth throws", async () => {
@@ -79,14 +80,12 @@ describe("GET /api/v1/dashboard/xp", () => {
     );
   });
 
-  it("falls back to UTC boundaries when since is absent or invalid", async () => {
+  it("falls back to UTC boundaries when since is absent", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     vi.mocked(getUserTotalXp).mockResolvedValue(0);
     vi.mocked(createServiceSupabase).mockReturnValueOnce({} as SupabaseClient);
     const response = await onRequestGet({
-      request: new Request(
-        "http://localhost/api/v1/dashboard/xp?since=not-a-date&todaySince=also-bad",
-      ),
+      request: new Request("http://localhost/api/v1/dashboard/xp"),
       env: {} as LteEnv,
     } as PagesContext<LteEnv>);
     expect(response.status).toBe(200);
@@ -98,6 +97,18 @@ describe("GET /api/v1/dashboard/xp", () => {
     expect(dayFallback).toBeInstanceOf(Date);
     expect(dayFallback?.getUTCHours()).toBe(0);
     expect(dayFallback?.getUTCMinutes()).toBe(0);
+  });
+
+  it("rejects invalid since/todaySince with 400 before querying XP", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
+    const response = await onRequestGet({
+      request: new Request(
+        "http://localhost/api/v1/dashboard/xp?since=not-a-date&todaySince=also-bad",
+      ),
+      env: {} as LteEnv,
+    } as PagesContext<LteEnv>);
+    expect(response.status).toBe(400);
+    expect(getUserTotalXp).not.toHaveBeenCalled();
   });
 
   it("returns 500 when the XP query fails", async () => {

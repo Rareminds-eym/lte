@@ -1,4 +1,5 @@
 export { fetchLevelDetails, fetchLevelModuleDetails } from "./api";
+export type { CapabilityLevel } from "./api/courseApi";
 export {
   ArtifactResponseTypeSchema,
   ContentTypeSchema,

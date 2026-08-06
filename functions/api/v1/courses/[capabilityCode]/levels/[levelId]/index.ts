@@ -5,6 +5,7 @@
 
 import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
+import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getLevelWithModules } from "../../../queries";
@@ -48,6 +49,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       });
     }
     const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    apiLogger.error("level details request failed", error, { requestId });
     return jsonError(errorMessage, 500, { code: "SERVER_ERROR", requestId });
   }
 }

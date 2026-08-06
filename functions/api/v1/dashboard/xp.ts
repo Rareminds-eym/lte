@@ -4,6 +4,7 @@ import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getUserTotalXp } from "@functions/lib/xp-engine";
+import { DashboardXpQuerySchema } from "./schemas";
 
 export interface DashboardXpResponse {
   success: boolean;
@@ -27,12 +28,19 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const user = await requireAuth(context.request, context.env);
 
     const params = new URL(context.request.url).searchParams;
-    const parseSince = (raw: string | null) =>
-      raw && !Number.isNaN(Date.parse(raw)) ? new Date(raw) : undefined;
+    const parsedQuery = DashboardXpQuerySchema.safeParse({
+      since: params.get("since") ?? undefined,
+      todaySince: params.get("todaySince") ?? undefined,
+    });
+    if (!parsedQuery.success) {
+      return jsonError("Invalid query parameters", 400, {
+        code: "VALIDATION_ERROR",
+        requestId,
+      });
+    }
     // ponytail: week/day boundaries computed by the browser in the user's local tz;
-    // fall back to UTC boundaries when absent/invalid rather than silently equaling totals
-    const since = parseSince(params.get("since"));
-    const todaySince = parseSince(params.get("todaySince"));
+    // fall back to UTC boundaries when absent rather than silently equaling totals
+    const { since, todaySince } = parsedQuery.data;
 
     const supabase = createServiceSupabase(context.env);
     const now = new Date();

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCapabilityLevels } from "@/entities/course";
 import { CourseDetail } from "@/pages/course-detail";
 
@@ -15,8 +15,14 @@ vi.mock("react-router-dom", async () => {
       state: null,
       key: "default",
     }),
-    useNavigate: () => vi.fn(),
+    useNavigate: () => mockNavigate,
   };
+});
+
+const mockNavigate = vi.hoisted(() => vi.fn());
+
+beforeEach(() => {
+  mockNavigate.mockClear();
 });
 
 vi.mock("@/features/initialize-learning-path", () => ({
@@ -242,10 +248,13 @@ describe("CourseDetail", () => {
     // Clicking unlocked level action ("Start →") triggers navigation/action
     const startBtn = screen.getByRole("button", { name: "Start →" });
     fireEvent.click(startBtn);
+    expect(mockNavigate).toHaveBeenCalledWith("/courses/TEST-CAP-101/levels/lvl-2");
 
-    // Clicking completed level action ("Review →")
+    // Clicking completed level action ("Review →") also navigates to the level
+    mockNavigate.mockClear();
     const reviewBtn = screen.getByRole("button", { name: "Review →" });
     fireEvent.click(reviewBtn);
+    expect(mockNavigate).toHaveBeenCalledWith("/courses/TEST-CAP-101/levels/lvl-1");
   });
 
   it("renders error state when courses query fails", async () => {

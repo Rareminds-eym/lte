@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchDashboardData, MOCK_DASHBOARD_DATA } from "@/entities/dashboard";
+import { fetchDashboardData } from "@/entities/dashboard";
+import { MOCK_DASHBOARD_DATA } from "@/entities/dashboard/api/dashboardApi";
 
 vi.mock("@/shared/api", () => ({
   apiFetch: vi.fn(),
@@ -75,10 +76,12 @@ describe("dashboardApi", () => {
     expect(data.journeyState).toBe("completed");
   });
 
-  it("falls back to the mock XP when the API call fails", async () => {
+  it("zeroes XP and clears the journey when the API call fails", async () => {
     vi.mocked(apiFetch).mockRejectedValue(new Error("network down"));
     const data = await fetchDashboardData();
-    expect(data.careerTarget.xp).toBe(MOCK_DASHBOARD_DATA.careerTarget.xp);
+    expect(data.careerTarget.xp).toBe(0);
+    expect(data.careerTarget.xpThisWeek).toBe(0);
+    expect(data.priorities.currentXp).toBe(0);
     expect(data.journey).toBeNull();
   });
 

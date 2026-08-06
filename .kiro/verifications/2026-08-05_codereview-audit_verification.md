@@ -23,7 +23,7 @@ Staged set classification:
   `src/pages/course-detail/model/dynamicLevels.ts`,
   `src/pages/course-detail/ui/CourseLevelCard.tsx`,
   `supabase/migrations/20260805120000_add_levels_total_xp_column.sql` (new),
-  `supabase/seed/{dev,production}/seed_lte_catalog_14_e_content_xp_rewards.sql` (new).
+  `supabase/seed/{dev,production}/seed_lte_catalog_15_e_content_xp_rewards.sql` (new; renumbered from 14 to the next free slot after the dev slot-14 collision).
 
 ## 🔴 Critical — blocks merge
 
@@ -39,8 +39,8 @@ Staged set classification:
 |---|---------|------|-----|
 | H1 | **Wrong artifact committed**: staged `lte/graphify-out/lte-callflow.html` (4,982 lines) is the stray **nested** artifact at `lte/lte/graphify-out/` — exactly the path trap documented in workspace `AGENTS.md` ("`graphify update ./lte` from the workspace root triggers a nested `lte/lte/graphify-out/` output"). The correct root build `graphify-out/lte-callflow.html` is gitignored (`.gitignore:52`); the nested copy escapes the root-anchored pattern (`git check-ignore` exit 1 — verified). | AGENTS.md graphify rules | `git restore --staged lte/graphify-out/lte-callflow.html` and delete `lte/lte/`. If a callflow artifact is wanted, generate from `lte/` root — but `.gitignore` deliberately keeps only `graph.json`, so drop it |
 | H2 | `graphify-out/.graphify_root` now contains `lte` (verified) — graph regenerated from the wrong root; `graphify query/path/explain` will resolve paths under nonexistent `lte/lte/` and fail. | AGENTS.md | Restore to `.` and regenerate: `graphify update .` from inside `lte/` |
-| H3 | **Backfill gap** in `seed_lte_catalog_14_e_content_xp_rewards.sql:5` — `WHERE xp_reward IS NULL OR xp_reward = 0` skips rows already ≥ 1, so their trigger never fires and `levels.total_xp` stays 0 (wrong XP on level cards). In-place `supabase db push` deployments never run seeds at all → all levels show "0 XP". Fresh `db reset` self-heals (seed 10 inserts rows with NULL xp_reward; seed 14 touches 100%). | 04-database-api-standards §11.2 (Expand-Migrate-Contract Phase 2 backfill) | `UPDATE public."e_content" SET "xp_reward" = 1 WHERE "xp_reward" IS DISTINCT FROM 1;` — still DML-only, idempotent, fires trigger for every non-1 row |
-| H4 | *(pre-existing, outside diff)* `functions/api/v1/courses/[capabilityCode]/levels/[levelId]/index.ts:12–37` — no `requireAuth`/`withAuth`; trusts `userId` from the query string (`:21`) and returns per-user progress. Anyone with a guessed userId can read another user's progress. | .codereview.yml "Use approved authentication middleware" (critical) | Wrap with `requireAuth` (as `courses/.../progress.ts` does), derive userId from `user.sub`, zod-validate query — follow-up ticket |
+| H3 | **Backfill gap** in `seed_lte_catalog_15_e_content_xp_rewards.sql:5` (renamed from 14; dev slot 14 was already taken by `seed_lte_catalog_14_artifact_question_response_types_20260805.sql`) — `WHERE xp_reward IS NULL OR xp_reward = 0` skips rows already ≥ 1, so their trigger never fires and `levels.total_xp` stays 0 (wrong XP on level cards). In-place `supabase db push` deployments never run seeds at all → all levels show "0 XP". Fresh `db reset` self-heals (seed 10 inserts rows with NULL xp_reward; seed 15 touches 100%). | 04-database-api-standards §11.2 (Expand-Migrate-Contract Phase 2 backfill) | `UPDATE public."e_content" SET "xp_reward" = 1 WHERE "xp_reward" IS DISTINCT FROM 1;` — still DML-only, idempotent, fires trigger for every non-1 row |
+| H4 | *(pre-existing, outside diff — resolved in this branch)* `functions/api/v1/courses/[capabilityCode]/levels/[levelId]/index.ts` — dev trusted `userId` from the query string (`:21`) and returned per-user progress. Anyone with a guessed userId could read another user's progress. **Branch fix verified**: `requireAuth` added (index.ts:16), userId derived from `user.sub`, route params zod-validated via `CapabilityLevelParamsSchema`; frontend no longer sends `?userId=`. | .codereview.yml "Use approved authentication middleware" (critical) | Already applied — no follow-up ticket needed |
 
 ## 🟡 Medium
 
@@ -152,8 +152,8 @@ the earlier audit missed — none introduced by this change, none blocking:
 | S3 | No API documentation exists for the capabilities/levels endpoints in `docs/` — nothing to update for the new `totalXp` field | 00-core-standards §1.2 / README standard | Pre-existing; repo-wide |
 
 Verified NOT missed (close calls): xp flows end-to-end (`CourseDetailPage.tsx:300`
-`{...level}` spread → card renders `xp` at both card/list sites); seed 14 is the next
-slot after 13 (no collision); dev/prod seeds byte-identical; live DB query confirms
+`{...level}` spread → card renders `xp` at both card/list sites); seed 15 is the next
+free slot after 14 (dev slot 14 was already taken by `seed_lte_catalog_14_artifact_question_response_types_20260805.sql`, so the XP-reward seed was renumbered to 15); dev/prod seeds byte-identical; live DB query confirms
 `trg_sync_level_total_xp` + `sync_level_total_xp` applied; `.kiro/` is tracked so the
 verification doc belongs in the staged set; migration intact after header edit; full
 `npm run lint` (eslint + stylelint) passes; final staged diff contains all 12 fix sites

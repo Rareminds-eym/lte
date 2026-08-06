@@ -1,4 +1,4 @@
-import type { CapabilityLevel } from "@/entities/course/api/courseApi";
+import type { CapabilityLevel } from "@/entities/course";
 import type { CourseLevelCardProps } from "../ui/CourseLevelCard";
 
 function durationLabel(minutes: number): string {

@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { apiLogger } from "./logger";
-import { assertStageSequenceAllowed } from "./stage-sequence";
+import {
+  assertStageSequenceAllowed,
+  getStageCompletionPercentage,
+  LTE_STAGE_COUNT,
+} from "./stage-sequence";
 
 // Event to XP amount mapping (TRD-DB-007 enum values)
 export const XP_AMOUNTS: Record<string, number> = {
@@ -317,10 +321,10 @@ export async function completeStage(
   // 6. Update user_module_progress progress counters if this is a newly completed stage
   if (isNewCompletion && !xpResult.alreadyAwarded) {
     const nextStagesCompleted = Math.min(
-      6,
+      LTE_STAGE_COUNT,
       (progressRecord as NonNullable<typeof progressRecord>).stages_completed + 1,
     );
-    const completionPercentage = Math.round((nextStagesCompleted / 6) * 100);
+    const completionPercentage = getStageCompletionPercentage(nextStagesCompleted);
 
     const updatePayload: Record<string, unknown> = {
       stages_completed: nextStagesCompleted,
@@ -328,7 +332,7 @@ export async function completeStage(
       current_stage: stageContent.stage_name,
       last_activity_at: new Date().toISOString(),
     };
-    if (nextStagesCompleted >= 6) {
+    if (nextStagesCompleted >= LTE_STAGE_COUNT) {
       updatePayload["module_status"] = "completed";
     }
 

@@ -15,14 +15,26 @@
 --
 -- Deployment order:
 -- 1. Run this migration
--- 2. Run seed 14 (dev or production) to normalize xp_reward = 1; the UPDATE fires
+-- 2. Run seed 15 (dev or production) to normalize xp_reward = 1; the UPDATE fires
 --    the sync trigger for every touched row and backfills levels.total_xp.
 BEGIN;
 
 -- 1. Add total_xp column to levels table with default 0 (trigger will populate from e_content.xp_reward)
 ALTER TABLE public."levels"
-  ADD COLUMN IF NOT EXISTS "total_xp" integer DEFAULT 0 NOT NULL,
-  ADD CONSTRAINT "chk_levels_total_xp" CHECK ("total_xp" >= 0);
+  ADD COLUMN IF NOT EXISTS "total_xp" integer DEFAULT 0 NOT NULL;
+
+-- Idempotent constraint add (Postgres has no ADD CONSTRAINT IF NOT EXISTS)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_levels_total_xp' AND conrelid = 'public.levels'::regclass
+  ) THEN
+    ALTER TABLE public."levels"
+      ADD CONSTRAINT "chk_levels_total_xp" CHECK ("total_xp" >= 0);
+  END IF;
+END;
+$$;
 
 -- 2. Create PostgreSQL trigger function to sync levels.total_xp from e_content.xp_reward sum.
 --    Dispatches on the firing table: modules (level_id moves), modules_content
@@ -68,13 +80,26 @@ BEGIN
       FROM public.modules m
       JOIN public.modules_content mc ON mc.module_id = m.id
       WHERE mc.id = OLD.modules_content_id;
+      target_level_ids := ARRAY[target_level_id];
+    ELSIF TG_OP = 'UPDATE' AND OLD.modules_content_id IS DISTINCT FROM NEW.modules_content_id THEN
+      -- Content moved between modules: refresh both the source and target levels
+      SELECT m.level_id INTO target_level_id
+      FROM public.modules m
+      JOIN public.modules_content mc ON mc.module_id = m.id
+      WHERE mc.id = OLD.modules_content_id;
+      target_level_ids := ARRAY[target_level_id];
+      SELECT m.level_id INTO target_level_id
+      FROM public.modules m
+      JOIN public.modules_content mc ON mc.module_id = m.id
+      WHERE mc.id = NEW.modules_content_id;
+      target_level_ids := target_level_ids || target_level_id;
     ELSE
       SELECT m.level_id INTO target_level_id
       FROM public.modules m
       JOIN public.modules_content mc ON mc.module_id = m.id
       WHERE mc.id = NEW.modules_content_id;
+      target_level_ids := ARRAY[target_level_id];
     END IF;
-    target_level_ids := ARRAY[target_level_id];
   END IF;
 
   FOREACH target_level_id IN ARRAY target_level_ids LOOP

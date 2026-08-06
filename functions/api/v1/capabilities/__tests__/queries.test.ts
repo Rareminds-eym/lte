@@ -1,7 +1,12 @@
 import { apiLogger } from "@functions/lib/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getCapabilitiesByRoleId, getLevelsForCapability } from "../queries";
+import {
+  getCapabilitiesByRoleId,
+  getLevelStatsForCapabilities,
+  getLevelsForCapability,
+  getUserCapabilitiesForRoles,
+} from "../queries";
 
 interface QueryChain {
   select: ReturnType<typeof vi.fn>;
@@ -128,6 +133,83 @@ describe("capabilities queries", () => {
       await expect(getCapabilitiesByRoleId(supabase, "role-1")).rejects.toThrow(
         "Failed to fetch role capabilities: boom",
       );
+    });
+  });
+
+  describe("getLevelStatsForCapabilities", () => {
+    it("returns empty maps for an empty capability id list", async () => {
+      await expect(getLevelStatsForCapabilities(supabaseWith({}), [])).resolves.toEqual({
+        counts: {},
+        xpSums: {},
+      });
+    });
+
+    it("counts levels and sums total_xp per capability", async () => {
+      const supabase = supabaseWith({
+        levels: {
+          data: [
+            { capability_id: "c1", id: "l1", total_xp: 10 },
+            { capability_id: "c1", id: "l2", total_xp: 20 },
+            { capability_id: "c2", id: "l3", total_xp: 5 },
+            { capability_id: "c2", id: "l4", total_xp: null },
+          ],
+        },
+      });
+
+      await expect(getLevelStatsForCapabilities(supabase, ["c1", "c2"])).resolves.toEqual({
+        counts: { c1: 2, c2: 2 },
+        xpSums: { c1: 30, c2: 5 },
+      });
+    });
+
+    it("throws when the query errors", async () => {
+      const supabase = supabaseWith({ levels: { error: new Error("boom") } });
+      await expect(getLevelStatsForCapabilities(supabase, ["c1"])).rejects.toThrow(
+        "Failed to fetch level counts: boom",
+      );
+    });
+  });
+
+  describe("getUserCapabilitiesForRoles", () => {
+    it("returns [] when no role ids are provided", async () => {
+      await expect(getUserCapabilitiesForRoles(supabaseWith({}), [], [])).resolves.toEqual([]);
+    });
+
+    it("maps capabilities with xp totals and role info", async () => {
+      const supabase = supabaseWith({
+        role_capability_sequence: {
+          data: [
+            {
+              id: "s1",
+              sequence_step: 1,
+              required_level: "L1",
+              capability_priority: "core",
+              capabilities: { id: "c1", code: "C1", name: "One", description: "Desc1" },
+            },
+          ],
+        },
+        levels: {
+          data: [{ capability_id: "c1", id: "l1", total_xp: 42 }],
+        },
+      });
+
+      const result = await getUserCapabilitiesForRoles(
+        supabase,
+        ["role-1"],
+        [{ roleId: "role-1", roleName: "Learner" }],
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        id: "c1",
+        code: "C1",
+        totalLevels: 1,
+        currentLevel: 0,
+        status: "not_started",
+        progress: 0,
+        xp: 42,
+        roleId: "role-1",
+        roleName: "Learner",
+      });
     });
   });
 

@@ -1,8 +1,14 @@
 import { apiFetch } from "@/shared/api";
-import type { CurrentJourneyData, DashboardData, JourneyState } from "../model/types";
+import {
+  DashboardJourneyResponseSchema,
+  DashboardXpResponseSchema,
+} from "../model/dashboardSchemas";
+import type { DashboardData } from "../model/types";
 
-// Static fixture used by widget unit tests only. fetchDashboardData never
-// falls back to it — an empty journey state is shown instead of fake data.
+// Static base payload for dashboard sections that have no backend endpoint
+// yet; also doubles as the widget-test fixture (not barrel-exported).
+// Live data (XP totals, journey) is always overwritten from the API; failures
+// surface honest zeroes/null, never fabricated numbers.
 export const MOCK_DASHBOARD_DATA: DashboardData = {
   careerTarget: {
     title: "Backend Engineer",
@@ -205,35 +211,39 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
   localMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
 
   const [xpResult, journeyResult] = await Promise.allSettled([
-    apiFetch<{
-      success: boolean;
-      totalXp: number;
-      xpThisWeek: number;
-      todayXp: number;
-    }>(
+    apiFetch(
       `/api/v1/dashboard/xp?since=${encodeURIComponent(localMidnight(localMonday).toISOString())}&todaySince=${encodeURIComponent(localMidnight(now).toISOString())}`,
     ),
-    apiFetch<{ success: boolean; data: CurrentJourneyData | null; state: JourneyState }>(
-      "/api/v1/dashboard/journey",
-    ),
+    apiFetch("/api/v1/dashboard/journey"),
   ]);
 
   const base = { ...MOCK_DASHBOARD_DATA };
-  if (xpResult.status === "fulfilled" && xpResult.value.success) {
-    const { totalXp, xpThisWeek, todayXp } = xpResult.value;
+
+  const parsedXp =
+    xpResult.status === "fulfilled" ? DashboardXpResponseSchema.safeParse(xpResult.value) : null;
+  if (parsedXp?.success) {
     base.careerTarget = {
       ...base.careerTarget,
-      xp: totalXp,
-      xpThisWeek,
+      xp: parsedXp.data.totalXp,
+      xpThisWeek: parsedXp.data.xpThisWeek,
     };
     base.priorities = {
       ...base.priorities,
-      currentXp: todayXp,
+      currentXp: parsedXp.data.todayXp,
     };
+  } else {
+    // Never show fabricated fixture XP: honest zeroes when the API fails.
+    base.careerTarget = { ...base.careerTarget, xp: 0, xpThisWeek: 0 };
+    base.priorities = { ...base.priorities, currentXp: 0 };
   }
-  if (journeyResult.status === "fulfilled" && journeyResult.value.success) {
-    base.journey = journeyResult.value.data;
-    base.journeyState = journeyResult.value.state;
+
+  const parsedJourney =
+    journeyResult.status === "fulfilled"
+      ? DashboardJourneyResponseSchema.safeParse(journeyResult.value)
+      : null;
+  if (parsedJourney?.success) {
+    base.journey = parsedJourney.data.data;
+    base.journeyState = parsedJourney.data.state;
   } else {
     // Never show stale mock data: an empty hero state is honest.
     base.journey = null;
