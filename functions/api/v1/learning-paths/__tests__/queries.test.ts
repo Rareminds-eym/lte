@@ -128,6 +128,18 @@ describe("learning-paths queries", () => {
             learningPathId: "lp-1",
           },
         ],
+        tracks: [
+          {
+            id: "track-1",
+            title: "React",
+            matchPercentage: 87,
+            isExplore: false,
+            isSelected: undefined,
+            fit: "high",
+          },
+        ],
+        overallProgress: 0,
+        completionCount: 0,
       });
     });
 

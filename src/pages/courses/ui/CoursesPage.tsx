@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLearningPathStore } from "@/entities/active-learning-path";
-import { CourseCard, CourseCardGridSkeleton, useCourses } from "@/entities/course";
+import { CourseCard, useCourses } from "@/entities/course";
 import { useAuthStore } from "@/entities/session";
 import { LearningPathInitializer } from "@/features/initialize-learning-path";
 import { StartAssessmentButton } from "@/features/start-assessment";
@@ -11,6 +11,7 @@ import { Button, SegmentedControl } from "@/shared/ui";
 import { Pagination } from "@/widgets";
 import { LearningPathEmptyState } from "@/widgets/learning-path";
 import { COURSE_PAGE_SIZE, getSafeCoursePage, paginateCourses } from "../model/courseFilters";
+import { CoursesPageSkeleton } from "./CoursesPageSkeleton";
 
 const STATS_PILL_STYLES = {
   enrolled: "bg-brand-50 border-brand-100 text-brand-700 [&_svg]:text-brand-500",
@@ -84,26 +85,7 @@ export const CoursesPage = () => {
   }, [courses]);
 
   if (isCoursesLoading) {
-    return (
-      <div className="mx-auto max-w-[1440px] space-y-6">
-        <header className="flex items-start justify-between gap-6 animate-pulse">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-surface-muted shrink-0 mt-1" />
-            <div className="space-y-2">
-              <div className="h-6 w-32 bg-surface-muted rounded" />
-              <div className="h-4 w-64 bg-surface-muted rounded" />
-            </div>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="w-24 h-10 bg-surface-muted rounded-full" />
-            <div className="w-24 h-10 bg-surface-muted rounded-full" />
-            <div className="w-24 h-10 bg-surface-muted rounded-full" />
-          </div>
-        </header>
-        <div className="h-px bg-line-default w-full" />
-        <CourseCardGridSkeleton />
-      </div>
-    );
+    return <CoursesPageSkeleton />;
   }
 
   if (needsAssessment && !hasInitParams) {

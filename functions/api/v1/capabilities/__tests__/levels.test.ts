@@ -118,6 +118,9 @@ describe("GET /api/v1/capabilities/:capabilityCode/levels", () => {
             },
           ]);
         }
+        if (table === "user_capabilities") {
+          return chainable(null);
+        }
         const levelsData = [
           {
             id: "lvl-2",

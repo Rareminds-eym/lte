@@ -62,8 +62,6 @@ export {
   CourseCardGridSkeleton,
   type CourseCardProps,
   CourseCardSkeleton,
-  CourseGridSkeleton,
-  CourseSkeleton,
   ResourceContentViewer,
   type ResourceContentViewerProps,
 } from "./ui";
