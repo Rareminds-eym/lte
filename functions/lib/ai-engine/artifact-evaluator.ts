@@ -8,6 +8,7 @@ import {
 import type { LteEnv } from "../types";
 import { awardXp } from "../xp-engine";
 import type {
+  AIDebugTelemetry,
   AIEvaluationResult,
   ArtifactEvaluationInput,
   LteCriterionLabel,
@@ -69,17 +70,20 @@ export function generateFallbackEvaluation(input: ArtifactEvaluationInput): AIEv
     };
   });
 
+  const stage1SubmissionCheck = {
+    isAssessable: isComplete,
+    notes: isComplete
+      ? "Submission check passed: All required artifact sections present and readable."
+      : "Submission check failed: One or more required prompt responses are missing or too brief.",
+  };
+  const stage2CriticalFailures = { hasFailure: false, failuresFound: [] };
+
   return {
     overallScore: isPass ? 85 : 50,
     passingScore: passingThreshold,
     decision: isPass ? "pass" : "revise_and_resubmit",
-    stage1SubmissionCheck: {
-      isAssessable: isComplete,
-      notes: isComplete
-        ? "Submission check passed: All required artifact sections present and readable."
-        : "Submission check failed: One or more required prompt responses are missing or too brief.",
-    },
-    stage2CriticalFailures: { hasFailure: false, failuresFound: [] },
+    stage1SubmissionCheck,
+    stage2CriticalFailures,
     rubricRows,
     feedback: isPass
       ? "Pass: No critical failures and all essential criteria demonstrate target mastery."
@@ -89,6 +93,19 @@ export function generateFallbackEvaluation(input: ArtifactEvaluationInput): AIEv
     calculatedXp,
     modelUsed: "fallback-rules-engine",
     provider: "fallback",
+    debugTelemetry: {
+      timestamp: new Date().toISOString(),
+      latencyMs: 0,
+      modelUsed: "fallback-rules-engine",
+      provider: "fallback",
+      rawPromptContent: "Deterministic fallback evaluator rules engine",
+      rawResponseContent: "N/A (Offline Fallback Evaluator)",
+      stage1Check: stage1SubmissionCheck,
+      stage2Failures: stage2CriticalFailures,
+      wasDecisionOverridden: false,
+      validatedDecision: isPass ? "pass" : "revise_and_resubmit",
+      calculatedXp,
+    },
   };
 }
 
@@ -229,8 +246,11 @@ export async function evaluateArtifactSubmission(
     temperature: 0.2,
   };
 
+  const startTime = performance.now();
+
   try {
     const rawContent = await callOpenRouterAI(env, requestPayload);
+    const latencyMs = Math.round(performance.now() - startTime);
     const cleaned = rawContent.replace(/```(json)?/g, "").trim();
     const parsed = JSON.parse(cleaned) as {
       overallScore?: number;
@@ -263,11 +283,12 @@ export async function evaluateArtifactSubmission(
         ? "revise_and_resubmit"
         : "pass");
 
+    const wasDecisionOverridden =
+      parsed.decision === "pass" &&
+      (hasCriticalFailure || hasSubparCriterion || isSubmissionIncomplete);
+
     // Override AI hallucinated pass if criteria or critical failure rules are violated
-    if (
-      validatedDecision === "pass" &&
-      (hasCriticalFailure || hasSubparCriterion || isSubmissionIncomplete)
-    ) {
+    if (wasDecisionOverridden) {
       apiLogger.warn(
         "Overriding false-positive AI pass decision due to rubric/critical failure violation.",
       );
@@ -277,6 +298,29 @@ export async function evaluateArtifactSubmission(
     const isPass = validatedDecision === "pass";
     const isPractice = input.artifactType === "practice";
     const calculatedXp = calculateArtifactXp(isPass, isPractice, input.attemptNo);
+
+    const debugTelemetry: AIDebugTelemetry = {
+      timestamp: new Date().toISOString(),
+      latencyMs,
+      modelUsed: modelToUse,
+      provider: "openrouter",
+      rawPromptContent: `SYSTEM PROMPT:\n${SYSTEM_PROMPT}\n\nUSER SUBMISSION PAYLOAD:\n${promptContent}`,
+      rawResponseContent: rawContent,
+      stage1Check: stage1SubmissionCheck,
+      stage2Failures: stage2CriticalFailures,
+      wasDecisionOverridden,
+      validatedDecision,
+      calculatedXp,
+    };
+
+    apiLogger.info("[AI_DEBUG_FLOW] OpenRouter Evaluation Complete", {
+      latencyMs: debugTelemetry.latencyMs,
+      modelUsed: debugTelemetry.modelUsed,
+      provider: debugTelemetry.provider,
+      validatedDecision: debugTelemetry.validatedDecision,
+      wasDecisionOverridden: debugTelemetry.wasDecisionOverridden,
+      calculatedXp: debugTelemetry.calculatedXp,
+    });
 
     return {
       overallScore: Math.min(100, Math.max(0, Number(parsed.overallScore) || (isPass ? 85 : 50))),
@@ -292,13 +336,20 @@ export async function evaluateArtifactSubmission(
       calculatedXp,
       modelUsed: modelToUse,
       provider: "openrouter",
+      debugTelemetry,
     };
   } catch (error) {
+    const latencyMs = Math.round(performance.now() - startTime);
     apiLogger.error(
       "Failed to run OpenRouter AI evaluation. Falling back to deterministic rules.",
       error,
     );
-    return generateFallbackEvaluation(input);
+    const fallback = generateFallbackEvaluation(input);
+    const fallbackTelemetry = fallback.debugTelemetry;
+    return {
+      ...fallback,
+      debugTelemetry: fallbackTelemetry ? { ...fallbackTelemetry, latencyMs } : undefined,
+    };
   }
 }
 
@@ -343,6 +394,7 @@ export async function processAndSaveArtifactEvaluation(
         provider: evalResult.provider,
         calculated_xp: evalResult.calculatedXp,
         attempt_no: input.attemptNo,
+        debug_telemetry: evalResult.debugTelemetry,
       },
       updated_at: now,
     },

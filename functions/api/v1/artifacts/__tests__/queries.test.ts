@@ -180,6 +180,10 @@ describe("artifact submission queries", () => {
         file_name: "Readiness Sheet.xlsx",
       },
     ]);
+    expect(result.evaluation?.debug_telemetry).toMatchObject({
+      provider: "fallback",
+      validatedDecision: "pass",
+    });
   });
 
   it("rejects a required file submission before creating a submission when no file is provided", async () => {

@@ -1,3 +1,4 @@
+import type { AIDebugTelemetry } from "@functions/lib/ai-engine/types";
 import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
@@ -37,6 +38,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
             completed_at: flow.completed_at,
             rubric_rows: meta?.["rubric_rows"] ?? [],
             calculated_xp: meta?.["calculated_xp"] ?? 0,
+            debug_telemetry: (meta?.["debug_telemetry"] as AIDebugTelemetry | undefined) ?? null,
           }
         : null,
     });

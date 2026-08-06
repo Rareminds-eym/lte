@@ -1,4 +1,5 @@
 import { processAndSaveArtifactEvaluation } from "@functions/lib/ai-engine/artifact-evaluator";
+import type { AIDebugTelemetry } from "@functions/lib/ai-engine/types";
 import { createObjectKey } from "@functions/lib/r2-client";
 import type { LteEnv } from "@functions/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -258,6 +259,7 @@ export async function submitArtifactSubmission(
     feedback: string;
     improvements: string;
     calculated_xp: number;
+    debug_telemetry?: AIDebugTelemetry;
   };
   files: Array<{ file_id: string; question_id: string; file_name: string }>;
 }> {
@@ -452,6 +454,7 @@ export async function submitArtifactSubmission(
       feedback: evalResult.feedback,
       improvements: evalResult.singleImprovementPoint,
       calculated_xp: evalResult.calculatedXp,
+      debug_telemetry: evalResult.debugTelemetry,
     },
     files: uploadedFiles,
   };

@@ -1,3 +1,4 @@
+import type { AIDebugTelemetry } from "@/../functions/lib/ai-engine/types";
 import { apiFetch } from "@/shared/api";
 
 export interface SubmissionEvaluationResponse {
@@ -8,7 +9,7 @@ export interface SubmissionEvaluationResponse {
     stage: string;
     status: string;
     score: number | null;
-    decision: "pass" | "fail" | null;
+    decision: "pass" | "revise_and_resubmit" | "human_review" | "fail" | null;
     feedback: string | null;
     improvements: string | null;
     completed_at: string | null;
@@ -20,6 +21,7 @@ export interface SubmissionEvaluationResponse {
       feedback?: string;
     }>;
     calculated_xp: number;
+    debug_telemetry: AIDebugTelemetry | null;
   } | null;
 }
 

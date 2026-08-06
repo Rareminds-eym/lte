@@ -1,5 +1,6 @@
 import type React from "react";
 import { useState } from "react";
+import type { AIDebugTelemetry } from "@/../functions/lib/ai-engine/types";
 import type { ModuleArtifactSubmittedFile } from "@/entities/course";
 import { downloadArtifactFile } from "@/features/submit-artifact";
 import {
@@ -11,6 +12,7 @@ import {
   MessageSquareIcon,
   toast,
 } from "@/shared/ui";
+import { AiDebugInspector } from "./AiDebugInspector";
 
 export interface SubmittedArtifactAttempt {
   attemptNo: number;
@@ -33,6 +35,7 @@ export interface SubmittedArtifactAttempt {
     feedback: string;
     improvements: string;
     calculated_xp: number;
+    debug_telemetry?: AIDebugTelemetry;
   };
 }
 
@@ -315,6 +318,8 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
           </div>
         ) : null}
       </div>
+
+      <AiDebugInspector telemetry={evaluationData?.debug_telemetry} />
     </div>
   );
 };

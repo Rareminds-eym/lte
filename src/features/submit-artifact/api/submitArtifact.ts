@@ -1,3 +1,4 @@
+import type { AIDebugTelemetry } from "@/../functions/lib/ai-engine/types";
 import { apiFetch } from "@/shared/api";
 
 export interface ArtifactAnswerInput {
@@ -22,7 +23,7 @@ export interface SubmitArtifactResponse {
   evaluation_status: "pending" | "completed";
   evaluation?: {
     overall_score: number;
-    decision: "pass" | "fail";
+    decision: "pass" | "revise_and_resubmit" | "human_review" | "fail";
     rubric_rows: Array<{
       label: string;
       score: number;
@@ -33,6 +34,7 @@ export interface SubmitArtifactResponse {
     feedback: string;
     improvements: string;
     calculated_xp: number;
+    debug_telemetry?: AIDebugTelemetry;
   };
   files: Array<{
     file_id: string;

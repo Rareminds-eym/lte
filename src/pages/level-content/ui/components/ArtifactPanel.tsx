@@ -1,7 +1,7 @@
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ModuleArtifact, ModuleArtifactSubmittedFile } from "@/entities/course";
-import type { SubmitArtifactResponse } from "@/features/submit-artifact";
+import { getSubmissionEvaluation, type SubmitArtifactResponse } from "@/features/submit-artifact";
 import { Button, LabFlaskIcon, LightningBoltIcon } from "@/shared/ui";
 import { ArtifactFeedbackTab, type SubmittedArtifactAttempt } from "./ArtifactFeedbackTab";
 import { ArtifactSubmitTab } from "./ArtifactSubmitTab";
@@ -31,6 +31,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [latestEvaluation, setLatestEvaluation] = useState<
     SubmitArtifactResponse["evaluation"] | undefined
   >();
+  const [evaluationsBySubmissionId, setEvaluationsBySubmissionId] = useState<
+    Record<string, SubmitArtifactResponse["evaluation"] | null>
+  >({});
 
   const submittedFileVersions = useMemo(() => {
     const baseFiles = activeArtifact?.submittedFiles ?? [];
@@ -64,6 +67,44 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
     return [...attemptsByNo.values()].sort((a, b) => b.attemptNo - a.attemptNo);
   }, [submittedFileVersions]);
+
+  const selectedAttempt =
+    submittedAttempts.find((attempt) => attempt.attemptNo === activeFeedbackAttemptNo) ??
+    submittedAttempts[0] ??
+    null;
+
+  useEffect(() => {
+    const submissionId = selectedAttempt?.files[0]?.submissionId;
+    if (!submissionId || submissionId in evaluationsBySubmissionId) return;
+    let cancelled = false;
+    getSubmissionEvaluation(submissionId)
+      .then((response) => {
+        if (cancelled) return;
+        const evaluation = response.evaluation;
+        setEvaluationsBySubmissionId((current) => ({
+          ...current,
+          [submissionId]: evaluation
+            ? {
+                overall_score: evaluation.score ?? 0,
+                decision: evaluation.decision ?? "fail",
+                rubric_rows: evaluation.rubric_rows,
+                feedback: evaluation.feedback ?? "",
+                improvements: evaluation.improvements ?? "",
+                calculated_xp: evaluation.calculated_xp,
+                debug_telemetry: evaluation.debug_telemetry ?? undefined,
+              }
+            : null,
+        }));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEvaluationsBySubmissionId((current) => ({ ...current, [submissionId]: null }));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAttempt, evaluationsBySubmissionId]);
 
   if (!activeArtifact || !activeArtifactType) {
     return (
@@ -114,6 +155,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       ],
     }));
     setLatestEvaluation(response.evaluation);
+    if (response.evaluation) {
+      setEvaluationsBySubmissionId((current) => ({
+        ...current,
+        [response.submission_id]: response.evaluation,
+      }));
+    }
     setActiveFeedbackAttemptNo(response.attempt_no);
     setActiveArtifactTab("feedback");
   };
@@ -194,7 +241,10 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           activeFeedbackAttemptNo={activeFeedbackAttemptNo}
           isPanelExpanded={isPanelExpanded}
           onSelectAttempt={setActiveFeedbackAttemptNo}
-          latestEvaluation={latestEvaluation}
+          latestEvaluation={
+            evaluationsBySubmissionId[selectedAttempt?.files[0]?.submissionId ?? ""] ??
+            latestEvaluation
+          }
         />
       ) : null}
 

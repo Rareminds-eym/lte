@@ -40,6 +40,9 @@ describe("ai-engine / artifact-evaluator", () => {
         "Judgement",
         "Next action",
       ]);
+      expect(result.debugTelemetry).toBeDefined();
+      expect(result.debugTelemetry?.provider).toBe("fallback");
+      expect(result.debugTelemetry?.validatedDecision).toBe("pass");
     });
 
     it("calculates lower XP for attempt 2", () => {
