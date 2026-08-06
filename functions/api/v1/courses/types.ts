@@ -5,6 +5,7 @@ export type Lte6eStage = LteStageName;
 
 /** Educational content types supported by the LTE system */
 export type ContentType = "pdf" | "doc" | "video" | "image" | "slide" | "link" | "audio" | "text";
+export type ArtifactResponseType = "text" | "file" | "url";
 
 /** Educational content item within a stage. */
 export interface EContentItem {
@@ -29,6 +30,10 @@ export interface ModuleArtifactQuestion {
   title: string;
   description: string;
   instructions: Record<string, unknown> | string;
+  responseType: ArtifactResponseType;
+  allowedFileTypes: string[] | null;
+  maxFileSizeMb: number | null;
+  responseRequired: boolean;
 }
 
 export interface ModuleArtifactTemplate {
@@ -41,6 +46,21 @@ export interface ModuleArtifactTemplate {
   isDownloadable: boolean;
 }
 
+export interface ModuleArtifactSubmittedFile {
+  id: string;
+  submissionId: string;
+  questionId: string;
+  fileName: string;
+  fileType: string;
+  fileSizeBytes: number | null;
+  downloadUrl: string;
+  attemptNo: number;
+  versionLabel: string;
+  isLatest: boolean;
+  submittedAt: string | null;
+  uploadedAt: string | null;
+}
+
 export interface ModuleArtifact {
   id: string;
   artifactType: "practice" | "final";
@@ -48,6 +68,7 @@ export interface ModuleArtifact {
   passingScore: number | null;
   questions: ModuleArtifactQuestion[];
   templates: ModuleArtifactTemplate[];
+  submittedFiles: ModuleArtifactSubmittedFile[];
   isActive: boolean;
 }
 
@@ -58,6 +79,7 @@ export interface ModuleStageContent {
   stageDescription: string;
   items: EContentItem[];
   artifacts: ModuleArtifact[];
+  artifactType: "practice" | "final" | null;
   isActive: boolean;
 }
 
@@ -188,6 +210,10 @@ export interface QuestionRow {
   title: string;
   description: string;
   instructions: Record<string, unknown> | string;
+  response_type?: ArtifactResponseType | null;
+  allowed_file_types?: string[] | null;
+  max_file_size_mb?: number | null;
+  response_required?: boolean | null;
 }
 
 /** Raw database row for artifact_templates table */
@@ -210,6 +236,24 @@ export interface ArtifactRow {
   is_active: boolean;
   artifact_questions?: QuestionRow[];
   artifact_templates?: ArtifactTemplateRow[];
+}
+
+export interface ArtifactSubmissionFileRow {
+  id: string;
+  question_id: string;
+  file_name: string;
+  file_type: string;
+  file_size_bytes: number | null;
+}
+
+export interface ArtifactSubmissionRow {
+  id: string;
+  artifact_id: string;
+  attempt_no: number;
+  version_label: string | null;
+  is_latest: boolean;
+  submitted_at: string | null;
+  artifact_submission_files?: ArtifactSubmissionFileRow[];
 }
 
 /** Raw database row for modules_content table (6E stages) */

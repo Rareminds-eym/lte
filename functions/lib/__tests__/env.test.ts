@@ -3,6 +3,12 @@ import { validateBackendEnv } from "../env";
 
 const validEnv = {
   SSO_SERVICE: {},
+  STORAGE_BUCKET: {
+    put: () => Promise.resolve({}),
+    get: () => Promise.resolve(null),
+    head: () => Promise.resolve(null),
+    delete: () => Promise.resolve(undefined),
+  },
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   SKILLPASSPORT_INTERNAL_URL: "https://skillpassport.example.com",
@@ -22,6 +28,23 @@ describe("validateBackendEnv", () => {
   it("rejects a null SSO_SERVICE binding", () => {
     expect(() => validateBackendEnv({ ...validEnv, SSO_SERVICE: null })).toThrow(
       /SSO_SERVICE service binding is required/,
+    );
+  });
+
+  it("rejects a missing STORAGE_BUCKET binding", () => {
+    const { STORAGE_BUCKET: _ignored, ...rest } = validEnv;
+    expect(() => validateBackendEnv(rest)).toThrow(/STORAGE_BUCKET R2 binding is required/);
+  });
+
+  it("rejects an invalid STORAGE_BUCKET binding", () => {
+    expect(() => validateBackendEnv({ ...validEnv, STORAGE_BUCKET: {} })).toThrow(
+      /STORAGE_BUCKET must be a valid R2 bucket binding/,
+    );
+  });
+
+  it("rejects an invalid R2_PUBLIC_DOMAIN", () => {
+    expect(() => validateBackendEnv({ ...validEnv, R2_PUBLIC_DOMAIN: "not-a-url" })).toThrow(
+      /R2_PUBLIC_DOMAIN must be a valid URL/,
     );
   });
 

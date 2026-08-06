@@ -3,6 +3,7 @@ import type { LteStageName } from "./stages";
 export type Lte6eStage = LteStageName;
 
 export type ContentType = "pdf" | "doc" | "video" | "image" | "slide" | "link" | "audio" | "text";
+export type ArtifactResponseType = "text" | "file" | "url";
 
 export interface EContentItem {
   id: string;
@@ -24,6 +25,10 @@ export interface ModuleArtifactQuestion {
   title: string;
   description: string;
   instructions: Record<string, unknown> | string;
+  responseType: ArtifactResponseType;
+  allowedFileTypes: string[] | null;
+  maxFileSizeMb: number | null;
+  responseRequired: boolean;
 }
 
 export interface ModuleArtifactTemplate {
@@ -36,6 +41,21 @@ export interface ModuleArtifactTemplate {
   isDownloadable: boolean;
 }
 
+export interface ModuleArtifactSubmittedFile {
+  id: string;
+  submissionId: string;
+  questionId: string;
+  fileName: string;
+  fileType: string;
+  fileSizeBytes: number | null;
+  downloadUrl: string;
+  attemptNo: number;
+  versionLabel: string;
+  isLatest: boolean;
+  submittedAt: string | null;
+  uploadedAt: string | null;
+}
+
 export interface ModuleArtifact {
   id: string;
   artifactType: "practice" | "final";
@@ -43,6 +63,7 @@ export interface ModuleArtifact {
   passingScore: number | null;
   questions: ModuleArtifactQuestion[];
   templates: ModuleArtifactTemplate[];
+  submittedFiles: ModuleArtifactSubmittedFile[];
   isActive: boolean;
 }
 
@@ -53,6 +74,7 @@ export interface ModuleStageContent {
   stageDescription: string;
   items: EContentItem[];
   artifacts: ModuleArtifact[];
+  artifactType: "practice" | "final" | null;
   isActive: boolean;
 }
 

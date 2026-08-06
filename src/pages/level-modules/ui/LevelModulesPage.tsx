@@ -1,7 +1,13 @@
 import type React from "react";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useCourses, useLevelDetails, useStartLevelProgress } from "@/entities/course";
+import {
+  LTE_STAGE_SEQUENCE,
+  normalizeLteStageName,
+  useCourses,
+  useLevelDetails,
+  useStartLevelProgress,
+} from "@/entities/course";
 import { useAuthStore } from "@/entities/session";
 import { PageLoader } from "@/shared/ui";
 import {
@@ -10,6 +16,13 @@ import {
   LevelProblemStatement,
   LevelStatsBar,
 } from "@/widgets/level-modules";
+
+const getResumeStage = (completedStages: string[] | undefined, progressPercentage = 0) => {
+  if (progressPercentage >= 100) return "engage";
+
+  const completedStageSet = new Set((completedStages ?? []).map(normalizeLteStageName));
+  return LTE_STAGE_SEQUENCE.find((stage) => !completedStageSet.has(stage)) ?? "engage";
+};
 
 export const LevelModulesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -105,7 +118,13 @@ export const LevelModulesPage: React.FC = () => {
 
   const handleContinueLearning = () => {
     if (levelId && nextUpModule) {
-      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${nextUpModule.moduleNo}`);
+      const resumeStage = getResumeStage(
+        nextUpModule.completedStages,
+        nextUpModule.progressPercentage,
+      );
+      navigate(
+        `/my-courses/${encodeURIComponent(levelId)}/modules/${nextUpModule.moduleNo}?stage=${resumeStage}`,
+      );
     }
   };
 
@@ -173,9 +192,11 @@ export const LevelModulesPage: React.FC = () => {
           modules={modulesList}
           levelId={levelId}
           moduleDurationMinutes={durationPerModule}
-          onSelectModule={(moduleNo) => {
+          onSelectModule={(moduleNo, stageName) => {
             if (levelId) {
-              navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${moduleNo}`);
+              navigate(
+                `/my-courses/${encodeURIComponent(levelId)}/modules/${moduleNo}?stage=${stageName}`,
+              );
             }
           }}
         />

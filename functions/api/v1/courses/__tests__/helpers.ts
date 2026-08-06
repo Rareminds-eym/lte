@@ -274,6 +274,21 @@ export const moduleRow = {
   ],
 };
 
+export const moduleArtifactStageMeta = [
+  {
+    artifact_type: "practice",
+    modules_content: { stage_name: "explain" },
+  },
+  {
+    artifact_type: "practice",
+    modules_content: { stage_name: "express" },
+  },
+  {
+    artifact_type: "final",
+    modules_content: { stage_name: "empower" },
+  },
+];
+
 export function moduleDetailsChains(
   overrides: {
     levelResult?: QueryResult;
@@ -281,6 +296,8 @@ export function moduleDetailsChains(
     moduleProgress?: QueryResult;
     stagesProg?: QueryResult;
     modulesContent?: QueryResult;
+    artifactStageMeta?: QueryResult;
+    artifactSubmissions?: QueryResult;
   } = {},
 ): MockChains {
   return {
@@ -299,6 +316,12 @@ export function moduleDetailsChains(
     }),
     modules_content: mockChain({
       thenQueue: [overrides.modulesContent ?? ok(moduleRow.modules_content)],
+    }),
+    module_artifacts: mockChain({
+      thenQueue: [overrides.artifactStageMeta ?? ok(moduleArtifactStageMeta)],
+    }),
+    artifact_submissions: mockChain({
+      thenVal: overrides.artifactSubmissions ?? { data: null, error: null },
     }),
   };
 }

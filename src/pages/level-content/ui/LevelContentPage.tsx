@@ -99,6 +99,18 @@ const getArtifactStepperMeta = (artifact: ModuleArtifact | null) => {
   return null;
 };
 
+const getArtifactStepperMetaByType = (artifactType: ModuleArtifact["artifactType"] | null) => {
+  if (artifactType === "practice") {
+    return { subtitle: "Practice Artifact", icon: LabFlaskIcon };
+  }
+
+  if (artifactType === "final") {
+    return { subtitle: "Final Artifact", icon: LightningBoltIcon };
+  }
+
+  return null;
+};
+
 const getModuleStageSequence = (stages: ModuleStageContent[] | undefined) => {
   const stageNames = new Set(
     (stages ?? [])
@@ -116,6 +128,8 @@ const getModuleStageSequence = (stages: ModuleStageContent[] | undefined) => {
 const getFirstIncompleteStage = (stages: LteStage[], completedStages: Set<LteStage>) =>
   stages.find((stage) => !completedStages.has(stage)) ?? null;
 
+const SCENARIO_COLLAPSE_CHAR_LIMIT = 280;
+
 export const LevelContentPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -129,12 +143,10 @@ export const LevelContentPage: React.FC = () => {
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isScenarioExpanded, setIsScenarioExpanded] = useState(false);
-  const [isScenarioOverflowing, setIsScenarioOverflowing] = useState(false);
   const [expandedArtifactQuestionId, setExpandedArtifactQuestionId] = useState<
     string | null | undefined
   >();
   const contentViewerRef = useRef<HTMLDivElement>(null);
-  const scenarioTextRef = useRef<HTMLParagraphElement>(null);
 
   const [showXpModal, setShowXpModal] = useState(false);
   const [xpAwardedAmount, setXpAwardedAmount] = useState(0);
@@ -167,30 +179,13 @@ export const LevelContentPage: React.FC = () => {
 
   const rawStage = searchParams.get("stage")?.toLowerCase();
   const activeStage: LteStage = isLteStageName(rawStage) ? (rawStage as LteStage) : "engage";
+  const routeContentId = searchParams.get("content");
+  const isScenarioOverflowing =
+    (level?.levelProblemStatement.description.length ?? 0) > SCENARIO_COLLAPSE_CHAR_LIMIT;
 
   useEffect(() => {
-    const measureScenarioText = () => {
-      const element = scenarioTextRef.current;
-      if (!element) return;
-
-      const computedStyle = window.getComputedStyle(element);
-      const lineHeight = Number.parseFloat(computedStyle.lineHeight);
-      const collapsedHeight = Number.isFinite(lineHeight) ? lineHeight * 3 : element.clientHeight;
-      const nextIsOverflowing = element.scrollHeight > collapsedHeight + 1;
-
-      setIsScenarioOverflowing(nextIsOverflowing);
-      if (!nextIsOverflowing) {
-        setIsScenarioExpanded(false);
-      }
-    };
-
-    measureScenarioText();
-    window.addEventListener("resize", measureScenarioText);
-
-    return () => {
-      window.removeEventListener("resize", measureScenarioText);
-    };
-  }, [level?.levelProblemStatement.description, isStageInfoExpanded, isStageInfoOpen]);
+    if (!isScenarioOverflowing) setIsScenarioExpanded(false);
+  }, [isScenarioOverflowing]);
 
   const handleBackToOverview = () => {
     navigate("/my-courses");
@@ -222,6 +217,7 @@ export const LevelContentPage: React.FC = () => {
   const previewItemsForSync = activeStageContentForSync?.items ?? [];
   const selectedContentForSync =
     previewItemsForSync.find((item) => item.id === selectedContentId) ??
+    previewItemsForSync.find((item) => item.id === routeContentId) ??
     previewItemsForSync[0] ??
     null;
 
@@ -245,6 +241,17 @@ export const LevelContentPage: React.FC = () => {
     setSearchParams((prev) => {
       const updated = new URLSearchParams(prev);
       updated.set("stage", stage);
+      updated.delete("content");
+      return updated;
+    });
+  };
+
+  const handleContentSelect = (contentId: string) => {
+    setSelectedContentId(contentId);
+    setSearchParams((prev) => {
+      const updated = new URLSearchParams(prev);
+      updated.set("stage", activeStage);
+      updated.set("content", contentId);
       return updated;
     });
   };
@@ -340,6 +347,7 @@ export const LevelContentPage: React.FC = () => {
       setSearchParams((prev) => {
         const updated = new URLSearchParams(prev);
         updated.set("stage", fallbackStage);
+        updated.delete("content");
         return updated;
       });
     }
@@ -460,7 +468,10 @@ export const LevelContentPage: React.FC = () => {
   const nextModuleExists = level.modules.some((m) => m.moduleNo === nextModuleNo);
 
   const selectedContent =
-    previewItems.find((item) => item.id === selectedContentId) ?? previewItems[0] ?? null;
+    previewItems.find((item) => item.id === selectedContentId) ??
+    previewItems.find((item) => item.id === routeContentId) ??
+    previewItems[0] ??
+    null;
   const selectedContentIndex = selectedContent
     ? previewItems.findIndex((item) => item.id === selectedContent.id)
     : -1;
@@ -480,7 +491,9 @@ export const LevelContentPage: React.FC = () => {
       >
     >
   >((overrides, stage) => {
-    const artifactMeta = getArtifactStepperMeta(getPrimaryArtifact(stage.artifacts));
+    const artifactMeta =
+      getArtifactStepperMetaByType(stage.artifactType) ??
+      getArtifactStepperMeta(getPrimaryArtifact(stage.artifacts));
     if (artifactMeta) {
       overrides[stage.stageName] = artifactMeta;
     }
@@ -618,7 +631,7 @@ export const LevelContentPage: React.FC = () => {
 
   const handlePrimaryNext = () => {
     if (nextContent) {
-      setSelectedContentId(nextContent.id);
+      handleContentSelect(nextContent.id);
       return;
     }
 
@@ -712,13 +725,13 @@ export const LevelContentPage: React.FC = () => {
       isScenarioExpanded={isScenarioExpanded}
       isScenarioOverflowing={isScenarioOverflowing}
       setIsScenarioExpanded={setIsScenarioExpanded}
-      scenarioTextRef={scenarioTextRef}
       formatStageLabel={formatStageLabel}
       renderArtifactPanel={() => (
         <ArtifactPanel
           activeArtifact={activeArtifact}
           activeArtifactType={activeArtifactType}
           rightPanelTitle={rightPanelTitle}
+          isPanelExpanded={isStageInfoExpanded}
           expandedArtifactQuestionId={expandedArtifactQuestionId}
           setExpandedArtifactQuestionId={setExpandedArtifactQuestionId}
         />
@@ -743,7 +756,7 @@ export const LevelContentPage: React.FC = () => {
               <button
                 type="button"
                 key={item.id}
-                onClick={() => setSelectedContentId(item.id)}
+                onClick={() => handleContentSelect(item.id)}
                 className={`relative flex min-w-[180px] max-w-[220px] shrink-0 items-center gap-2 px-4 text-xs font-semibold transition-colors border-r border-line-subtle ${
                   isSelected
                     ? "text-brand-600 bg-surface-primary"
@@ -863,7 +876,7 @@ export const LevelContentPage: React.FC = () => {
         {isStageInfoOpen && (
           <aside
             className={`hidden min-h-0 shrink-0 flex-col overflow-hidden border-l border-border-default/80 bg-white font-sans select-none transition-all duration-200 lg:flex ${
-              isStageInfoExpanded ? "w-[500px] max-w-[70vw]" : "w-[340px]"
+              isStageInfoExpanded ? "w-[540px] max-w-[72vw]" : "w-[360px]"
             }`}
           >
             <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3 sm:px-4 sm:py-3.5">
@@ -908,7 +921,7 @@ export const LevelContentPage: React.FC = () => {
                 className="relative z-10 w-72 h-full shadow-2xl"
               />
             ) : (
-              <aside className="relative z-10 w-80 bg-white h-full ml-auto shadow-2xl flex flex-col">
+              <aside className="relative z-10 h-full w-[92vw] max-w-[390px] bg-white ml-auto shadow-2xl flex flex-col">
                 <div className="p-4 border-b border-line-subtle flex items-center justify-between">
                   <h2 className="text-xs font-bold tracking-wider text-content-secondary uppercase">
                     {rightPanelTitle}

@@ -17,6 +17,8 @@ export const ContentTypeSchema = z.enum([
   "text",
 ]);
 
+export const ArtifactResponseTypeSchema = z.enum(["text", "file", "url"]);
+
 export const EContentItemSchema = z.object({
   id: z.string(),
   contentType: ContentTypeSchema,
@@ -37,6 +39,10 @@ export const ModuleArtifactQuestionSchema = z.object({
   title: z.string(),
   description: z.string(),
   instructions: z.union([JsonRecordSchema, z.string()]),
+  responseType: ArtifactResponseTypeSchema,
+  allowedFileTypes: z.array(z.string()).nullable(),
+  maxFileSizeMb: z.number().nullable(),
+  responseRequired: z.boolean(),
 });
 
 export const ModuleArtifactTemplateSchema = z.object({
@@ -49,6 +55,21 @@ export const ModuleArtifactTemplateSchema = z.object({
   isDownloadable: z.boolean(),
 });
 
+export const ModuleArtifactSubmittedFileSchema = z.object({
+  id: z.string(),
+  submissionId: z.string(),
+  questionId: z.string(),
+  fileName: z.string(),
+  fileType: z.string(),
+  fileSizeBytes: z.number().nullable(),
+  downloadUrl: z.string(),
+  attemptNo: z.number(),
+  versionLabel: z.string(),
+  isLatest: z.boolean(),
+  submittedAt: z.string().nullable(),
+  uploadedAt: z.string().nullable(),
+});
+
 export const ModuleArtifactSchema = z.object({
   id: z.string(),
   artifactType: z.enum(["practice", "final"]),
@@ -56,6 +77,7 @@ export const ModuleArtifactSchema = z.object({
   passingScore: z.number().nullable(),
   questions: z.array(ModuleArtifactQuestionSchema),
   templates: z.array(ModuleArtifactTemplateSchema),
+  submittedFiles: z.array(ModuleArtifactSubmittedFileSchema),
   isActive: z.boolean(),
 });
 
@@ -66,6 +88,7 @@ export const ModuleStageContentSchema = z.object({
   stageDescription: z.string(),
   items: z.array(EContentItemSchema),
   artifacts: z.array(ModuleArtifactSchema),
+  artifactType: z.enum(["practice", "final"]).nullable(),
   isActive: z.boolean(),
 });
 

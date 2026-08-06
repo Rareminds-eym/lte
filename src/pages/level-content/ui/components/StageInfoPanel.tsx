@@ -29,7 +29,6 @@ interface StageInfoPanelProps {
   isScenarioExpanded: boolean;
   isScenarioOverflowing: boolean;
   setIsScenarioExpanded: (expanded: boolean) => void;
-  scenarioTextRef: React.RefObject<HTMLParagraphElement | null>;
   formatStageLabel: (stage: LteStage) => string;
   renderArtifactPanel: () => React.ReactNode;
 }
@@ -54,7 +53,6 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
   isScenarioExpanded,
   isScenarioOverflowing,
   setIsScenarioExpanded,
-  scenarioTextRef,
   formatStageLabel,
   renderArtifactPanel,
 }) => {
@@ -62,9 +60,13 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-white p-3.5 text-content-body">
       {/* Level problem card */}
       <div className="rounded-xl border border-border-default bg-white px-3.5 py-3 shadow-2xs">
-        <button
+        <Button
           type="button"
-          className="flex w-full items-start justify-between gap-2 border-0 bg-transparent p-0 text-left font-sans text-content-heading"
+          variant="ghost"
+          size="sm"
+          className={`flex h-auto w-full items-start justify-between gap-2 rounded-none border-0 bg-transparent p-0 text-left font-sans text-content-heading shadow-none hover:bg-transparent disabled:opacity-100 ${
+            isScenarioOverflowing ? "cursor-pointer" : "cursor-default"
+          }`}
           aria-expanded={isScenarioExpanded}
           disabled={!isScenarioOverflowing}
           onClick={() => setIsScenarioExpanded(!isScenarioExpanded)}
@@ -81,9 +83,8 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
               }`}
             />
           ) : null}
-        </button>
+        </Button>
         <p
-          ref={scenarioTextRef}
           className={`mt-2 text-[13px] leading-relaxed text-content-default ${
             isScenarioOverflowing && !isScenarioExpanded ? "line-clamp-3" : ""
           }`}
@@ -91,13 +92,15 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
           {level.levelProblemStatement.description}
         </p>
         {isScenarioOverflowing ? (
-          <button
+          <Button
             type="button"
-            className="mt-1 border-0 bg-transparent p-0 text-[11px] font-bold text-brand-600 hover:underline"
+            variant="ghost"
+            size="sm"
+            className="mt-1 h-auto cursor-pointer rounded-none border-0 bg-transparent p-0 text-[11px] font-bold text-brand-600 shadow-none hover:bg-transparent hover:underline"
             onClick={() => setIsScenarioExpanded(!isScenarioExpanded)}
           >
             {isScenarioExpanded ? "Read less" : "Read more"}
-          </button>
+          </Button>
         ) : null}
       </div>
 
