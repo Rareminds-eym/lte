@@ -22,6 +22,7 @@ try {
   let rows = '';
   categories.forEach((key) => {
     const data = total[key];
+    if (!data) return;
     const categoryName = key.charAt(0).toUpperCase() + key.slice(1);
     rows += `| **${categoryName}** | ${data.total} | ${data.covered} | ${data.pct}% |\n`;
   });
