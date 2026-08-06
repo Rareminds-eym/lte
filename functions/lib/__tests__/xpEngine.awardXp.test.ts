@@ -617,6 +617,53 @@ describe("XP Engine Core logic", () => {
       expect(result.userStageProgressId).toBe("stage-progress-1");
     });
 
+    it("should finalize module status to completed when the 6th stage is done", async () => {
+      const stageProgressCalls = { n: 0 };
+      const moduleChain = createMockQueryChain([
+        { id: "mod-progress-1", stages_completed: 5, module_status: "in_progress" },
+      ]);
+      const moduleUpdate = vi.spyOn(moduleChain, "update").mockImplementation(() => moduleChain);
+      const mockSupabase = {
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === "modules_content") {
+            return createMockQueryChain({
+              module_id: "mod-1",
+              stage_name: "engage",
+              stage_order: 1,
+            });
+          }
+          if (table === "e_content") {
+            return createMockQueryChain({ id: "content-1" });
+          }
+          if (table === "user_module_progress") {
+            return moduleChain;
+          }
+          if (table === "user_stage_progress") {
+            stageProgressCalls.n++;
+            if (stageProgressCalls.n === 1) {
+              return createMockQueryChain([]);
+            }
+            if (stageProgressCalls.n === 2) {
+              return createMockQueryChain({ id: "stage-progress-1", status: "in_progress" });
+            }
+            return createMockQueryChain(null);
+          }
+          return createMockQueryChain(null);
+        }),
+      } as unknown as Parameters<typeof completeStage>[0];
+
+      const result = await completeStage(mockSupabase, "user-1", "stage-1");
+
+      expect(result.success).toBe(true);
+      expect(moduleUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stages_completed: 6,
+          completion_percentage: 100,
+          module_status: "completed",
+        }),
+      );
+    });
+
     it("should throw when updating module progress counters fails", async () => {
       const stageProgressCalls = { n: 0 };
       const moduleProgressCalls = { n: 0 };

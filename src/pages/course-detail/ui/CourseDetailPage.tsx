@@ -95,7 +95,8 @@ export const CourseDetailPage: React.FC = () => {
     (totalDurationMinutes > 0 ? Math.round(totalDurationMinutes / 60) : 0);
   const totalDurationStr = durationHours > 0 ? `${durationHours} hrs` : "N/A";
 
-  const xpValue = activeCourse?.xp || 0;
+  const totalLevelXp = apiLevels?.reduce((sum, lvl) => sum + (lvl.totalXp || 0), 0) ?? 0;
+  const xpValue = activeCourse?.xp || totalLevelXp;
   const xpAvailableStr = xpValue > 0 ? `${xpValue.toLocaleString()} XP` : "0 XP";
 
   const totalLevels = activeCourse?.totalLevels || apiLevels?.length || 0;

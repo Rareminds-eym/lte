@@ -47,6 +47,10 @@ const UserCapabilitySchema = z.object({
     .number()
     .nullish()
     .transform((v) => v ?? 0),
+  xp: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? 0),
   roleId: z.string().optional(),
   roleName: z.string().optional(),
 });
@@ -97,6 +101,10 @@ export const CapabilityLevelSchema = z.object({
     .string()
     .nullish()
     .transform((v) => v ?? "published"),
+  totalXp: z
+    .number()
+    .nullish()
+    .transform((v) => v ?? undefined),
 });
 
 export type CapabilityLevel = z.infer<typeof CapabilityLevelSchema>;
@@ -141,7 +149,7 @@ function mapCapabilityToCourse(cap: UserCapabilityResponse, index: number): Cour
     totalLevels: cap.totalLevels,
     targetLevel,
     durationHours: 0,
-    xp: 0,
+    xp: cap.xp ?? 0,
     priority: cap.priority ?? "",
     qualified: cap.status === "completed",
     roleId: cap.roleId,

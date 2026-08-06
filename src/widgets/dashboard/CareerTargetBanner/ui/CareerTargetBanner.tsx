@@ -127,7 +127,7 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
               {data.xp.toLocaleString()}
             </div>
             <div className="text-[11px] font-bold text-success-600">
-              +{data.xpThisWeek} this week
+              +{data.xpThisWeek.toLocaleString()} this week
             </div>
           </div>
 

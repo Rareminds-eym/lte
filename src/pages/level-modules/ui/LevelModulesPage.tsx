@@ -33,7 +33,7 @@ export const LevelModulesPage: React.FC = () => {
 
   const userId = useAuthStore((s) => s.user?.id);
   const { data: courses } = useCourses(userId);
-  const { data: levelData, isLoading, error } = useLevelDetails(levelId, capabilityCode, userId);
+  const { data: levelData, isLoading, error } = useLevelDetails(levelId, capabilityCode);
   const { mutate: startLevel } = useStartLevelProgress();
 
   useEffect(() => {

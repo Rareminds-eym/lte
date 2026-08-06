@@ -54,6 +54,7 @@ export interface UserCapability {
   currentLevel: number;
   status: string;
   progress: number;
+  xp?: number;
   roleId?: string;
   roleName?: string;
 }
@@ -81,6 +82,8 @@ export interface CapabilityLevel {
   durationMinutes: number;
   difficulty: string;
   status: string;
+  /** levels.total_xp, always present (NOT NULL DEFAULT 0); backfilled by trg_sync_level_total_xp */
+  totalXp: number;
 }
 
 export interface CapabilityLevelsResponse {

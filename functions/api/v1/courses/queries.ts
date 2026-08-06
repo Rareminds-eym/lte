@@ -55,6 +55,7 @@ export async function getLevelWithModules(
   supabase: SupabaseClient,
   levelId: string,
   userId?: string,
+  includeStages: boolean = true,
 ): Promise<LevelDetailsResponse | null> {
   // Fetch level details
   const { data: levelData, error: levelError } = await supabase
@@ -153,10 +154,12 @@ export async function getLevelWithModules(
         for (const p of progresses) {
           const entry = {
             completionPercentage: p.completion_percentage || 0,
-            isCompleted: p.module_status === "completed",
+            isCompleted: p.module_status === "completed" || p.module_status === "mastered",
             completedStages: [] as string[],
           };
           moduleProgressMap[p.module_id] = entry;
+
+          if (!includeStages) continue;
 
           const { data: stages } = await supabase
             .from("user_stage_progress")
@@ -189,7 +192,7 @@ export async function getLevelWithModules(
         module_problem_statement: m.module_problem_statement,
         pressure_points: m.pressure_points,
         user_confusion: m.user_confusion,
-        industry_challenge: m.industry_challenge,
+        industry_challenge: m.industry_challenge ?? null,
         prerequisites: m.prerequisites,
         what_youll_learn: m.what_youll_learn,
         when_to_apply: m.when_to_apply,

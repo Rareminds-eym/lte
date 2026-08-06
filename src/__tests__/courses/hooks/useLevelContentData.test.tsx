@@ -89,7 +89,7 @@ describe("useLevelContentData hooks", () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     mockFetchLevelDetails.mockResolvedValue({ id: "lvl-1" });
 
-    const { result } = renderHook(() => useLevelDetails("lvl-1", "TS-101", "user-1"), {
+    const { result } = renderHook(() => useLevelDetails("lvl-1", "TS-101"), {
       wrapper: createWrapper(queryClient),
     });
 
@@ -100,7 +100,7 @@ describe("useLevelContentData hooks", () => {
   it("useLevelDetails queryFn throws when parameters are missing", async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
-    renderHook(() => useLevelDetails(undefined, undefined, undefined), {
+    renderHook(() => useLevelDetails(undefined, undefined), {
       wrapper: createWrapper(queryClient),
     });
 

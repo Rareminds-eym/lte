@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { MOCK_DASHBOARD_DATA } from "@/entities/dashboard";
+
 import {
   Achievements,
   CapabilityGapMap,
@@ -25,13 +27,39 @@ describe("Dashboard Widgets", () => {
   });
 
   it("renders JourneyHero with progress percentage and action buttons", () => {
-    render(<JourneyHero data={MOCK_DASHBOARD_DATA.journey} />);
+    render(
+      <MemoryRouter>
+        <JourneyHero data={MOCK_DASHBOARD_DATA.journey} state={MOCK_DASHBOARD_DATA.journeyState} />
+      </MemoryRouter>,
+    );
     expect(screen.getByText("CONTINUE YOUR JOURNEY")).toBeInTheDocument();
     expect(screen.getByText("Debugging API Latency Issues")).toBeInTheDocument();
     expect(screen.getByText("Module 3 of 7")).toBeInTheDocument();
     expect(screen.getByText("60%")).toBeInTheDocument();
     expect(screen.getByText("Continue Challenge")).toBeInTheDocument();
     expect(screen.getByText("View Details")).toBeInTheDocument();
+  });
+
+  it("renders JourneyHero empty state with completed CTA when journey is complete", () => {
+    render(
+      <MemoryRouter>
+        <JourneyHero data={null} state="completed" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Level Complete — Outstanding Work!")).toBeInTheDocument();
+    expect(screen.getByText("Choose Next Capability")).toBeInTheDocument();
+    expect(screen.queryByText("Continue Challenge")).not.toBeInTheDocument();
+  });
+
+  it("renders JourneyHero empty state with explore CTA when no track exists", () => {
+    render(
+      <MemoryRouter>
+        <JourneyHero data={null} state="no_track" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Your Journey Starts Here")).toBeInTheDocument();
+    expect(screen.getByText("Explore Career Paths")).toBeInTheDocument();
+    expect(screen.queryByText("Continue Challenge")).not.toBeInTheDocument();
   });
 
   it("renders TodaysPriorities with daily XP goal and task list", () => {

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { DASHBOARD_QUERY_KEY } from "@/entities/dashboard";
 import { ApiError } from "@/shared";
 import { initializeLearningPath } from "../api/initializeLearningPath";
 import type { InitializeLearningPathPayload } from "./initializeLearningPath.schema";
@@ -14,6 +15,7 @@ export const useInitializeLearningPath = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userCourses"] });
       queryClient.invalidateQueries({ queryKey: ["activeLearningPath"] });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
       // Purge any stale/errored levels queries so they refetch against the
       // newly-created learning path (prevents lingering 404 cache entries).
       queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });

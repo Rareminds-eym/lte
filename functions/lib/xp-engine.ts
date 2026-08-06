@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { apiLogger } from "./logger";
-import { assertStageSequenceAllowed } from "./stage-sequence";
+import {
+  assertStageSequenceAllowed,
+  getStageCompletionPercentage,
+  LTE_STAGE_COUNT,
+} from "./stage-sequence";
 
 // Event to XP amount mapping (TRD-DB-007 enum values)
 export const XP_AMOUNTS: Record<string, number> = {
@@ -317,19 +321,24 @@ export async function completeStage(
   // 6. Update user_module_progress progress counters if this is a newly completed stage
   if (isNewCompletion && !xpResult.alreadyAwarded) {
     const nextStagesCompleted = Math.min(
-      6,
+      LTE_STAGE_COUNT,
       (progressRecord as NonNullable<typeof progressRecord>).stages_completed + 1,
     );
-    const completionPercentage = Math.round((nextStagesCompleted / 6) * 100);
+    const completionPercentage = getStageCompletionPercentage(nextStagesCompleted);
+
+    const updatePayload: Record<string, unknown> = {
+      stages_completed: nextStagesCompleted,
+      completion_percentage: completionPercentage,
+      current_stage: stageContent.stage_name,
+      last_activity_at: new Date().toISOString(),
+    };
+    if (nextStagesCompleted >= LTE_STAGE_COUNT) {
+      updatePayload["module_status"] = "completed";
+    }
 
     const { error: updateError } = await supabase
       .from("user_module_progress")
-      .update({
-        stages_completed: nextStagesCompleted,
-        completion_percentage: completionPercentage,
-        current_stage: stageContent.stage_name,
-        last_activity_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", (progressRecord as NonNullable<typeof progressRecord>).id);
 
     if (updateError) throw updateError;
@@ -871,12 +880,20 @@ export async function calculateReadiness(
 
 /**
  * Calculates the total XP for a user from the xp_events table.
+ * Optionally filters to events created at or after `since`.
  */
-export async function getUserTotalXp(supabase: SupabaseClient, userId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from("xp_events")
-    .select("xp_amount")
-    .eq("user_id", userId);
+export async function getUserTotalXp(
+  supabase: SupabaseClient,
+  userId: string,
+  since?: Date,
+): Promise<number> {
+  let query = supabase.from("xp_events").select("xp_amount").eq("user_id", userId);
+
+  if (since) {
+    query = query.gte("created_at", since.toISOString());
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;

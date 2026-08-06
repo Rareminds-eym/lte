@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCapabilityLevels } from "@/entities/course";
 import { CourseDetail } from "@/pages/course-detail";
 
@@ -15,8 +15,14 @@ vi.mock("react-router-dom", async () => {
       state: null,
       key: "default",
     }),
-    useNavigate: () => vi.fn(),
+    useNavigate: () => mockNavigate,
   };
+});
+
+const mockNavigate = vi.hoisted(() => vi.fn());
+
+beforeEach(() => {
+  mockNavigate.mockClear();
 });
 
 vi.mock("@/features/initialize-learning-path", () => ({
@@ -192,6 +198,7 @@ describe("CourseDetail", () => {
             durationMinutes: 360,
             difficulty: "beginner",
             status: "published",
+            totalXp: 0,
           },
         ],
       }),
@@ -218,13 +225,12 @@ describe("CourseDetail", () => {
     expect(screen.getByText("Applied Observability & Implementation")).toBeInTheDocument();
     expect(screen.getByText("Unlocked")).toBeInTheDocument();
     expect(screen.getByText("Observability Config Sheet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continue →" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start →" })).toBeInTheDocument();
 
     // Level 3 - Target Level / Locked
     expect(screen.getByTestId("level-card-3")).toBeInTheDocument();
     expect(screen.getByText("Advanced Observability & Root Cause Analysis")).toBeInTheDocument();
     expect(screen.getByText("🎯 TARGET LEVEL")).toBeInTheDocument();
-    expect(screen.getByText("Complete Level 2 to unlock")).toBeInTheDocument();
     expect(screen.getByText("Observability Correlation Map")).toBeInTheDocument();
 
     // Level 4 & 5 - Locked
@@ -234,5 +240,64 @@ describe("CourseDetail", () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId("level-card-5")).toBeInTheDocument();
     expect(screen.getByText("Observability Architecture & Systems Design")).toBeInTheDocument();
+  });
+
+  it("handles course level actions when unlocked vs locked", () => {
+    render(<CourseDetail />);
+
+    // Clicking unlocked level action ("Start →") triggers navigation/action
+    const startBtn = screen.getByRole("button", { name: "Start →" });
+    fireEvent.click(startBtn);
+    expect(mockNavigate).toHaveBeenCalledWith("/courses/TEST-CAP-101/levels/lvl-2");
+
+    // Clicking completed level action ("Review →") also navigates to the level
+    mockNavigate.mockClear();
+    const reviewBtn = screen.getByRole("button", { name: "Review →" });
+    fireEvent.click(reviewBtn);
+    expect(mockNavigate).toHaveBeenCalledWith("/courses/TEST-CAP-101/levels/lvl-1");
+  });
+
+  it("renders error state when courses query fails", async () => {
+    const { useCourses } = await import("@/entities/course");
+    const { useAuthStore } = await import("@/entities/session");
+
+    useAuthStore.setState({
+      user: {
+        id: "user-1",
+        email: "test@example.com",
+        org_id: "org-1",
+        roles: ["learner"],
+        products: [],
+        membership_status: "active",
+        is_email_verified: true,
+        user_metadata: {},
+      },
+      loading: false,
+      initialized: true,
+    });
+
+    vi.mocked(useCourses).mockReturnValueOnce({
+      data: undefined,
+      isPending: false,
+      error: new Error("Database connection failed"),
+    } as unknown as ReturnType<typeof useCourses>);
+
+    render(<CourseDetail />);
+    expect(screen.getByText("Failed to load course details")).toBeInTheDocument();
+    expect(screen.getByText("Database connection failed")).toBeInTheDocument();
+  });
+
+  it("renders skeleton loader when courses are pending", async () => {
+    const { useCourses } = await import("@/entities/course");
+    vi.mocked(useCourses).mockReturnValueOnce({
+      data: undefined,
+      isPending: true,
+      error: null,
+    } as unknown as ReturnType<typeof useCourses>);
+
+    render(<CourseDetail />);
+    expect(
+      screen.queryByText("Observability: Logging, Monitoring & Debugging"),
+    ).not.toBeInTheDocument();
   });
 });

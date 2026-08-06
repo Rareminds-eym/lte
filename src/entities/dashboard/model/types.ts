@@ -22,8 +22,14 @@ export interface CurrentJourneyData {
   completedCount: number;
   inProgressCount: number;
   remainingCount: number;
-  timeRemaining: string;
+  /** backend does not send this today; present only in the mock base */
+  timeRemaining?: string | null;
+  levelId?: string;
+  moduleNo?: number;
+  capabilityCode?: string;
 }
+
+export type JourneyState = "active" | "completed" | "no_track";
 
 export interface PriorityItem {
   id: string;
@@ -108,7 +114,8 @@ export interface AchievementsData {
 
 export interface DashboardData {
   careerTarget: CareerTargetData;
-  journey: CurrentJourneyData;
+  journey: CurrentJourneyData | null;
+  journeyState: JourneyState;
   priorities: TodaysPrioritiesData;
   capabilityGaps: CapabilityGapItem[];
   upcomingFeedback: UpcomingFeedbackData;

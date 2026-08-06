@@ -3,9 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getCapabilitiesByRoleId,
-  getLevelCountsForCapabilities,
+  getLevelStatsForCapabilities,
   getLevelsForCapability,
-  getUserCapabilities,
+  getUserCapabilitiesForRoles,
 } from "../queries";
 
 interface QueryChain {
@@ -136,82 +136,80 @@ describe("capabilities queries", () => {
     });
   });
 
-  describe("getLevelCountsForCapabilities", () => {
-    it("returns {} for an empty capability id list", async () => {
-      await expect(getLevelCountsForCapabilities(supabaseWith({}), [])).resolves.toEqual({});
+  describe("getLevelStatsForCapabilities", () => {
+    it("returns empty maps for an empty capability id list", async () => {
+      await expect(getLevelStatsForCapabilities(supabaseWith({}), [])).resolves.toEqual({
+        counts: {},
+        xpSums: {},
+      });
     });
 
-    it("counts duplicate capability ids", async () => {
+    it("counts levels and sums total_xp per capability", async () => {
       const supabase = supabaseWith({
         levels: {
           data: [
-            { capability_id: "c1", id: "l1" },
-            { capability_id: "c1", id: "l2" },
-            { capability_id: "c2", id: "l3" },
+            { capability_id: "c1", id: "l1", total_xp: 10 },
+            { capability_id: "c1", id: "l2", total_xp: 20 },
+            { capability_id: "c2", id: "l3", total_xp: 5 },
+            { capability_id: "c2", id: "l4", total_xp: null },
           ],
         },
       });
 
-      await expect(getLevelCountsForCapabilities(supabase, ["c1", "c2"])).resolves.toEqual({
-        c1: 2,
-        c2: 1,
+      await expect(getLevelStatsForCapabilities(supabase, ["c1", "c2"])).resolves.toEqual({
+        counts: { c1: 2, c2: 2 },
+        xpSums: { c1: 30, c2: 5 },
       });
-    });
-
-    it("returns {} when levels data is null", async () => {
-      await expect(
-        getLevelCountsForCapabilities(supabaseWith({ levels: { data: null } }), ["c1"]),
-      ).resolves.toEqual({});
     });
 
     it("throws when the query errors", async () => {
       const supabase = supabaseWith({ levels: { error: new Error("boom") } });
-      await expect(getLevelCountsForCapabilities(supabase, ["c1"])).rejects.toThrow(
+      await expect(getLevelStatsForCapabilities(supabase, ["c1"])).rejects.toThrow(
         "Failed to fetch level counts: boom",
       );
     });
   });
 
-  describe("getUserCapabilities", () => {
-    it("returns [] when no role capabilities exist", async () => {
-      const supabase = supabaseWith({ role_capability_sequence: { data: [] } });
-      await expect(getUserCapabilities(supabase, "role-1")).resolves.toEqual([]);
+  describe("getUserCapabilitiesForRoles", () => {
+    it("returns [] when no role ids are provided", async () => {
+      await expect(getUserCapabilitiesForRoles(supabaseWith({}), [], [])).resolves.toEqual([]);
     });
 
-    it("maps capabilities with priority and level-count fallbacks", async () => {
+    it("maps capabilities with xp totals and role info", async () => {
       const supabase = supabaseWith({
         role_capability_sequence: {
           data: [
-            arrayCapabilityRow,
             {
-              ...objectCapabilityRow,
-              id: "s2",
-              capabilities: [{ id: "c2", code: "C2", name: "Two", description: "Desc2" }],
+              id: "s1",
+              sequence_step: 1,
+              required_level: "L1",
+              capability_priority: "core",
+              capabilities: { id: "c1", code: "C1", name: "One", description: "Desc1" },
             },
           ],
         },
-        levels: { data: [{ capability_id: "c1", id: "l1" }] },
+        levels: {
+          data: [{ capability_id: "c1", id: "l1", total_xp: 42 }],
+        },
       });
 
-      const result = await getUserCapabilities(supabase, "role-1");
-      expect(result).toMatchObject([
-        {
-          id: "c1",
-          priority: "core",
-          totalLevels: 1,
-          currentLevel: 0,
-          status: "not_started",
-          progress: 0,
-        },
-        {
-          id: "c2",
-          priority: "",
-          totalLevels: 0,
-          currentLevel: 0,
-          status: "not_started",
-          progress: 0,
-        },
-      ]);
+      const result = await getUserCapabilitiesForRoles(
+        supabase,
+        ["role-1"],
+        [{ roleId: "role-1", roleName: "Learner" }],
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        id: "c1",
+        code: "C1",
+        totalLevels: 1,
+        currentLevel: 0,
+        status: "not_started",
+        progress: 0,
+        xp: 42,
+        roleId: "role-1",
+        roleName: "Learner",
+      });
     });
   });
 
@@ -293,6 +291,46 @@ describe("capabilities queries", () => {
         capabilityId: "cap-1",
       });
       warnSpy.mockRestore();
+    });
+
+    it("reads totalXp directly from the total_xp column (set by DB trigger)", async () => {
+      const supabase = supabaseWith({
+        levels: {
+          data: [
+            {
+              id: "lvl-1",
+              level_code: "L1",
+              title: "Level 1",
+              description: "Desc 1",
+              total_xp: 42,
+              status: "published",
+            },
+          ],
+        },
+      });
+
+      const result = await getLevelsForCapability(supabase, "cap-1");
+      expect(result).toHaveLength(1);
+      expect(result[0]?.totalXp).toBe(42);
+    });
+
+    it("defaults totalXp to 0 when total_xp is missing", async () => {
+      const supabase = supabaseWith({
+        levels: {
+          data: [
+            {
+              id: "lvl-1",
+              level_code: "L1",
+              title: "Level 1",
+              description: "Desc 1",
+              status: "published",
+            },
+          ],
+        },
+      });
+
+      const result = await getLevelsForCapability(supabase, "cap-1");
+      expect(result[0]?.totalXp).toBe(0);
     });
   });
 });

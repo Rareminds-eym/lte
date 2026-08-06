@@ -1,12 +1,74 @@
 import type React from "react";
-import type { CurrentJourneyData } from "@/entities/dashboard";
+import { useNavigate } from "react-router-dom";
+import type { CurrentJourneyData, JourneyState } from "@/entities/dashboard";
+import { ROUTES, routeForLevel, routeForModule } from "@/shared/config";
 import { Image } from "@/shared/ui";
 
 export interface JourneyHeroProps {
-  data: CurrentJourneyData;
+  data: CurrentJourneyData | null;
+  state: JourneyState;
 }
 
-export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
+export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
+  const navigate = useNavigate();
+  const continueUrl =
+    data?.levelId !== undefined && data?.moduleNo !== undefined
+      ? routeForModule(data.levelId, data.moduleNo)
+      : null;
+  const detailsUrl =
+    data?.capabilityCode && data?.levelId ? routeForLevel(data.capabilityCode, data.levelId) : null;
+
+  if (!data) {
+    return (
+      <div className="relative bg-surface-hero text-content-inverse rounded-2xl p-6 lg:p-8 overflow-hidden shadow-lg flex flex-col justify-between min-h-[340px]">
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[340px] h-[340px] opacity-20 pointer-events-none translate-x-0">
+          <Image
+            src="/assets/images/mesh_orb.png"
+            alt="3D Mesh Sphere Graphic"
+            priority
+            className="w-full h-full object-contain"
+          />
+        </div>
+        <div className="relative z-10 space-y-6 max-w-[640px]">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-content-on-dark-muted mb-2">
+              CONTINUE YOUR JOURNEY
+            </div>
+            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-content-inverse">
+              {state === "completed"
+                ? "Level Complete — Outstanding Work!"
+                : "Your Journey Starts Here"}
+            </h1>
+            <p className="text-sm text-content-on-dark-muted mt-2 leading-relaxed">
+              {state === "completed"
+                ? "You finished every level in this track. Pick your next capability to keep the momentum going."
+                : "Choose a career path and capability to unlock your first learning level."}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.MY_COURSES)}
+              className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-content-inverse font-semibold text-sm rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              {state === "completed" ? "Choose Next Capability" : "Explore Career Paths"}
+              <svg
+                aria-hidden="true"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative bg-surface-hero text-content-inverse rounded-2xl p-6 lg:p-8 overflow-hidden shadow-lg flex flex-col justify-between min-h-[340px]">
       {/* Background Graphic: 3D Orb Mesh using shared Image component */}
@@ -42,16 +104,19 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
             {
               label: "Capability",
               value: data.capability,
+              clampClass: "line-clamp-2",
               icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
             },
             {
               label: "Output",
               value: data.output,
+              clampClass: "line-clamp-2",
               icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
             },
             {
               label: "Why it matters",
               value: data.whyItMatters,
+              clampClass: "line-clamp-3",
               icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
             },
           ].map((item) => (
@@ -70,7 +135,9 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
                 <div className="text-[10px] text-content-on-dark-muted font-medium">
                   {item.label}
                 </div>
-                <div className="text-sm font-semibold text-content-inverse mt-0.5 leading-snug">
+                <div
+                  className={`text-sm font-semibold text-content-inverse mt-0.5 leading-snug ${item.clampClass ?? ""}`}
+                >
                   {item.value}
                 </div>
               </div>
@@ -124,7 +191,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <span>{data.timeRemaining}</span>
+              {data.timeRemaining && <span>{data.timeRemaining}</span>}
             </div>
           </div>
         </div>
@@ -133,6 +200,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
         <div className="flex flex-wrap items-center gap-3 pt-4">
           <button
             type="button"
+            onClick={() => continueUrl && navigate(continueUrl)}
             className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-content-inverse font-semibold text-sm rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
           >
             <span>Continue Challenge</span>
@@ -149,6 +217,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
           </button>
           <button
             type="button"
+            onClick={() => detailsUrl && navigate(detailsUrl)}
             className="px-6 py-2.5 bg-surface-hero-button hover:bg-surface-hero-elevated text-content-on-dark font-semibold text-sm rounded-lg border border-surface-hero-elevated transition-colors cursor-pointer"
           >
             View Details
