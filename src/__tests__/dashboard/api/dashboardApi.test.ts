@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchDashboardData } from "@/entities/dashboard";
-import { MOCK_DASHBOARD_DATA } from "@/entities/dashboard/api/dashboardApi";
+import { fetchDashboardData, MOCK_DASHBOARD_DATA } from "@/entities/dashboard";
 
 vi.mock("@/shared/api", () => ({
   apiFetch: vi.fn(),
