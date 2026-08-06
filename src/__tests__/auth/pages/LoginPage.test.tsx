@@ -20,7 +20,9 @@ describe("LoginPage", () => {
 
   it("renders heading and description", () => {
     render(<LoginPage />);
-    expect(screen.getByText("Sign In to LTE")).toBeInTheDocument();
+    expect(
+      screen.getByText((_, node) => node?.textContent === "Sign In to LTE"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("Please sign in with your SkillPassport account to access LTE."),
     ).toBeInTheDocument();
