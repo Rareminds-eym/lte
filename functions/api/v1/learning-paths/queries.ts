@@ -6,6 +6,15 @@ export interface ActiveTrackRole {
   learningPathId: string;
 }
 
+export interface CareerTrackItem {
+  id: string;
+  title: string;
+  matchPercentage?: number;
+  isExplore?: boolean;
+  isSelected?: boolean;
+  fit?: string;
+}
+
 export interface ActiveTrackDetail {
   learningTrackId: string;
   track: string;
@@ -13,6 +22,9 @@ export interface ActiveTrackDetail {
   matchScore: number;
   whyItFits: string;
   roles: ActiveTrackRole[];
+  tracks: CareerTrackItem[];
+  overallProgress: number;
+  completionCount: number;
 }
 
 export async function getActiveLearningTrack(
@@ -58,6 +70,30 @@ export async function getActiveLearningTrack(
     };
   });
 
+  // 3. Fetch all recommended tracks for the user
+  const { data: tracksData, error: tracksError } = await supabase
+    .from("learning_tracks")
+    .select("id, track, fit, match_score, is_active")
+    .eq("user_id", userId)
+    .order("match_score", { ascending: false });
+
+  if (tracksError) {
+    throw new Error(`Failed to fetch all learning tracks for user: ${tracksError.message}`);
+  }
+
+  const tracks = (Array.isArray(tracksData) ? tracksData : tracksData ? [tracksData] : []).map(
+    (t) => ({
+      id: t.id,
+      title: t.track,
+      matchPercentage: t.match_score,
+      isExplore: t.fit === "Explore",
+      isSelected: t.is_active,
+      fit: t.fit,
+    }),
+  );
+
+  const stats = await getTrackProgressStats(supabase, userId, trackData.id);
+
   return {
     learningTrackId: trackData.id,
     track: trackData.track,
@@ -65,7 +101,92 @@ export async function getActiveLearningTrack(
     matchScore: trackData.match_score,
     whyItFits: trackData.why_it_fits ?? "",
     roles,
+    tracks,
+    overallProgress: stats.overallProgress,
+    completionCount: stats.completionCount,
   };
+}
+
+export async function getTrackProgressStats(
+  supabase: SupabaseClient,
+  userId: string,
+  trackId: string,
+): Promise<{ overallProgress: number; completionCount: number }> {
+  // 1. Fetch all learning paths (roles) under this track
+  const { data: paths, error: pathsError } = await supabase
+    .from("learning_paths")
+    .select("id")
+    .eq("learning_track_id", trackId);
+
+  if (pathsError) {
+    throw new Error(
+      `Failed to fetch learning paths for progress calculations: ${pathsError.message}`,
+    );
+  }
+
+  if (!paths || paths.length === 0) {
+    return { overallProgress: 0, completionCount: 0 };
+  }
+
+  const pathIds = paths.map((p) => p.id);
+
+  // 2. Fetch all user capabilities for these paths
+  const { data: userCaps, error: capsError } = await supabase
+    .from("user_capabilities")
+    .select("learning_path_id, current_level, required_level, has_gap")
+    .eq("user_id", userId)
+    .in("learning_path_id", pathIds);
+
+  if (capsError) {
+    throw new Error(
+      `Failed to fetch user capabilities for progress calculations: ${capsError.message}`,
+    );
+  }
+
+  if (!userCaps || userCaps.length === 0) {
+    return { overallProgress: 0, completionCount: 0 };
+  }
+
+  // 3. Compute overall progress using:
+  // overallProgress = SUM(min(current_level, required_level)) / SUM(required_level) * 100
+  let totalRequiredLevels = 0;
+  let totalCurrentLevelsClamped = 0;
+
+  for (const cap of userCaps) {
+    const req = cap.required_level ?? 1;
+    const cur = cap.current_level ?? 0;
+    totalRequiredLevels += req;
+    totalCurrentLevelsClamped += Math.min(cur, req);
+  }
+
+  const overallProgress =
+    totalRequiredLevels > 0
+      ? Math.round((totalCurrentLevelsClamped / totalRequiredLevels) * 100)
+      : 0;
+
+  // 4. Compute completion count:
+  // Number of learning paths (roles) where all capability gaps are cleared (i.e. no capability has has_gap = true)
+  const pathGaps: Record<string, boolean> = {}; // learning_path_id -> has_any_gaps
+
+  for (const pathId of pathIds) {
+    pathGaps[pathId] = false;
+  }
+
+  for (const cap of userCaps) {
+    if (cap.has_gap) {
+      pathGaps[cap.learning_path_id] = true;
+    }
+  }
+
+  let completionCount = 0;
+  for (const pathId of pathIds) {
+    const capsForPath = userCaps.filter((c) => c.learning_path_id === pathId);
+    if (capsForPath.length > 0 && !pathGaps[pathId]) {
+      completionCount++;
+    }
+  }
+
+  return { overallProgress, completionCount };
 }
 
 export async function checkRoleExists(supabase: SupabaseClient, roleId: string): Promise<boolean> {
@@ -169,6 +290,22 @@ export async function activateLearningTrack(
 
   if (error) {
     throw new Error(`Failed to activate learning track: ${error.message}`);
+  }
+
+  // Fetch all learning paths for this newly activated track and sync capabilities
+  const { data: paths, error: pathsError } = await supabase
+    .from("learning_paths")
+    .select("id, role_id")
+    .eq("learning_track_id", trackId);
+
+  if (!pathsError && paths) {
+    for (const path of paths) {
+      await syncUserCapabilities(supabase, {
+        userId,
+        learningPathId: path.id,
+        roleId: path.role_id,
+      });
+    }
   }
 }
 

@@ -9,13 +9,13 @@ import {
   useStartLevelProgress,
 } from "@/entities/course";
 import { useAuthStore } from "@/entities/session";
-import { PageLoader } from "@/shared/ui";
 import {
   LevelHeroBanner,
   LevelModuleList,
   LevelProblemStatement,
   LevelStatsBar,
 } from "@/widgets/level-modules";
+import { LevelModulesSkeleton } from "./LevelModulesSkeleton";
 
 const getResumeStage = (completedStages: string[] | undefined, progressPercentage = 0) => {
   if (progressPercentage >= 100) return "engage";
@@ -43,7 +43,7 @@ export const LevelModulesPage: React.FC = () => {
   }, [levelId, startLevel]);
 
   if (isLoading) {
-    return <PageLoader message="Loading level modules..." />;
+    return <LevelModulesSkeleton />;
   }
 
   const handleBackToCourses = () => {

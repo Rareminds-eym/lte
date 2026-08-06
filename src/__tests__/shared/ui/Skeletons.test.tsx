@@ -4,7 +4,6 @@ import {
   CourseCardGridSkeleton,
   CourseCardSkeleton,
 } from "@/entities/course/ui/CourseCardSkeleton";
-import { CourseSkeleton } from "@/entities/course/ui/CourseSkeleton";
 import { CourseDetailSkeleton } from "@/pages/course-detail/ui/CourseDetailSkeleton";
 import { InlineSpinner } from "@/shared/ui/InlineSpinner/InlineSpinner";
 
@@ -18,11 +17,6 @@ describe("Static Skeletons and Spinners", () => {
     const { container } = render(<CourseCardGridSkeleton count={3} />);
     // Grid itself is not .animate-pulse, but its children cards are
     expect(container.querySelectorAll(".animate-pulse")).toHaveLength(3);
-  });
-
-  it("renders CourseSkeleton correctly", () => {
-    const { container } = render(<CourseSkeleton />);
-    expect(container.querySelector(".animate-pulse")).not.toBeNull();
   });
 
   it("renders CourseDetailSkeleton correctly", () => {

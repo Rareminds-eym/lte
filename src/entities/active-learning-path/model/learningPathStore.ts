@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { getLogger } from "@/shared";
 import type { ActiveTrackDetail } from "@/shared/types/auth";
-import { fetchActiveLearningPath } from "../api/learningPathApi";
+import { activateLearningTrack, fetchActiveLearningPath } from "../api/learningPathApi";
 
 const logger = getLogger("learningPathStore");
 
@@ -12,6 +12,7 @@ interface LearningPathState {
   needsAssessment: boolean;
   error: string | null;
   fetchAndSetActiveLearningPath: (userId: string) => Promise<void>;
+  switchActiveTrack: (trackId: string) => Promise<void>;
   clearActiveLearningPath: () => void;
 }
 
@@ -59,6 +60,40 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         needsAssessment: false,
         error: message,
       });
+    }
+  },
+
+  switchActiveTrack: async (trackId: string) => {
+    const userId = get().userId;
+    if (!userId) return;
+    logger.info("switchActiveTrack triggered", { trackId, userId });
+    set({ activeLearningPathLoading: true, error: null });
+    try {
+      await activateLearningTrack(trackId);
+      const result = await fetchActiveLearningPath();
+      if (get().userId !== userId) {
+        logger.info("switchActiveTrack user changed during fetch, ignoring result");
+        return;
+      }
+      set({
+        activeTrack: result.data,
+        needsAssessment: result.needsAssessment,
+        activeLearningPathLoading: false,
+      });
+      logger.info("switchActiveTrack succeeded", { trackId });
+    } catch (error) {
+      if (get().userId !== userId) {
+        logger.info("switchActiveTrack user changed during fetch error, ignoring error");
+        return;
+      }
+      const message =
+        error instanceof Error ? error.message : "Failed to switch active learning track";
+      logger.error("switchActiveTrack failed", error instanceof Error ? error : new Error(message));
+      set({
+        activeLearningPathLoading: false,
+        error: message,
+      });
+      throw error;
     }
   },
 

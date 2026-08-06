@@ -42,6 +42,9 @@ describe("Learner Track Resolution (3-layer logic)", () => {
         learningPathId: "lp-1",
       },
     ],
+    tracks: [],
+    overallProgress: 0,
+    completionCount: 0,
   };
 
   beforeEach(() => {

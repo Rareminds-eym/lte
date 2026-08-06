@@ -36,6 +36,15 @@ export interface ActiveTrackRole {
   learningPathId: string;
 }
 
+export interface CareerTrackItem {
+  id: string;
+  title: string;
+  matchPercentage?: number;
+  isExplore?: boolean;
+  isSelected?: boolean;
+  fit?: string;
+}
+
 export interface ActiveTrackDetail {
   learningTrackId: string;
   track: string;
@@ -43,6 +52,9 @@ export interface ActiveTrackDetail {
   matchScore: number;
   whyItFits?: string;
   roles: ActiveTrackRole[];
+  tracks?: CareerTrackItem[];
+  overallProgress?: number;
+  completionCount?: number;
 }
 
 export interface ActiveLearningPathResponse {

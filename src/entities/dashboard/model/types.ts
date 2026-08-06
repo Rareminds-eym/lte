@@ -82,6 +82,7 @@ export interface CareerTrackItem {
   matchPercentage?: number;
   isExplore?: boolean;
   isSelected?: boolean;
+  fit?: string;
 }
 
 export interface RecommendedCareerPathsData {
