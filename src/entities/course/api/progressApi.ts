@@ -48,15 +48,19 @@ export async function updateStageProgress(
   eContentId: string,
   stageName: string,
   status: "in_progress" | "completed",
+  durationSeconds?: number,
+  options: Pick<RequestInit, "keepalive"> = {},
 ): Promise<StageProgressResponse> {
   return apiFetch<StageProgressResponse>(
     `/api/v1/courses/${encodeURIComponent(levelId)}/modules/${moduleNo}/stages/progress`,
     {
       method: "POST",
+      ...options,
       body: JSON.stringify({
         eContentId,
         stageName,
         status,
+        ...(durationSeconds !== undefined ? { durationSeconds } : {}),
       }),
     },
   );

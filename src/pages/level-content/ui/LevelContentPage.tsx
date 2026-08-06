@@ -7,11 +7,7 @@ import {
   fetchLevelModuleDetails,
   getLevelModuleDetailsQueryKey,
   isLteStageName,
-  LTE_STAGE_SEQUENCE,
   type LteStage,
-  type ModuleArtifact,
-  type ModuleDetailsResponse,
-  type ModuleStageContent,
   ResourceContentViewer,
   useLevelDetails,
   useLevelModuleDetails,
@@ -26,109 +22,35 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
-  DocumentIcon,
   DownloadIcon,
   ExpandIcon,
   IconButton,
   type IconProps,
-  LabFlaskIcon,
   LightbulbIcon,
-  LightningBoltIcon,
-  PlayIcon,
   toast,
 } from "@/shared/ui";
 import { LevelHeader, type ModuleItem, ModulesDrawer, StageStepperBar } from "@/widgets";
 import { ArtifactPanel } from "./components/ArtifactPanel";
+import {
+  formatContentType,
+  formatDuration,
+  formatStageLabel,
+  getArtifactPanelTitle,
+  getArtifactStepperMeta,
+  getArtifactStepperMetaByType,
+  getContentIcon,
+  getCourseOverviewPath,
+  getDownloadFileName,
+  getFirstIncompleteStage,
+  getModuleStageSequence,
+  getPrimaryArtifact,
+  getStageSummary,
+  LEVEL_CONTENT_UNAVAILABLE_MESSAGE,
+  SCENARIO_COLLAPSE_CHAR_LIMIT,
+} from "./components/levelContentUtils";
 import { ModuleLoadingShell } from "./components/ModuleLoadingShell";
+import { SilentContentTimer } from "./components/SilentContentTimer";
 import { StageInfoPanel } from "./components/StageInfoPanel";
-
-const LEVEL_CONTENT_UNAVAILABLE_MESSAGE =
-  "This course content is not available right now. Please go back to your courses and try again.";
-
-const formatStageLabel = (stage: LteStage) => stage.charAt(0).toUpperCase() + stage.slice(1);
-
-const formatDuration = (seconds: number | null) => {
-  if (!seconds) return null;
-  const minutes = Math.max(1, Math.round(seconds / 60));
-  return `${minutes} min`;
-};
-
-const formatContentType = (contentType: EContentItem["contentType"]) =>
-  contentType.charAt(0).toUpperCase() + contentType.slice(1);
-
-const getContentIcon = (contentType: EContentItem["contentType"]) => {
-  if (contentType === "video" || contentType === "audio") return PlayIcon;
-  return DocumentIcon;
-};
-
-const getDownloadFileName = (item: EContentItem) => {
-  const urlFileName = item.url.split("/").pop()?.split("?")[0];
-  return decodeURIComponent(urlFileName || item.title).replace(/[<>:"/\\|?*]+/g, "-");
-};
-
-const getStageSummary = (module: ModuleDetailsResponse, stageContent: ModuleStageContent) => {
-  if (stageContent.items.length) {
-    return `${stageContent.items.length} published resource${stageContent.items.length === 1 ? "" : "s"} available for this stage.`;
-  }
-
-  if (stageContent.artifacts.length) {
-    return `${stageContent.artifacts.length} artifact${stageContent.artifacts.length === 1 ? "" : "s"} available for this stage.`;
-  }
-
-  return module.moduleProblemStatement ?? "No published content has been added for this stage yet.";
-};
-
-const getPrimaryArtifact = (artifacts: ModuleArtifact[]) =>
-  artifacts.find((artifact) => artifact.artifactType === "final") ?? artifacts[0] ?? null;
-
-const getArtifactPanelTitle = (artifact: ModuleArtifact | null) => {
-  if (artifact?.artifactType === "practice") return "Practice Artifact";
-  if (artifact?.artifactType === "final") return "Final Artifact";
-  return "Stage Info";
-};
-
-const getArtifactStepperMeta = (artifact: ModuleArtifact | null) => {
-  if (artifact?.artifactType === "practice") {
-    return { subtitle: "Practice Artifact", icon: LabFlaskIcon };
-  }
-
-  if (artifact?.artifactType === "final") {
-    return { subtitle: "Final Artifact", icon: LightningBoltIcon };
-  }
-
-  return null;
-};
-
-const getArtifactStepperMetaByType = (artifactType: ModuleArtifact["artifactType"] | null) => {
-  if (artifactType === "practice") {
-    return { subtitle: "Practice Artifact", icon: LabFlaskIcon };
-  }
-
-  if (artifactType === "final") {
-    return { subtitle: "Final Artifact", icon: LightningBoltIcon };
-  }
-
-  return null;
-};
-
-const getModuleStageSequence = (stages: ModuleStageContent[] | undefined) => {
-  const stageNames = new Set(
-    (stages ?? [])
-      .map((stage) => stage.stageName.toLowerCase() as LteStage)
-      .filter((stage) => isLteStageName(stage)),
-  );
-
-  return (
-    stageNames.size
-      ? LTE_STAGE_SEQUENCE.filter((stage) => stageNames.has(stage))
-      : [...LTE_STAGE_SEQUENCE]
-  ) as LteStage[];
-};
-
-const getFirstIncompleteStage = (stages: LteStage[], completedStages: Set<LteStage>) =>
-  stages.find((stage) => !completedStages.has(stage)) ?? null;
-
-const SCENARIO_COLLAPSE_CHAR_LIMIT = 280;
 
 export const LevelContentPage: React.FC = () => {
   const navigate = useNavigate();
@@ -188,7 +110,7 @@ export const LevelContentPage: React.FC = () => {
   }, [isScenarioOverflowing]);
 
   const handleBackToOverview = () => {
-    navigate("/my-courses");
+    navigate(getCourseOverviewPath(level?.capabilityCode));
   };
 
   const { mutate: startModule } = useStartModuleProgress();
@@ -429,6 +351,15 @@ export const LevelContentPage: React.FC = () => {
     );
   }
 
+  const resolvedLevelId = levelId;
+  if (!resolvedLevelId) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-surface-secondary p-4">
+        {renderUnavailableState(LEVEL_CONTENT_UNAVAILABLE_MESSAGE)}
+      </div>
+    );
+  }
+
   const completedStages = Array.from(
     new Set([...(levelModule.completedStages || []), ...optimisticCompletedStages]),
   ) as LteStage[];
@@ -538,7 +469,7 @@ export const LevelContentPage: React.FC = () => {
       navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${moduleToOpen}?stage=engage`);
     } else {
       toast.success("Course completed successfully!");
-      navigate("/my-courses");
+      navigate(getCourseOverviewPath(level.capabilityCode));
     }
   };
 
@@ -559,7 +490,7 @@ export const LevelContentPage: React.FC = () => {
 
   const handleCompleteCourse = () => {
     toast.success("Course completed successfully!");
-    navigate("/my-courses");
+    navigate(getCourseOverviewPath(level.capabilityCode));
   };
 
   const handleAdvanceBeyondStage = () => {
@@ -780,6 +711,14 @@ export const LevelContentPage: React.FC = () => {
 
       {selectedContent ? (
         <section className="flex min-h-0 flex-1 flex-col bg-surface-primary">
+          <SilentContentTimer
+            contentId={selectedContent.id}
+            levelId={resolvedLevelId}
+            moduleNo={moduleNumber}
+            stageName={activeStage}
+            updateStage={updateStage}
+          />
+
           <div className="min-h-14 border-b border-line-subtle bg-surface-primary px-5 py-2.5 flex items-center justify-between gap-4 shrink-0">
             <div className="min-w-0">
               <h2 className="truncate text-sm font-bold text-content-primary">

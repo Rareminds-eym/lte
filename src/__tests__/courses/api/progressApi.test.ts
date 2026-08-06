@@ -81,5 +81,30 @@ describe("progressApi", () => {
         }),
       );
     });
+
+    it("includes duration seconds when tracking content viewing time", async () => {
+      const mockResponse = {
+        success: true,
+        stageProgressId: "stage-prog-123",
+        stagesCompleted: 1,
+        completionPercentage: 17,
+      };
+      mockFetch(200, mockResponse);
+
+      await updateStageProgress("level-1", 2, "content-1", "engage", "in_progress", 42);
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/courses/level-1/modules/2/stages/progress"),
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            eContentId: "content-1",
+            stageName: "engage",
+            status: "in_progress",
+            durationSeconds: 42,
+          }),
+        }),
+      );
+    });
   });
 });

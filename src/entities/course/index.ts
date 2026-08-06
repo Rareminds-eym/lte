@@ -1,4 +1,4 @@
-export { fetchLevelDetails, fetchLevelModuleDetails } from "./api";
+export { fetchLevelDetails, fetchLevelModuleDetails, updateStageProgress } from "./api";
 export type { CapabilityLevel } from "./api/courseApi";
 export {
   ArtifactResponseTypeSchema,

@@ -49,6 +49,7 @@ export const useUpdateStageProgress = () => {
       eContentId: string;
       stageName: string;
       status: "in_progress" | "completed";
+      durationSeconds?: number;
     }) =>
       updateStageProgress(
         params.levelId,
@@ -56,6 +57,7 @@ export const useUpdateStageProgress = () => {
         params.eContentId,
         params.stageName,
         params.status,
+        params.durationSeconds,
       ),
     onSuccess: (_, variables) => {
       // Invalidate user courses list to reflect overall progress updates

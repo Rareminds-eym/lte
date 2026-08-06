@@ -1,7 +1,1 @@
-// Shared custom hooks
-// Example:
-// export { useAsync } from './useAsync';
-// export { useFetch } from './useFetch';
-// export { useLocalStorage } from './useLocalStorage';
-
-export {};
+export { type UseContentTimerParams, useContentTimer } from "./useContentTimer";

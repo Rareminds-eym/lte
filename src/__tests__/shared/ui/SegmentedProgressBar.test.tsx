@@ -47,4 +47,14 @@ describe("SegmentedProgressBar", () => {
     const progressbar = screen.getByRole("progressbar", { name: "Course Level Progress" });
     expect(progressbar).toBeInTheDocument();
   });
+
+  it("renders an empty visual track while preserving zero total semantics", () => {
+    render(<SegmentedProgressBar currentLevel={0} totalLevels={0} />);
+
+    const progressbar = screen.getByRole("progressbar");
+    expect(progressbar).toHaveAttribute("aria-valuenow", "0");
+    expect(progressbar).toHaveAttribute("aria-valuemax", "0");
+    expect(progressbar.children).toHaveLength(1);
+    expect(progressbar.children[0]).toHaveClass("bg-line-default");
+  });
 });

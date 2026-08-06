@@ -30,7 +30,7 @@ const baseCourse: Course = {
   tags: ["Testing", "Engineering"],
   status: "in_progress",
   progress: 50,
-  currentLevel: 2,
+  currentLevel: 1,
   totalLevels: 5,
   targetLevel: "L3",
   durationHours: 40,
@@ -56,7 +56,7 @@ describe("CourseCard", () => {
 
   it("renders progress information", () => {
     renderWithRouter(<CourseCard course={baseCourse} />);
-    expect(screen.getByText("Level 2 of 5")).toBeInTheDocument();
+    expect(screen.getByText("Level 1 of 5")).toBeInTheDocument();
     expect(screen.getByText("TARGET: L3")).toBeInTheDocument();
   });
 

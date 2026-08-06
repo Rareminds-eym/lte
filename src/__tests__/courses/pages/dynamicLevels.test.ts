@@ -31,7 +31,7 @@ describe("mapApiLevelsToCards", () => {
   ];
 
   it("maps capability levels to course level cards including XP", () => {
-    const cards = mapApiLevelsToCards(mockLevels, 2, 3);
+    const cards = mapApiLevelsToCards(mockLevels, 1, 3);
     expect(cards).toHaveLength(2);
 
     expect(cards[0]).toEqual({
@@ -111,5 +111,13 @@ describe("mapApiLevelsToCards", () => {
     ];
     const cards = mapApiLevelsToCards(levels, 1, 1);
     expect(cards[0]?.duration).toBe("45 min");
+  });
+
+  it("keeps level one startable when unlocked progress is zero", () => {
+    const cards = mapApiLevelsToCards(mockLevels, 0, 2);
+
+    expect(cards[0]?.status).toBe("unlocked");
+    expect(cards[0]?.actionText).toBe("Start →");
+    expect(cards[1]?.status).toBe("locked");
   });
 });

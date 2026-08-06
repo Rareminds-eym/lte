@@ -25,7 +25,12 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     const roleIds = activeTrack.roles.map((r) => r.roleId);
-    const capabilities = await getUserCapabilitiesForRoles(supabase, roleIds, activeTrack.roles);
+    const capabilities = await getUserCapabilitiesForRoles(
+      supabase,
+      userId,
+      roleIds,
+      activeTrack.roles,
+    );
 
     return jsonResponse<UserCapabilitiesResponse>({
       success: true,
