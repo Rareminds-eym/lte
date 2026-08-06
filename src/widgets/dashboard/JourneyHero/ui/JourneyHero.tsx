@@ -49,7 +49,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
           <div className="flex flex-wrap items-center gap-3 pt-4">
             <button
               type="button"
-              onClick={() => navigate("/career-paths")}
+              onClick={() => navigate("/my-courses")}
               className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-content-inverse font-semibold text-sm rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
             >
               {state === "completed" ? "Choose Next Capability" : "Explore Career Paths"}

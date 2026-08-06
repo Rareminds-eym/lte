@@ -39,6 +39,28 @@ describe("Dashboard Widgets", () => {
     expect(screen.getByText("View Details")).toBeInTheDocument();
   });
 
+  it("renders JourneyHero empty state with completed CTA when journey is complete", () => {
+    render(
+      <MemoryRouter>
+        <JourneyHero data={null} state="completed" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Level Complete — Outstanding Work!")).toBeInTheDocument();
+    expect(screen.getByText("Choose Next Capability")).toBeInTheDocument();
+    expect(screen.queryByText("Continue Challenge")).not.toBeInTheDocument();
+  });
+
+  it("renders JourneyHero empty state with explore CTA when no track exists", () => {
+    render(
+      <MemoryRouter>
+        <JourneyHero data={null} state="no_track" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Your Journey Starts Here")).toBeInTheDocument();
+    expect(screen.getByText("Explore Career Paths")).toBeInTheDocument();
+    expect(screen.queryByText("Continue Challenge")).not.toBeInTheDocument();
+  });
+
   it("renders TodaysPriorities with daily XP goal and task list", () => {
     render(<TodaysPriorities data={MOCK_DASHBOARD_DATA.priorities} />);
     expect(screen.getByText("Today's Priorities")).toBeInTheDocument();
