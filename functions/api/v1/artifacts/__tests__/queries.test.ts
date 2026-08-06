@@ -34,7 +34,7 @@ function mockChain(
     select: vi.fn(() => chain),
     eq: vi.fn(() => chain),
     order: vi.fn(() => chain),
-    update: vi.fn(() => Promise.resolve(ok(null))),
+    update: vi.fn(() => chain),
     insert: vi.fn(() => Promise.resolve(ok(null))),
     upsert: vi.fn(() => Promise.resolve(ok(null))),
     maybeSingle: vi.fn().mockResolvedValue(options.maybeSingle ?? ok(null)),

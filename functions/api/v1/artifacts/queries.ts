@@ -1,3 +1,4 @@
+import { processAndSaveArtifactEvaluation } from "@functions/lib/ai-engine/artifact-evaluator";
 import { createObjectKey } from "@functions/lib/r2-client";
 import type { LteEnv } from "@functions/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -239,7 +240,7 @@ async function listArtifactQuestions(
 
 export async function submitArtifactSubmission(
   supabase: SupabaseClient,
-  env: Pick<LteEnv, "STORAGE_BUCKET" | "R2_PUBLIC_DOMAIN">,
+  env: Pick<LteEnv, "STORAGE_BUCKET" | "R2_PUBLIC_DOMAIN" | "OPENROUTER_API_KEY">,
   userId: string,
   input: CompleteSubmissionInput,
   filesByQuestionId: Map<string, File>,
@@ -248,8 +249,16 @@ export async function submitArtifactSubmission(
   attempt_no: number;
   version_label: string;
   submitted_at: string | null;
-  status: "submitted";
-  evaluation_status: "pending";
+  status: "submitted" | "accepted" | "resubmission_required" | "human_review";
+  evaluation_status: "pending" | "completed";
+  evaluation?: {
+    overall_score: number;
+    decision: "pass" | "revise_and_resubmit" | "human_review";
+    rubric_rows: unknown[];
+    feedback: string;
+    improvements: string;
+    calculated_xp: number;
+  };
   files: Array<{ file_id: string; question_id: string; file_name: string }>;
 }> {
   const moduleProgressId = await requireModuleProgress(supabase, input.artifact_id, userId);
@@ -378,13 +387,72 @@ export async function submitArtifactSubmission(
     });
   }
 
+  // Fetch full artifact details for AI Evaluation
+  const { data: artifactMeta } = await supabase
+    .from("module_artifacts")
+    .select("artifact_type, passing_score, total_score")
+    .eq("id", input.artifact_id)
+    .single();
+
+  const { data: questionDetails } = await supabase
+    .from("artifact_questions")
+    .select("id, title, description, response_type, instructions")
+    .eq("artifact_id", input.artifact_id)
+    .eq("is_active", true);
+
+  const evalInput = {
+    artifactId: input.artifact_id,
+    artifactType: (artifactMeta?.artifact_type as "practice" | "final") || "final",
+    passingScore: artifactMeta?.passing_score ?? 60,
+    totalScore: artifactMeta?.total_score ?? 100,
+    questions: (questionDetails ?? []).map((q) => ({
+      id: q.id,
+      title: q.title,
+      description: q.description ?? "",
+      responseType: q.response_type,
+      instructions: q.instructions,
+    })),
+    answers: input.answers.map((a) => {
+      const fileObj = filesByQuestionId.get(a.question_id);
+      return {
+        questionId: a.question_id,
+        textResponse: a.text_response,
+        urlResponse: a.url_response,
+        fileName: fileObj?.name,
+      };
+    }),
+    attemptNo: submission.attempt_no,
+  };
+
+  const evalResult = await processAndSaveArtifactEvaluation(
+    supabase,
+    env,
+    submission.id,
+    evalInput,
+    userId,
+    moduleProgressId,
+  );
+
   return {
     submission_id: submission.id,
     attempt_no: submission.attempt_no,
     version_label: submission.version_label ?? `v${submission.attempt_no}`,
     submitted_at: submission.submitted_at,
-    status: "submitted",
-    evaluation_status: "pending",
+    status:
+      evalResult.decision === "pass"
+        ? "accepted"
+        : evalResult.decision === "human_review"
+          ? "human_review"
+          : "resubmission_required",
+    evaluation_status: "completed",
+    evaluation: {
+      overall_score: evalResult.overallScore,
+      decision: evalResult.decision,
+      rubric_rows: evalResult.rubricRows,
+      feedback: evalResult.feedback,
+      improvements: evalResult.singleImprovementPoint,
+      calculated_xp: evalResult.calculatedXp,
+    },
     files: uploadedFiles,
   };
 }
@@ -459,4 +527,33 @@ export async function createArtifactFileDownloadResponse(
 
 export function createDownloadUrl(fileId: string, requestUrl: string): string {
   return new URL(`/api/v1/artifacts/files/${fileId}/download`, requestUrl).toString();
+}
+
+export async function getSubmissionEvaluationFlow(
+  supabase: SupabaseClient,
+  submissionId: string,
+  userId: string,
+) {
+  const { data: submission } = await supabase
+    .from("artifact_submissions")
+    .select("id")
+    .eq("id", submissionId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!submission) {
+    throw new ArtifactSubmissionError("Submission not found.", 404, "SUBMISSION_NOT_FOUND");
+  }
+
+  const { data: flow, error } = await supabase
+    .from("artifact_evaluation_flows")
+    .select(
+      "id, submission_id, stage, status, score, decision, feedback, improvements, completed_at, metadata",
+    )
+    .eq("submission_id", submissionId)
+    .eq("is_current_stage", true)
+    .maybeSingle();
+
+  if (error) throw new Error(`Failed to fetch evaluation flow: ${error.message}`);
+  return flow;
 }

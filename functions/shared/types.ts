@@ -20,6 +20,7 @@ export interface LteEnv {
   COOKIE_DOMAIN?: string;
   SKILLPASSPORT_INTERNAL_URL: string;
   SKILLPASSPORT_INTERNAL_SECRET: string;
+  OPENROUTER_API_KEY?: string;
 }
 
 export interface PagesContext<Env = LteEnv> {

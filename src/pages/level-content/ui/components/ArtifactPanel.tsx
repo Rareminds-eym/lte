@@ -28,6 +28,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   >({});
   const [activeArtifactTab, setActiveArtifactTab] = useState<"submit" | "feedback">("submit");
   const [activeFeedbackAttemptNo, setActiveFeedbackAttemptNo] = useState<number | null>(null);
+  const [latestEvaluation, setLatestEvaluation] = useState<
+    SubmitArtifactResponse["evaluation"] | undefined
+  >();
 
   const submittedFileVersions = useMemo(() => {
     const baseFiles = activeArtifact?.submittedFiles ?? [];
@@ -110,6 +113,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         ...submittedFiles,
       ],
     }));
+    setLatestEvaluation(response.evaluation);
     setActiveFeedbackAttemptNo(response.attempt_no);
     setActiveArtifactTab("feedback");
   };
@@ -190,6 +194,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           activeFeedbackAttemptNo={activeFeedbackAttemptNo}
           isPanelExpanded={isPanelExpanded}
           onSelectAttempt={setActiveFeedbackAttemptNo}
+          latestEvaluation={latestEvaluation}
         />
       ) : null}
 

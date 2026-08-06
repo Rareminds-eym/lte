@@ -18,8 +18,22 @@ export interface SubmitArtifactResponse {
   attempt_no: number;
   version_label: string;
   submitted_at: string | null;
-  status: "submitted";
-  evaluation_status: "pending";
+  status: "submitted" | "accepted" | "resubmission_required";
+  evaluation_status: "pending" | "completed";
+  evaluation?: {
+    overall_score: number;
+    decision: "pass" | "fail";
+    rubric_rows: Array<{
+      label: string;
+      score: number;
+      maxScore: number;
+      tone: "success" | "warning" | "error";
+      feedback?: string;
+    }>;
+    feedback: string;
+    improvements: string;
+    calculated_xp: number;
+  };
   files: Array<{
     file_id: string;
     question_id: string;

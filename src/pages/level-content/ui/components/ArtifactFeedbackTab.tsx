@@ -18,6 +18,22 @@ export interface SubmittedArtifactAttempt {
   isLatest: boolean;
   submittedAt: string | null;
   files: ModuleArtifactSubmittedFile[];
+  evaluation?: {
+    overall_score: number;
+    decision: "pass" | "revise_and_resubmit" | "human_review" | "fail";
+    rubric_rows: Array<{
+      label: string;
+      score: number;
+      maxScore: number;
+      level?: string;
+      evidence?: string;
+      tone?: "success" | "warning" | "error";
+      feedback?: string;
+    }>;
+    feedback: string;
+    improvements: string;
+    calculated_xp: number;
+  };
 }
 
 interface ArtifactFeedbackTabProps {
@@ -25,40 +41,74 @@ interface ArtifactFeedbackTabProps {
   activeFeedbackAttemptNo: number | null;
   isPanelExpanded: boolean;
   onSelectAttempt: (attemptNo: number) => void;
+  latestEvaluation?: SubmittedArtifactAttempt["evaluation"];
 }
 
 const formatSubmittedDate = (uploadedAt: string | null | undefined) => {
   if (!uploadedAt) return "Submitted";
-  return `Submitted ${new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(uploadedAt))}`;
+  return `Submitted ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(uploadedAt))}`;
 };
 
-const rubricRows = [
-  { label: "Clarity & Structure", score: 3, total: 4, tone: "success" },
-  { label: "Evidence & Accuracy", score: 2, total: 4, tone: "warning" },
-  { label: "Depth of Analysis", score: 2, total: 4, tone: "warning" },
-  { label: "Completeness", score: 3, total: 4, tone: "success" },
-] as const;
+const DEFAULT_RUBRIC_ROWS = [
+  {
+    label: "Completeness",
+    score: 3,
+    level: "Strongly demonstrated",
+    evidence: "Required prompt sections and fields are present.",
+  },
+  {
+    label: "Accuracy",
+    score: 2,
+    level: "Demonstrated",
+    evidence: "Content matches baseline evidence and instructions.",
+  },
+  {
+    label: "Evidence use",
+    score: 2,
+    level: "Demonstrated",
+    evidence: "Citations and source references included.",
+  },
+  {
+    label: "Judgement",
+    score: 2,
+    level: "Demonstrated",
+    evidence: "Identifies risks, gaps, and uncertainty.",
+  },
+  {
+    label: "Next action",
+    score: 2,
+    level: "Demonstrated",
+    evidence: "Role-appropriate recommendation provided.",
+  },
+].map((r) => ({ ...r, maxScore: 3, tone: "success" as const }));
 
-const mockArtifactFeedback = {
-  getScore: (attemptNo: number | null | undefined) => (attemptNo === 1 ? 87 : 85),
-  latestStatus: "Approved",
-  submittedStatus: "Submitted",
-  reviewMode: "normal",
-  rubricRows,
-  staffFeedback:
-    "Reviewed and approved. Good application of the concepts; tighten the conclusion next time.",
-  staffSuggestion: "Consider expanding on edge cases for an even higher score.",
+const DECISION_META = {
+  pass: { label: "Passed", bg: "bg-success-50 text-success-700", border: "border-success-500" },
+  human_review: {
+    label: "Human Review Required",
+    bg: "bg-warning-50 text-warning-700",
+    border: "border-warning-500",
+  },
+  revise_and_resubmit: {
+    label: "Revise & Resubmit",
+    bg: "bg-warning-50 text-warning-700",
+    border: "border-warning-500",
+  },
+  fail: {
+    label: "Failed",
+    bg: "bg-error-50 text-error-700",
+    border: "border-error-500",
+  },
 } as const;
+
+type DecisionMeta = (typeof DECISION_META)[keyof typeof DECISION_META];
 
 export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
   submittedAttempts,
   activeFeedbackAttemptNo,
   isPanelExpanded,
   onSelectAttempt,
+  latestEvaluation,
 }) => {
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const selectedAttempt =
@@ -66,7 +116,21 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
     submittedAttempts[0] ??
     null;
   const submittedFileList = selectedAttempt?.files ?? [];
-  const selectedScore = mockArtifactFeedback.getScore(selectedAttempt?.attemptNo);
+
+  const evaluationData = selectedAttempt?.evaluation ?? latestEvaluation;
+  const selectedScore = evaluationData?.overall_score ?? 85;
+  const decisionMeta: DecisionMeta =
+    DECISION_META[evaluationData?.decision ?? "revise_and_resubmit"] ??
+    DECISION_META.revise_and_resubmit;
+  const rubricList = evaluationData?.rubric_rows?.length
+    ? evaluationData.rubric_rows
+    : DEFAULT_RUBRIC_ROWS;
+  const feedbackText =
+    evaluationData?.feedback ||
+    "Pass: No critical failures and all essential criteria demonstrate target mastery.";
+  const improvementsText =
+    evaluationData?.improvements ||
+    "Elaborate further on root-cause evidence and specify concrete ownership for next steps.";
 
   const handleDownload = async (
     file: Pick<ModuleArtifactSubmittedFile, "id" | "fileName" | "downloadUrl">,
@@ -94,6 +158,7 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Submitted artifact versions">
         {submittedAttempts.map((attempt) => {
           const isSelected = attempt.attemptNo === selectedAttempt?.attemptNo;
+          const attemptScore = attempt.evaluation?.overall_score ?? selectedScore;
           return (
             <Button
               key={attempt.attemptNo}
@@ -111,13 +176,9 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
             >
               <span>{attempt.versionLabel}</span>
               <span
-                className={`rounded px-1.5 py-0.5 text-[10px] ${
-                  isSelected
-                    ? "bg-surface-primary text-success-700"
-                    : "bg-surface-primary text-content-muted"
-                }`}
+                className={`rounded px-1.5 py-0.5 text-[10px] ${isSelected ? "bg-surface-primary text-success-700" : "bg-surface-primary text-content-muted"}`}
               >
-                {mockArtifactFeedback.getScore(attempt.attemptNo)}
+                {attemptScore}
               </span>
             </Button>
           );
@@ -126,34 +187,30 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
 
       <div className="rounded-xl border border-line-default bg-brand-50/30 p-3.5">
         <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-success-500 bg-surface-primary text-sm font-bold text-success-700">
+          <div
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 text-sm font-bold bg-surface-primary ${decisionMeta.border}`}
+          >
             {selectedScore}
           </div>
           <div className="min-w-0 space-y-1">
-            <span className="inline-flex rounded-md bg-success-50 px-2 py-0.5 text-[11px] font-bold text-success-700">
-              {selectedAttempt?.isLatest
-                ? mockArtifactFeedback.latestStatus
-                : mockArtifactFeedback.submittedStatus}
+            <span
+              className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-bold ${decisionMeta.bg}`}
+            >
+              {decisionMeta.label}
             </span>
             <p className="text-[11px] font-medium text-content-muted">
               {formatSubmittedDate(selectedAttempt?.submittedAt)}
             </p>
-            <p className="text-[11px] font-medium text-content-muted">
-              Mode: {mockArtifactFeedback.reviewMode}
-            </p>
+            <p className="text-[11px] font-medium text-content-muted">Evaluator: OpenRouter AI</p>
           </div>
         </div>
       </div>
 
       <div
-        className={`flex items-center rounded-xl border border-line-default bg-surface-primary px-3 py-2 text-[11px] font-bold transition-all duration-300 ${
-          isPanelExpanded ? "flex-nowrap gap-2" : "flex-wrap gap-x-3 gap-y-2"
-        }`}
+        className={`flex items-center rounded-xl border border-line-default bg-surface-primary px-3 py-2 text-[11px] font-bold transition-all duration-300 ${isPanelExpanded ? "flex-nowrap gap-2" : "flex-wrap gap-x-3 gap-y-2"}`}
       >
         <span
-          className={`inline-flex items-center gap-1.5 text-success-700 transition-all duration-300 ${
-            isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"
-          }`}
+          className={`inline-flex items-center gap-1.5 text-success-700 transition-all duration-300 ${isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"}`}
         >
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success-50 transition-transform duration-300 hover:scale-105">
             <CheckIcon size={12} />
@@ -164,9 +221,7 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
           <span className="h-px min-w-8 flex-1 bg-success-500 transition-all duration-300" />
         ) : null}
         <span
-          className={`inline-flex items-center gap-1.5 text-brand-600 transition-all duration-300 ${
-            isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"
-          }`}
+          className={`inline-flex items-center gap-1.5 text-brand-600 transition-all duration-300 ${isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"}`}
         >
           <span className="h-5 w-5 rounded-full border-2 border-brand-200 border-t-brand-600 transition-transform duration-300 motion-safe:animate-spin" />
           Staff Review
@@ -175,70 +230,73 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
           <span className="h-px min-w-8 flex-1 bg-line-subtle transition-all duration-300" />
         ) : null}
         <span
-          className={`inline-flex items-center gap-1.5 text-content-muted transition-all duration-300 ${
-            isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"
-          }`}
+          className={`inline-flex items-center gap-1.5 text-content-muted transition-all duration-300 ${isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"}`}
         >
           <span className="h-5 w-5 rounded-full border border-line-strong" />
           Industry Review
         </span>
       </div>
 
-      <div className="rounded-xl border border-line-default bg-surface-primary p-3.5">
-        <div className="mb-2 inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-600">
-          <ArtifactsIcon size={12} />
-          File Upload
-        </div>
-        <div className="space-y-2">
-          {submittedFileList.map((file) => (
-            <Button
-              key={file.id}
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-10 w-full justify-start rounded-md px-2 py-2 text-[11px] font-medium text-brand-600"
-              icon={<DocumentIcon size={13} />}
-              disabled={downloadingFileId === file.id}
-              onClick={() => void handleDownload(file)}
-            >
-              <span className="min-w-0 flex-1 truncate text-left">{file.fileName}</span>
-              <span className="ml-2 inline-flex shrink-0 flex-wrap items-center justify-end gap-1">
-                <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] text-content-muted">
-                  {file.versionLabel}
-                </span>
-                {file.isLatest ? (
-                  <span className="rounded bg-success-50 px-1.5 py-0.5 text-[10px] font-bold text-success-700">
-                    Latest
+      {submittedFileList.length > 0 ? (
+        <div className="rounded-xl border border-line-default bg-surface-primary p-3.5">
+          <div className="mb-2 inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-600">
+            <ArtifactsIcon size={12} />
+            File Upload
+          </div>
+          <div className="space-y-2">
+            {submittedFileList.map((file) => (
+              <Button
+                key={file.id}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="min-h-10 w-full justify-start rounded-md px-2 py-2 text-[11px] font-medium text-brand-600"
+                icon={<DocumentIcon size={13} />}
+                disabled={downloadingFileId === file.id}
+                onClick={() => void handleDownload(file)}
+              >
+                <span className="min-w-0 flex-1 truncate text-left">{file.fileName}</span>
+                <span className="ml-2 inline-flex shrink-0 flex-wrap items-center justify-end gap-1">
+                  <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] text-content-muted">
+                    {file.versionLabel}
                   </span>
-                ) : null}
-              </span>
-              <ChevronRightIcon size={12} className="ml-1 shrink-0" />
-            </Button>
-          ))}
+                  {file.isLatest ? (
+                    <span className="rounded bg-success-50 px-1.5 py-0.5 text-[10px] font-bold text-success-700">
+                      Latest
+                    </span>
+                  ) : null}
+                </span>
+                <ChevronRightIcon size={12} className="ml-1 shrink-0" />
+              </Button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="rounded-xl border border-line-default bg-surface-primary p-3.5">
         <h5 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-content-primary">
-          Rubric Breakdown
+          LTE Standard Rubric Breakdown (0–3 Scale)
         </h5>
-        <div className="space-y-2.5">
-          {mockArtifactFeedback.rubricRows.map((row) => (
-            <div key={row.label}>
-              <div className="mb-1 flex items-center justify-between gap-2 text-[11px]">
-                <span className="font-medium text-content-secondary">{row.label}</span>
-                <span className="font-bold text-content-primary">
-                  {row.score}/{row.total}
+        <div className="space-y-3">
+          {rubricList.map((row) => (
+            <div key={row.label} className="space-y-1">
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="font-bold text-content-primary">{row.label}</span>
+                <span className="font-bold text-brand-600">
+                  {row.score}/3 {row.level ? `(${row.level})` : ""}
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-line-subtle">
                 <div
-                  className={`h-full rounded-full ${
-                    row.tone === "success" ? "bg-success-500" : "bg-warning-500"
-                  }`}
-                  style={{ width: `${(row.score / row.total) * 100}%` }}
+                  className={`h-full rounded-full ${row.score >= 2 ? "bg-success-500" : "bg-warning-500"}`}
+                  style={{ width: `${(row.score / (row.maxScore || 3)) * 100}%` }}
                 />
               </div>
+              {row.evidence ? (
+                <p className="text-[11px] italic leading-tight text-content-muted">
+                  Evidence: &ldquo;{row.evidence}&rdquo;
+                </p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -247,14 +305,15 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
       <div className="rounded-xl border border-brand-100 bg-brand-50 p-3.5">
         <h5 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-600">
           <MessageSquareIcon size={13} />
-          Staff Feedback
+          AI & Evaluator Feedback
         </h5>
-        <p className="text-[12px] leading-relaxed text-content-primary">
-          {mockArtifactFeedback.staffFeedback}
-        </p>
-        <div className="mt-2 rounded-md bg-warning-50 px-2.5 py-2 text-[11px] font-medium text-warning-700">
-          {mockArtifactFeedback.staffSuggestion}
-        </div>
+        <p className="text-[12px] leading-relaxed text-content-primary">{feedbackText}</p>
+        {improvementsText ? (
+          <div className="mt-2.5 rounded-md bg-warning-50 p-2.5 text-[11px] font-medium text-warning-700">
+            <span className="block font-bold mb-0.5">Clear Actionable Improvement Point:</span>
+            {improvementsText}
+          </div>
+        ) : null}
       </div>
     </div>
   );

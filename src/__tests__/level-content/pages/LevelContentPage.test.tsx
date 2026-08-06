@@ -520,6 +520,9 @@ describe("LevelContentPage", () => {
     // Click download resource button
     const downloadBtn = screen.getByLabelText("Download selected resource");
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    vi.spyOn(globalThis, "fetch").mockImplementation(() =>
+      Promise.reject(new Error("Network Error")),
+    );
     fireEvent.click(downloadBtn);
     await waitFor(() =>
       expect(openSpy).toHaveBeenCalledWith(
