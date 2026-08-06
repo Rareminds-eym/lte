@@ -28,6 +28,8 @@ export interface CurrentJourneyData {
   capabilityCode?: string;
 }
 
+export type JourneyState = "active" | "completed" | "no_track";
+
 export interface PriorityItem {
   id: string;
   title: string;
@@ -111,7 +113,8 @@ export interface AchievementsData {
 
 export interface DashboardData {
   careerTarget: CareerTargetData;
-  journey: CurrentJourneyData;
+  journey: CurrentJourneyData | null;
+  journeyState: JourneyState;
   priorities: TodaysPrioritiesData;
   capabilityGaps: CapabilityGapItem[];
   upcomingFeedback: UpcomingFeedbackData;

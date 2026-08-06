@@ -9,5 +9,6 @@ export const useDashboardData = () => {
     queryKey: DASHBOARD_QUERY_KEY,
     queryFn: fetchDashboardData,
     staleTime: 1000 * 60 * 5, // 5 minutes cache
+    refetchOnWindowFocus: "always", // journey recency depends on last activity, not wall-clock staleness
   });
 };

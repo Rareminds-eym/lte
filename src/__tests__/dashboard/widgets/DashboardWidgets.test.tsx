@@ -28,7 +28,7 @@ describe("Dashboard Widgets", () => {
   it("renders JourneyHero with progress percentage and action buttons", () => {
     render(
       <MemoryRouter>
-        <JourneyHero data={MOCK_DASHBOARD_DATA.journey} />
+        <JourneyHero data={MOCK_DASHBOARD_DATA.journey} state={MOCK_DASHBOARD_DATA.journeyState} />
       </MemoryRouter>,
     );
     expect(screen.getByText("CONTINUE YOUR JOURNEY")).toBeInTheDocument();

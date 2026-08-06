@@ -55,6 +55,7 @@ export async function getLevelWithModules(
   supabase: SupabaseClient,
   levelId: string,
   userId?: string,
+  includeStages: boolean = true,
 ): Promise<LevelDetailsResponse | null> {
   // Fetch level details
   const { data: levelData, error: levelError } = await supabase
@@ -157,6 +158,8 @@ export async function getLevelWithModules(
             completedStages: [] as string[],
           };
           moduleProgressMap[p.module_id] = entry;
+
+          if (!includeStages) continue;
 
           const { data: stages } = await supabase
             .from("user_stage_progress")

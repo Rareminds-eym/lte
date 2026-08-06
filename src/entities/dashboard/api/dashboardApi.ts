@@ -1,6 +1,8 @@
 import { apiFetch } from "@/shared/api";
-import type { CurrentJourneyData, DashboardData } from "../model/types";
+import type { CurrentJourneyData, DashboardData, JourneyState } from "../model/types";
 
+// Static fixture used by widget unit tests only. fetchDashboardData never
+// falls back to it — an empty journey state is shown instead of fake data.
 export const MOCK_DASHBOARD_DATA: DashboardData = {
   careerTarget: {
     title: "Backend Engineer",
@@ -27,6 +29,7 @@ export const MOCK_DASHBOARD_DATA: DashboardData = {
     remainingCount: 2,
     timeRemaining: "~18 min remaining",
   },
+  journeyState: "active",
   priorities: {
     currentXp: 120,
     goalXp: 150,
@@ -210,7 +213,9 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
     }>(
       `/api/v1/dashboard/xp?since=${encodeURIComponent(localMidnight(localMonday).toISOString())}&todaySince=${encodeURIComponent(localMidnight(now).toISOString())}`,
     ),
-    apiFetch<{ success: boolean; data: CurrentJourneyData | null }>("/api/v1/dashboard/journey"),
+    apiFetch<{ success: boolean; data: CurrentJourneyData | null; state: JourneyState }>(
+      "/api/v1/dashboard/journey",
+    ),
   ]);
 
   const base = { ...MOCK_DASHBOARD_DATA };
@@ -226,8 +231,13 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
       currentXp: todayXp,
     };
   }
-  if (journeyResult.status === "fulfilled" && journeyResult.value.data) {
+  if (journeyResult.status === "fulfilled" && journeyResult.value.success) {
     base.journey = journeyResult.value.data;
+    base.journeyState = journeyResult.value.state;
+  } else {
+    // Never show stale mock data: an empty hero state is honest.
+    base.journey = null;
+    base.journeyState = "active";
   }
   return base;
 };

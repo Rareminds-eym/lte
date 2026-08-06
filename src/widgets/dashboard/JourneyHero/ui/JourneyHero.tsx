@@ -1,21 +1,74 @@
 import type React from "react";
 import { useNavigate } from "react-router-dom";
-import type { CurrentJourneyData } from "@/entities/dashboard";
+import type { CurrentJourneyData, JourneyState } from "@/entities/dashboard";
 import { Image } from "@/shared/ui";
 
 export interface JourneyHeroProps {
-  data: CurrentJourneyData;
+  data: CurrentJourneyData | null;
+  state: JourneyState;
 }
 
-export const JourneyHero: React.FC<JourneyHeroProps> = ({ data }) => {
+export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
   const navigate = useNavigate();
   const continueUrl =
-    data.levelId !== undefined && data.moduleNo !== undefined
+    data?.levelId !== undefined && data?.moduleNo !== undefined
       ? `/my-courses/${data.levelId}/modules/${data.moduleNo}`
       : null;
-  const detailsUrl = data.capabilityCode
+  const detailsUrl = data?.capabilityCode
     ? `/courses/${data.capabilityCode}/levels/${data.levelId}`
     : null;
+
+  if (!data) {
+    return (
+      <div className="relative bg-surface-hero text-content-inverse rounded-2xl p-6 lg:p-8 overflow-hidden shadow-lg flex flex-col justify-between min-h-[340px]">
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[340px] h-[340px] opacity-20 pointer-events-none translate-x-0">
+          <Image
+            src="/assets/images/mesh_orb.png"
+            alt="3D Mesh Sphere Graphic"
+            loading="eager"
+            priority
+            className="w-full h-full object-contain"
+          />
+        </div>
+        <div className="relative z-10 space-y-6 max-w-[640px]">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-content-on-dark-muted mb-2">
+              CONTINUE YOUR JOURNEY
+            </div>
+            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-content-inverse">
+              {state === "completed"
+                ? "Level Complete — Outstanding Work!"
+                : "Your Journey Starts Here"}
+            </h1>
+            <p className="text-sm text-content-on-dark-muted mt-2 leading-relaxed">
+              {state === "completed"
+                ? "You finished every level in this track. Pick your next capability to keep the momentum going."
+                : "Choose a career path and capability to unlock your first learning level."}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => navigate("/career-paths")}
+              className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-content-inverse font-semibold text-sm rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              {state === "completed" ? "Choose Next Capability" : "Explore Career Paths"}
+              <svg
+                aria-hidden="true"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative bg-surface-hero text-content-inverse rounded-2xl p-6 lg:p-8 overflow-hidden shadow-lg flex flex-col justify-between min-h-[340px]">

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { DASHBOARD_QUERY_KEY } from "../../dashboard/model/useDashboardData";
 import { startLevelProgress, startModuleProgress, updateStageProgress } from "../api/progressApi";
 import {
   getLevelContentQueryKey,
@@ -15,6 +16,7 @@ export const useStartLevelProgress = () => {
       queryClient.invalidateQueries({ queryKey: ["userCourses"] });
       queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });
       queryClient.invalidateQueries({ queryKey: [LEVEL_DETAILS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 };
@@ -33,6 +35,7 @@ export const useStartModuleProgress = () => {
         queryKey: getLevelModuleDetailsQueryKey(variables.levelId, variables.moduleNo),
       });
       queryClient.invalidateQueries({ queryKey: getLevelDetailsQueryKey(variables.levelId) });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 };
@@ -70,6 +73,8 @@ export const useUpdateStageProgress = () => {
       });
       // Invalidate course capability levels to update course progress percentage
       queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });
+      // Invalidate dashboard journey so Continue Your Journey follows the last touch
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 };

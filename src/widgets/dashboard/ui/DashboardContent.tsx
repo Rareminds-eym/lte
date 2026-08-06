@@ -33,7 +33,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ data }) => (
       aria-label="Journey and Priorities"
     >
       <div className="lg:col-span-2 h-full">
-        <JourneyHero data={data.journey} />
+        <JourneyHero data={data.journey} state={data.journeyState} />
       </div>
       <div className="h-full">
         <TodaysPriorities data={data.priorities} />
