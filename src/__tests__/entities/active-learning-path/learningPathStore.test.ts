@@ -5,6 +5,7 @@ import * as learningPathApi from "@/entities/active-learning-path/api/learningPa
 
 vi.mock("@/entities/active-learning-path/api/learningPathApi", () => ({
   fetchActiveLearningPath: vi.fn(),
+  activateLearningTrack: vi.fn(),
 }));
 
 describe("learningPathStore", () => {
@@ -142,6 +143,46 @@ describe("learningPathStore", () => {
       expect(useLearningPathStore.getState().activeLearningPathLoading).toBe(false);
       expect(useLearningPathStore.getState().needsAssessment).toBe(false);
       expect(useLearningPathStore.getState().error).toBeNull();
+    });
+  });
+
+  describe("switchActiveTrack", () => {
+    it("activates a track and refreshes active learning track on success", async () => {
+      useLearningPathStore.setState({ userId: testUserId });
+      (learningPathApi.activateLearningTrack as Mock).mockResolvedValue(undefined);
+      const mockTrack = {
+        learningTrackId: "lt-2",
+        track: "Backend Development",
+        fit: "High",
+        matchScore: 95,
+        whyItFits: "Great fit.",
+        roles: [],
+      };
+      (learningPathApi.fetchActiveLearningPath as Mock).mockResolvedValue({
+        data: mockTrack,
+        needsAssessment: false,
+      });
+
+      await useLearningPathStore.getState().switchActiveTrack("lt-2");
+
+      expect(learningPathApi.activateLearningTrack).toHaveBeenCalledWith("lt-2");
+      expect(useLearningPathStore.getState().activeTrack).toEqual(mockTrack);
+      expect(useLearningPathStore.getState().activeLearningPathLoading).toBe(false);
+      expect(useLearningPathStore.getState().error).toBeNull();
+    });
+
+    it("handles switch track failure and records the error message", async () => {
+      useLearningPathStore.setState({ userId: testUserId });
+      (learningPathApi.activateLearningTrack as Mock).mockRejectedValue(
+        new Error("Activation failed"),
+      );
+
+      await expect(useLearningPathStore.getState().switchActiveTrack("lt-2")).rejects.toThrow(
+        "Activation failed",
+      );
+
+      expect(useLearningPathStore.getState().activeLearningPathLoading).toBe(false);
+      expect(useLearningPathStore.getState().error).toBe("Activation failed");
     });
   });
 });

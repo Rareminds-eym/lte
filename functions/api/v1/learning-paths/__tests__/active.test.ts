@@ -18,6 +18,7 @@ interface Chainable extends Record<string, unknown> {
   eq: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   limit: ReturnType<typeof vi.fn>;
+  in: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
   then?: (onfulfilled: unknown) => unknown;
@@ -29,6 +30,7 @@ function chainable(resolveVal: unknown = null, errorVal: unknown = null) {
     eq: vi.fn().mockImplementation(() => chain),
     order: vi.fn().mockImplementation(() => chain),
     limit: vi.fn().mockImplementation(() => chain),
+    in: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     // biome-ignore lint/suspicious/noThenProperty: mock promise resolution

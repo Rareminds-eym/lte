@@ -8,6 +8,15 @@ const ActiveTrackRoleSchema = z.object({
   learningPathId: z.string(),
 });
 
+const CareerTrackItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  matchPercentage: z.number().optional(),
+  isExplore: z.boolean().optional(),
+  isSelected: z.boolean().optional(),
+  fit: z.string().optional(),
+});
+
 const ActiveTrackDetailSchema = z.object({
   learningTrackId: z.string(),
   track: z
@@ -27,6 +36,9 @@ const ActiveTrackDetailSchema = z.object({
     .nullish()
     .transform((v) => v ?? ""),
   roles: z.array(ActiveTrackRoleSchema),
+  tracks: z.array(CareerTrackItemSchema).optional(),
+  overallProgress: z.number().optional(),
+  completionCount: z.number().optional(),
 });
 
 const ActiveLearningPathResponseSchema = z.object({

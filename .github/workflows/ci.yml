@@ -94,3 +94,7 @@ jobs:
       - name: Run Tests
         run: npx vitest run --coverage
 
+      - name: Add Coverage to Job Summary
+        if: always()
+        run: node scripts/add-coverage-summary.js
+

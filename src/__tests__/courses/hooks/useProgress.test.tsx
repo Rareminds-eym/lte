@@ -80,6 +80,7 @@ describe("useProgress hooks", () => {
       eContentId: "content-1",
       stageName: "engage",
       status: "completed",
+      durationSeconds: 12,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -89,6 +90,7 @@ describe("useProgress hooks", () => {
       "content-1",
       "engage",
       "completed",
+      12,
     );
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["userCourses"] }),

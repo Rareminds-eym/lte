@@ -5,6 +5,12 @@ import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 import { LevelPlayerLayout } from "@/app/layouts/LevelPlayerLayout";
 import { MainLayout } from "@/app/layouts/MainLayout";
 import { GuestGuard } from "@/app/router/guards";
+import { CourseDetailSkeleton } from "@/pages/course-detail/ui/CourseDetailSkeleton";
+import { CoursesPageSkeleton } from "@/pages/courses/ui/CoursesPageSkeleton";
+// Statically import page-specific layout skeletons (FSD compliant down-layer imports)
+import { DashboardSkeleton } from "@/pages/dashboard/ui/DashboardSkeleton";
+import { LevelModulesSkeleton } from "@/pages/level-modules/ui/LevelModulesSkeleton";
+import { SettingsPageSkeleton } from "@/pages/settings/ui/SettingsPageSkeleton";
 import { PageLoader, RouteLoadingBoundary } from "@/shared/ui";
 
 // Lazy loaded page components — must be declared at module scope (workspace rule)
@@ -51,7 +57,7 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/dashboard"
             element={
-              <RouteLoadingBoundary fallback={<PageLoader message="Loading dashboard..." />}>
+              <RouteLoadingBoundary fallback={<DashboardSkeleton />}>
                 <Dashboard />
               </RouteLoadingBoundary>
             }
@@ -59,7 +65,7 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/my-courses"
             element={
-              <RouteLoadingBoundary fallback={<PageLoader message="Loading courses..." />}>
+              <RouteLoadingBoundary fallback={<CoursesPageSkeleton />}>
                 <Courses />
               </RouteLoadingBoundary>
             }
@@ -67,7 +73,7 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/my-courses/:capabilityCode"
             element={
-              <RouteLoadingBoundary fallback={<PageLoader message="Loading course details..." />}>
+              <RouteLoadingBoundary fallback={<CourseDetailSkeleton />}>
                 <CourseDetail />
               </RouteLoadingBoundary>
             }
@@ -75,7 +81,7 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/courses/:capabilityCode/levels/:levelId"
             element={
-              <RouteLoadingBoundary fallback={<PageLoader message="Loading course modules..." />}>
+              <RouteLoadingBoundary fallback={<LevelModulesSkeleton />}>
                 <LevelModules />
               </RouteLoadingBoundary>
             }
@@ -83,7 +89,7 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/settings"
             element={
-              <RouteLoadingBoundary fallback={<PageLoader message="Loading settings..." />}>
+              <RouteLoadingBoundary fallback={<SettingsPageSkeleton />}>
                 <Settings />
               </RouteLoadingBoundary>
             }

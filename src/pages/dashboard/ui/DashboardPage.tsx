@@ -1,16 +1,18 @@
 import type React from "react";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useDashboardData } from "@/entities/dashboard";
-import { DashboardContent, DashboardSkeleton } from "@/widgets/dashboard";
+import { DashboardContent } from "@/widgets/dashboard";
 import { LearningPathEmptyState } from "@/widgets/learning-path";
+import { DashboardSkeleton } from "./DashboardSkeleton";
 
 export const DashboardPage: React.FC = () => {
   const { data, isPending, isError } = useDashboardData();
+  const activeTrack = useLearningPathStore((s) => s.activeTrack);
   const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
   const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
 
-  // Loading state: use the structured DashboardSkeleton to prevent layout shift
-  if (isPending || activeLearningPathLoading) {
+  // Loading state: use the structured DashboardSkeleton to prevent layout shift on initial load only
+  if ((isPending && !data) || (activeLearningPathLoading && !data)) {
     return <DashboardSkeleton />;
   }
 
@@ -36,5 +38,39 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  return <DashboardContent data={data} />;
+  // Merge the real active track details and list of tracks from store if available
+  const mergedData =
+    data && activeTrack
+      ? {
+          ...data,
+          careerTarget: {
+            ...data.careerTarget,
+            title: activeTrack.track,
+            readinessPercentage: activeTrack.matchScore,
+          },
+          careerPaths: {
+            ...data.careerPaths,
+            activeTrackTitle: activeTrack.track,
+            matchPercentage: activeTrack.matchScore,
+            whyItFits: activeTrack.whyItFits || data.careerPaths.whyItFits,
+            tracks:
+              activeTrack.tracks && activeTrack.tracks.length > 0
+                ? (activeTrack.tracks as unknown as import("@/entities/dashboard").CareerTrackItem[])
+                : data.careerPaths.tracks,
+            capabilitiesCount: activeTrack.roles
+              ? activeTrack.roles.length
+              : data.careerPaths.capabilitiesCount,
+            overallProgress:
+              activeTrack.overallProgress !== undefined
+                ? activeTrack.overallProgress
+                : data.careerPaths.overallProgress,
+            competitionCount:
+              activeTrack.completionCount !== undefined
+                ? activeTrack.completionCount
+                : data.careerPaths.competitionCount,
+          },
+        }
+      : data;
+
+  return <DashboardContent data={mergedData || data} />;
 };

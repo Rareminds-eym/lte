@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BookOpenIcon,
   Button,
@@ -26,6 +26,8 @@ const SvgIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </svg>
 );
 
+const COMING_SOON_TOAST = "⏳";
+
 export interface NavigationDrawerProps {
   activeNavId?: string;
   isCollapsed?: boolean;
@@ -40,10 +42,6 @@ interface NavItem {
   icon: React.ReactNode;
   locked?: boolean;
 }
-
-const COMING_SOON_TOAST: React.ReactNode = (
-  <LockIcon size={16} className="text-content-secondary" />
-);
 
 const NAV_ITEMS: NavItem[] = [
   {
@@ -110,11 +108,10 @@ const NAV_ITEMS: NavItem[] = [
     icon: (
       <SvgIcon>
         <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-        <path d="M18 9h1.5a2.5 2.5 0 0 1 0-5H18" />
+        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
         <path d="M4 22h16" />
-        <path d="M10 14.66V17c0 .55-.45 1-1 1H7.5" />
-        <path d="M14 14.66V17c0 .55.45 1 1 1h1.5" />
-        <path d="M18 4H6v7a6 6 0 0 0 12 0V4z" />
+        <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" />
+        <path d="M12 2a6 6 0 0 0-6 6v5a6 6 0 0 0 12 0V8a6 6 0 0 0-6-6Z" />
       </SvgIcon>
     ),
   },
@@ -123,8 +120,8 @@ const NAV_ITEMS: NavItem[] = [
     label: "Settings",
     icon: (
       <SvgIcon>
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
         <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </SvgIcon>
     ),
   },
@@ -138,6 +135,10 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   className = "",
 }) => {
   const [activeId, setActiveId] = useState(initialActiveNavId);
+
+  useEffect(() => {
+    setActiveId(initialActiveNavId);
+  }, [initialActiveNavId]);
 
   const handleToggle = () => onToggleCollapse?.();
 

@@ -35,6 +35,7 @@ describe("courseApi", () => {
       currentLevel: 0,
       status: "not_started",
       progress: 0,
+      durationHours: 35,
     };
 
     it("maps capability to course shape", async () => {
@@ -50,6 +51,7 @@ describe("courseApi", () => {
         priority: "Core",
         totalLevels: 3,
         currentLevel: 0,
+        durationHours: 35,
         status: "not_started",
       });
     });

@@ -90,7 +90,38 @@ describe("upsertStageProgress", () => {
     );
     await expect(
       upsertStageProgress(supabase, "user-1", "level-1", 1, "ec-1", "explore", "completed"),
-    ).rejects.toThrow("Failed to update stage progress to completed: update down");
+    ).rejects.toThrow("Failed to update stage progress: update down");
+  });
+
+  it("adds duration seconds to an existing stage progress record", async () => {
+    const usp = mockChain({
+      maybeSingle: ok({ id: "sp-1", status: "in_progress", time_spent_seconds: 10 }),
+      insert: ok({ id: "sp-new" }),
+      thenQueue: [ok([]), { data: null, error: null }, ok([])],
+    });
+    const ump = mockChain({
+      maybeSingle: { data: null, error: null },
+      insert: ok({ id: "mod-prog-1" }),
+      thenQueue: [{ data: null, error: null }],
+    });
+    const supabase = makeSupabase({
+      ...upsertUpstream(),
+      modules: mockChain({ single: ok({ id: "mod-1" }) }),
+      user_module_progress: ump,
+      user_stage_progress: usp,
+    });
+
+    await expect(
+      upsertStageProgress(supabase, "user-1", "level-1", 1, "ec-1", "engage", "in_progress", 25),
+    ).resolves.toEqual({ stageProgressId: "sp-1", stagesCompleted: 0, completionPercentage: 0 });
+
+    expect(usp.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        time_spent_seconds: 35,
+        last_viewed_at: expect.any(String),
+        updated_at: expect.any(String),
+      }),
+    );
   });
 
   it("throws when inserting a new stage progress fails", async () => {
@@ -131,6 +162,8 @@ describe("upsertStageProgress", () => {
         stage_order: 1,
         status: "in_progress",
         completed_at: null,
+        time_spent_seconds: 0,
+        last_viewed_at: expect.any(String),
       }),
     );
     expect(ump.update).toHaveBeenCalledWith(
