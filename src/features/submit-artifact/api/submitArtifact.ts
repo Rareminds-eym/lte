@@ -18,11 +18,11 @@ export interface SubmitArtifactResponse {
   attempt_no: number;
   version_label: string;
   submitted_at: string | null;
-  status: "submitted" | "accepted" | "resubmission_required";
+  status: "submitted" | "accepted" | "resubmission_required" | "human_review";
   evaluation_status: "pending" | "completed";
   evaluation?: {
     overall_score: number;
-    decision: "pass" | "fail";
+    decision: "pass" | "fail" | "human_review";
     rubric_rows: Array<{
       label: string;
       score: number;

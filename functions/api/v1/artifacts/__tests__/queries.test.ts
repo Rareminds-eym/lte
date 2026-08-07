@@ -1,8 +1,10 @@
 import type { LteEnv } from "@functions/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as XLSX from "xlsx/xlsx.mjs";
 import {
   type ArtifactSubmissionError,
+  buildArtifactEvaluationInput,
   createArtifactFileDownloadResponse,
   submitArtifactSubmission,
 } from "../queries";
@@ -235,6 +237,96 @@ describe("artifact submission queries", () => {
         new Map([["question-1", file]]),
       ),
     ).rejects.toThrow(/Failed to save uploaded artifact file: insert failed/);
+  });
+
+  it("routes unreadable file submissions to human_review with neutral XP", async () => {
+    const chains = createSubmitChains();
+    const allChains = { ...chains, xp_events: mockChain(), artifact_evaluation_flows: mockChain() };
+    const supabase = createSupabase(allChains);
+    const corruptZip = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+    const file = createTestFile([corruptZip, "garbage"], "broken.xlsx");
+
+    const result = await submitArtifactSubmission(
+      supabase,
+      createEnv(),
+      "user-1",
+      { artifact_id: "artifact-1", answers: [{ question_id: "question-1" }] },
+      new Map([["question-1", file]]),
+    );
+
+    expect(result.status).toBe("human_review");
+    expect(result.evaluation?.decision).toBe("human_review");
+    expect(result.evaluation?.overall_score).toBe(0);
+
+    const flowsPayload = allChains.artifact_evaluation_flows.upsert.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(flowsPayload).toMatchObject({
+      decision: "human_review",
+      overall_status: "human_review",
+      metadata: {
+        debug_telemetry: {
+          provider: "fallback",
+          calculatedXp: 0,
+          validatedDecision: "human_review",
+          stage1Check: { isAssessable: false },
+        },
+      },
+    });
+    expect(allChains.artifact_submission_files.insert).toHaveBeenCalled();
+    expect(allChains.xp_events.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("artifact evaluation input builder", () => {
+  const questionDetails = [
+    {
+      id: "question-1",
+      title: "Readiness Sheet",
+      description: "Complete the course readiness sheet.",
+      response_type: "file",
+      instructions: { pass_criteria: "All required fields completed" },
+    },
+  ];
+
+  it("extracts readable file content into the eval input snippet", async () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ["Claim ID", "Confidence"],
+      ["C-001", "High"],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, sheet, "Readiness");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    const file = new File([buffer], "Readiness.xlsx");
+
+    const result = await buildArtifactEvaluationInput({
+      artifactMeta: { artifact_type: "final", passing_score: 60, total_score: 100 },
+      questionDetails,
+      input: { artifact_id: "artifact-1", answers: [{ question_id: "question-1" }] },
+      filesByQuestionId: new Map([["question-1", file]]),
+      attemptNo: 1,
+    });
+
+    expect(result.answers[0]?.fileName).toBe("Readiness.xlsx");
+    expect(result.answers[0]?.fileContentSnippet).toContain("C-001");
+    expect(result.answers[0]?.fileContentSnippet).toContain("High");
+  });
+
+  it("leaves the snippet undefined when file content is not readable", async () => {
+    const corruptZip = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+    const file = new File([corruptZip, "garbage-not-a-valid-zip"], "broken.xlsx");
+
+    const result = await buildArtifactEvaluationInput({
+      artifactMeta: { artifact_type: "final", passing_score: 60, total_score: 100 },
+      questionDetails,
+      input: { artifact_id: "artifact-1", answers: [{ question_id: "question-1" }] },
+      filesByQuestionId: new Map([["question-1", file]]),
+      attemptNo: 1,
+    });
+
+    expect(result.answers[0]?.fileName).toBe("broken.xlsx");
+    expect(result.answers[0]?.fileContentSnippet).toBeUndefined();
   });
 });
 

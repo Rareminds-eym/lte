@@ -18,12 +18,26 @@ export default defineConfig({
 		tsconfigPaths: true,
 		...(process.env.VITEST
 			? {
-					alias: {
-						"@file-viewer/pptx": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						"docx-preview": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						"pdfjs-dist": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						xlsx: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-					},
+					// Mock bare specifiers only, so functions/** subpath imports
+					// (e.g. pdfjs-dist/legacy/build/pdf.mjs) resolve to the real libs.
+					alias: [
+						{
+							find: /^@file-viewer\/pptx$/,
+							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						},
+						{
+							find: /^docx-preview$/,
+							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						},
+						{
+							find: /^pdfjs-dist$/,
+							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						},
+						{
+							find: /^xlsx$/,
+							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						},
+					],
 				}
 			: {}),
 	},

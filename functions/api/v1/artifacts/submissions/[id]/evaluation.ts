@@ -37,6 +37,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
             completed_at: flow.completed_at,
             rubric_rows: meta?.["rubric_rows"] ?? [],
             calculated_xp: meta?.["calculated_xp"] ?? 0,
+            debug_telemetry: meta?.["debug_telemetry"] ?? null,
           }
         : null,
     });

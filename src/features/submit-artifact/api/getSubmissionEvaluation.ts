@@ -20,6 +20,7 @@ export interface SubmissionEvaluationResponse {
       feedback?: string;
     }>;
     calculated_xp: number;
+    debug_telemetry?: unknown;
   } | null;
 }
 

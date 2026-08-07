@@ -1,7 +1,7 @@
 # Wrangler configuration for LTE Cloudflare Pages Functions.
 # SSO owns auth-code Durable Object storage; LTE consumes SSO through RPC.
 
-pages_build_output_dir = "build"
+pages_build_output_dir = "dist"
 name = "lte-app"
 compatibility_date = "2026-06-08"
 compatibility_flags = ["nodejs_compat"]

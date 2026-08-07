@@ -33,6 +33,22 @@ export interface SubmissionCheckResult {
   notes: string;
 }
 
+export interface ArtifactDebugTelemetry {
+  provider: "openrouter" | "fallback";
+  latencyMs: number | null;
+  modelUsed: string;
+  timestamp: string;
+  stage1Check: SubmissionCheckResult;
+  stage2Failures: CriticalFailureCheckResult;
+  calculatedXp: number;
+  rawPromptContent: string | null;
+  rawResponseContent: string | null;
+  validatedDecision: LteDecisionResult;
+  wasDecisionOverridden: boolean;
+  extractionCharCounts: Record<string, number>;
+  promptCharCount: number | null;
+}
+
 export interface AIEvaluationResult {
   overallScore: number; // percentage 0-100
   passingScore: number;
@@ -45,6 +61,7 @@ export interface AIEvaluationResult {
   calculatedXp: number;
   modelUsed: string;
   provider: "openrouter" | "fallback";
+  debugTelemetry?: ArtifactDebugTelemetry;
 }
 
 export interface ArtifactEvaluationInput {

@@ -1,4 +1,7 @@
 import { processAndSaveArtifactEvaluation } from "@functions/lib/ai-engine/artifact-evaluator";
+import { extractArtifactContent } from "@functions/lib/ai-engine/artifact-extractor";
+import type { ArtifactEvaluationInput } from "@functions/lib/ai-engine/types";
+import { apiLogger } from "@functions/lib/logger";
 import { createObjectKey } from "@functions/lib/r2-client";
 import type { LteEnv } from "@functions/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -35,6 +38,20 @@ interface ArtifactFileRow {
   object_key: string | null;
   file_type: string;
   file_size_bytes: number | null;
+}
+
+interface ArtifactMetaRow {
+  artifact_type: string | null;
+  passing_score: number | null;
+  total_score: number | null;
+}
+
+interface ArtifactQuestionDetailRow {
+  id: string;
+  title: string;
+  description: string | null;
+  response_type: string;
+  instructions: Record<string, unknown> | string | null;
 }
 
 export class ArtifactSubmissionError extends Error {
@@ -400,29 +417,13 @@ export async function submitArtifactSubmission(
     .eq("artifact_id", input.artifact_id)
     .eq("is_active", true);
 
-  const evalInput = {
-    artifactId: input.artifact_id,
-    artifactType: (artifactMeta?.artifact_type as "practice" | "final") || "final",
-    passingScore: artifactMeta?.passing_score ?? 60,
-    totalScore: artifactMeta?.total_score ?? 100,
-    questions: (questionDetails ?? []).map((q) => ({
-      id: q.id,
-      title: q.title,
-      description: q.description ?? "",
-      responseType: q.response_type,
-      instructions: q.instructions,
-    })),
-    answers: input.answers.map((a) => {
-      const fileObj = filesByQuestionId.get(a.question_id);
-      return {
-        questionId: a.question_id,
-        textResponse: a.text_response,
-        urlResponse: a.url_response,
-        fileName: fileObj?.name,
-      };
-    }),
+  const evalInput = await buildArtifactEvaluationInput({
+    artifactMeta: (artifactMeta as ArtifactMetaRow | null) ?? null,
+    questionDetails: (questionDetails as ArtifactQuestionDetailRow[] | null) ?? [],
+    input,
+    filesByQuestionId,
     attemptNo: submission.attempt_no,
-  };
+  });
 
   const evalResult = await processAndSaveArtifactEvaluation(
     supabase,
@@ -454,6 +455,55 @@ export async function submitArtifactSubmission(
       calculated_xp: evalResult.calculatedXp,
     },
     files: uploadedFiles,
+  };
+}
+
+export async function buildArtifactEvaluationInput(params: {
+  artifactMeta: ArtifactMetaRow | null;
+  questionDetails: ArtifactQuestionDetailRow[];
+  input: CompleteSubmissionInput;
+  filesByQuestionId: Map<string, File>;
+  attemptNo: number;
+}): Promise<ArtifactEvaluationInput> {
+  const extractedByQuestionId = new Map<string, string>();
+  for (const [questionId, file] of params.filesByQuestionId) {
+    const extracted = await extractArtifactContent(file);
+    if (extracted.isReadable) {
+      extractedByQuestionId.set(questionId, extracted.extractedText);
+    } else {
+      apiLogger.warn("Artifact file content is not readable for AI evaluation.", {
+        questionId,
+        fileName: file.name,
+        format: extracted.format,
+      });
+    }
+  }
+
+  return {
+    artifactId: params.input.artifact_id,
+    artifactType: (params.artifactMeta?.artifact_type as "practice" | "final") || "final",
+    passingScore: params.artifactMeta?.passing_score ?? 60,
+    totalScore: params.artifactMeta?.total_score ?? 100,
+    questions: params.questionDetails.map((q) => ({
+      id: q.id,
+      title: q.title,
+      description: q.description ?? "",
+      responseType: q.response_type as "text" | "file" | "url",
+      instructions: q.instructions,
+    })),
+    answers: params.input.answers.map((a) => {
+      const fileObj = params.filesByQuestionId.get(a.question_id);
+      return {
+        questionId: a.question_id,
+        textResponse: a.text_response,
+        urlResponse: a.url_response,
+        fileName: fileObj?.name,
+        fileContentSnippet: fileObj
+          ? (extractedByQuestionId.get(a.question_id) ?? undefined)
+          : undefined,
+      };
+    }),
+    attemptNo: params.attemptNo,
   };
 }
 
