@@ -147,7 +147,7 @@ export const DashboardLayout: React.FC = () => {
           userStatus={userStatus}
           userEmail={user?.email}
           onToggleMobileDrawer={() => setIsMobileDrawerOpen(true)}
-          onLogoutClick={logout}
+          onLogoutClick={() => logout().catch((err) => logger.error("Logout failed", err))}
         />
         <DashboardScrollRestoration />
         <main

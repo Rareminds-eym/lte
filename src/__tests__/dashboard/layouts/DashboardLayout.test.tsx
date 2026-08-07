@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardLayout } from "@/app/layouts/DashboardLayout";
@@ -213,6 +213,6 @@ describe("DashboardLayout", () => {
 
     // Trigger logout handler
     header.click();
-    expect(logoutSpy).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(logoutSpy).toHaveBeenCalledTimes(1));
   });
 });
