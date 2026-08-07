@@ -47,6 +47,6 @@ describe("useSubmitArtifact", () => {
     result.current.mutate(input);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockSubmitArtifact).toHaveBeenCalledWith(input);
+    expect(mockSubmitArtifact).toHaveBeenCalledWith(input, expect.any(String));
   });
 });

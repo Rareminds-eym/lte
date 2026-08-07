@@ -1,6 +1,11 @@
 import { processAndSaveArtifactEvaluation } from "@functions/lib/ai-engine/artifact-evaluator";
 import { extractArtifactContent } from "@functions/lib/ai-engine/artifact-extractor";
 import type { ArtifactEvaluationInput } from "@functions/lib/ai-engine/types";
+import {
+  ArtifactFileGuardError,
+  assertFileSignature,
+  checkZipExpansion,
+} from "@functions/lib/artifact-file-guard";
 import { apiLogger } from "@functions/lib/logger";
 import { createObjectKey } from "@functions/lib/r2-client";
 import type { LteEnv } from "@functions/lib/types";
@@ -27,6 +32,7 @@ interface ArtifactSubmissionRow {
   status: string;
   previous_submission_id: string | null;
   submitted_at: string | null;
+  sealed_at: string | null;
 }
 
 interface ArtifactFileRow {
@@ -117,6 +123,40 @@ function validateFileForQuestion(file: File, question: ArtifactQuestionRow): str
   return extension || "file";
 }
 
+/**
+ * P1-2/P1-3: content-level validation - magic-byte signature check (rejects
+ * renamed binaries) and zip-expansion check (rejects zip bombs). Runs before
+ * any submission row or R2 object is created.
+ */
+async function validateArtifactFileContent(file: File, extension: string): Promise<void> {
+  const buffer = await file.arrayBuffer();
+
+  try {
+    assertFileSignature(extension, buffer);
+  } catch (error) {
+    if (error instanceof ArtifactFileGuardError) {
+      throw new ArtifactSubmissionError(error.message, 400, error.code);
+    }
+    throw error;
+  }
+
+  if (extension === "xlsx" || extension === "xls" || extension === "docx") {
+    const expansion = checkZipExpansion(buffer);
+    if (!expansion.safe) {
+      apiLogger.warn("Rejected artifact upload with abnormal archive expansion.", {
+        extension,
+        fileName: file.name,
+        reason: expansion.reason,
+      });
+      throw new ArtifactSubmissionError(
+        "The uploaded archive expands beyond a safe processing limit.",
+        400,
+        "ZIP_BOMB_DETECTED",
+      );
+    }
+  }
+}
+
 async function requireModuleProgress(
   supabase: SupabaseClient,
   artifactId: string,
@@ -177,7 +217,7 @@ async function getLatestSubmission(
   const { data, error } = await supabase
     .from("artifact_submissions")
     .select(
-      "id, artifact_id, user_id, user_module_progress_id, attempt_no, version_label, is_latest, status, previous_submission_id, submitted_at",
+      "id, artifact_id, user_id, user_module_progress_id, attempt_no, version_label, is_latest, status, previous_submission_id, submitted_at, sealed_at",
     )
     .eq("artifact_id", artifactId)
     .eq("user_id", userId)
@@ -191,28 +231,67 @@ async function getLatestSubmission(
   return (data as ArtifactSubmissionRow | null) ?? null;
 }
 
+async function findSubmissionByIdempotencyKey(
+  supabase: SupabaseClient,
+  userId: string,
+  artifactId: string,
+  idempotencyKey: string,
+): Promise<ArtifactSubmissionRow | null> {
+  const { data, error } = await supabase
+    .from("artifact_submissions")
+    .select(
+      "id, artifact_id, user_id, user_module_progress_id, attempt_no, version_label, is_latest, status, previous_submission_id, submitted_at, sealed_at",
+    )
+    .eq("user_id", userId)
+    .eq("artifact_id", artifactId)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch duplicate artifact submission: ${error.message}`);
+  }
+
+  return (data as ArtifactSubmissionRow | null) ?? null;
+}
+
+const SUBMISSION_ROW_SELECT =
+  "id, artifact_id, user_id, user_module_progress_id, attempt_no, version_label, is_latest, status, previous_submission_id, submitted_at, sealed_at";
+
 async function createSubmissionAttempt(
   supabase: SupabaseClient,
   artifactId: string,
   userId: string,
   moduleProgressId: string,
-): Promise<ArtifactSubmissionRow> {
-  const latest = await getLatestSubmission(supabase, artifactId, userId);
-  if (latest) {
-    const { error } = await supabase
-      .from("artifact_submissions")
-      .update({ is_latest: false, updated_at: new Date().toISOString() })
-      .eq("id", latest.id);
+  idempotencyKey?: string,
+): Promise<{ submission: ArtifactSubmissionRow; duplicate: boolean }> {
+  // P1-1: a unique-violation retry re-reads the latest row, so a concurrent
+  // insert converges instead of failing. The uq_artifact_submissions_latest
+  // partial unique index guarantees exactly one latest row either way.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const latest = await getLatestSubmission(supabase, artifactId, userId);
 
-    if (error) {
-      throw new Error(`Failed to update previous artifact submission: ${error.message}`);
+    // P0-3: accepted/sealed submissions are final; resubmission is rejected.
+    if (latest && (latest.status === "accepted" || latest.sealed_at !== null)) {
+      throw new ArtifactSubmissionError(
+        "This artifact has already been accepted and cannot be resubmitted.",
+        409,
+        "SUBMISSION_ALREADY_ACCEPTED",
+      );
     }
-  }
 
-  const attemptNo = (latest?.attempt_no ?? 0) + 1;
-  const { data, error } = await supabase
-    .from("artifact_submissions")
-    .insert({
+    if (latest) {
+      const { error } = await supabase
+        .from("artifact_submissions")
+        .update({ is_latest: false, updated_at: new Date().toISOString() })
+        .eq("id", latest.id);
+
+      if (error) {
+        throw new Error(`Failed to update previous artifact submission: ${error.message}`);
+      }
+    }
+
+    const attemptNo = (latest?.attempt_no ?? 0) + 1;
+    const insertPayload: Record<string, unknown> = {
       artifact_id: artifactId,
       user_id: userId,
       user_module_progress_id: moduleProgressId,
@@ -222,17 +301,47 @@ async function createSubmissionAttempt(
       status: "submitted",
       submitted_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    })
-    .select(
-      "id, artifact_id, user_id, user_module_progress_id, attempt_no, version_label, is_latest, status, previous_submission_id, submitted_at",
-    )
-    .single();
+    };
+    if (idempotencyKey) {
+      insertPayload["idempotency_key"] = idempotencyKey;
+    }
 
-  if (error || !data) {
+    const { data, error } = await supabase
+      .from("artifact_submissions")
+      .insert(insertPayload)
+      .select(SUBMISSION_ROW_SELECT)
+      .single();
+
+    if (!error && data) {
+      return { submission: data as ArtifactSubmissionRow, duplicate: false };
+    }
+
+    if (error?.code === "23505") {
+      // P0-2: same idempotency key = a retried request - return the original.
+      if (idempotencyKey) {
+        const existing = await findSubmissionByIdempotencyKey(
+          supabase,
+          userId,
+          artifactId,
+          idempotencyKey,
+        );
+        if (existing) {
+          return { submission: existing, duplicate: true };
+        }
+      }
+      // P1-1: concurrent attempt_no / is_latest collision - retry once.
+      apiLogger.warn("Artifact submission insert collided; retrying once.", {
+        artifactId,
+        userId,
+        attemptNo,
+      });
+      continue;
+    }
+
     throw new Error(`Failed to create artifact submission: ${error?.message ?? "unknown error"}`);
   }
 
-  return data as ArtifactSubmissionRow;
+  throw new Error("Failed to create artifact submission after retrying a concurrent insert.");
 }
 
 async function listArtifactQuestions(
@@ -255,19 +364,15 @@ async function listArtifactQuestions(
   return (data as ArtifactQuestionRow[] | null) ?? [];
 }
 
-export async function submitArtifactSubmission(
-  supabase: SupabaseClient,
-  env: Pick<LteEnv, "STORAGE_BUCKET" | "R2_PUBLIC_DOMAIN" | "OPENROUTER_API_KEY">,
-  userId: string,
-  input: CompleteSubmissionInput,
-  filesByQuestionId: Map<string, File>,
-): Promise<{
+export interface ArtifactSubmissionResult {
   submission_id: string;
   attempt_no: number;
   version_label: string;
   submitted_at: string | null;
   status: "submitted" | "accepted" | "resubmission_required" | "human_review";
   evaluation_status: "pending" | "completed";
+  /** True when this request was a duplicate of an already-processed one. */
+  duplicate: boolean;
   evaluation?: {
     overall_score: number;
     decision: "pass" | "revise_and_resubmit" | "human_review";
@@ -277,7 +382,16 @@ export async function submitArtifactSubmission(
     calculated_xp: number;
   };
   files: Array<{ file_id: string; question_id: string; file_name: string }>;
-}> {
+}
+
+export async function submitArtifactSubmission(
+  supabase: SupabaseClient,
+  env: Pick<LteEnv, "STORAGE_BUCKET" | "R2_PUBLIC_DOMAIN" | "OPENROUTER_API_KEY">,
+  userId: string,
+  input: CompleteSubmissionInput,
+  filesByQuestionId: Map<string, File>,
+  idempotencyKey?: string,
+): Promise<ArtifactSubmissionResult> {
   const moduleProgressId = await requireModuleProgress(supabase, input.artifact_id, userId);
   const questions = await listArtifactQuestions(supabase, input.artifact_id);
   const questionById = new Map(questions.map((question) => [question.id, question]));
@@ -329,15 +443,27 @@ export async function submitArtifactSubmission(
         "FILE_RESPONSE_REQUIRED",
       );
     }
-    if (file) validateFileForQuestion(file, question);
+    if (file) {
+      const extension = validateFileForQuestion(file, question);
+      // P1-2/P1-3: reject renamed binaries and zip bombs before any
+      // submission row or R2 object is created.
+      await validateArtifactFileContent(file, extension);
+    }
   }
 
-  const submission = await createSubmissionAttempt(
+  const created = await createSubmissionAttempt(
     supabase,
     input.artifact_id,
     userId,
     moduleProgressId,
+    idempotencyKey,
   );
+  if (created.duplicate) {
+    // P0-2: the same request was already processed - return the original
+    // submission instead of creating a new attempt.
+    return buildDuplicateSubmissionResponse(supabase, created.submission);
+  }
+  const submission = created.submission;
   const now = new Date().toISOString();
   const answerRows = input.answers
     .filter((answer) => answer.text_response || answer.url_response)
@@ -359,49 +485,58 @@ export async function submitArtifactSubmission(
   }
 
   const uploadedFiles: Array<{ file_id: string; question_id: string; file_name: string }> = [];
+  const uploadedObjectKeys: string[] = [];
 
-  for (const [questionId, file] of filesByQuestionId) {
-    const question = questionById.get(questionId);
-    if (!question) continue;
+  try {
+    for (const [questionId, file] of filesByQuestionId) {
+      const question = questionById.get(questionId);
+      if (!question) continue;
 
-    const fileId = crypto.randomUUID();
-    const extension = validateFileForQuestion(file, question);
-    const objectKey = createObjectKey({
-      namespace: "submissions/artifacts",
-      ownerId: userId,
-      entityId: input.artifact_id,
-      recordId: submission.id,
-      fileId,
-      fileName: file.name,
-    });
+      const fileId = crypto.randomUUID();
+      const extension = validateFileForQuestion(file, question);
+      const objectKey = createObjectKey({
+        namespace: "submissions/artifacts",
+        ownerId: userId,
+        entityId: input.artifact_id,
+        recordId: submission.id,
+        fileId,
+        fileName: file.name,
+      });
 
-    await env.STORAGE_BUCKET.put(objectKey, file.stream(), {
-      httpMetadata: {
-        contentType: file.type || "application/octet-stream",
-        contentDisposition: `attachment; filename="${file.name.replace(/"/g, "")}"`,
-      },
-    });
+      await env.STORAGE_BUCKET.put(objectKey, file.stream(), {
+        httpMetadata: {
+          contentType: file.type || "application/octet-stream",
+          contentDisposition: `attachment; filename="${file.name.replace(/"/g, "")}"`,
+        },
+      });
+      uploadedObjectKeys.push(objectKey);
 
-    const { error } = await supabase.from("artifact_submission_files").insert({
-      id: fileId,
-      submission_id: submission.id,
-      question_id: questionId,
-      file_name: file.name,
-      file_url: createPublicFileUrl(env.R2_PUBLIC_DOMAIN, objectKey),
-      object_key: objectKey,
-      file_type: extension,
-      file_size_bytes: file.size,
-    });
+      const { error } = await supabase.from("artifact_submission_files").insert({
+        id: fileId,
+        submission_id: submission.id,
+        question_id: questionId,
+        file_name: file.name,
+        file_url: createPublicFileUrl(env.R2_PUBLIC_DOMAIN, objectKey),
+        object_key: objectKey,
+        file_type: extension,
+        file_size_bytes: file.size,
+      });
 
-    if (error) {
-      throw new Error(`Failed to save uploaded artifact file: ${error.message}`);
+      if (error) {
+        throw new Error(`Failed to save uploaded artifact file: ${error.message}`);
+      }
+
+      uploadedFiles.push({
+        file_id: fileId,
+        question_id: questionId,
+        file_name: file.name,
+      });
     }
-
-    uploadedFiles.push({
-      file_id: fileId,
-      question_id: questionId,
-      file_name: file.name,
-    });
+  } catch (error) {
+    // P0-4: persistence failed after upload - best-effort delete so no orphan
+    // R2 object is left behind. Cleanup results are always logged.
+    await cleanupUploadedObjects(env, uploadedObjectKeys);
+    throw error;
   }
 
   // Fetch full artifact details for AI Evaluation
@@ -446,6 +581,7 @@ export async function submitArtifactSubmission(
           ? "human_review"
           : "resubmission_required",
     evaluation_status: "completed",
+    duplicate: false,
     evaluation: {
       overall_score: evalResult.overallScore,
       decision: evalResult.decision,
@@ -455,6 +591,73 @@ export async function submitArtifactSubmission(
       calculated_xp: evalResult.calculatedXp,
     },
     files: uploadedFiles,
+  };
+}
+
+/**
+ * P0-4: best-effort deletion of R2 objects whose DB persistence failed.
+ * Never silent: every cleanup attempt is logged with its outcome.
+ */
+async function cleanupUploadedObjects(
+  env: Pick<LteEnv, "STORAGE_BUCKET">,
+  objectKeys: string[],
+): Promise<void> {
+  for (const objectKey of objectKeys) {
+    try {
+      await env.STORAGE_BUCKET.delete(objectKey);
+      apiLogger.warn("Deleted orphaned R2 object after persistence failure.", { objectKey });
+    } catch (cleanupError) {
+      apiLogger.error(
+        "Failed to delete orphaned R2 object after persistence failure.",
+        cleanupError,
+        {
+          objectKey,
+        },
+      );
+    }
+  }
+}
+
+/**
+ * P0-2: response for a duplicate submission request - reuses the original
+ * submission, its files, and its current evaluation flow (if completed).
+ */
+async function buildDuplicateSubmissionResponse(
+  supabase: SupabaseClient,
+  submission: ArtifactSubmissionRow,
+): Promise<ArtifactSubmissionResult> {
+  const flow = await getSubmissionEvaluationFlow(supabase, submission.id, submission.user_id);
+  const meta = (flow?.metadata as Record<string, unknown> | null) ?? null;
+
+  const { data: fileRows } = await supabase
+    .from("artifact_submission_files")
+    .select("id, question_id, file_name")
+    .eq("submission_id", submission.id);
+
+  return {
+    submission_id: submission.id,
+    attempt_no: submission.attempt_no,
+    version_label: submission.version_label ?? `v${submission.attempt_no}`,
+    submitted_at: submission.submitted_at,
+    status: submission.status as ArtifactSubmissionResult["status"],
+    evaluation_status: flow ? "completed" : "pending",
+    duplicate: true,
+    evaluation: flow
+      ? {
+          overall_score: flow.score ?? 0,
+          decision:
+            (flow.decision as "pass" | "revise_and_resubmit" | "human_review") ?? "human_review",
+          rubric_rows: (meta?.["rubric_rows"] as unknown[]) ?? [],
+          feedback: flow.feedback ?? "",
+          improvements: flow.improvements ?? "",
+          calculated_xp: (meta?.["calculated_xp"] as number) ?? 0,
+        }
+      : undefined,
+    files: (fileRows ?? []).map((fileRow) => ({
+      file_id: fileRow.id,
+      question_id: fileRow.question_id,
+      file_name: fileRow.file_name,
+    })),
   };
 }
 

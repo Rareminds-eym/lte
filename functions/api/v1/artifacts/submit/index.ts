@@ -45,6 +45,16 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       });
     }
 
+    // P0-2: optional client-supplied idempotency key so retried requests
+    // return the original submission instead of creating duplicates.
+    const idempotencyKey = context.request.headers.get("Idempotency-Key")?.trim() || undefined;
+    if (idempotencyKey && idempotencyKey.length > 128) {
+      return jsonError("Idempotency-Key header is too long.", 400, {
+        code: "VALIDATION_ERROR",
+        requestId,
+      });
+    }
+
     const supabase = createServiceSupabase(context.env);
     const result = await submitArtifactSubmission(
       supabase,
@@ -52,6 +62,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       user.sub,
       parsed.data,
       filesByQuestionId,
+      idempotencyKey,
     );
     return jsonResponse({ success: true, ...result });
   } catch (error) {
