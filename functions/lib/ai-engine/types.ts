@@ -19,6 +19,8 @@ export interface RubricCriterionResult {
   evidence: string; // evidence citation from submission
   tone: "success" | "warning" | "error";
   feedback?: string;
+  /** False when evidence could not be verified verbatim in the submission (Part 4). */
+  evidenceValid: boolean;
 }
 
 export type LteDecisionResult = "pass" | "revise_and_resubmit" | "human_review";
@@ -41,6 +43,7 @@ export interface ArtifactDebugTelemetry {
   stage1Check: SubmissionCheckResult;
   stage2Failures: CriticalFailureCheckResult;
   calculatedXp: number;
+  confidence: number;
   rawPromptContent: string | null;
   rawResponseContent: string | null;
   validatedDecision: LteDecisionResult;
@@ -52,6 +55,8 @@ export interface ArtifactDebugTelemetry {
 export interface AIEvaluationResult {
   overallScore: number; // percentage 0-100
   passingScore: number;
+  /** Model confidence 0-100 (0 for deterministic fallback paths). */
+  confidence: number;
   decision: LteDecisionResult;
   stage1SubmissionCheck: SubmissionCheckResult;
   stage2CriticalFailures: CriticalFailureCheckResult;

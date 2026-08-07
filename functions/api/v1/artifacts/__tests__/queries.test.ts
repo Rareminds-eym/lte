@@ -534,6 +534,7 @@ describe("artifact submission queries", () => {
     expect(result.status).toBe("human_review");
     expect(result.evaluation?.decision).toBe("human_review");
     expect(result.evaluation?.overall_score).toBe(0);
+    expect(result.evaluation?.confidence).toBe(0);
 
     const flowsPayload = allChains.artifact_evaluation_flows.upsert.mock.calls[0]?.[0] as Record<
       string,

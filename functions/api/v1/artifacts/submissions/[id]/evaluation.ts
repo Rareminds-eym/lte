@@ -31,6 +31,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
             stage: flow.stage,
             status: flow.status,
             score: flow.score,
+            confidence: (meta?.["confidence"] as number | null) ?? null,
             decision: flow.decision,
             feedback: flow.feedback,
             improvements: flow.improvements,

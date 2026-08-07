@@ -375,6 +375,7 @@ export interface ArtifactSubmissionResult {
   duplicate: boolean;
   evaluation?: {
     overall_score: number;
+    confidence: number;
     decision: "pass" | "revise_and_resubmit" | "human_review";
     rubric_rows: unknown[];
     feedback: string;
@@ -584,6 +585,7 @@ export async function submitArtifactSubmission(
     duplicate: false,
     evaluation: {
       overall_score: evalResult.overallScore,
+      confidence: evalResult.confidence,
       decision: evalResult.decision,
       rubric_rows: evalResult.rubricRows,
       feedback: evalResult.feedback,
@@ -645,6 +647,7 @@ async function buildDuplicateSubmissionResponse(
     evaluation: flow
       ? {
           overall_score: flow.score ?? 0,
+          confidence: (meta?.["confidence"] as number | null) ?? 0,
           decision:
             (flow.decision as "pass" | "revise_and_resubmit" | "human_review") ?? "human_review",
           rubric_rows: (meta?.["rubric_rows"] as unknown[]) ?? [],
