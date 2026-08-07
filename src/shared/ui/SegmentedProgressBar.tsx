@@ -22,8 +22,9 @@ export const SegmentedProgressBar: React.FC<SegmentedProgressBarProps> = ({
   className,
   ariaLabel,
 }) => {
-  const safeTotal = Math.max(1, totalLevels);
+  const safeTotal = Math.max(0, totalLevels);
   const safeCurrent = Math.max(0, Math.min(currentLevel, safeTotal));
+  const visualTotal = Math.max(1, safeTotal);
 
   return (
     <div
@@ -34,7 +35,7 @@ export const SegmentedProgressBar: React.FC<SegmentedProgressBarProps> = ({
       aria-valuemax={safeTotal}
       aria-label={ariaLabel ?? `Progress: Level ${safeCurrent} of ${safeTotal}`}
     >
-      {Array.from({ length: safeTotal }, (_, idx) => {
+      {Array.from({ length: visualTotal }, (_, idx) => {
         const isFilled = idx < safeCurrent;
         return (
           <div

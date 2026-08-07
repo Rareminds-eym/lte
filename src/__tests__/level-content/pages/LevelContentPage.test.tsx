@@ -35,6 +35,7 @@ vi.mock("@/entities/course", async () => {
 const mockLevelContentData = {
   level: {
     id: "course-1",
+    capabilityCode: "BCP-CAP-CM-002",
     levelCode: "crs-sys-fail-inv",
     title: "System Failure Investigation",
     description: "Investigate production incidents.",
@@ -200,6 +201,10 @@ const renderPage = (path = `/my-courses/${levelId}/modules/1`) => {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/my-courses/:levelId/modules/:moduleNo" element={<LevelContentPage />} />
+          <Route
+            path="/my-courses/:capabilityCode"
+            element={<div data-testid="course-overview-route" />}
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -438,6 +443,60 @@ describe("LevelContentPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Next Module/i }));
 
     expect(useLevelModuleDetailsMock).toHaveBeenCalledWith(levelId, 2);
+  });
+
+  it("returns to the capability overview when the final module is complete", () => {
+    const data = {
+      level: {
+        ...mockLevelContentData.level,
+        modules: [mockLevelContentData.level.modules[0]],
+      },
+      module: {
+        ...mockLevelContentData.module,
+        progressPercentage: 100,
+        completedStages: ["engage", "explore", "explain", "express", "empower", "evolve"],
+        stages: mockLevelContentData.module.stages.map((stage) =>
+          stage.stageName === "evolve"
+            ? {
+                ...stage,
+                items: [
+                  {
+                    id: "content-final-review",
+                    contentType: "slide",
+                    title: "Final Review",
+                    description: "Review before finishing.",
+                    url: "https://example.com/final-review",
+                    sortOrder: 1,
+                    durationSeconds: 120,
+                    xpReward: 0,
+                    mimeType: null,
+                    fileSizeBytes: null,
+                    status: "published",
+                  },
+                ],
+              }
+            : stage,
+        ),
+      },
+    };
+    useLevelDetailsMock.mockReturnValue({
+      data: data.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: data.module,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage(`/my-courses/${levelId}/modules/1?stage=evolve`);
+
+    fireEvent.click(screen.getByRole("button", { name: /Complete Course/i }));
+
+    expect(screen.getByTestId("course-overview-route")).toBeInTheDocument();
   });
 
   it("handles toggling modules drawer and expanding/collapsing stage info", async () => {

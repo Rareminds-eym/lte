@@ -11,12 +11,14 @@ function durationLabel(minutes: number): string {
  */
 export function mapApiLevelsToCards(
   levels: CapabilityLevel[],
-  currentUnlockedLevel: number,
+  completedLevelCount: number,
   parsedTargetLevelNum: number,
 ): Omit<CourseLevelCardProps, "onAction" | "isLast">[] {
+  const activeLevel = completedLevelCount + 1;
+
   return levels.map((level) => {
-    const isCompleted = level.levelNumber < currentUnlockedLevel;
-    const isUnlocked = level.levelNumber === currentUnlockedLevel;
+    const isCompleted = level.levelNumber <= completedLevelCount;
+    const isUnlocked = level.levelNumber === activeLevel;
     const difficulty = level.difficulty
       ? level.difficulty.charAt(0).toUpperCase() + level.difficulty.slice(1)
       : "Intermediate";

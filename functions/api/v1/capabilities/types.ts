@@ -54,6 +54,7 @@ export interface UserCapability {
   currentLevel: number;
   status: string;
   progress: number;
+  durationHours: number;
   xp?: number;
   roleId?: string;
   roleName?: string;

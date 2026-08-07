@@ -13,6 +13,12 @@ const StageProgressBodySchema = z.object({
   eContentId: z.string().uuid("Invalid eContentId format"),
   stageName: z.enum(LTE_STAGE_SEQUENCE),
   status: z.enum(["in_progress", "completed"]),
+  durationSeconds: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 60 * 60)
+    .optional(),
 });
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
@@ -50,7 +56,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       });
     }
 
-    const { eContentId, stageName, status } = parsedBody.data;
+    const { eContentId, stageName, status, durationSeconds } = parsedBody.data;
     const supabase = createServiceSupabase(context.env);
 
     let progressData: Record<string, unknown>;
@@ -73,19 +79,39 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       }
 
       // 2. Call completeStage from the unified XP engine
-      const xpResult = await completeStage(supabase, userId, eContent.modules_content_id);
+      const xpResult = await completeStage(
+        supabase,
+        userId,
+        eContent.modules_content_id,
+        eContentId,
+      );
       xpAwarded = xpResult.xpAwarded;
       totalXp = await getUserTotalXp(supabase, userId);
 
       // 3. Fetch the updated progress counters from user_module_progress to return to client
       const { data: stageProg, error: stageProgErr } = await supabase
         .from("user_stage_progress")
-        .select("user_module_progress_id")
+        .select("user_module_progress_id, time_spent_seconds")
         .eq("id", xpResult.userStageProgressId)
         .single();
 
       if (stageProgErr || !stageProg) {
         throw new Error("Failed to find module progress ID for returning status data");
+      }
+
+      if (durationSeconds && durationSeconds > 0) {
+        const { error: timerUpdateError } = await supabase
+          .from("user_stage_progress")
+          .update({
+            time_spent_seconds: (stageProg.time_spent_seconds ?? 0) + durationSeconds,
+            last_viewed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", xpResult.userStageProgressId);
+
+        if (timerUpdateError) {
+          throw new Error(`Failed to update content viewing time: ${timerUpdateError.message}`);
+        }
       }
 
       const { data: updatedProgress, error: progressFetchErr } = await supabase
@@ -113,6 +139,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
         eContentId,
         stageName,
         status,
+        durationSeconds,
       );
     }
 

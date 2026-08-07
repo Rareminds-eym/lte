@@ -100,7 +100,7 @@ export const CourseDetailPage: React.FC = () => {
   const xpAvailableStr = xpValue > 0 ? `${xpValue.toLocaleString()} XP` : "0 XP";
 
   const totalLevels = activeCourse?.totalLevels || apiLevels?.length || 0;
-  const currentUnlockedLevel = activeCourse?.currentLevel || 1;
+  const completedLevelCount = activeCourse?.currentLevel ?? 0;
   const targetLevelStr = activeCourse?.targetLevel || "L1";
 
   const parsedTargetLevelNum = parseInt(targetLevelStr.match(/\d+/)?.[0] ?? "1", 10);
@@ -108,7 +108,7 @@ export const CourseDetailPage: React.FC = () => {
   // Strictly map real DB levels
   const dynamicLevelCards = mapApiLevelsToCards(
     apiLevels ?? [],
-    currentUnlockedLevel,
+    completedLevelCount,
     parsedTargetLevelNum,
   );
 
@@ -188,7 +188,7 @@ export const CourseDetailPage: React.FC = () => {
         <CourseStatsOverlay
           totalDuration={totalDurationStr}
           xpAvailable={xpAvailableStr}
-          unlockedLevels={currentUnlockedLevel}
+          completedLevels={completedLevelCount}
           totalLevels={totalLevels}
           targetLevel={targetLevelStr}
         />

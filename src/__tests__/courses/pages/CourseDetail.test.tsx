@@ -106,7 +106,7 @@ vi.mock("@/entities/course", async () => {
           tags: [],
           status: "in_progress",
           progress: 40,
-          currentLevel: 2,
+          currentLevel: 1,
           totalLevels: 5,
           targetLevel: "L3",
           durationHours: 225,
@@ -154,7 +154,7 @@ describe("CourseDetail", () => {
     render(<CourseDetail />);
     expect(screen.getByText("225 hrs")).toBeInTheDocument();
     expect(screen.getByText("1,850 XP")).toBeInTheDocument();
-    expect(screen.getByText("Level 2 of 5 unlocked")).toBeInTheDocument();
+    expect(screen.getByText("Level 1 of 5 completed")).toBeInTheDocument();
     expect(screen.getByText("TARGET: L3")).toBeInTheDocument();
   });
 
