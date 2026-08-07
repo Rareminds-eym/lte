@@ -31,7 +31,11 @@ export const getContentIcon = (contentType: EContentItem["contentType"]) => {
 
 export const getDownloadFileName = (item: EContentItem) => {
   const urlFileName = item.url.split("/").pop()?.split("?")[0];
-  return decodeURIComponent(urlFileName || item.title).replace(/[<>:"/\\|?*]+/g, "-");
+  try {
+    return decodeURIComponent(urlFileName || item.title).replace(/[<>:"/\\|?*]+/g, "-");
+  } catch {
+    return (urlFileName || item.title).replace(/[<>:"/\\|?*]+/g, "-");
+  }
 };
 
 export const getStageSummary = (
