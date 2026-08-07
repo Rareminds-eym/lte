@@ -19,7 +19,10 @@ export const DashboardPage: React.FC = () => {
     if (!data?.todayEvents || data.todayEvents.length === 0) return null;
     try {
       const shownIdsRaw = localStorage.getItem("lte-shown-xp-event-ids");
-      const shownIds: string[] = shownIdsRaw ? JSON.parse(shownIdsRaw) : [];
+      const parsed = shownIdsRaw ? JSON.parse(shownIdsRaw) : [];
+      const shownIds: string[] = Array.isArray(parsed)
+        ? parsed.filter((id): id is string => typeof id === "string")
+        : [];
       return (
         data.todayEvents.find(
           (event) => !shownIds.includes(event.id) && !dismissedEventIds.includes(event.id),
@@ -34,7 +37,10 @@ export const DashboardPage: React.FC = () => {
     if (currentShowEvent) {
       try {
         const shownIdsRaw = localStorage.getItem("lte-shown-xp-event-ids");
-        const shownIds: string[] = shownIdsRaw ? JSON.parse(shownIdsRaw) : [];
+        const parsed = shownIdsRaw ? JSON.parse(shownIdsRaw) : [];
+        const shownIds: string[] = Array.isArray(parsed)
+          ? parsed.filter((id): id is string => typeof id === "string")
+          : [];
         if (!shownIds.includes(currentShowEvent.id)) {
           shownIds.push(currentShowEvent.id);
           localStorage.setItem("lte-shown-xp-event-ids", JSON.stringify(shownIds));

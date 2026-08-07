@@ -14,19 +14,20 @@ vi.mock("@functions/lib/auth", async (importOriginal) => {
 
 vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
 
-interface Chainable extends Record<string, unknown> {
-  select: ReturnType<typeof vi.fn>;
-  eq: ReturnType<typeof vi.fn>;
-  order: ReturnType<typeof vi.fn>;
-  limit: ReturnType<typeof vi.fn>;
-  in: ReturnType<typeof vi.fn>;
-  single: ReturnType<typeof vi.fn>;
-  maybeSingle: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
-  then?: (onfulfilled: unknown) => unknown;
+interface Chainable {
+  select: (...args: unknown[]) => Chainable;
+  eq: (...args: unknown[]) => Chainable;
+  order: (...args: unknown[]) => Chainable;
+  limit: (...args: unknown[]) => Chainable;
+  in: (...args: unknown[]) => Chainable;
+  single: () => Promise<{ data: unknown; error: unknown }>;
+  maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
+  update: (...args: unknown[]) => Chainable;
+  then?: (onfulfilled: (value: { data: unknown; error: unknown }) => unknown) => Promise<unknown>;
 }
 
-function chainable(resolveVal: unknown = null, errorVal: unknown = null) {
+// biome-ignore lint/suspicious/noExplicitAny: mock chain factory
+function chainable<T = any, E = any>(resolveVal: T = null as any, errorVal: E = null as any) {
   const chain: Chainable = {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { apiLogger } from "./logger";
 import { awardXp } from "./xp-engine.core";
 import { evaluateMilestones } from "./xp-engine.engagement";
 
@@ -210,11 +211,14 @@ async function calculateReadinessInternal(
       .in("user_module_progress_id", userModuleProgressIds);
 
     if (subErr) throw subErr;
-    artifactSubmissions = (data as unknown as ArtifactSubmissionWithArtifact[]) || [];
+    artifactSubmissions = (data || []) as ArtifactSubmissionWithArtifact[];
   }
 
   const finalSubmissions = (artifactSubmissions || []).filter((s) => {
-    const ma = Array.isArray(s.module_artifacts) ? s.module_artifacts[0] : s.module_artifacts;
+    const ma =
+      Array.isArray(s.module_artifacts) && s.module_artifacts.length > 0
+        ? s.module_artifacts[0]
+        : (s.module_artifacts as { artifact_type: string } | null);
     return ma?.artifact_type === "final";
   });
 
@@ -335,8 +339,12 @@ async function calculateReadinessInternal(
     if (learningPath?.role_id) {
       try {
         await evaluateMilestones(supabase, userId, learningPath.role_id, readinessScore);
-      } catch {
+      } catch (err) {
         // Non-fatal: milestone evaluation failure should not break readiness calculation
+        apiLogger.error("[XP] evaluateMilestones failed", err, {
+          userId,
+          roleId: learningPath.role_id,
+        });
       }
     }
   }
@@ -360,10 +368,22 @@ export async function triggerReadinessRecalculation(
 
     if (paths && paths.length > 0) {
       await Promise.all(
-        paths.map((path) => calculateReadiness(supabase, userId, path.id).catch(() => null)),
+        paths.map((path) =>
+          calculateReadiness(supabase, userId, path.id).catch((err) => {
+            apiLogger.error(
+              "[XP] calculateReadiness failed in triggerReadinessRecalculation",
+              err,
+              {
+                userId,
+                pathId: path.id,
+              },
+            );
+            return null;
+          }),
+        ),
       );
     }
-  } catch {
-    // Non-fatal
+  } catch (err) {
+    apiLogger.error("[XP] triggerReadinessRecalculation failed", err, { userId });
   }
 }

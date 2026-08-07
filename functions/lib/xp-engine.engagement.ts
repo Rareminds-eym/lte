@@ -22,7 +22,7 @@ export function countConsecutiveDaysFromToday(todayStr: string, sortedDescDates:
       // Move expected one day earlier
       const dt = new Date(`${expected}T00:00:00Z`);
       dt.setUTCDate(dt.getUTCDate() - 1);
-      expected = dt.toISOString().split("T")[0] as string;
+      expected = dt.toISOString().split("T")[0] || "";
     } else if (d < expected) {
       // Gap detected — streak is broken
       break;
@@ -44,8 +44,10 @@ export async function triggerDailyLogin(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{ success: boolean; xpAwarded: number }> {
-  const todayDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-  if (!todayDate) throw new Error("Invalid date");
+  const todayDate = new Date().toISOString().split("T")[0] || "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(todayDate)) {
+    throw new Error("Invalid date format generated");
+  }
 
   const xpResult = await awardXp(supabase, userId, "daily_login", "users", userId, {
     login_date: todayDate,
@@ -85,7 +87,7 @@ export async function checkAndAwardStreak(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{ xpAwarded: number; consecutiveDays: number }> {
-  const todayStr = new Date().toISOString().split("T")[0] as string;
+  const todayStr = new Date().toISOString().split("T")[0] || "";
 
   // Fetch all distinct daily_login dates for this user, descending
   const { data: loginRows, error } = await supabase
@@ -99,8 +101,12 @@ export async function checkAndAwardStreak(
   // Extract and deduplicate YYYY-MM-DD strings from metadata.login_date
   const dateSet = new Set<string>();
   for (const row of loginRows ?? []) {
-    const meta = row.metadata as Record<string, unknown> | null;
-    const d = meta && typeof meta["login_date"] === "string" ? meta["login_date"] : null;
+    const meta = row.metadata;
+    const isObject = meta !== null && typeof meta === "object" && !Array.isArray(meta);
+    const d =
+      isObject && typeof (meta as Record<string, unknown>)["login_date"] === "string"
+        ? ((meta as Record<string, unknown>)["login_date"] as string)
+        : null;
     if (d) dateSet.add(d);
   }
 
@@ -137,7 +143,7 @@ export async function checkAndAwardConsistency(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{ xpAwarded: number; consecutiveDays: number }> {
-  const todayStr = new Date().toISOString().split("T")[0] as string;
+  const todayStr = new Date().toISOString().split("T")[0] || "";
 
   const { data: loginRows, error } = await supabase
     .from("xp_events")
@@ -149,8 +155,12 @@ export async function checkAndAwardConsistency(
 
   const dateSet = new Set<string>();
   for (const row of loginRows ?? []) {
-    const meta = row.metadata as Record<string, unknown> | null;
-    const d = meta && typeof meta["login_date"] === "string" ? meta["login_date"] : null;
+    const meta = row.metadata;
+    const isObject = meta !== null && typeof meta === "object" && !Array.isArray(meta);
+    const d =
+      isObject && typeof (meta as Record<string, unknown>)["login_date"] === "string"
+        ? ((meta as Record<string, unknown>)["login_date"] as string)
+        : null;
     if (d) dateSet.add(d);
   }
 
@@ -160,7 +170,7 @@ export async function checkAndAwardConsistency(
   if (consecutive >= 30) {
     const startDt = new Date(`${todayStr}T00:00:00Z`);
     startDt.setUTCDate(startDt.getUTCDate() - (consecutive - 1));
-    const streakStartDate = startDt.toISOString().split("T")[0] as string;
+    const streakStartDate = startDt.toISOString().split("T")[0] || "";
 
     const res = await awardXp(supabase, userId, "consistency_30_day", "xp_events", userId, {
       consecutive_days: consecutive,

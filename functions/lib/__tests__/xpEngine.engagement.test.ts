@@ -18,7 +18,7 @@ import { createMockQueryChain, mockInsert, mockSupabase, resetMocks } from "./xp
 function makeDateStr(daysAgo: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - daysAgo);
-  return d.toISOString().split("T")[0] as string;
+  return d.toISOString().split("T")[0] || "";
 }
 
 function makeLoginRows(daysAgo: number[]): { metadata: { login_date: string } }[] {

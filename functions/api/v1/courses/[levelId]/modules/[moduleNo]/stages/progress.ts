@@ -95,7 +95,11 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       xpAwarded = xpResult.xpAwarded;
 
       // Recalculate level progress to trigger level completions and on-time rewards
-      await recalculateLevelProgress(supabase, userId, levelId);
+      try {
+        await recalculateLevelProgress(supabase, userId, levelId);
+      } catch (err) {
+        apiLogger.error("Failed to recalculate level progress", err, { userId, levelId });
+      }
 
       // Query level progress status and XP events after recalculation
       const { data: levelProgressAfter } = await supabase

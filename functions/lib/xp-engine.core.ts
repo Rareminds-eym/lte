@@ -86,26 +86,32 @@ export function generateIdempotencyKey(
     case "capstone_completed":
       return `capstone:${userId}:${sourceId}`;
     case "daily_login": {
+      const isObject =
+        metadata !== null && typeof metadata === "object" && !Array.isArray(metadata);
       const loginDate =
-        metadata && typeof metadata["login_date"] === "string"
-          ? metadata["login_date"]
-          : new Date().toISOString().split("T")[0];
+        isObject && typeof (metadata as Record<string, unknown>)["login_date"] === "string"
+          ? ((metadata as Record<string, unknown>)["login_date"] as string)
+          : new Date().toISOString().split("T")[0] || "";
       return `login:${userId}:${loginDate}`;
     }
     case "profile_completed":
       return `profile:${userId}`;
     case "streak_7_day": {
+      const isObject =
+        metadata !== null && typeof metadata === "object" && !Array.isArray(metadata);
       const streakDate =
-        metadata && typeof metadata["streak_date"] === "string"
-          ? metadata["streak_date"]
-          : new Date().toISOString().split("T")[0];
+        isObject && typeof (metadata as Record<string, unknown>)["streak_date"] === "string"
+          ? ((metadata as Record<string, unknown>)["streak_date"] as string)
+          : new Date().toISOString().split("T")[0] || "";
       return `streak7:${userId}:${streakDate}`;
     }
     case "consistency_30_day": {
+      const isObject =
+        metadata !== null && typeof metadata === "object" && !Array.isArray(metadata);
       const consistencyDate =
-        metadata && typeof metadata["consistency_date"] === "string"
-          ? metadata["consistency_date"]
-          : new Date().toISOString().split("T")[0];
+        isObject && typeof (metadata as Record<string, unknown>)["consistency_date"] === "string"
+          ? ((metadata as Record<string, unknown>)["consistency_date"] as string)
+          : new Date().toISOString().split("T")[0] || "";
       return `consistency30:${userId}:${consistencyDate}`;
     }
     case "readiness_milestone_25":

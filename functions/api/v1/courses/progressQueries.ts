@@ -363,9 +363,16 @@ export async function recalculateLevelProgress(
 
   // Trigger readiness recalculation on level completion transition
   if (isCompleted && !wasCompleted && currentProgress?.id) {
-    const { completeCourseOnTime, triggerReadinessRecalculation } = await import(
-      "@functions/lib/xp-engine.progress"
-    );
+    let completeCourseOnTime: typeof import("@functions/lib/xp-engine.progress").completeCourseOnTime;
+    let triggerReadinessRecalculation: typeof import("@functions/lib/xp-engine.progress").triggerReadinessRecalculation;
+    try {
+      const module = await import("@functions/lib/xp-engine.progress");
+      completeCourseOnTime = module.completeCourseOnTime;
+      triggerReadinessRecalculation = module.triggerReadinessRecalculation;
+    } catch (importErr) {
+      apiLogger.error("Failed to import xp-engine.progress", importErr);
+      throw importErr;
+    }
 
     try {
       const { data: levelData } = await supabase

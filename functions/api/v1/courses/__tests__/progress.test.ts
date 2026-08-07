@@ -632,7 +632,7 @@ describe("Progress API Endpoints", () => {
             const chain = createMockQueryChain([]);
             let callCount = 0;
             const originalEq = chain.eq;
-            chain.eq = vi.fn((...args) => {
+            chain.eq = vi.fn((...args: [col: string, val: unknown]) => {
               callCount++;
               if (callCount === 1) {
                 // First call is for completed stages query - return empty array

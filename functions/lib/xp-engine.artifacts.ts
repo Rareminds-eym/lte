@@ -243,12 +243,15 @@ export async function evaluateArtifact(
 
   const userId = submission.user_id;
   const attemptNo = submission.attempt_no;
-  const artifact = (
-    Array.isArray(submission.module_artifacts)
-      ? submission.module_artifacts[0]
-      : submission.module_artifacts
-  ) as { artifact_type: "practice" | "final" };
-  const isPractice = artifact.artifact_type === "practice";
+  const artifactArray = Array.isArray(submission.module_artifacts)
+    ? submission.module_artifacts
+    : [submission.module_artifacts];
+  const artifact = artifactArray[0];
+  if (!artifact || typeof artifact !== "object" || !("artifact_type" in artifact)) {
+    throw new Error(`Invalid artifact structure in submission: ${submissionId}`);
+  }
+  const typedArtifact = artifact as { artifact_type: "practice" | "final" };
+  const isPractice = typedArtifact.artifact_type === "practice";
 
   let evidenceXp = 0;
   let engagementXp = 0;
@@ -439,8 +442,9 @@ export async function adminOverrideArtifact(
     .eq("id", submissionId)
     .single();
 
-  const passingScore =
-    (submission?.module_artifacts as { passing_score?: number } | null)?.passing_score ?? 60;
+  const moduleArtifacts = submission?.module_artifacts;
+  const singleArtifact = Array.isArray(moduleArtifacts) ? moduleArtifacts[0] : moduleArtifacts;
+  const passingScore = (singleArtifact as { passing_score?: number } | null)?.passing_score ?? 60;
   const decision = newScore >= passingScore ? "pass" : "fail";
 
   // 3. Create a NEW evaluation entry reflecting correction

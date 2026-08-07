@@ -8,9 +8,24 @@ import { calculateReadiness } from "@functions/lib/xp-engine.progress";
 // In-memory sliding window rate limiter
 // Key: userId, Value: timestamps of calls in the last 60 seconds
 const rateLimiterCache = new Map<string, number[]>();
+let lastPruneTime = Date.now();
+
+function pruneRateLimiterCache(now: number) {
+  if (now - lastPruneTime < 60000) return;
+  lastPruneTime = now;
+  for (const [key, timestamps] of rateLimiterCache.entries()) {
+    const recent = timestamps.filter((t) => now - t < 60000);
+    if (recent.length === 0) {
+      rateLimiterCache.delete(key);
+    } else {
+      rateLimiterCache.set(key, recent);
+    }
+  }
+}
 
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
+  pruneRateLimiterCache(now);
   const timestamps = rateLimiterCache.get(userId) || [];
   // Keep only timestamps within the last 60 seconds
   const recent = timestamps.filter((t) => now - t < 60000);

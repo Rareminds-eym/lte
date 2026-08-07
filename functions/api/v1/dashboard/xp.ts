@@ -69,12 +69,17 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
         "legacy_consistency_bonus",
       ]);
 
-    const todayEvents = (eventsData ?? []).map((row) => ({
-      id: row.id,
-      event_type: row.event_type,
-      xp_amount: row.xp_amount,
-      metadata: (row.metadata as Record<string, unknown>) ?? {},
-    }));
+    const todayEvents = (eventsData ?? []).map((row) => {
+      const metadata = row.metadata;
+      const isObject =
+        metadata !== null && typeof metadata === "object" && !Array.isArray(metadata);
+      return {
+        id: row.id,
+        event_type: row.event_type,
+        xp_amount: row.xp_amount,
+        metadata: isObject ? (metadata as Record<string, unknown>) : {},
+      };
+    });
 
     return jsonResponse<DashboardXpResponse>({
       success: true,

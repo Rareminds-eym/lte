@@ -56,11 +56,13 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       });
     }
 
-    const roleData = Array.isArray(path.roles) ? path.roles[0] : path.roles;
+    const roleData = (
+      Array.isArray(path.roles) && path.roles.length > 0 ? path.roles[0] : path.roles
+    ) as Record<string, unknown> | null;
     const currentRole = {
-      name: roleData?.role_name || "Unknown Role",
-      domain: roleData?.domain_name || "Unknown Domain",
-      family: roleData?.role_family_name || "Unknown Family",
+      name: (roleData?.role_name as string) || "Unknown Role",
+      domain: (roleData?.domain_name as string) || "Unknown Domain",
+      family: (roleData?.role_family_name as string) || "Unknown Family",
     };
 
     // 2. Identify the levels in this learning path
@@ -130,10 +132,11 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
           if (artifacts) {
             requiredArtifacts = artifacts.map((art) => {
               const stage = stages?.find((s) => s.id === art.modules_content_id);
-              const mod = requiredModules.find((m) => m.id === stage?.module_id);
+              const moduleId = stage?.module_id;
+              const mod = moduleId ? requiredModules.find((m) => m.id === moduleId) : undefined;
               return {
                 id: art.id,
-                moduleId: stage?.module_id,
+                moduleId,
                 moduleNo: mod?.module_no || 0,
               };
             });
@@ -149,7 +152,8 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       .select("module_status, module_id")
       .eq("user_id", userId);
 
-    const totalModules = requiredModules.length || modulesProgress?.length || 1;
+    const totalModules =
+      requiredModules.length > 0 ? requiredModules.length : modulesProgress?.length || 0;
     const masteredModules = modulesProgress
       ? modulesProgress.filter((m) => {
           const isMastered = m.module_status === "mastered" || m.module_status === "completed";
@@ -168,12 +172,17 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       .eq("user_id", userId);
 
     const finalSubmissions = (artifactSubmissions || []).filter((s) => {
-      const ma = Array.isArray(s.module_artifacts) ? s.module_artifacts[0] : s.module_artifacts;
-      return ma?.artifact_type === "final";
+      const ma =
+        Array.isArray(s.module_artifacts) && s.module_artifacts.length > 0
+          ? s.module_artifacts[0]
+          : s.module_artifacts;
+      const typedMa = ma as Record<string, unknown> | null;
+      return typedMa?.artifact_type === "final";
     });
 
     const requiredArtifactIds = requiredArtifacts.map((a) => a.id);
-    const totalMandatoryArtifacts = requiredArtifacts.length || finalSubmissions.length || 1;
+    const totalMandatoryArtifacts =
+      requiredArtifacts.length > 0 ? requiredArtifacts.length : finalSubmissions.length || 0;
     const acceptedMandatoryArtifacts = finalSubmissions.filter((s) => {
       const isAccepted = s.status === "accepted";
       if (requiredArtifactIds.length > 0) {
@@ -204,7 +213,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
         .in("submission_id", submissionIds)
         .eq("is_current_stage", true);
 
-      const scores = flows?.map((f) => f.score).filter((s) => s !== null) as number[];
+      const scores = (flows || [])
+        .map((f) => f.score)
+        .filter((s): s is number => typeof s === "number");
       if (scores && scores.length > 0) {
         aiAverageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
       }
