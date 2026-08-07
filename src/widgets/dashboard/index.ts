@@ -1,1 +1,1 @@
-export { DashboardContent, DashboardSkeleton } from "./ui";
+export { DashboardContent } from "./ui";

@@ -6,6 +6,7 @@ import {
   getLevelStatsForCapabilities,
   getLevelsForCapability,
   getUserCapabilitiesForRoles,
+  getUserCapabilityProgressSummaries,
 } from "../queries";
 
 interface QueryChain {
@@ -140,24 +141,26 @@ describe("capabilities queries", () => {
     it("returns empty maps for an empty capability id list", async () => {
       await expect(getLevelStatsForCapabilities(supabaseWith({}), [])).resolves.toEqual({
         counts: {},
+        durationHours: {},
         xpSums: {},
       });
     });
 
-    it("counts levels and sums total_xp per capability", async () => {
+    it("counts levels and sums total_xp and duration per capability", async () => {
       const supabase = supabaseWith({
         levels: {
           data: [
-            { capability_id: "c1", id: "l1", total_xp: 10 },
-            { capability_id: "c1", id: "l2", total_xp: 20 },
-            { capability_id: "c2", id: "l3", total_xp: 5 },
-            { capability_id: "c2", id: "l4", total_xp: null },
+            { capability_id: "c1", id: "l1", total_xp: 10, duration_minutes: 60 },
+            { capability_id: "c1", id: "l2", total_xp: 20, duration_minutes: 120 },
+            { capability_id: "c2", id: "l3", total_xp: 5, duration_minutes: 30 },
+            { capability_id: "c2", id: "l4", total_xp: null, duration_minutes: null },
           ],
         },
       });
 
       await expect(getLevelStatsForCapabilities(supabase, ["c1", "c2"])).resolves.toEqual({
         counts: { c1: 2, c2: 2 },
+        durationHours: { c1: 3, c2: 1 },
         xpSums: { c1: 30, c2: 5 },
       });
     });
@@ -172,7 +175,9 @@ describe("capabilities queries", () => {
 
   describe("getUserCapabilitiesForRoles", () => {
     it("returns [] when no role ids are provided", async () => {
-      await expect(getUserCapabilitiesForRoles(supabaseWith({}), [], [])).resolves.toEqual([]);
+      await expect(
+        getUserCapabilitiesForRoles(supabaseWith({}), "user-1", [], []),
+      ).resolves.toEqual([]);
     });
 
     it("maps capabilities with xp totals and role info", async () => {
@@ -189,12 +194,13 @@ describe("capabilities queries", () => {
           ],
         },
         levels: {
-          data: [{ capability_id: "c1", id: "l1", total_xp: 42 }],
+          data: [{ capability_id: "c1", id: "l1", total_xp: 42, duration_minutes: 180 }],
         },
       });
 
       const result = await getUserCapabilitiesForRoles(
         supabase,
+        "user-1",
         ["role-1"],
         [{ roleId: "role-1", roleName: "Learner" }],
       );
@@ -206,10 +212,47 @@ describe("capabilities queries", () => {
         currentLevel: 0,
         status: "not_started",
         progress: 0,
+        durationHours: 3,
         xp: 42,
         roleId: "role-1",
         roleName: "Learner",
       });
+    });
+  });
+
+  describe("getUserCapabilityProgressSummaries", () => {
+    it("reports completed level count when every module in level one is completed", async () => {
+      const supabase = supabaseWith({
+        levels: {
+          data: [
+            { id: "l1", capability_id: "c1", level_code: "CAP_L1" },
+            { id: "l2", capability_id: "c1", level_code: "CAP_L2" },
+          ],
+        },
+        modules: {
+          data: [
+            { id: "m1", level_id: "l1" },
+            { id: "m2", level_id: "l1" },
+            { id: "m3", level_id: "l2" },
+          ],
+        },
+        user_module_progress: {
+          data: [
+            { module_id: "m1", module_status: "completed", completion_percentage: 100 },
+            { module_id: "m2", module_status: "completed", completion_percentage: 100 },
+          ],
+        },
+      });
+
+      await expect(getUserCapabilityProgressSummaries(supabase, "user-1", ["c1"])).resolves.toEqual(
+        {
+          c1: {
+            currentLevel: 1,
+            status: "in_progress",
+            progress: 50,
+          },
+        },
+      );
     });
   });
 

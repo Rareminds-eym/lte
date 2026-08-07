@@ -20,21 +20,39 @@ export async function callOpenRouterAI(
     "X-Title": DEFAULT_OPENROUTER_SITE_NAME,
   };
 
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(requestPayload),
-  });
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
 
-  if (!response.ok) {
-    throw new Error(`OpenRouter API error [${response.status}]: ${await response.text()}`);
+    let response: Response;
+    try {
+      response = await fetch(OPENROUTER_API_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestPayload),
+        signal: AbortSignal.timeout(30_000),
+      });
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      continue;
+    }
+
+    if (!response.ok) {
+      const message = `OpenRouter API error [${response.status}]: ${await response.text()}`;
+      if (response.status === 429 || response.status >= 500) {
+        lastError = new Error(message);
+        continue;
+      }
+      throw new Error(message);
+    }
+
+    const data = (await response.json()) as OpenRouterChatResponse;
+    if (data.error) throw new Error(`OpenRouter returned error: ${data.error.message}`);
+
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("OpenRouter API returned an empty response content.");
+
+    return content;
   }
-
-  const data = (await response.json()) as OpenRouterChatResponse;
-  if (data.error) throw new Error(`OpenRouter returned error: ${data.error.message}`);
-
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("OpenRouter API returned an empty response content.");
-
-  return content;
+  throw lastError ?? new Error("OpenRouter request failed.");
 }

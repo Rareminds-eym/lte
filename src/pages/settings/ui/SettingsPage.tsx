@@ -8,7 +8,8 @@ import {
   useSettingsProfile,
   useUpdateProfile,
 } from "@/entities/settings";
-import { Button, RouteContentSkeleton, TextField, ToggleSwitch, toast } from "@/shared/ui";
+import { Button, TextField, ToggleSwitch, toast } from "@/shared/ui";
+import { SettingsPageSkeleton } from "./SettingsPageSkeleton";
 
 // ─── Section Icon Components ────────────────────────────────────────────────
 
@@ -273,7 +274,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return <RouteContentSkeleton />;
+    return <SettingsPageSkeleton />;
   }
 
   if (isError || !profile) {

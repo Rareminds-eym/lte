@@ -27,8 +27,8 @@ function chainable(resolveVal: unknown = null, errorVal: unknown = null) {
   const chain: Chainable = {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
-    order: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
-    in: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
+    order: vi.fn().mockImplementation(() => chain),
+    in: vi.fn().mockImplementation(() => chain),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
@@ -108,23 +108,12 @@ describe("GET /api/v1/capabilities/user", () => {
           );
         }
         if (table === "levels") {
-          const levelsChain: Chainable = {
-            select: vi.fn().mockImplementation(() => levelsChain),
-            order: vi.fn().mockResolvedValue({ data: null, error: null }),
-            eq: vi.fn().mockImplementation(() => levelsChain),
-            single: vi.fn().mockResolvedValue({ data: null, error: null }),
-            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-            in: vi
-              .fn()
-              .mockResolvedValue({ data: [{ capability_id: "cap-1", id: 1 }], error: null }),
-            // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
-            then: vi
-              .fn()
-              .mockImplementation((resolve) =>
-                Promise.resolve({ data: null, error: null }).then(resolve),
-              ),
-          };
-          return levelsChain;
+          return chainable([
+            { capability_id: "cap-1", id: "level-1", level_code: "L1", total_xp: 100 },
+          ]);
+        }
+        if (table === "modules") {
+          return chainable([]);
         }
         return chainable(null);
       }),

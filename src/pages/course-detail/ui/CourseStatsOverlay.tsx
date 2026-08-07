@@ -4,7 +4,7 @@ import { SegmentedProgressBar } from "@/shared/ui";
 export interface CourseStatsOverlayProps {
   totalDuration: string;
   xpAvailable: string;
-  unlockedLevels: number;
+  completedLevels: number;
   totalLevels: number;
   targetLevel: string;
 }
@@ -12,7 +12,7 @@ export interface CourseStatsOverlayProps {
 export const CourseStatsOverlay: React.FC<CourseStatsOverlayProps> = ({
   totalDuration,
   xpAvailable,
-  unlockedLevels,
+  completedLevels,
   totalLevels,
   targetLevel,
 }) => {
@@ -64,7 +64,7 @@ export const CourseStatsOverlay: React.FC<CourseStatsOverlayProps> = ({
         <div className="flex-1 max-w-md">
           <div className="flex items-center justify-between gap-2 mb-2 text-xs">
             <span className="font-semibold text-brand-600">
-              Level {unlockedLevels} of {totalLevels} unlocked
+              Level {completedLevels} of {totalLevels} completed
             </span>
             <span className="font-bold uppercase tracking-wider text-content-secondary">
               TARGET: {targetLevel}
@@ -73,7 +73,7 @@ export const CourseStatsOverlay: React.FC<CourseStatsOverlayProps> = ({
 
           {/* Segmented progress bar */}
           <SegmentedProgressBar
-            currentLevel={unlockedLevels}
+            currentLevel={completedLevels}
             totalLevels={totalLevels}
             heightClassName="h-2"
             gapClassName="gap-1.5"

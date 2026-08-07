@@ -166,6 +166,7 @@ export async function completeStage(
   supabase: SupabaseClient,
   userId: string,
   modulesContentId: string,
+  eContentId?: string,
 ): Promise<{ success: boolean; xpAwarded: number; userStageProgressId: string }> {
   // 1. Fetch modules content stage details
   const { data: stageContent, error: stageError } = await supabase
@@ -179,15 +180,21 @@ export async function completeStage(
   }
 
   // 2. Resolve e_content ID for this modules_content stage (Required NOT NULL for stage progress)
-  const { data: content, error: contentError } = await supabase
-    .from("e_content")
-    .select("id")
-    .eq("modules_content_id", modulesContentId)
-    .limit(1)
-    .maybeSingle();
+  let content = eContentId ? { id: eContentId } : null;
 
-  if (contentError || !content) {
-    throw new Error(`Associated e_content item not found for stage: ${modulesContentId}`);
+  if (!content) {
+    const { data: contentData, error: contentError } = await supabase
+      .from("e_content")
+      .select("id")
+      .eq("modules_content_id", modulesContentId)
+      .limit(1)
+      .maybeSingle();
+
+    if (contentError || !contentData) {
+      throw new Error(`Associated e_content item not found for stage: ${modulesContentId}`);
+    }
+
+    content = contentData;
   }
 
   // 3. Fetch or Create user_module_progress

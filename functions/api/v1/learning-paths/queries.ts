@@ -1,9 +1,19 @@
+import { apiLogger } from "@functions/lib/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface ActiveTrackRole {
   roleId: string;
   roleName: string;
   learningPathId: string;
+}
+
+export interface CareerTrackItem {
+  id: string;
+  title: string;
+  matchPercentage?: number;
+  isExplore?: boolean;
+  isSelected?: boolean;
+  fit?: string;
 }
 
 export interface ActiveTrackDetail {
@@ -13,6 +23,9 @@ export interface ActiveTrackDetail {
   matchScore: number;
   whyItFits: string;
   roles: ActiveTrackRole[];
+  tracks: CareerTrackItem[];
+  overallProgress: number;
+  completionCount: number;
 }
 
 export async function getActiveLearningTrack(
@@ -28,6 +41,7 @@ export async function getActiveLearningTrack(
     .maybeSingle();
 
   if (trackError) {
+    apiLogger.error("Failed to fetch active learning track", trackError);
     throw new Error(`Failed to fetch active learning track: ${trackError.message}`);
   }
 
@@ -46,6 +60,7 @@ export async function getActiveLearningTrack(
     .eq("learning_track_id", trackData.id);
 
   if (pathsError) {
+    apiLogger.error("Failed to fetch paths for active track", pathsError);
     throw new Error(`Failed to fetch paths for active track: ${pathsError.message}`);
   }
 
@@ -58,6 +73,31 @@ export async function getActiveLearningTrack(
     };
   });
 
+  // 3. Fetch all recommended tracks for the user
+  const { data: tracksData, error: tracksError } = await supabase
+    .from("learning_tracks")
+    .select("id, track, fit, match_score, is_active")
+    .eq("user_id", userId)
+    .order("match_score", { ascending: false });
+
+  if (tracksError) {
+    apiLogger.error("Failed to fetch all learning tracks for user", tracksError);
+    throw new Error(`Failed to fetch all learning tracks for user: ${tracksError.message}`);
+  }
+
+  const tracks = (Array.isArray(tracksData) ? tracksData : tracksData ? [tracksData] : []).map(
+    (t) => ({
+      id: t.id,
+      title: t.track,
+      matchPercentage: t.match_score,
+      isExplore: t.fit === "Explore",
+      isSelected: t.is_active,
+      fit: t.fit,
+    }),
+  );
+
+  const stats = await getTrackProgressStats(supabase, userId, trackData.id);
+
   return {
     learningTrackId: trackData.id,
     track: trackData.track,
@@ -65,13 +105,101 @@ export async function getActiveLearningTrack(
     matchScore: trackData.match_score,
     whyItFits: trackData.why_it_fits ?? "",
     roles,
+    tracks,
+    overallProgress: stats.overallProgress,
+    completionCount: stats.completionCount,
   };
+}
+
+export async function getTrackProgressStats(
+  supabase: SupabaseClient,
+  userId: string,
+  trackId: string,
+): Promise<{ overallProgress: number; completionCount: number }> {
+  // 1. Fetch all learning paths (roles) under this track
+  const { data: paths, error: pathsError } = await supabase
+    .from("learning_paths")
+    .select("id")
+    .eq("learning_track_id", trackId);
+
+  if (pathsError) {
+    apiLogger.error("Failed to fetch learning paths for progress calculations", pathsError);
+    throw new Error(
+      `Failed to fetch learning paths for progress calculations: ${pathsError.message}`,
+    );
+  }
+
+  if (!paths || paths.length === 0) {
+    return { overallProgress: 0, completionCount: 0 };
+  }
+
+  const pathIds = paths.map((p) => p.id);
+
+  // 2. Fetch all user capabilities for these paths
+  const { data: userCaps, error: capsError } = await supabase
+    .from("user_capabilities")
+    .select("learning_path_id, current_level, required_level, has_gap")
+    .eq("user_id", userId)
+    .in("learning_path_id", pathIds);
+
+  if (capsError) {
+    apiLogger.error("Failed to fetch user capabilities for progress calculations", capsError);
+    throw new Error(
+      `Failed to fetch user capabilities for progress calculations: ${capsError.message}`,
+    );
+  }
+
+  if (!userCaps || userCaps.length === 0) {
+    return { overallProgress: 0, completionCount: 0 };
+  }
+
+  // 3. Compute overall progress using:
+  // overallProgress = SUM(min(current_level, required_level)) / SUM(required_level) * 100
+  let totalRequiredLevels = 0;
+  let totalCurrentLevelsClamped = 0;
+
+  for (const cap of userCaps) {
+    const req = cap.required_level ?? 1;
+    const cur = cap.current_level ?? 0;
+    totalRequiredLevels += req;
+    totalCurrentLevelsClamped += Math.min(cur, req);
+  }
+
+  const overallProgress =
+    totalRequiredLevels > 0
+      ? Math.round((totalCurrentLevelsClamped / totalRequiredLevels) * 100)
+      : 0;
+
+  // 4. Compute completion count:
+  // Number of learning paths (roles) where all capability gaps are cleared (i.e. no capability has has_gap = true)
+  const pathGaps: Record<string, boolean> = {}; // learning_path_id -> has_any_gaps
+
+  for (const pathId of pathIds) {
+    pathGaps[pathId] = false;
+  }
+
+  for (const cap of userCaps) {
+    if (cap.has_gap) {
+      pathGaps[cap.learning_path_id] = true;
+    }
+  }
+
+  let completionCount = 0;
+  for (const pathId of pathIds) {
+    const capsForPath = userCaps.filter((c) => c.learning_path_id === pathId);
+    if (capsForPath.length > 0 && !pathGaps[pathId]) {
+      completionCount++;
+    }
+  }
+
+  return { overallProgress, completionCount };
 }
 
 export async function checkRoleExists(supabase: SupabaseClient, roleId: string): Promise<boolean> {
   const { data, error } = await supabase.from("roles").select("id").eq("id", roleId).maybeSingle();
 
   if (error) {
+    apiLogger.error("Failed to check role existence", error);
     throw new Error(`Failed to check role existence: ${error.message}`);
   }
 
@@ -130,12 +258,14 @@ export async function upsertLearningTrack(
       .single();
 
     if (updateError) {
+      apiLogger.error("Failed to update learning track", updateError);
       throw new Error(`Failed to update learning track: ${updateError.message}`);
     }
 
     return updated.id;
   }
 
+  apiLogger.error("Failed to upsert learning track", insertError);
   throw new Error(`Failed to upsert learning track: ${insertError.message}`);
 }
 
@@ -150,6 +280,7 @@ export async function deactivateOtherTracks(
     .eq("is_active", true);
 
   if (error) {
+    apiLogger.error("Failed to deactivate other active tracks", error);
     throw new Error(`Failed to deactivate other active tracks: ${error.message}`);
   }
 }
@@ -168,7 +299,29 @@ export async function activateLearningTrack(
     .eq("id", trackId);
 
   if (error) {
+    apiLogger.error("Failed to activate learning track", error);
     throw new Error(`Failed to activate learning track: ${error.message}`);
+  }
+
+  // Fetch all learning paths for this newly activated track and sync capabilities
+  const { data: paths, error: pathsError } = await supabase
+    .from("learning_paths")
+    .select("id, role_id")
+    .eq("learning_track_id", trackId);
+
+  if (pathsError) {
+    apiLogger.error("Failed to fetch learning paths for capability sync", pathsError);
+    throw new Error(`Failed to fetch learning paths for capability sync: ${pathsError.message}`);
+  }
+
+  if (paths) {
+    for (const path of paths) {
+      await syncUserCapabilities(supabase, {
+        userId,
+        learningPathId: path.id,
+        roleId: path.role_id,
+      });
+    }
   }
 }
 
@@ -206,6 +359,7 @@ export async function upsertLearningPath(
       .maybeSingle();
 
     if (updateError || !updated) {
+      apiLogger.error("Failed to retrieve existing learning path", updateError);
       throw new Error(
         `Failed to retrieve existing learning path: ${updateError?.message ?? "Not found"}`,
       );
@@ -214,6 +368,7 @@ export async function upsertLearningPath(
     return updated.id;
   }
 
+  apiLogger.error("Failed to upsert learning path", insertError);
   throw new Error(`Failed to upsert learning path: ${insertError.message}`);
 }
 
@@ -232,6 +387,7 @@ export async function syncUserCapabilities(
     .eq("role_id", params.roleId);
 
   if (seqError) {
+    apiLogger.error("Failed to query role capability sequences", seqError);
     throw new Error(`Failed to query role capability sequences: ${seqError.message}`);
   }
 
@@ -246,6 +402,7 @@ export async function syncUserCapabilities(
     .eq("user_id", params.userId);
 
   if (capError) {
+    apiLogger.error("Failed to query existing user capabilities", capError);
     throw new Error(`Failed to query existing user capabilities: ${capError.message}`);
   }
 
@@ -289,6 +446,7 @@ export async function syncUserCapabilities(
     .upsert(rows, { onConflict: "user_id,role_sequence_id" });
 
   if (upsertError) {
+    apiLogger.error("Failed to upsert user capabilities", upsertError);
     throw new Error(`Failed to upsert user capabilities: ${upsertError.message}`);
   }
 }

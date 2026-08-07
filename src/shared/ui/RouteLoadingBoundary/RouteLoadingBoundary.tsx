@@ -23,4 +23,8 @@ interface RouteLoadingBoundaryProps {
 export const RouteLoadingBoundary: React.FC<RouteLoadingBoundaryProps> = ({
   children,
   fallback,
-}) => <Suspense fallback={fallback ?? <RouteContentSkeleton />}>{children}</Suspense>;
+}) => (
+  <Suspense fallback={fallback !== undefined ? fallback : <RouteContentSkeleton />}>
+    {children}
+  </Suspense>
+);

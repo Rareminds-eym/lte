@@ -174,7 +174,7 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
       xpAwarded: 5,
       totalXp: 430,
     });
-    expect(completeStage).toHaveBeenCalledWith(expect.anything(), "user-1", "mc-1");
+    expect(completeStage).toHaveBeenCalledWith(expect.anything(), "user-1", "mc-1", eContentId);
     expect(getUserTotalXp).toHaveBeenCalledWith(expect.anything(), "user-1");
   });
 
@@ -259,6 +259,7 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
       eContentId,
       "engage",
       "in_progress",
+      undefined,
     );
   });
 

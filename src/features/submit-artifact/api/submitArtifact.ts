@@ -19,7 +19,7 @@ export interface SubmitArtifactResponse {
   attempt_no: number;
   version_label: string;
   submitted_at: string | null;
-  status: "submitted" | "accepted" | "resubmission_required";
+  status: "submitted" | "accepted" | "resubmission_required" | "human_review";
   evaluation_status: "pending" | "completed";
   evaluation?: {
     overall_score: number;

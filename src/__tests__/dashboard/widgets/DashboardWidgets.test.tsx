@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MOCK_DASHBOARD_DATA } from "@/entities/dashboard";
 
 import {
@@ -12,6 +12,36 @@ import {
   TodaysPriorities,
   UpcomingFeedback,
 } from "@/widgets";
+
+vi.mock("@/entities/active-learning-path", () => ({
+  useLearningPathStore: Object.assign(
+    vi.fn().mockImplementation((selector) => {
+      const mockState = {
+        activeTrack: null,
+        activeLearningPathLoading: false,
+        switchActiveTrack: vi.fn().mockResolvedValue(undefined),
+      };
+      return selector(mockState);
+    }),
+    {
+      getState: () => ({
+        activeTrack: null,
+        activeLearningPathLoading: false,
+        switchActiveTrack: vi.fn().mockResolvedValue(undefined),
+      }),
+    },
+  ),
+}));
+
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return {
+    ...actual,
+    useQueryClient: () => ({
+      invalidateQueries: vi.fn().mockResolvedValue(undefined),
+    }),
+  };
+});
 
 describe("Dashboard Widgets", () => {
   it("renders CareerTargetBanner with readiness stats and gamification metrics", () => {
@@ -94,9 +124,13 @@ describe("Dashboard Widgets", () => {
   });
 
   it("renders CareerPaths with track explorer and match stats", () => {
-    render(<CareerPaths data={MOCK_DASHBOARD_DATA.careerPaths} />);
+    render(
+      <MemoryRouter>
+        <CareerPaths data={MOCK_DASHBOARD_DATA.careerPaths} />
+      </MemoryRouter>,
+    );
     expect(screen.getByText("Recommended Career Paths")).toBeInTheDocument();
-    expect(screen.getByText("Track Explorer")).toBeInTheDocument();
+    expect(screen.getByText("Track A")).toBeInTheDocument();
     expect(screen.getByText("WHY IT FITS")).toBeInTheDocument();
     expect(screen.getByText("6")).toBeInTheDocument();
     expect(screen.getByText("80%")).toBeInTheDocument();

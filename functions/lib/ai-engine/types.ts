@@ -34,17 +34,19 @@ export interface SubmissionCheckResult {
 }
 
 export interface AIDebugTelemetry {
-  timestamp: string;
-  latencyMs: number;
-  modelUsed: string;
   provider: "openrouter" | "fallback";
-  rawPromptContent: string;
-  rawResponseContent: string;
+  latencyMs: number | null;
+  modelUsed: string;
+  timestamp: string;
   stage1Check: SubmissionCheckResult;
   stage2Failures: CriticalFailureCheckResult;
-  wasDecisionOverridden: boolean;
-  validatedDecision: LteDecisionResult;
   calculatedXp: number;
+  rawPromptContent: string | null;
+  rawResponseContent: string | null;
+  validatedDecision: LteDecisionResult;
+  wasDecisionOverridden: boolean;
+  extractionCharCounts: Record<string, number>;
+  promptCharCount: number | null;
 }
 
 export interface AIEvaluationResult {
