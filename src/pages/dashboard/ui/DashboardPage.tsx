@@ -1,6 +1,8 @@
 import type React from "react";
+import { useMemo, useState } from "react";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useDashboardData } from "@/entities/dashboard";
+import { XpRewardModal } from "@/features/xp-reward";
 import { DashboardContent } from "@/widgets/dashboard";
 import { LearningPathEmptyState } from "@/widgets/learning-path";
 import { DashboardSkeleton } from "./DashboardSkeleton";
@@ -10,6 +12,39 @@ export const DashboardPage: React.FC = () => {
   const activeTrack = useLearningPathStore((s) => s.activeTrack);
   const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
   const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
+
+  const [dismissedEventIds, setDismissedEventIds] = useState<string[]>([]);
+
+  const currentShowEvent = useMemo(() => {
+    if (!data?.todayEvents || data.todayEvents.length === 0) return null;
+    try {
+      const shownIdsRaw = localStorage.getItem("lte-shown-xp-event-ids");
+      const shownIds: string[] = shownIdsRaw ? JSON.parse(shownIdsRaw) : [];
+      return (
+        data.todayEvents.find(
+          (event) => !shownIds.includes(event.id) && !dismissedEventIds.includes(event.id),
+        ) || null
+      );
+    } catch {
+      return null;
+    }
+  }, [data?.todayEvents, dismissedEventIds]);
+
+  const handleCloseXpModal = () => {
+    if (currentShowEvent) {
+      try {
+        const shownIdsRaw = localStorage.getItem("lte-shown-xp-event-ids");
+        const shownIds: string[] = shownIdsRaw ? JSON.parse(shownIdsRaw) : [];
+        if (!shownIds.includes(currentShowEvent.id)) {
+          shownIds.push(currentShowEvent.id);
+          localStorage.setItem("lte-shown-xp-event-ids", JSON.stringify(shownIds));
+        }
+      } catch {
+        // Ignore error
+      }
+      setDismissedEventIds((prev) => [...prev, currentShowEvent.id]);
+    }
+  };
 
   // Loading state: use the structured DashboardSkeleton to prevent layout shift on initial load only
   if ((isPending && !data) || (activeLearningPathLoading && !data)) {
@@ -72,5 +107,19 @@ export const DashboardPage: React.FC = () => {
         }
       : data;
 
-  return <DashboardContent data={mergedData || data} />;
+  return (
+    <>
+      <DashboardContent data={mergedData || data} />
+      {currentShowEvent && (
+        <XpRewardModal
+          isOpen={true}
+          xpAmount={currentShowEvent.xp_amount}
+          totalXp={data?.careerTarget.xp ?? 0}
+          stageName={currentShowEvent.event_type}
+          onClose={handleCloseXpModal}
+          xpCategory="engagement"
+        />
+      )}
+    </>
+  );
 };

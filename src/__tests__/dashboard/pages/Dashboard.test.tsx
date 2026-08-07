@@ -22,26 +22,37 @@ const createTestQueryClient = () =>
 describe("Dashboard Page", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.mocked(apiFetch)
-      .mockResolvedValueOnce({ success: true, totalXp: 1240, xpThisWeek: 120, todayXp: 20 })
-      .mockResolvedValueOnce({
-        success: true,
-        state: "active",
-        data: {
-          levelId: "lvl-1",
-          capabilityCode: "CAP037",
-          capability: "Support exchange handoffs",
-          title: "Before You Trust the Answer",
-          moduleInfo: "Module 1 of 2",
-          output: "Root-cause analysis artifact",
-          whyItMatters: "Northstar Retail needs a safe review handoff.",
-          progressPercentage: 34,
-          completedCount: 0,
-          inProgressCount: 1,
-          remainingCount: 1,
-          moduleNo: 0,
-        },
-      });
+    vi.mocked(apiFetch).mockImplementation((url: string) => {
+      if (url.includes("/api/v1/dashboard/xp")) {
+        return Promise.resolve({
+          success: true,
+          totalXp: 1240,
+          xpThisWeek: 120,
+          todayXp: 20,
+        });
+      }
+      if (url.includes("/api/v1/dashboard/journey")) {
+        return Promise.resolve({
+          success: true,
+          state: "active",
+          data: {
+            levelId: "lvl-1",
+            capabilityCode: "CAP037",
+            capability: "Support exchange handoffs",
+            title: "Before You Trust the Answer",
+            moduleInfo: "Module 1 of 2",
+            output: "Root-cause analysis artifact",
+            whyItMatters: "Northstar Retail needs a safe review handoff.",
+            progressPercentage: 34,
+            completedCount: 0,
+            inProgressCount: 1,
+            remainingCount: 1,
+            moduleNo: 0,
+          },
+        });
+      }
+      return Promise.reject(new Error(`Unhandled apiFetch: ${url}`));
+    });
   });
 
   it("renders full dashboard widgets when data resolves", async () => {
@@ -64,5 +75,66 @@ describe("Dashboard Page", () => {
     expect(screen.getByText("Upcoming & Feedback")).toBeInTheDocument();
     expect(screen.getByText("Recommended Career Paths")).toBeInTheDocument();
     expect(screen.getByText("Achievements")).toBeInTheDocument();
+  });
+
+  it("renders XpRewardModal when there is an unshown daily login event", async () => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+    vi.mocked(apiFetch).mockImplementation((url: string) => {
+      if (url.includes("/api/v1/dashboard/xp")) {
+        return Promise.resolve({
+          success: true,
+          totalXp: 1240,
+          xpThisWeek: 120,
+          todayXp: 20,
+          todayEvents: [
+            {
+              id: "evt-login-123",
+              event_type: "daily_login",
+              xp_amount: 1,
+              metadata: { login_date: "2026-08-07" },
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/dashboard/journey")) {
+        return Promise.resolve({
+          success: true,
+          state: "active",
+          data: null,
+        });
+      }
+      return Promise.reject(new Error(`Unhandled apiFetch: ${url}`));
+    });
+
+    const queryClient = createTestQueryClient();
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <Dashboard />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+
+    // Verify XpRewardModal is rendered with +1 XP Earned!
+    await waitFor(() => {
+      expect(screen.getByText("+1")).toBeInTheDocument();
+    });
+    expect(screen.getByText("XP Earned!")).toBeInTheDocument();
+    expect(
+      screen.getByText(/You earned engagement XP for your daily active login/),
+    ).toBeInTheDocument();
+
+    // Click continue button to close
+    const continueBtn = screen.getByRole("button", { name: /Continue/i });
+    continueBtn.click();
+
+    // Verify it is closed and stored in localStorage
+    await waitFor(() => {
+      expect(screen.queryByText("+1")).not.toBeInTheDocument();
+    });
+    expect(JSON.parse(localStorage.getItem("lte-shown-xp-event-ids") ?? "[]")).toContain(
+      "evt-login-123",
+    );
   });
 });

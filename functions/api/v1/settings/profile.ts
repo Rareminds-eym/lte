@@ -3,6 +3,7 @@ import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { completeProfile } from "@functions/lib/xp-engine";
 import { ProfileUpdateSchema } from "./schemas";
 
 export interface SettingsProfileResponse {
@@ -248,6 +249,14 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
     };
 
     const profileStrength = calculateProfileStrength(rawProfile);
+
+    // Fire-and-forget: award +50 XP when profile reaches 100% completion.
+    // Idempotency key (profile:{userId}) ensures this is only ever awarded once.
+    if (profileStrength === 100) {
+      completeProfile(supabase, userId).catch((err) => {
+        apiLogger.error("[XP] profile_completed award failed", err, { userId });
+      });
+    }
 
     return jsonResponse<SettingsProfileResponse>({
       success: true,

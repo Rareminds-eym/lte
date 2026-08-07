@@ -6,7 +6,7 @@ import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
 import { z } from "zod";
-import { upsertStageProgress } from "../../../../queries";
+import { recalculateLevelProgress, upsertStageProgress } from "../../../../queries";
 import { LevelModuleParamsSchema } from "../../../../schemas";
 
 const StageProgressBodySchema = z.object({
@@ -62,6 +62,8 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     let progressData: Record<string, unknown>;
     let xpAwarded = 0;
     let totalXp = 0;
+    let levelCompleted = false;
+    let levelXpAwarded = 0;
 
     if (status === "completed") {
       // 1. Resolve modules_content_id from e_content
@@ -78,14 +80,47 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
         });
       }
 
+      // Query level progress status before recalculation
+      const { data: levelProgressBefore } = await supabase
+        .from("user_capability_level_progress")
+        .select("status")
+        .eq("user_id", userId)
+        .eq("level_id", levelId)
+        .maybeSingle();
+
+      const wasLevelCompleted = levelProgressBefore?.status === "completed";
+
       // 2. Call completeStage from the unified XP engine
-      const xpResult = await completeStage(
-        supabase,
-        userId,
-        eContent.modules_content_id,
-        eContentId,
-      );
+      const xpResult = await completeStage(supabase, userId, eContent.modules_content_id);
       xpAwarded = xpResult.xpAwarded;
+
+      // Recalculate level progress to trigger level completions and on-time rewards
+      await recalculateLevelProgress(supabase, userId, levelId);
+
+      // Query level progress status and XP events after recalculation
+      const { data: levelProgressAfter } = await supabase
+        .from("user_capability_level_progress")
+        .select("id, status")
+        .eq("user_id", userId)
+        .eq("level_id", levelId)
+        .maybeSingle();
+
+      const isLevelCompleted = levelProgressAfter?.status === "completed";
+      if (isLevelCompleted && !wasLevelCompleted && levelProgressAfter?.id) {
+        levelCompleted = true;
+        const { data: xpEvent } = await supabase
+          .from("xp_events")
+          .select("xp_amount")
+          .eq("user_id", userId)
+          .eq("event_type", "course_completed_on_time")
+          .eq("source_id", levelProgressAfter.id)
+          .maybeSingle();
+
+        if (xpEvent) {
+          levelXpAwarded = xpEvent.xp_amount;
+        }
+      }
+
       totalXp = await getUserTotalXp(supabase, userId);
 
       // 3. Fetch the updated progress counters from user_module_progress to return to client
@@ -148,6 +183,9 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       ...progressData,
       xpAwarded,
       totalXp,
+      xpCategory: "evidence",
+      levelCompleted,
+      levelXpAwarded,
     });
   } catch (error) {
     if (error instanceof AuthError) {

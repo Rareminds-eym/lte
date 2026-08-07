@@ -1,0 +1,82 @@
+import { AuthError, requireAuth } from "@functions/lib/auth";
+import { jsonError, jsonResponse } from "@functions/lib/http";
+import { apiLogger } from "@functions/lib/logger";
+import { createServiceSupabase } from "@functions/lib/supabase";
+import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { calculateReadiness } from "@functions/lib/xp-engine.progress";
+
+// In-memory sliding window rate limiter
+// Key: userId, Value: timestamps of calls in the last 60 seconds
+const rateLimiterCache = new Map<string, number[]>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const timestamps = rateLimiterCache.get(userId) || [];
+  // Keep only timestamps within the last 60 seconds
+  const recent = timestamps.filter((t) => now - t < 60000);
+  if (recent.length >= 5) {
+    return false; // Limit exceeded
+  }
+  recent.push(now);
+  rateLimiterCache.set(userId, recent);
+  return true;
+}
+
+export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
+  const requestId = crypto.randomUUID();
+  try {
+    const user = await requireAuth(context.request, context.env);
+    const userId = user.sub;
+
+    // Enforce 5 calls/minute per user rate limit
+    if (!checkRateLimit(userId)) {
+      return jsonError(
+        "Too many calculation requests. Strictly rate-limited to 5 calls/minute.",
+        429,
+        {
+          code: "RATE_LIMIT_EXCEEDED",
+          requestId,
+        },
+      );
+    }
+
+    const supabase = createServiceSupabase(context.env);
+
+    // Fetch the user's latest active learning path
+    const { data: path, error: pathError } = await supabase
+      .from("learning_paths")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("is_latest", true)
+      .maybeSingle();
+
+    if (pathError) throw pathError;
+
+    if (!path) {
+      return jsonResponse({
+        success: false,
+        message: "No active learning path found for this user",
+      });
+    }
+
+    // Trigger calculation
+    const result = await calculateReadiness(supabase, userId, path.id);
+
+    return jsonResponse({
+      success: true,
+      readinessScore: result.readinessScore,
+      band: result.band,
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return jsonError(error.message, error.code === "UNAUTHORIZED" ? 401 : 403, {
+        code: error.code,
+        requestId,
+      });
+    }
+
+    apiLogger.error("Failed to execute manual readiness recalculation", error, { requestId });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+  }
+}

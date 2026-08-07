@@ -1,3 +1,4 @@
+import { apiLogger } from "@functions/lib/logger";
 import {
   assertStageSequenceAllowed,
   getStageCompletionPercentage,
@@ -287,7 +288,7 @@ export async function upsertModuleProgress(
   return inserted.id;
 }
 
-async function recalculateLevelProgress(
+export async function recalculateLevelProgress(
   supabase: SupabaseClient,
   userId: string,
   levelId: string,
@@ -335,6 +336,16 @@ async function recalculateLevelProgress(
   const isCompleted = completedModules >= moduleIds.length;
   const now = new Date().toISOString();
 
+  // Query previous status
+  const { data: currentProgress } = await supabase
+    .from("user_capability_level_progress")
+    .select("id, status")
+    .eq("user_id", userId)
+    .eq("level_id", levelId)
+    .maybeSingle();
+
+  const wasCompleted = currentProgress?.status === "completed";
+
   const { error: updateError } = await supabase
     .from("user_capability_level_progress")
     .update({
@@ -348,6 +359,50 @@ async function recalculateLevelProgress(
 
   if (updateError) {
     throw new Error(`Failed to update level progress recalculation: ${updateError.message}`);
+  }
+
+  // Trigger readiness recalculation on level completion transition
+  if (isCompleted && !wasCompleted && currentProgress?.id) {
+    const { completeCourseOnTime, triggerReadinessRecalculation } = await import(
+      "@functions/lib/xp-engine.progress"
+    );
+
+    try {
+      const { data: levelData } = await supabase
+        .from("levels")
+        .select("duration_minutes")
+        .eq("id", levelId)
+        .single();
+
+      const { data: modProgressRows } = await supabase
+        .from("user_module_progress")
+        .select("id")
+        .eq("user_id", userId)
+        .in("module_id", moduleIds);
+
+      const modProgressIds = modProgressRows?.map((r) => r.id) || [];
+      let totalTimeSpent = 0;
+
+      if (modProgressIds.length > 0) {
+        const { data: stageProgressRows } = await supabase
+          .from("user_stage_progress")
+          .select("time_spent_seconds")
+          .in("user_module_progress_id", modProgressIds);
+
+        totalTimeSpent = (stageProgressRows || []).reduce(
+          (sum, r) => sum + (r.time_spent_seconds || 0),
+          0,
+        );
+      }
+
+      if (totalTimeSpent <= (levelData?.duration_minutes || 0) * 60) {
+        await completeCourseOnTime(supabase, userId, currentProgress.id, levelId);
+      }
+    } catch (err) {
+      apiLogger.error("Failed to check on-time course completion", err);
+    }
+
+    await triggerReadinessRecalculation(supabase, userId).catch(() => null);
   }
 }
 
