@@ -351,14 +351,7 @@ export const LevelContentPage: React.FC = () => {
     );
   }
 
-  const resolvedLevelId = levelId;
-  if (!resolvedLevelId) {
-    return (
-      <div className="flex h-full w-full items-center justify-center bg-surface-secondary p-4">
-        {renderUnavailableState(LEVEL_CONTENT_UNAVAILABLE_MESSAGE)}
-      </div>
-    );
-  }
+  const resolvedLevelId = levelId as string;
 
   const completedStages = Array.from(
     new Set([...(levelModule.completedStages || []), ...optimisticCompletedStages]),

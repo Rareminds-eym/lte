@@ -1,3 +1,4 @@
+import { normalizeStageName } from "@functions/lib/stage-sequence";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeLevelProblemStatement } from "./queriesHelpers";
 import type { LevelDetailsResponse, LevelModuleSummary, LevelRow } from "./types";
@@ -120,7 +121,7 @@ export async function getLevelWithModules(
             .eq("status", "completed");
 
           if (stages) {
-            entry.completedStages = stages.map((s) => s.stage_name.toLowerCase());
+            entry.completedStages = stages.map((s) => normalizeStageName(s.stage_name));
           }
         }
       }
