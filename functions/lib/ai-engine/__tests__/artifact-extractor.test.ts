@@ -95,6 +95,83 @@ function buildSpreadsheetFileWithSheets(sheets: Array<[string, (string | number)
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
   return new File([buffer], "multi.xlsx");
 }
+
+function u16le(value: number): number[] {
+  return [value & 0xff, (value >> 8) & 0xff];
+}
+
+function u32le(value: number): number[] {
+  return [value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff];
+}
+
+/** Minimal zip whose central directory declares the given uncompressed sizes. */
+function buildZipBuffer(
+  entries: Array<{ name: string; compressedSize: number; uncompressedSize: number }>,
+): Uint8Array {
+  const bytes: number[] = [];
+  for (const entry of entries) {
+    const nameBytes = [...new TextEncoder().encode(entry.name)];
+    bytes.push(
+      0x50,
+      0x4b,
+      0x01,
+      0x02, // central directory signature
+      0x14,
+      0x00,
+      0x14,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      ...u32le(entry.compressedSize),
+      ...u32le(entry.uncompressedSize),
+      ...u16le(nameBytes.length),
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      ...nameBytes,
+    );
+  }
+  const dirSize = bytes.length;
+  bytes.push(
+    0x50,
+    0x4b,
+    0x05,
+    0x06, // EOCD signature
+    ...u16le(0),
+    ...u16le(0),
+    ...u16le(entries.length),
+    ...u16le(entries.length),
+    ...u32le(dirSize),
+    ...u32le(0),
+    ...u16le(0),
+  );
+  return new Uint8Array(bytes);
+}
 describe("ai-engine / artifact-extractor", () => {
   describe("normalizeArtifactExtension", () => {
     it("extracts a lowercase extension from a file name", () => {
@@ -114,6 +191,10 @@ describe("ai-engine / artifact-extractor", () => {
       expect(result.extractedText).toContain("C-001");
       expect(result.extractedText).toContain("Incident log 2026-07");
       expect(result.extractedText).toContain("--- Sheet: Readiness ---");
+      expect(result.extractedText).toContain("Header:");
+      expect(result.extractedText).toContain("Claim ID | Evidence source | Confidence");
+      expect(result.extractedText).toContain("Claim ID=C-001");
+      expect(result.extractedText).toContain("Evidence source=Incident log 2026-07");
     });
 
     it("extracts plain text from csv and txt files", async () => {
@@ -122,10 +203,53 @@ describe("ai-engine / artifact-extractor", () => {
       );
       expect(csv.isReadable).toBe(true);
       expect(csv.extractedText).toContain("C-001");
+      expect(csv.extractedText).toContain("claim=C-001");
+      expect(csv.extractedText).toContain("evidence=incident log");
 
       const txt = await extractArtifactContent(new File(["Plain analysis text"], "notes.txt"));
       expect(txt.isReadable).toBe(true);
       expect(txt.extractedText).toBe("Plain analysis text");
+    });
+
+    it("strips a UTF-8 BOM from csv content", async () => {
+      const withBom = new Uint8Array([
+        0xef,
+        0xbb,
+        0xbf,
+        ...new TextEncoder().encode("claim,evidence\nC-001,log"),
+      ]);
+      const result = await extractArtifactContent(new File([withBom], "claims.csv"));
+      expect(result.isReadable).toBe(true);
+      expect(result.extractedText).toContain("claim=C-001");
+      expect(result.extractedText).not.toContain("\uFEFF");
+      expect(result.extractedText).not.toContain("\uFFFD");
+    });
+
+    it("decodes non-latin1 utf-8 csv content correctly", async () => {
+      const utf8 = new TextEncoder().encode("claim,evidence\nC-001,café au lait");
+      const result = await extractArtifactContent(new File([utf8], "claims.csv"));
+      expect(result.isReadable).toBe(true);
+      expect(result.extractedText).toContain("evidence=café au lait");
+      expect(result.extractedText).not.toContain("\uFFFD");
+    });
+
+    it("rejects zip bombs before parsing", async () => {
+      const bomb = buildZipBuffer([
+        { name: "xl/data.bin", compressedSize: 100, uncompressedSize: 50_000_000 },
+      ]);
+      const result = await extractArtifactContent(new File([bomb as BlobPart], "claims.xlsx"));
+      expect(result.isReadable).toBe(false);
+      expect(result.extractedText).toBe("");
+    });
+
+    it("marks row-capped spreadsheets as truncated with the omitted row count", async () => {
+      const rows = [["header", "x"], ...Array.from({ length: 2100 }, (_, i) => [`row-${i}`, "y"])];
+      const file = buildSpreadsheetFile("Big", rows);
+      const result = await extractArtifactContent(file);
+      expect(result.isReadable).toBe(true);
+      expect(result.truncated).toBe(true);
+      expect(result.extractedText).toContain("[CONTENT TRUNCATED]");
+      expect(result.extractedText).toContain("Rows omitted: 101");
     });
 
     it("extracts text from a docx file", async () => {
@@ -224,8 +348,12 @@ describe("ai-engine / artifact-extractor", () => {
       const result = await extractArtifactContent(file);
       expect(result.isReadable).toBe(true);
       expect(result.truncated).toBe(true);
-      expect(result.extractedText.length).toBeLessThanOrEqual(ARTIFACT_TEXT_CAP + 100);
-      expect(result.extractedText).toContain("truncated at");
+      expect(result.extractedText.length).toBeLessThanOrEqual(ARTIFACT_TEXT_CAP + 200);
+      expect(result.extractedText).toContain("[CONTENT TRUNCATED]");
+      expect(result.extractedText).toContain("Original length:");
+      expect(result.extractedText).toContain("Returned length:");
+      expect(result.truncation?.originalLength).toBeGreaterThan(ARTIFACT_TEXT_CAP);
+      expect(result.truncation?.returnedLength).toBe(ARTIFACT_TEXT_CAP);
     });
 
     it("marks scanned/image-only pdfs as unreadable (empty pages must not count)", async () => {
@@ -268,8 +396,10 @@ describe("ai-engine / artifact-extractor", () => {
       const result = await extractArtifactContent(new File([long], "long.txt"));
       expect(result.isReadable).toBe(true);
       expect(result.truncated).toBe(true);
-      expect(result.extractedText.length).toBeLessThanOrEqual(ARTIFACT_TEXT_CAP + 50);
-      expect(result.extractedText).toContain("truncated at");
+      expect(result.extractedText.length).toBeLessThanOrEqual(ARTIFACT_TEXT_CAP + 200);
+      expect(result.extractedText).toContain("[CONTENT TRUNCATED]");
+      expect(result.truncation?.originalLength).toBe(ARTIFACT_TEXT_CAP + 100);
+      expect(result.truncation?.returnedLength).toBe(ARTIFACT_TEXT_CAP);
     });
   });
 });

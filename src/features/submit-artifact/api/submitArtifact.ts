@@ -21,6 +21,8 @@ export interface SubmitArtifactResponse {
   submitted_at: string | null;
   status: "submitted" | "accepted" | "resubmission_required" | "human_review";
   evaluation_status: "pending" | "completed";
+  /** True when the server treated this request as a duplicate of an earlier one. */
+  duplicate?: boolean;
   evaluation?: {
     overall_score: number;
     decision: "pass" | "revise_and_resubmit" | "human_review" | "fail";
@@ -43,7 +45,15 @@ export interface SubmitArtifactResponse {
   }>;
 }
 
-export async function submitArtifact(input: SubmitArtifactInput): Promise<SubmitArtifactResponse> {
+/**
+ * P0-2: an idempotency key is generated once per logical submission attempt
+ * and reused across automatic network retries, so a retried request never
+ * creates a duplicate submission server-side.
+ */
+export async function submitArtifact(
+  input: SubmitArtifactInput,
+  idempotencyKey?: string,
+): Promise<SubmitArtifactResponse> {
   const formData = new FormData();
   formData.set(
     "payload",
@@ -66,5 +76,6 @@ export async function submitArtifact(input: SubmitArtifactInput): Promise<Submit
   return apiFetch<SubmitArtifactResponse>("/api/v1/artifacts/submit", {
     method: "POST",
     body: formData,
+    ...(idempotencyKey ? { headers: { "Idempotency-Key": idempotencyKey } } : {}),
   });
 }

@@ -61,6 +61,10 @@ export interface AIEvaluationResult {
   calculatedXp: number;
   modelUsed: string;
   provider: "openrouter" | "fallback";
+  /** True whenever the result came from the deterministic fallback instead of the LLM. */
+  requiresManualReview: boolean;
+  /** "ai" for LLM evaluation, "fallback" for the deterministic rules engine. */
+  evaluationSource: "ai" | "fallback";
   debugTelemetry?: AIDebugTelemetry;
 }
 

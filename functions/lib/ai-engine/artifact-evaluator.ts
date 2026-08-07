@@ -32,45 +32,35 @@ function calculateArtifactXp(isPass: boolean, isPractice: boolean, attemptNo: nu
   return attemptNo === 1 ? 20 : attemptNo === 2 ? 15 : 10;
 }
 
+/**
+ * Deterministic fallback evaluator, used when the LLM is unavailable or fails.
+ *
+ * P0-1: a fallback evaluation must NEVER award XP or mark a submission as
+ * passed. It always routes to human_review with score 0 and XP 0, so a broken
+ * LLM can never be the source of a passing decision.
+ */
 export function generateFallbackEvaluation(input: ArtifactEvaluationInput): AIEvaluationResult {
   const passingThreshold = input.passingScore ?? 60;
   const questionCount = Math.max(1, input.questions.length);
 
-  // False-positive prevention: ensure ALL questions are answered with meaningful content
+  // Assessability signal only - never used to produce a pass decision.
   const validAnswers = input.answers.filter(
     (a) =>
       (a.textResponse && a.textResponse.trim().length >= 10) ||
       (a.urlResponse && a.urlResponse.trim().length >= 5) ||
       (a.fileName && a.fileContentSnippet && a.fileContentSnippet.trim().length >= 10),
   );
-
   const isComplete = validAnswers.length >= questionCount;
-  const isPass = isComplete;
-  const defaultScore = isPass ? 2 : 1;
-  const isPractice = input.artifactType === "practice";
-  const calculatedXp = calculateArtifactXp(isPass, isPractice, input.attemptNo);
 
-  const rubricRows: RubricCriterionResult[] = LTE_CRITERIA.map((label) => {
-    const isCompleteness = label === "Completeness";
-    const score = isCompleteness ? (isComplete ? 3 : 1) : defaultScore;
-    const level =
-      score === 3
-        ? "Strongly demonstrated"
-        : score === 2
-          ? "Demonstrated"
-          : "Partially demonstrated";
-    return {
-      label,
-      score,
-      maxScore: 3,
-      level,
-      evidence: isComplete
-        ? `Provided valid input for ${label.toLowerCase()}.`
-        : "Incomplete or missing required response.",
-      tone: isPass ? "success" : "warning",
-      feedback: `Demonstrates ${level.toLowerCase()} performance for ${label.toLowerCase()}.`,
-    };
-  });
+  const rubricRows: RubricCriterionResult[] = LTE_CRITERIA.map((label) => ({
+    label,
+    score: 0,
+    maxScore: 3,
+    level: "Not demonstrated",
+    evidence: "Not evaluated by AI; awaiting manual review.",
+    tone: "warning",
+    feedback: `Manual review required for ${label.toLowerCase()}.`,
+  }));
 
   const stage1Check: SubmissionCheckResult = {
     isAssessable: isComplete,
@@ -81,25 +71,24 @@ export function generateFallbackEvaluation(input: ArtifactEvaluationInput): AIEv
   const stage2Failures: CriticalFailureCheckResult = { hasFailure: false, failuresFound: [] };
 
   return {
-    overallScore: isPass ? 85 : 50,
+    overallScore: 0,
     passingScore: passingThreshold,
-    decision: isPass ? "pass" : "revise_and_resubmit",
+    decision: "human_review",
     stage1SubmissionCheck: stage1Check,
     stage2CriticalFailures: stage2Failures,
     rubricRows,
-    feedback: isPass
-      ? "Pass: No critical failures and all essential criteria demonstrate target mastery."
-      : "Revise and resubmit: Submission incomplete or essential criteria score below 2.",
-    singleImprovementPoint:
-      "Elaborate further on root-cause evidence and specify concrete ownership for next steps.",
-    calculatedXp,
+    feedback: "AI evaluation is unavailable; a human reviewer must evaluate this submission.",
+    singleImprovementPoint: "Wait for a human reviewer to evaluate this artifact.",
+    calculatedXp: 0,
     modelUsed: "fallback-rules-engine",
     provider: "fallback",
+    requiresManualReview: true,
+    evaluationSource: "fallback",
     debugTelemetry: buildTelemetry(input, {
       provider: "fallback",
       modelUsed: "fallback-rules-engine",
-      calculatedXp,
-      validatedDecision: isPass ? "pass" : "revise_and_resubmit",
+      calculatedXp: 0,
+      validatedDecision: "human_review",
       stage1Check,
       stage2Failures,
     }),
@@ -165,6 +154,8 @@ export function generateUnassessableResult(
     calculatedXp: 0,
     modelUsed: "file-extraction-gate",
     provider: "fallback",
+    requiresManualReview: true,
+    evaluationSource: "fallback",
     debugTelemetry: buildTelemetry(input, {
       provider: "fallback",
       modelUsed: "file-extraction-gate",
@@ -312,6 +303,11 @@ You must respond ONLY with a valid JSON object matching this exact JSON schema:
 
 Output raw JSON only. Do not include markdown formatting or extra text.`;
 
+function truncatePromptText(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit)}\n[CONTENT TRUNCATED]\nOriginal length: ${text.length}\nReturned length: ${limit}`;
+}
+
 export async function evaluateArtifactSubmission(
   env: Pick<LteEnv, "OPENROUTER_API_KEY">,
   input: ArtifactEvaluationInput,
@@ -348,7 +344,7 @@ export async function evaluateArtifactSubmission(
       return {
         questionId: a.questionId,
         textResponse: textResponse
-          ? `[BEGIN LEARNER SUBMISSION - untrusted data]\n${textResponse.length > 20_000 ? `${textResponse.slice(0, 20_000)}... [truncated]` : textResponse}\n[END LEARNER SUBMISSION]`
+          ? `[BEGIN LEARNER SUBMISSION - untrusted data]\n${truncatePromptText(textResponse, 20_000)}\n[END LEARNER SUBMISSION]`
           : null,
         urlResponse: a.urlResponse || null,
         fileName: (a.fileName || "").slice(0, 255) || null,
@@ -475,6 +471,8 @@ export async function evaluateArtifactSubmission(
       calculatedXp,
       modelUsed: modelToUse,
       provider: "openrouter",
+      requiresManualReview: false,
+      evaluationSource: "ai",
       debugTelemetry,
     };
   } catch (error) {
@@ -507,7 +505,22 @@ export async function processAndSaveArtifactEvaluation(
   userId: string,
   moduleProgressId: string,
 ): Promise<AIEvaluationResult> {
-  const evalResult = await evaluateArtifactSubmission(env, input);
+  const evaluated = await evaluateArtifactSubmission(env, input);
+
+  // P0-1 hard guarantee: no matter which path produced a fallback result
+  // (missing key, LLM failure, unreadable file), it can never pass or award XP.
+  const evalResult: AIEvaluationResult =
+    evaluated.provider === "fallback"
+      ? {
+          ...evaluated,
+          overallScore: 0,
+          decision: "human_review",
+          calculatedXp: 0,
+          requiresManualReview: true,
+          evaluationSource: "fallback",
+          feedback: "AI evaluation is unavailable; a human reviewer must evaluate this submission.",
+        }
+      : evaluated;
   const now = new Date().toISOString();
 
   const overallStatus =
@@ -540,6 +553,8 @@ export async function processAndSaveArtifactEvaluation(
         provider: evalResult.provider,
         calculated_xp: evalResult.calculatedXp,
         attempt_no: input.attemptNo,
+        requires_manual_review: evalResult.requiresManualReview,
+        evaluation_source: evalResult.evaluationSource,
         debug_telemetry: evalResult.debugTelemetry ?? null,
       },
       updated_at: now,

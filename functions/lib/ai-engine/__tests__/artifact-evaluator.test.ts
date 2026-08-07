@@ -111,12 +111,14 @@ describe("ai-engine / artifact-evaluator", () => {
   });
 
   describe("generateFallbackEvaluation", () => {
-    it("generates passing score and 5 LTE criteria for valid answers", () => {
+    it("never awards a pass or XP; always routes to human_review", () => {
       const result = generateFallbackEvaluation(sampleInput);
-      expect(result.overallScore).toBeGreaterThanOrEqual(60);
-      expect(result.decision).toBe("pass");
-      expect(result.calculatedXp).toBe(20);
+      expect(result.overallScore).toBe(0);
+      expect(result.decision).toBe("human_review");
+      expect(result.calculatedXp).toBe(0);
       expect(result.provider).toBe("fallback");
+      expect(result.requiresManualReview).toBe(true);
+      expect(result.evaluationSource).toBe("fallback");
       expect(result.rubricRows).toHaveLength(5);
       expect(result.rubricRows.map((r) => r.label)).toEqual([
         "Completeness",
@@ -130,25 +132,28 @@ describe("ai-engine / artifact-evaluator", () => {
       expect(result.debugTelemetry?.validatedDecision).toBe("pass");
     });
 
-    it("calculates lower XP for attempt 2", () => {
+    it("keeps score 0 and XP 0 for attempt 2", () => {
       const result = generateFallbackEvaluation({ ...sampleInput, attemptNo: 2 });
-      expect(result.calculatedXp).toBe(15);
+      expect(result.overallScore).toBe(0);
+      expect(result.calculatedXp).toBe(0);
+      expect(result.decision).toBe("human_review");
     });
 
-    it("calculates revise_and_resubmit decision for empty answers", () => {
+    it("keeps score 0 and XP 0 for empty answers", () => {
       const result = generateFallbackEvaluation({ ...sampleInput, answers: [] });
-      expect(result.overallScore).toBe(50);
-      expect(result.decision).toBe("revise_and_resubmit");
-      expect(result.calculatedXp).toBe(1);
+      expect(result.overallScore).toBe(0);
+      expect(result.decision).toBe("human_review");
+      expect(result.calculatedXp).toBe(0);
     });
 
-    it("does not treat a file answer without extracted content as valid", () => {
+    it("keeps score 0 and XP 0 for a file answer without extracted content", () => {
       const result = generateFallbackEvaluation(fileInput);
-      expect(result.decision).toBe("revise_and_resubmit");
-      expect(result.overallScore).toBe(50);
+      expect(result.overallScore).toBe(0);
+      expect(result.decision).toBe("human_review");
+      expect(result.calculatedXp).toBe(0);
     });
 
-    it("treats a file answer with extracted content as valid", () => {
+    it("still routes to human_review for a file answer with extracted content", () => {
       const result = generateFallbackEvaluation({
         ...fileInput,
         answers: [
@@ -159,8 +164,9 @@ describe("ai-engine / artifact-evaluator", () => {
           },
         ],
       });
-      expect(result.decision).toBe("pass");
-      expect(result.overallScore).toBe(85);
+      expect(result.decision).toBe("human_review");
+      expect(result.overallScore).toBe(0);
+      expect(result.calculatedXp).toBe(0);
     });
   });
 
@@ -194,7 +200,10 @@ describe("ai-engine / artifact-evaluator", () => {
     it("uses fallback evaluator when OPENROUTER_API_KEY is missing", async () => {
       const result = await evaluateArtifactSubmission({}, sampleInput);
       expect(result.provider).toBe("fallback");
-      expect(result.overallScore).toBeGreaterThanOrEqual(60);
+      expect(result.decision).toBe("human_review");
+      expect(result.overallScore).toBe(0);
+      expect(result.calculatedXp).toBe(0);
+      expect(result.requiresManualReview).toBe(true);
       expect(result.rubricRows).toHaveLength(5);
     });
 
@@ -355,8 +364,10 @@ describe("ai-engine / artifact-evaluator", () => {
       );
 
       expect(result.provider).toBe("fallback");
-      expect(result.decision).toBe("pass");
-      expect(result.calculatedXp).toBe(20);
+      expect(result.decision).toBe("human_review");
+      expect(result.overallScore).toBe(0);
+      expect(result.calculatedXp).toBe(0);
+      expect(result.requiresManualReview).toBe(true);
       expect(result.debugTelemetry?.provider).toBe("fallback");
       expect(result.debugTelemetry?.latencyMs).toBeTypeOf("number");
       expect(result.debugTelemetry?.rawPromptContent).toContain(
@@ -433,7 +444,7 @@ describe("ai-engine / artifact-evaluator", () => {
     it("caps long text responses at 20k chars and file names at 255 chars in the prompt", async () => {
       mockOpenRouter();
       const longText = "x".repeat(25_000);
-      const longName = "y".repeat(300) + ".xlsx";
+      const longName = `${"y".repeat(300)}.xlsx`;
       const result = await evaluateArtifactSubmission(
         { OPENROUTER_API_KEY: "sk-test" },
         {
@@ -461,10 +472,10 @@ describe("ai-engine / artifact-evaluator", () => {
       expect(result.decision).toBe("pass");
       const payload = vi.mocked(callOpenRouterAI).mock.calls[0]?.[1];
       const userMessage = payload?.messages[1].content as string;
-      expect(userMessage).toContain("... [truncated]");
+      expect(userMessage).toContain("[CONTENT TRUNCATED]");
       expect(userMessage.length).toBeLessThan(25_000);
       expect(userMessage).toContain(longName.slice(0, 255));
-      expect(userMessage).not.toContain("y".repeat(256) + ".xlsx");
+      expect(userMessage).not.toContain(`${"y".repeat(256)}.xlsx`);
     });
   });
 });

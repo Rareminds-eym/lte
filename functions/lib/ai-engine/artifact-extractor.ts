@@ -1,3 +1,4 @@
+import { checkZipExpansion } from "../artifact-file-guard";
 import { apiLogger } from "../logger";
 
 export interface ExtractedArtifactContent {
@@ -5,6 +6,11 @@ export interface ExtractedArtifactContent {
   extractedText: string;
   isReadable: boolean;
   truncated?: boolean;
+  truncation?: {
+    originalLength: number;
+    returnedLength: number;
+    rowsOmitted: number | null;
+  };
 }
 
 /** Overall cap on extracted text sent to the LLM (TRD §8.4). */
@@ -13,50 +19,158 @@ const PDF_PAGE_CAP = 15;
 const MAX_SHEETS = 20;
 const SHEET_MAX_ROWS = 2_000;
 const SHEET_MAX_COLS = 256;
-const TRUNCATION_MARKER = `...[truncated at ${ARTIFACT_TEXT_CAP} chars]`;
 
-export function normalizeArtifactExtension(fileName: string): string {
-  if (!fileName.includes(".")) return "";
-  return (fileName.split(".").pop() ?? "").trim().replace(/^\./, "").toLowerCase();
+function truncationMarker(
+  originalLength: number,
+  returnedLength: number,
+  rowsOmitted: number | null,
+): string {
+  const rows = rowsOmitted !== null && rowsOmitted > 0 ? `\nRows omitted: ${rowsOmitted}` : "";
+  return (
+    `[CONTENT TRUNCATED]\nOriginal length: ${originalLength}\nReturned length: ${returnedLength}` +
+    rows
+  );
 }
 
-function finish(text: string, format: string): ExtractedArtifactContent {
+function finish(
+  text: string,
+  format: string,
+  options: { rowsOmitted?: number | null } = {},
+): ExtractedArtifactContent {
   const trimmed = text.trim();
   if (!trimmed) return { format, extractedText: "", isReadable: false };
-  if (trimmed.length <= ARTIFACT_TEXT_CAP) {
+  const rowsOmitted = options.rowsOmitted ?? null;
+  if (trimmed.length <= ARTIFACT_TEXT_CAP && !rowsOmitted) {
     return { format, extractedText: trimmed, isReadable: true };
   }
-  apiLogger.warn(`Artifact text extraction exceeded ${ARTIFACT_TEXT_CAP} chars`, { format });
+  const originalLength = trimmed.length;
+  const returnedLength = Math.min(trimmed.length, ARTIFACT_TEXT_CAP);
+  const marker = truncationMarker(originalLength, returnedLength, rowsOmitted);
+  apiLogger.warn(`Artifact text extraction exceeded limits`, {
+    format,
+    originalLength,
+    rowsOmitted,
+  });
   return {
     format,
-    extractedText: `${trimmed.slice(0, ARTIFACT_TEXT_CAP)}\n${TRUNCATION_MARKER}`,
+    extractedText: `${trimmed.slice(0, ARTIFACT_TEXT_CAP)}\n${marker}`,
     isReadable: true,
     truncated: true,
+    truncation: {
+      originalLength,
+      returnedLength,
+      rowsOmitted,
+    },
   };
 }
 
-async function parseSpreadsheet(file: File): Promise<ExtractedArtifactContent> {
+/**
+ * Decodes raw bytes as strict UTF-8 (with BOM stripped), falling back to
+ * windows-1252 for legacy latin1 content. Loose utf-8 decoding would silently
+ * garble latin1 bytes into U+FFFD replacement chars.
+ */
+function decodeTextBytes(buffer: ArrayBuffer): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buffer).replace(/^\uFEFF/, "");
+  } catch {
+    return new TextDecoder("windows-1252", { fatal: false })
+      .decode(buffer)
+      .replace(/^\u00EF\u00BB\u00BF/, "");
+  }
+}
+
+interface SpreadsheetRows {
+  text: string;
+}
+
+/**
+ * Row-aware spreadsheet serialization: keeps the header row and per-row
+ * header-to-value relationships instead of a flat CSV that loses them.
+ */
+function renderSheetRows(rows: unknown[][], sheetName: string): SpreadsheetRows {
+  let headerIndex = -1;
+  for (let i = 0; i < rows.length; i += 1) {
+    if ((rows[i] ?? []).some((cell) => cell !== "" && cell !== null && cell !== undefined)) {
+      headerIndex = i;
+      break;
+    }
+  }
+  if (headerIndex === -1) return { text: "" };
+
+  const header = (rows[headerIndex] ?? []).map((cell) => String(cell));
+  const lines: string[] = [`--- Sheet: ${sheetName} ---`, "", "Header:", header.join(" | ")];
+
+  let dataRowCount = 0;
+  for (const row of rows.slice(headerIndex + 1)) {
+    const pairs: string[] = [];
+    for (let c = 0; c < header.length; c += 1) {
+      const value = row[c];
+      if (value === "" || value === null || value === undefined) continue;
+      pairs.push(`${header[c]}=${String(value)}`);
+    }
+    if (pairs.length === 0) continue;
+    dataRowCount += 1;
+    lines.push("", `Row ${headerIndex + 1 + dataRowCount}`);
+    for (const pair of pairs) {
+      lines.push("", pair);
+    }
+  }
+
+  return { text: lines.join("\n").trim() };
+}
+
+async function parseSpreadsheet(file: File, format: string): Promise<ExtractedArtifactContent> {
   // Dynamic import so SheetJS's heavy module body does not execute at worker startup.
   const XLSX = await import("xlsx/xlsx.mjs");
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
+
+  // P1-3 (defense in depth; upload validation already guards): refuse to
+  // parse archives with abnormal expansion before SheetJS buffers everything.
+  if (format === "xlsx" || format === "xls") {
+    const expansion = checkZipExpansion(buffer);
+    if (!expansion.safe) {
+      apiLogger.warn("Refusing to parse suspicious archive expansion.", {
+        format,
+        ...expansion,
+      });
+      return { format, extractedText: "", isReadable: false };
+    }
+  }
+
+  let workbook: Awaited<ReturnType<typeof XLSX.read>>;
+  if (format === "csv") {
+    // P1-5: decode BOM-less UTF-8 / UTF-8 BOM / windows-1252 explicitly
+    // instead of letting SheetJS guess from raw bytes.
+    workbook = XLSX.read(decodeTextBytes(buffer), { type: "string", cellDates: true });
+  } else {
+    workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
+  }
+
   const parts: string[] = [];
+  let rowsOmitted = 0;
   for (const sheetName of workbook.SheetNames.slice(0, MAX_SHEETS)) {
     const sheet = workbook.Sheets[sheetName];
     if (!sheet) continue;
     if (sheet["!ref"]) {
       const range = XLSX.utils.decode_range(sheet["!ref"]);
-      range.e.r = Math.min(range.e.r, range.s.r + SHEET_MAX_ROWS - 1);
+      const originalRowCount = range.e.r - range.s.r + 1;
+      const cappedEndRow = range.s.r + SHEET_MAX_ROWS - 1;
+      range.e.r = Math.min(range.e.r, cappedEndRow);
       range.e.c = Math.min(range.e.c, range.s.c + SHEET_MAX_COLS - 1);
+      const cappedRowCount = range.e.r - range.s.r + 1;
+      if (originalRowCount > cappedRowCount) {
+        rowsOmitted += originalRowCount - cappedRowCount;
+      }
       sheet["!ref"] = XLSX.utils.encode_range(range);
     }
-    const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false }).trim();
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as unknown[][];
+    const rendered = renderSheetRows(rows, sheetName);
     // Skip empty sheets: SheetJS returns a phantom "Sheet1" (with !ref "A1") when
     // parsing empty bytes - a header-only marker must not count as readable content.
-    if (csv) parts.push(`--- Sheet: ${sheetName} ---\n${csv}`);
+    if (rendered.text) parts.push(rendered.text);
     if (parts.join("\n").length >= ARTIFACT_TEXT_CAP) break;
   }
-  return finish(parts.join("\n\n"), "spreadsheet");
+  return finish(parts.join("\n\n"), "spreadsheet", { rowsOmitted });
 }
 
 async function parsePdf(file: File): Promise<ExtractedArtifactContent> {
@@ -111,7 +225,7 @@ export async function extractArtifactContent(file: File): Promise<ExtractedArtif
       case "xlsx":
       case "xls":
       case "csv":
-        return await parseSpreadsheet(file);
+        return await parseSpreadsheet(file, format);
       case "pdf":
         return await parsePdf(file);
       case "docx":
@@ -133,15 +247,10 @@ export async function extractArtifactContent(file: File): Promise<ExtractedArtif
 
 async function parseText(file: File): Promise<ExtractedArtifactContent> {
   const buffer = await file.arrayBuffer();
-  // Strict utf-8 first; fall back to windows-1252 for legacy latin1-encoded files
-  // (loose utf-8 decoding would silently garble them into U+FFFD replacement chars).
-  let decoded: string;
-  try {
-    decoded = new TextDecoder("utf-8", { fatal: true }).decode(buffer).replace(/^\uFEFF/, "");
-  } catch {
-    decoded = new TextDecoder("windows-1252", { fatal: false })
-      .decode(buffer)
-      .replace(/^\u00EF\u00BB\u00BF/, "");
-  }
-  return finish(decoded, "text");
+  return finish(decodeTextBytes(buffer), "text");
+}
+
+export function normalizeArtifactExtension(fileName: string): string {
+  if (!fileName.includes(".")) return "";
+  return (fileName.split(".").pop() ?? "").trim().replace(/^\./, "").toLowerCase();
 }
