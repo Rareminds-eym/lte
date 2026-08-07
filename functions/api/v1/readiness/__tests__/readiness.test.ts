@@ -26,8 +26,7 @@ interface Chainable {
   then?: (onfulfilled: (value: { data: unknown; error: unknown }) => unknown) => Promise<unknown>;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: mock chain factory
-function chainable<T = any, E = any>(resolveVal: T = null as any, errorVal: E = null as any) {
+function chainable<T = unknown, E = unknown>(resolveVal: T = null as T, errorVal: E = null as E) {
   const chain: Chainable = {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),

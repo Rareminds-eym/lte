@@ -60,9 +60,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       Array.isArray(path.roles) && path.roles.length > 0 ? path.roles[0] : path.roles
     ) as Record<string, unknown> | null;
     const currentRole = {
-      name: (roleData?.role_name as string) || "Unknown Role",
-      domain: (roleData?.domain_name as string) || "Unknown Domain",
-      family: (roleData?.role_family_name as string) || "Unknown Family",
+      name: (roleData?.["role_name"] as string) || "Unknown Role",
+      domain: (roleData?.["domain_name"] as string) || "Unknown Domain",
+      family: (roleData?.["role_family_name"] as string) || "Unknown Family",
     };
 
     // 2. Identify the levels in this learning path
@@ -177,7 +177,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
           ? s.module_artifacts[0]
           : s.module_artifacts;
       const typedMa = ma as Record<string, unknown> | null;
-      return typedMa?.artifact_type === "final";
+      return typedMa?.["artifact_type"] === "final";
     });
 
     const requiredArtifactIds = requiredArtifacts.map((a) => a.id);

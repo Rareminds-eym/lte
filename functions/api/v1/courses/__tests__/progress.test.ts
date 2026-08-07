@@ -562,9 +562,7 @@ describe("Progress API Endpoints", () => {
       vi.mocked(requireAuth).mockResolvedValueOnce(
         mockUser as unknown as Awaited<ReturnType<typeof requireAuth>>,
       );
-      vi.mocked(completeStage).mockRejectedValueOnce(
-        new StageSequenceError("Stage locked", "STAGE_SEQUENCE_LOCKED"),
-      );
+      vi.mocked(completeStage).mockRejectedValueOnce(new StageSequenceError("Stage locked"));
 
       const mockSupabase = {
         from: vi.fn().mockImplementation((table: string) => {
