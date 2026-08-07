@@ -48,7 +48,7 @@
 
 ### 1.5 Open Items (Not Yet Decided)
 
-- **Telemetry exposure**: the evaluation endpoint returns `rawPromptContent` (full rubric + system prompt) to any submission owner. Plan-mandated passthrough, but it is proprietary. Decision: keep as-is or restrict to staff (e.g. `role=admin`/reviewer check in `evaluation.ts`).
+- **Telemetry exposure (RESOLVED 2026-08-07)**: decision taken — store the exact `messages` array (system prompt + user message) as `rawPromptContent` so the AI Inspector tab shows the full input passed to the LLM. Rubric/grading key is therefore learner-visible; accepted tradeoff. Catch path also captures `rawPromptContent`/`promptCharCount` (failed LLM calls show the attempted input).
 - `request.formData()` reads the body once — real-multipart behavior not yet validated under `wrangler dev`.
 - Bundle size (7.4 MB single functions chunk, dynamic imports flattened) still pending the deploy-time optimization.
 - pdfjs corrupt-PDF behavior under the Workers runtime (Node throws → unreadable; vitest fake worker bleeds) must be confirmed in `wrangler dev`.

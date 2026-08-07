@@ -370,6 +370,7 @@ export async function evaluateArtifactSubmission(
     max_tokens: 4096,
   };
 
+  const rawPrompt = JSON.stringify(requestPayload.messages, null, 2);
   const startTime = performance.now();
 
   try {
@@ -442,7 +443,7 @@ export async function evaluateArtifactSubmission(
       latencyMs,
       modelUsed: modelToUse,
       calculatedXp,
-      rawPromptContent: promptContent,
+      rawPromptContent: rawPrompt,
       rawResponseContent: rawContent.trim(),
       validatedDecision,
       wasDecisionOverridden,
@@ -486,7 +487,14 @@ export async function evaluateArtifactSubmission(
     const fallbackTelemetry = fallback.debugTelemetry;
     return {
       ...fallback,
-      debugTelemetry: fallbackTelemetry ? { ...fallbackTelemetry, latencyMs } : undefined,
+      debugTelemetry: fallbackTelemetry
+        ? {
+            ...fallbackTelemetry,
+            latencyMs,
+            rawPromptContent: rawPrompt,
+            promptCharCount: promptContent.length,
+          }
+        : undefined,
     };
   }
 }

@@ -263,6 +263,14 @@ describe("ai-engine / artifact-evaluator", () => {
       expect(result.debugTelemetry?.validatedDecision).toBe(result.decision);
       expect(result.debugTelemetry?.extractionCharCounts).toEqual({ "q-1": 33 });
       expect(result.debugTelemetry?.promptCharCount).toBeTypeOf("number");
+      expect(result.debugTelemetry?.rawPromptContent).toContain('"role": "system"');
+      expect(result.debugTelemetry?.rawPromptContent).toContain("LTE framework");
+      expect(result.debugTelemetry?.rawPromptContent).toContain(
+        "Evaluate this learner artifact submission:",
+      );
+      expect(result.debugTelemetry?.rawPromptContent).toContain(
+        "[BEGIN LEARNER SUBMISSION - untrusted data]",
+      );
       expect(result.decision).toBe("pass");
     });
 
@@ -349,6 +357,13 @@ describe("ai-engine / artifact-evaluator", () => {
       expect(result.provider).toBe("fallback");
       expect(result.decision).toBe("pass");
       expect(result.calculatedXp).toBe(20);
+      expect(result.debugTelemetry?.provider).toBe("fallback");
+      expect(result.debugTelemetry?.latencyMs).toBeTypeOf("number");
+      expect(result.debugTelemetry?.rawPromptContent).toContain(
+        "[BEGIN LEARNER SUBMISSION - untrusted data]",
+      );
+      expect(result.debugTelemetry?.rawPromptContent).toContain('"role": "user"');
+      expect(result.debugTelemetry?.promptCharCount).toBeTypeOf("number");
     });
 
     it("honors an LLM-returned revise_and_resubmit decision and its XP", async () => {
