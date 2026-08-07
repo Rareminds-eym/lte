@@ -22,8 +22,22 @@ vi.mock("@/widgets/app/NavigationDrawer", () => ({
 }));
 
 vi.mock("@/widgets/app/Header", () => ({
-  Header: ({ userName }: { userName?: string }) => (
-    <div data-testid="header" data-user={userName} />
+  Header: ({
+    userName,
+    userEmail,
+    onLogoutClick,
+  }: {
+    userName?: string;
+    userEmail?: string;
+    onLogoutClick?: () => void;
+  }) => (
+    <button
+      data-testid="header"
+      data-user={userName}
+      data-email={userEmail}
+      onClick={onLogoutClick}
+      type="button"
+    />
   ),
 }));
 
@@ -37,6 +51,7 @@ describe("DashboardLayout", () => {
       loading: false,
       error: null,
       initialize: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn().mockResolvedValue(undefined),
     });
     localStorage.removeItem("lte-ui-store");
     useUIStore.setState({ sidebarCollapsed: false });
@@ -166,5 +181,38 @@ describe("DashboardLayout", () => {
       </MemoryRouter>,
     );
     expect(screen.getByTestId("header")).toHaveAttribute("data-user", "Bob");
+  });
+
+  it("passes userEmail and calls logout when logout is triggered", async () => {
+    const logoutSpy = vi.fn().mockResolvedValue(undefined);
+    useAuthStore.setState({
+      initialized: true,
+      isAuthenticated: true,
+      user: {
+        id: "u4",
+        email: "logout-test@example.com",
+        org_id: "org-1",
+        roles: ["learner"],
+        products: ["lte"],
+        membership_status: "active",
+        is_email_verified: true,
+        user_metadata: { full_name: "Logout Test User" },
+      },
+      error: null,
+      logout: logoutSpy,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardLayout />
+      </MemoryRouter>,
+    );
+
+    const header = screen.getByTestId("header");
+    expect(header).toHaveAttribute("data-email", "logout-test@example.com");
+
+    // Trigger logout handler
+    header.click();
+    expect(logoutSpy).toHaveBeenCalledTimes(1);
   });
 });

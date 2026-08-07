@@ -32,6 +32,7 @@ export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const logout = useAuthStore((state) => state.logout);
   const authError = useAuthStore((state) => state.error);
   const isCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
@@ -146,6 +147,7 @@ export const DashboardLayout: React.FC = () => {
           userStatus={userStatus}
           userEmail={user?.email}
           onToggleMobileDrawer={() => setIsMobileDrawerOpen(true)}
+          onLogoutClick={logout}
         />
         <DashboardScrollRestoration />
         <main
