@@ -304,7 +304,7 @@ describe("artifact submission queries", () => {
     ]);
     expect(result.evaluation?.debug_telemetry).toMatchObject({
       provider: "fallback",
-      validatedDecision: "pass",
+      validatedDecision: "human_review",
     });
   });
 

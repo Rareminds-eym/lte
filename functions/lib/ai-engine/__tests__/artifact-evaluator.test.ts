@@ -129,7 +129,7 @@ describe("ai-engine / artifact-evaluator", () => {
       ]);
       expect(result.debugTelemetry).toBeDefined();
       expect(result.debugTelemetry?.provider).toBe("fallback");
-      expect(result.debugTelemetry?.validatedDecision).toBe("pass");
+      expect(result.debugTelemetry?.validatedDecision).toBe("human_review");
     });
 
     it("keeps score 0 and XP 0 for attempt 2", () => {
