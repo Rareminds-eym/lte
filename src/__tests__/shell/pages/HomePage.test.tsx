@@ -1,26 +1,19 @@
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { HomePage } from "@/pages/home";
 
 describe("HomePage", () => {
-  it("renders home text", () => {
+  it("redirects to login", () => {
     render(
-      <MemoryRouter>
-        <HomePage />
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<div>login page</div>} />
+        </Routes>
       </MemoryRouter>,
     );
-    expect(screen.getByText("home")).toBeInTheDocument();
-  });
 
-  it("renders link to dashboard", () => {
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>,
-    );
-    const link = screen.getByText("Dashboard");
-    expect(link).toBeInTheDocument();
-    expect(link.getAttribute("href")).toBe("/dashboard");
+    expect(screen.getByText("login page")).toBeInTheDocument();
   });
 });
