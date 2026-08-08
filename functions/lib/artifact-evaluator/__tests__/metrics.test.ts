@@ -27,7 +27,7 @@ describe("Metrics", () => {
   it("caps histogram buckets", () => {
     const metrics = new Metrics();
     for (let i = 0; i < 2_000; i += 1) metrics.observe("x", i);
-    expect(metrics.snapshot().histograms["x"]!.count).toBe(1024);
+    expect(metrics.snapshot().histograms["x"]?.count).toBe(1024);
   });
 
   it("reset clears everything", () => {

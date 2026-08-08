@@ -91,6 +91,25 @@ export interface ArtifactEvaluationInput {
     urlResponse?: string;
     fileName?: string;
     fileContentSnippet?: string;
+    /** Extracted text from the original template file (if one exists). */
+    templateContent?: string;
   }>;
   attemptNo: number;
+  /** Hierarchy learning context for rich evaluation understanding. */
+  evaluationContext?: {
+    capabilityName?: string;
+    capabilityCode?: string;
+    levelTitle?: string;
+    levelProblemStatement?: { title: string; description: string };
+    observableBehavior?: unknown;
+    moduleNo?: number;
+    moduleTitle?: string;
+    moduleProblemStatement?: string;
+    industryChallenge?: string;
+    pressurePoints?: string[];
+    whatYoullLearn?: string[];
+    stageName?: string;
+    stageOrder?: number;
+    stageDescription?: string;
+  };
 }

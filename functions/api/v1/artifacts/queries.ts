@@ -15,6 +15,7 @@ import type { LteEnv } from "@functions/lib/types";
 import type { CompleteSubmissionInput } from "@functions/schemas";
 import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchArtifactTemplateContent, fetchEvaluationContext } from "./evaluation-context";
 
 interface ArtifactQuestionRow {
   id: string;
@@ -609,6 +610,7 @@ export async function submitArtifactSubmission(
   }
 
   const evalInput = await buildArtifactEvaluationInput({
+    supabase,
     artifactMeta: (artifactMeta as ArtifactMetaRow | null) ?? null,
     questionDetails: (questionDetails as ArtifactQuestionDetailRow[] | null) ?? [],
     input,
@@ -729,12 +731,15 @@ async function buildDuplicateSubmissionResponse(
 }
 
 export async function buildArtifactEvaluationInput(params: {
+  supabase?: SupabaseClient;
   artifactMeta: ArtifactMetaRow | null;
   questionDetails: ArtifactQuestionDetailRow[];
   input: CompleteSubmissionInput;
   filesByQuestionId: Map<string, File>;
   preReadBuffers?: Map<string, ArrayBuffer>;
   attemptNo: number;
+  evaluationContext?: ArtifactEvaluationInput["evaluationContext"];
+  templateContentByQuestionId?: Map<string, string>;
 }): Promise<ArtifactEvaluationInput> {
   const extractedByQuestionId = new Map<string, string>();
   for (const [questionId, file] of params.filesByQuestionId) {
@@ -752,6 +757,19 @@ export async function buildArtifactEvaluationInput(params: {
     }
   }
 
+  let evaluationContext = params.evaluationContext;
+  if (!evaluationContext && params.supabase) {
+    evaluationContext = await fetchEvaluationContext(params.supabase, params.input.artifact_id);
+  }
+
+  let templateContentMap = params.templateContentByQuestionId;
+  if (!templateContentMap && params.supabase) {
+    templateContentMap = await fetchArtifactTemplateContent(
+      params.supabase,
+      params.input.artifact_id,
+    );
+  }
+
   return {
     artifactId: params.input.artifact_id,
     artifactType: (params.artifactMeta?.artifact_type as "practice" | "final") || "final",
@@ -766,6 +784,9 @@ export async function buildArtifactEvaluationInput(params: {
     })),
     answers: params.input.answers.map((a) => {
       const fileObj = params.filesByQuestionId.get(a.question_id);
+      const tplContent = templateContentMap
+        ? (templateContentMap.get(a.question_id) ?? templateContentMap.get("__artifact__"))
+        : undefined;
       return {
         questionId: a.question_id,
         textResponse: a.text_response,
@@ -774,9 +795,11 @@ export async function buildArtifactEvaluationInput(params: {
         fileContentSnippet: fileObj
           ? (extractedByQuestionId.get(a.question_id) ?? undefined)
           : undefined,
+        templateContent: tplContent ?? undefined,
       };
     }),
     attemptNo: params.attemptNo,
+    evaluationContext,
   };
 }
 
