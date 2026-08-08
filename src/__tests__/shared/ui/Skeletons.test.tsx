@@ -5,7 +5,7 @@ import {
   CourseCardSkeleton,
 } from "@/entities/course/ui/CourseCardSkeleton";
 import { CourseDetailSkeleton } from "@/pages/course-detail/ui/CourseDetailSkeleton";
-import { InlineSpinner } from "@/shared/ui/InlineSpinner/InlineSpinner";
+import { InlineSpinner } from "@/shared/ui/inline-spinner/InlineSpinner";
 
 describe("Static Skeletons and Spinners", () => {
   it("renders CourseCardSkeleton correctly", () => {

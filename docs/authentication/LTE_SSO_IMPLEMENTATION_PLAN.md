@@ -62,7 +62,7 @@ Implement the `SkillPassport -> LTE -> Dashboard` flow using SSO as the source o
 
 `functions/lib/sync-shadow.ts` - Sync `users_shadow` and `subscription_cache` from SSO exchange data.
 
-`functions/lib/auth.ts` - Verify LTE access token and produce backend auth context.
+`functions/middleware/auth.ts` - Verify LTE access token and produce backend auth context.
 
 `src/shared/api/authApi.ts` - Call LTE auth endpoints from the frontend.
 

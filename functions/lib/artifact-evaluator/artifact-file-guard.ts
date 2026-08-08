@@ -116,6 +116,34 @@ export function assertFileSignature(extension: string, buffer: ArrayBuffer): voi
   }
 }
 
+/** Control characters that must never reach a Content-Disposition header. */
+const FILENAME_CONTROL_CHARS = /[\p{Cc}]/gu;
+
+/**
+ * Sanitizes a user-supplied file name for use inside a Content-Disposition
+ * header value: strips control characters (CR/LF header injection), quotes,
+ * and caps the length. Applied at both upload and download time.
+ */
+export function sanitizeContentDispositionFilename(name: string): string {
+  return name.replace(FILENAME_CONTROL_CHARS, "").replace(/"/g, "").slice(0, 255);
+}
+
+/**
+ * Rejects file names that are empty, too long, or carry control characters.
+ * Throws ArtifactFileGuardError; callers convert to their error type.
+ */
+export function assertValidArtifactFileName(name: string): void {
+  if (name.length === 0 || name.length > 255) {
+    throw new ArtifactFileGuardError("The file name is empty or too long.", "INVALID_FILE_NAME");
+  }
+  if (name.search(FILENAME_CONTROL_CHARS) !== -1) {
+    throw new ArtifactFileGuardError(
+      "The file name contains invalid characters.",
+      "INVALID_FILE_NAME",
+    );
+  }
+}
+
 export const ZIP_EXPANSION_LIMITS = {
   /** Total uncompressed payload cap across all entries. */
   maxTotalUncompressedBytes: 25 * 1024 * 1024,

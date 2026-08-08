@@ -1,11 +1,12 @@
+import type { LteEnv } from "@functions/lib/types";
 import type { AuthUser } from "@rareminds-eym/auth-core";
+import { initAuth, verifyJWT } from "@rareminds-eym/auth-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthError, extractBearerToken, requireAuth, toAuthApiUser } from "../auth";
-import { getMe, SsoAuthError } from "../sso-client";
+import { extractBearerToken, requireAuth, toAuthApiUser } from "../auth";
 
-vi.mock("../sso-client", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../sso-client")>();
-  return { ...actual, getMe: vi.fn() };
+vi.mock("@rareminds-eym/auth-core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@rareminds-eym/auth-core")>();
+  return { ...actual, initAuth: vi.fn(), verifyJWT: vi.fn() };
 });
 
 const mockUser: AuthUser = {
@@ -18,8 +19,8 @@ const mockUser: AuthUser = {
   is_email_verified: true,
 };
 
-const mockEnv = {
-  SSO_SERVICE: {},
+const mockEnv: LteEnv = {
+  SSO_SERVICE: {} as LteEnv["SSO_SERVICE"],
   STORAGE_BUCKET: {
     put: () => Promise.resolve({}),
     get: () => Promise.resolve(null),
@@ -30,7 +31,7 @@ const mockEnv = {
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   SKILLPASSPORT_INTERNAL_URL: "https://skillpassport.example.com",
   SKILLPASSPORT_INTERNAL_SECRET: "a-secret-that-is-at-least-32-characters-long",
-} as never;
+};
 
 describe("extractBearerToken", () => {
   it("returns null when the Authorization header is missing", () => {
@@ -60,6 +61,7 @@ describe("extractBearerToken", () => {
 describe("requireAuth", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(initAuth).mockImplementation(() => undefined);
   });
 
   it("throws UNAUTHORIZED when no token is present", async () => {
@@ -70,23 +72,15 @@ describe("requireAuth", () => {
   });
 
   it("returns the user when the token is valid and lte is a product", async () => {
-    vi.mocked(getMe).mockResolvedValueOnce(mockUser);
+    vi.mocked(verifyJWT).mockResolvedValueOnce(mockUser);
     const request = new Request("http://localhost", {
       headers: { authorization: "Bearer token-123" },
     });
     await expect(requireAuth(request, mockEnv)).resolves.toEqual(mockUser);
   });
 
-  it("rethrows AuthError from getMe", async () => {
-    vi.mocked(getMe).mockRejectedValueOnce(new AuthError("Downstream denied", "UNAUTHORIZED"));
-    const request = new Request("http://localhost", {
-      headers: { authorization: "Bearer token-123" },
-    });
-    await expect(requireAuth(request, mockEnv)).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-  });
-
-  it("maps SsoAuthError to UNAUTHORIZED AuthError", async () => {
-    vi.mocked(getMe).mockRejectedValueOnce(new SsoAuthError("Invalid or revoked session"));
+  it("maps token verification failures to UNAUTHORIZED AuthError", async () => {
+    vi.mocked(verifyJWT).mockRejectedValueOnce(new Error("signature verification failed"));
     const request = new Request("http://localhost", {
       headers: { authorization: "Bearer token-123" },
     });
@@ -96,32 +90,24 @@ describe("requireAuth", () => {
     });
   });
 
-  it("wraps generic errors from getMe", async () => {
-    vi.mocked(getMe).mockRejectedValueOnce(new Error("connection reset"));
-    const request = new Request("http://localhost", {
-      headers: { authorization: "Bearer token-123" },
-    });
-    await expect(requireAuth(request, mockEnv)).rejects.toThrow(
-      "Unexpected auth error: connection reset",
-    );
-  });
-
-  it("wraps non-Error rejections from getMe", async () => {
-    vi.mocked(getMe).mockRejectedValueOnce("boom");
-    const request = new Request("http://localhost", {
-      headers: { authorization: "Bearer token-123" },
-    });
-    await expect(requireAuth(request, mockEnv)).rejects.toThrow("Unexpected auth error: boom");
-  });
-
   it("throws FORBIDDEN when the user lacks the lte product", async () => {
-    vi.mocked(getMe).mockResolvedValueOnce({ ...mockUser, products: ["other"] });
+    vi.mocked(verifyJWT).mockResolvedValueOnce({ ...mockUser, products: ["other"] });
     const request = new Request("http://localhost", {
       headers: { authorization: "Bearer token-123" },
     });
     await expect(requireAuth(request, mockEnv)).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
+  });
+
+  it("fails fast with a config error when SSO_SERVICE binding is missing", async () => {
+    const envWithoutSso: LteEnv = {
+      ...mockEnv,
+      SSO_SERVICE: undefined as unknown as LteEnv["SSO_SERVICE"],
+    };
+    await expect(requireAuth(new Request("http://localhost"), envWithoutSso)).rejects.toThrow(
+      /SSO_SERVICE must be a Service Binding/,
+    );
   });
 });
 

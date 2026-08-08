@@ -8,7 +8,7 @@ import type { ArtifactEvaluationInput } from "../types";
 
 const { callOpenRouterAI } = vi.hoisted(() => ({ callOpenRouterAI: vi.fn() }));
 
-vi.mock("@functions/lib/openrouter", () => ({
+vi.mock("@functions/lib/ai-engine/openrouter", () => ({
   callOpenRouterAI,
   DEFAULT_OPENROUTER_MODEL: "google/gemini-2.5-flash",
   OPENROUTER_API_URL: "https://openrouter.ai/api/v1/chat/completions",

@@ -15,6 +15,8 @@
 
 ### P0.1 — Create `apiClient` with auth injection
 
+**Status: CLOSED — YAGNI (2026-08-08).** Never created, zero references anywhere. Frontend already uses TanStack Query + per-slice API modules. Plan itself notes it "unlocks 0 files directly". Add only when a real cross-slice fetch client is needed.
+
 **Files**: `src/shared/api/index.ts` (rewrite), `src/shared/api/authApi.ts` (minor update)
 
 **Problem**: `.codereview.yml` mandates `apiGet`/`apiPost`/`apiPut`/`apiPatch`/`apiDelete` via an approved client, but only a bare `fetchJSON` exists. All 4 frontend API files (`authApi.ts`, `courseApi.ts`, `learningPathApi.ts`, `initializeLearningPath.ts`) use raw `fetch()` — this is a pre-existing infra gap, not a new violation per se, but fixing the infra fixes all 4 at once.
@@ -209,6 +211,8 @@ Then `CourseApiError` becomes `ApiError`, `InitializeLearningPathError` becomes 
 
 ### 4.2 — Remove `useMemo` on trivial computations
 
+**Status: DONE (2026-08-08).** All 5 `useMemo` calls in `CoursesPage.tsx` replaced with plain computations; `useMemo` import removed.
+
 **File**: `src/pages/courses/ui/CoursesPage.tsx`
 
 **Lines to change**:
@@ -242,6 +246,8 @@ if (courses) for (const p of PRIORITIES) priorityCounts[p] = courses.filter((c) 
 ---
 
 ### 4.4 — Remove dead code `getClientIp`, `getUserAgent`
+
+**Status: CLOSED — audit premise false (2026-08-08).** Both functions ARE used: `logout.ts`, `refresh.ts`, `sso/exchange.ts`, `settings/password.ts` call them for session metadata logging. Not dead code; kept.
 
 **File**: `functions/lib/http.ts`
 
@@ -286,7 +292,7 @@ export function validateLteEnv(env: Record<string, unknown>) {
 }
 ```
 
-Update `functions/lib/auth.ts` or a middleware to call `validateLteEnv(env)` on first access.
+Update `functions/middleware/auth.ts` or a middleware to call `validateLteEnv(env)` on first access.
 
 ---
 
@@ -466,6 +472,8 @@ Or coordinate a deployment where frontend lands first, then backend. Document in
 ---
 
 ### M6.8 — TOCTOU race condition in upsert functions (no unique constraint)
+
+**Status: DONE (2026-08-08).** Code already uses insert-first + 23505 fallback (no check-then-act). `learning_paths` already had `uq_learning_paths_user_track`; missing piece was `learning_tracks` natural key — landed as `supabase/migrations/20260808000000_add_learning_tracks_natural_key_unique.sql` (unique index on `(user_id, assessment_id, track)`).
 
 **Files**: `functions/api/v1/learning-paths/queries.ts` — `upsertLearningTrack` (lines 103-148) and `upsertLearningPath` (lines 169-210)
 

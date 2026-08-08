@@ -1,9 +1,9 @@
 import { clearRefreshCookies, createRefreshCookie, getRefreshCookie } from "@functions/lib/cookies";
 import { validateBackendEnv } from "@functions/lib/env";
 import { getClientIp, getUserAgent, jsonError, jsonResponse } from "@functions/lib/http";
-import { authLogger } from "@functions/lib/logger";
 import { refreshLteSession, SsoAuthError } from "@functions/lib/sso-client";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { authLogger } from "@functions/shared/logger";
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   try {

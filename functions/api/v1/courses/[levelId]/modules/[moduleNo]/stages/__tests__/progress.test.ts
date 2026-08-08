@@ -1,14 +1,14 @@
 import { upsertStageProgress } from "@functions/api/v1/courses/queries";
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
+import { AuthError, requireAuth } from "@functions/middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost } from "../progress";
 
-vi.mock("@functions/lib/auth", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@functions/lib/auth")>();
+vi.mock("@functions/middleware", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/middleware")>();
   return { ...actual, requireAuth: vi.fn() };
 });
 

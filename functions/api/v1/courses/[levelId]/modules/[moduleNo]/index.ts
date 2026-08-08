@@ -5,10 +5,10 @@
 
 import { getModuleDetails } from "@functions/api/v1/courses/queries";
 import { LevelModuleParamsSchema } from "@functions/api/v1/courses/schemas";
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { AuthError, requireAuth } from "@functions/middleware";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();

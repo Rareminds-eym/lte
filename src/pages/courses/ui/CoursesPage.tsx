@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { CourseCard, useCourses } from "@/entities/course";
@@ -38,31 +38,22 @@ export const CoursesPage = () => {
   const isCoursesLoading =
     !courses && ((Boolean(userId) && isPending) || (authLoading && !authInitialized));
 
-  const uniqueRoles = useMemo(() => {
-    if (!courses) return [];
-    const rolesMap = new Map<string, string>();
-    for (const c of courses) {
-      if (c.roleId && c.roleName) {
-        rolesMap.set(c.roleId, c.roleName);
-      }
+  const rolesMap = new Map<string, string>();
+  for (const c of courses ?? []) {
+    if (c.roleId && c.roleName) {
+      rolesMap.set(c.roleId, c.roleName);
     }
-    return Array.from(rolesMap.entries()).map(([id, name]) => ({ id, name }));
-  }, [courses]);
+  }
+  const uniqueRoles = Array.from(rolesMap.entries()).map(([id, name]) => ({ id, name }));
 
-  const roleTabs = useMemo(() => {
-    return [
-      { id: null as string | null, label: "All Roles" },
-      ...uniqueRoles.map((r) => ({ id: r.id, label: r.name })),
-    ];
-  }, [uniqueRoles]);
+  const roleTabs = [
+    { id: null as string | null, label: "All Roles" },
+    ...uniqueRoles.map((r) => ({ id: r.id, label: r.name })),
+  ];
 
-  const filteredCourses = useMemo(() => {
-    let result = courses ?? [];
-    if (activeRoleFilter) {
-      result = result.filter((c) => c.roleId === activeRoleFilter);
-    }
-    return result;
-  }, [courses, activeRoleFilter]);
+  const filteredCourses = (courses ?? []).filter(
+    (c) => !activeRoleFilter || c.roleId === activeRoleFilter,
+  );
 
   const totalPages = Math.ceil(filteredCourses.length / COURSE_PAGE_SIZE);
   const safePage = getSafeCoursePage(currentPage, totalPages);
@@ -72,17 +63,12 @@ export const CoursesPage = () => {
   const completed = courses?.filter((c) => c.status === "completed").length ?? 0;
   const inProgress = courses?.filter((c) => c.status === "in_progress").length ?? 0;
 
-  const roleCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    if (courses) {
-      for (const c of courses) {
-        if (c.roleId) {
-          counts[c.roleId] = (counts[c.roleId] ?? 0) + 1;
-        }
-      }
+  const roleCounts: Record<string, number> = {};
+  for (const c of courses ?? []) {
+    if (c.roleId) {
+      roleCounts[c.roleId] = (roleCounts[c.roleId] ?? 0) + 1;
     }
-    return counts;
-  }, [courses]);
+  }
 
   if (isCoursesLoading) {
     return <CoursesPageSkeleton />;

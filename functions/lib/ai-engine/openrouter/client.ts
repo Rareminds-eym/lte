@@ -1,4 +1,5 @@
-import type { LteEnv } from "../types";
+import { METRIC, metrics } from "../../artifact-evaluator";
+import type { LteEnv } from "../../types";
 import {
   DEFAULT_OPENROUTER_SITE_NAME,
   DEFAULT_OPENROUTER_SITE_URL,
@@ -22,8 +23,12 @@ export async function callOpenRouterAI(
 
   let lastError: Error | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
-    if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
+    if (attempt > 0) {
+      metrics.inc(METRIC.RETRY_COUNT);
+      await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
 
+    const attemptStartedAt = performance.now();
     let response: Response;
     try {
       response = await fetch(OPENROUTER_API_URL, {
@@ -33,9 +38,12 @@ export async function callOpenRouterAI(
         signal: AbortSignal.timeout(30_000),
       });
     } catch (error) {
+      metrics.observe(METRIC.OPENROUTER_LATENCY, Math.round(performance.now() - attemptStartedAt));
       lastError = error instanceof Error ? error : new Error(String(error));
       continue;
     }
+
+    metrics.observe(METRIC.OPENROUTER_LATENCY, Math.round(performance.now() - attemptStartedAt));
 
     if (!response.ok) {
       const message = `OpenRouter API error [${response.status}]: ${await response.text()}`;

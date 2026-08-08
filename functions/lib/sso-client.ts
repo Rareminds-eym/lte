@@ -1,4 +1,3 @@
-import type { AuthUser, MembershipStatus } from "@rareminds-eym/auth-core";
 import type { LteEnv, SsoExchangeResponse } from "./types";
 
 export function getSsoService(env: Pick<LteEnv, "SSO_SERVICE">) {
@@ -129,77 +128,4 @@ export class SsoAuthError extends Error {
     super(message);
     this.name = "SsoAuthError";
   }
-}
-
-export async function getMe(
-  env: Pick<LteEnv, "SSO_SERVICE">,
-  accessToken: string,
-): Promise<AuthUser> {
-  try {
-    const result = await getSsoService(env).getMe(accessToken);
-    return normalizeAuthUser(result);
-  } catch (err) {
-    const isServiceError = err instanceof Error && err.name === "ConfigError";
-    if (!isServiceError) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new SsoAuthError(msg);
-    }
-    throw err;
-  }
-}
-
-function isMembershipStatus(value: string): value is MembershipStatus {
-  return ["active", "inactive", "suspended", "expired"].includes(value);
-}
-interface RawSsoUser {
-  sub?: unknown;
-  email?: unknown;
-  org_id?: unknown;
-  is_email_verified?: unknown;
-  membership_status?: unknown;
-  roles?: unknown;
-  products?: unknown;
-  user_metadata?: unknown;
-}
-
-export function normalizeAuthUser(value: RawSsoUser): AuthUser {
-  const roles = Array.isArray(value.roles)
-    ? value.roles.filter((role: unknown): role is string => typeof role === "string")
-    : [];
-  const products = Array.isArray(value.products)
-    ? value.products.filter((product: unknown): product is string => typeof product === "string")
-    : [];
-  const membershipStatus = value.membership_status;
-
-  if (
-    typeof value.sub !== "string" ||
-    typeof value.email !== "string" ||
-    typeof value.org_id !== "string" ||
-    typeof value.is_email_verified !== "boolean" ||
-    typeof membershipStatus !== "string"
-  ) {
-    throw new Error("Invalid SSO user claims");
-  }
-
-  if (!isMembershipStatus(membershipStatus)) {
-    throw new Error("Invalid SSO membership status");
-  }
-
-  const userMetadata =
-    value.user_metadata &&
-    typeof value.user_metadata === "object" &&
-    !Array.isArray(value.user_metadata)
-      ? (value.user_metadata as Record<string, unknown>)
-      : {};
-
-  return {
-    sub: value.sub,
-    email: value.email,
-    org_id: value.org_id,
-    roles,
-    products,
-    membership_status: membershipStatus,
-    is_email_verified: value.is_email_verified,
-    user_metadata: userMetadata,
-  };
 }

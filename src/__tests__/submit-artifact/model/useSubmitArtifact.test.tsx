@@ -5,11 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockSubmitArtifact = vi.fn();
 
-vi.mock("../api", () => ({
+vi.mock("@/features/submit-artifact/api", () => ({
   submitArtifact: (...args: unknown[]) => mockSubmitArtifact(...args),
 }));
 
-import { useSubmitArtifact } from "./useSubmitArtifact";
+import { useSubmitArtifact } from "@/features/submit-artifact/model/useSubmitArtifact";
 
 function createWrapper() {
   const queryClient = new QueryClient({

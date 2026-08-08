@@ -5,7 +5,7 @@ import {
   getOfficeEmbedUrl,
   getResourceFileKind,
   getResourcePreviewUrl,
-} from "@/entities/course/ui/ResourceContentViewer/types";
+} from "@/entities/course/ui/resource-content-viewer/types";
 
 function item(overrides: Partial<EContentItem>): EContentItem {
   return {

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { EContentItem } from "@/entities/course/model/levelContentTypes";
-import { ResourceContentViewer } from "@/entities/course/ui/ResourceContentViewer/ResourceContentViewer";
+import { ResourceContentViewer } from "@/entities/course/ui/resource-content-viewer/ResourceContentViewer";
 
 describe("ResourceContentViewer & Media players", () => {
   it("renders image content viewer correctly", () => {

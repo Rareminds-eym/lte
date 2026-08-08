@@ -1,5 +1,5 @@
 import type React from "react";
-import { Skeleton, SkeletonGroup } from "@/shared/ui/Skeleton";
+import { Skeleton, SkeletonGroup } from "@/shared/ui/skeleton";
 
 /**
  * A generic page content skeleton designed to fit inside the application layouts

@@ -1,25 +1,30 @@
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { uuidSchema } from "@functions/schemas";
+import { apiLogger } from "@functions/shared/logger";
 import { ArtifactSubmissionError, getSubmissionEvaluationFlow } from "../../queries";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
   const submissionId = context.params["id"];
 
-  if (!submissionId) {
-    return jsonError("Submission ID is required.", 400, {
-      code: "SUBMISSION_ID_REQUIRED",
+  const parsedId = uuidSchema.safeParse(submissionId);
+  if (!parsedId.success) {
+    return jsonError("Submission ID must be a valid UUID.", 400, {
+      code: "INVALID_SUBMISSION_ID",
       requestId,
     });
   }
+  const validSubmissionId = parsedId.data;
 
   try {
-    const user = await requireAuth(context.request, context.env);
+    const user = context.data?.["user"] as { sub: string } | undefined;
+    if (!user) {
+      return jsonError("Unauthorized", 401, { code: "UNAUTHORIZED", requestId });
+    }
     const supabase = createServiceSupabase(context.env);
-    const flow = await getSubmissionEvaluationFlow(supabase, submissionId, user.sub);
+    const flow = await getSubmissionEvaluationFlow(supabase, validSubmissionId, user.sub);
     const meta = flow?.metadata as Record<string, unknown> | null;
 
     return jsonResponse({
@@ -43,12 +48,6 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
         : null,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return jsonError(error.message, error.code === "UNAUTHORIZED" ? 401 : 403, {
-        code: error.code,
-        requestId,
-      });
-    }
     if (error instanceof ArtifactSubmissionError) {
       return jsonError(error.message, error.status, { code: error.code, requestId });
     }

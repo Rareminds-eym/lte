@@ -1,18 +1,18 @@
-export { Header, type HeaderProps } from "./app/Header";
-export { NavigationDrawer, type NavigationDrawerProps } from "./app/NavigationDrawer";
-export { Achievements, type AchievementsProps } from "./dashboard/Achievements";
-export { CapabilityGapMap, type CapabilityGapMapProps } from "./dashboard/CapabilityGapMap";
-export { CareerPaths, type CareerPathsProps } from "./dashboard/CareerPaths";
-export { CareerTargetBanner, type CareerTargetBannerProps } from "./dashboard/CareerTargetBanner";
-export { JourneyHero, type JourneyHeroProps } from "./dashboard/JourneyHero";
-export { TodaysPriorities, type TodaysPrioritiesProps } from "./dashboard/TodaysPriorities";
-export { UpcomingFeedback, type UpcomingFeedbackProps } from "./dashboard/UpcomingFeedback";
-export { LevelHeader, type LevelHeaderProps } from "./LevelHeader";
-export { type ModuleItem, ModulesDrawer, type ModulesDrawerProps } from "./ModulesDrawer";
+export { Header, type HeaderProps } from "./app/header";
+export { NavigationDrawer, type NavigationDrawerProps } from "./app/navigation-drawer";
+export { Achievements, type AchievementsProps } from "./dashboard/achievements";
+export { CapabilityGapMap, type CapabilityGapMapProps } from "./dashboard/capability-gap-map";
+export { CareerPaths, type CareerPathsProps } from "./dashboard/career-paths";
+export { CareerTargetBanner, type CareerTargetBannerProps } from "./dashboard/career-target-banner";
+export { JourneyHero, type JourneyHeroProps } from "./dashboard/journey-hero";
+export { TodaysPriorities, type TodaysPrioritiesProps } from "./dashboard/todays-priorities";
+export { UpcomingFeedback, type UpcomingFeedbackProps } from "./dashboard/upcoming-feedback";
+export { LevelHeader, type LevelHeaderProps } from "./level-header";
+export { type ModuleItem, ModulesDrawer, type ModulesDrawerProps } from "./modules-drawer";
+export { Pagination, type PaginationProps } from "./shared/pagination";
 export {
   STAGE_STEPS,
   type StageStepInfo,
   StageStepperBar,
   type StageStepperBarProps,
-} from "./StageStepperBar";
-export { Pagination, type PaginationProps } from "./shared/Pagination";
+} from "./stage-stepper-bar";

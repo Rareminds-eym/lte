@@ -1,4 +1,3 @@
-import { AuthError, extractBearerToken, requireAuth } from "@functions/lib/auth";
 import {
   getClientIp,
   getUserAgent,
@@ -6,9 +5,10 @@ import {
   jsonResponse,
   readJsonObject,
 } from "@functions/lib/http";
-import { apiLogger } from "@functions/lib/logger";
 import { changeSsoPassword } from "@functions/lib/sso-client";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { AuthError, extractBearerToken, requireAuth } from "@functions/middleware";
+import { apiLogger } from "@functions/shared/logger";
 import { PasswordChangeSchema } from "./schemas";
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {

@@ -1,5 +1,5 @@
-import { checkZipExpansion } from "../artifact-file-guard";
-import { apiLogger } from "../logger";
+import { apiLogger } from "../../shared/logger";
+import { checkZipExpansion } from "./artifact-file-guard";
 
 export interface ExtractedArtifactContent {
   format: string;
@@ -119,10 +119,12 @@ function renderSheetRows(rows: unknown[][], sheetName: string): SpreadsheetRows 
   return { text: lines.join("\n").trim() };
 }
 
-async function parseSpreadsheet(file: File, format: string): Promise<ExtractedArtifactContent> {
+async function parseSpreadsheet(
+  buffer: ArrayBuffer,
+  format: string,
+): Promise<ExtractedArtifactContent> {
   // Dynamic import so SheetJS's heavy module body does not execute at worker startup.
   const XLSX = await import("xlsx/xlsx.mjs");
-  const buffer = await file.arrayBuffer();
 
   // P1-3 (defense in depth; upload validation already guards): refuse to
   // parse archives with abnormal expansion before SheetJS buffers everything.
@@ -173,8 +175,7 @@ async function parseSpreadsheet(file: File, format: string): Promise<ExtractedAr
   return finish(parts.join("\n\n"), "spreadsheet", { rowsOmitted });
 }
 
-async function parsePdf(file: File): Promise<ExtractedArtifactContent> {
-  const buffer = await file.arrayBuffer();
+async function parsePdf(buffer: ArrayBuffer): Promise<ExtractedArtifactContent> {
   // Side-effect import registers the worker module for fake-worker fallback (no real Worker in Workers/Node).
   await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -209,31 +210,41 @@ interface MammothModule {
   default?: MammothModule;
 }
 
-async function parseDocx(file: File): Promise<ExtractedArtifactContent> {
-  const arrayBuffer = await file.arrayBuffer();
+async function parseDocx(buffer: ArrayBuffer): Promise<ExtractedArtifactContent> {
   const module = (await import("mammoth")) as unknown as MammothModule;
   const mammoth = module.default ?? module;
   // Node entry expects { buffer }, browser build expects { arrayBuffer }; pass both.
-  const result = await mammoth.extractRawText({ arrayBuffer, buffer: arrayBuffer });
+  const result = await mammoth.extractRawText({ arrayBuffer: buffer, buffer });
   return finish(result.value, "docx");
 }
 
-export async function extractArtifactContent(file: File): Promise<ExtractedArtifactContent> {
+/**
+ * Extracts readable text from an uploaded artifact file.
+ *
+ * `preReadBuffer` is an optional caller-provided copy of the file bytes
+ * (already read once for signature validation); supplying it avoids a second
+ * `arrayBuffer()` allocation of the whole file.
+ */
+export async function extractArtifactContent(
+  file: File,
+  preReadBuffer?: ArrayBuffer,
+): Promise<ExtractedArtifactContent> {
   const format = normalizeArtifactExtension(file.name) || "file";
   try {
+    const buffer = preReadBuffer ?? (await file.arrayBuffer());
     switch (format) {
       case "xlsx":
       case "xls":
       case "csv":
-        return await parseSpreadsheet(file, format);
+        return await parseSpreadsheet(buffer, format);
       case "pdf":
-        return await parsePdf(file);
+        return await parsePdf(buffer);
       case "docx":
-        return await parseDocx(file);
+        return await parseDocx(buffer);
       case "txt":
       case "text":
       case "md":
-        return await parseText(file);
+        return await parseText(buffer);
       default:
         return { format, extractedText: "", isReadable: false };
     }
@@ -245,8 +256,7 @@ export async function extractArtifactContent(file: File): Promise<ExtractedArtif
   }
 }
 
-async function parseText(file: File): Promise<ExtractedArtifactContent> {
-  const buffer = await file.arrayBuffer();
+async function parseText(buffer: ArrayBuffer): Promise<ExtractedArtifactContent> {
   return finish(decodeTextBytes(buffer), "text");
 }
 

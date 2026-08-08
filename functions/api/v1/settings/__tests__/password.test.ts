@@ -1,12 +1,12 @@
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { changeSsoPassword } from "@functions/lib/sso-client";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost } from "../password";
 
-vi.mock("@functions/lib/auth", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@functions/lib/auth")>();
+vi.mock("@functions/middleware", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/middleware")>();
   return { ...actual, requireAuth: vi.fn() };
 });
 
