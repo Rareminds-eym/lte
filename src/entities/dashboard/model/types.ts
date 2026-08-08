@@ -113,6 +113,13 @@ export interface AchievementsData {
   nextMilestoneProgressPercentage: number;
 }
 
+export interface TodayXpEvent {
+  id: string;
+  event_type: string;
+  xp_amount: number;
+  metadata: Record<string, unknown>;
+}
+
 export interface DashboardData {
   careerTarget: CareerTargetData;
   journey: CurrentJourneyData | null;
@@ -122,4 +129,5 @@ export interface DashboardData {
   upcomingFeedback: UpcomingFeedbackData;
   careerPaths: RecommendedCareerPathsData;
   achievements: AchievementsData;
+  todayEvents?: TodayXpEvent[];
 }

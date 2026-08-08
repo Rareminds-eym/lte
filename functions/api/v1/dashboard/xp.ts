@@ -6,11 +6,19 @@ import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getUserTotalXp } from "@functions/lib/xp-engine";
 import { DashboardXpQuerySchema } from "./schemas";
 
+export interface TodayXpEvent {
+  id: string;
+  event_type: string;
+  xp_amount: number;
+  metadata: Record<string, unknown>;
+}
+
 export interface DashboardXpResponse {
   success: boolean;
   totalXp: number;
   xpThisWeek: number;
   todayXp: number;
+  todayEvents?: TodayXpEvent[];
 }
 
 function startOfDayUtc(now: Date): Date {
@@ -48,7 +56,38 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const xpThisWeek = await getUserTotalXp(supabase, user.sub, since ?? startOfWeekMondayUtc(now));
     const todayXp = await getUserTotalXp(supabase, user.sub, todaySince ?? startOfDayUtc(now));
 
-    return jsonResponse<DashboardXpResponse>({ success: true, totalXp, xpThisWeek, todayXp });
+    // Query today's engagement XP events
+    const { data: eventsData } = await supabase
+      .from("xp_events")
+      .select("id, event_type, xp_amount, metadata")
+      .eq("user_id", user.sub)
+      .gte("created_at", (todaySince ?? startOfDayUtc(now)).toISOString())
+      .in("event_type", [
+        "daily_login",
+        "streak_7_day",
+        "consistency_30_day",
+        "legacy_consistency_bonus",
+      ]);
+
+    const todayEvents = (eventsData ?? []).map((row) => {
+      const metadata = row.metadata;
+      const isObject =
+        metadata !== null && typeof metadata === "object" && !Array.isArray(metadata);
+      return {
+        id: row.id,
+        event_type: row.event_type,
+        xp_amount: row.xp_amount,
+        metadata: isObject ? (metadata as Record<string, unknown>) : {},
+      };
+    });
+
+    return jsonResponse<DashboardXpResponse>({
+      success: true,
+      totalXp,
+      xpThisWeek,
+      todayXp,
+      todayEvents,
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       return jsonError(error.message, error.code === "UNAUTHORIZED" ? 401 : 403, {

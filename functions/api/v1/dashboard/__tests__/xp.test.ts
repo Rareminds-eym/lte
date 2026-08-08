@@ -33,6 +33,15 @@ describe("GET /api/v1/dashboard/xp", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.mocked(getUserTotalXp).mockClear();
+    const mockSupabase = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }),
+    } as unknown as SupabaseClient;
+    vi.mocked(createServiceSupabase).mockReturnValue(mockSupabase);
   });
 
   it("returns 401 when requireAuth throws", async () => {
@@ -50,7 +59,6 @@ describe("GET /api/v1/dashboard/xp", () => {
       .mockResolvedValueOnce(430)
       .mockResolvedValueOnce(75)
       .mockResolvedValueOnce(20);
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({} as SupabaseClient);
     const since = "2026-08-03T00:00:00.000Z";
     const todaySince = "2026-08-05T00:00:00.000Z";
     const response = await onRequestGet({
@@ -83,7 +91,6 @@ describe("GET /api/v1/dashboard/xp", () => {
   it("falls back to UTC boundaries when since is absent", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     vi.mocked(getUserTotalXp).mockResolvedValue(0);
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({} as SupabaseClient);
     const response = await onRequestGet({
       request: new Request("http://localhost/api/v1/dashboard/xp"),
       env: {} as LteEnv,
@@ -114,7 +121,6 @@ describe("GET /api/v1/dashboard/xp", () => {
   it("returns 500 when the XP query fails", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     vi.mocked(getUserTotalXp).mockRejectedValueOnce(new Error("db down"));
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({} as SupabaseClient);
     const response = await onRequestGet({
       request: new Request("http://localhost"),
       env: {} as LteEnv,
