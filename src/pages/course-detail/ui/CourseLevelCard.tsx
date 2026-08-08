@@ -1,5 +1,11 @@
-import type React from "react";
 import { Button } from "@/shared/ui";
+import {
+  ArrowRightIcon,
+  CheckIcon,
+  DurationIcon,
+  EnergyBoltIcon,
+  LockIcon,
+} from "@/shared/ui/icons";
 
 export interface CourseLevelCardProps {
   id?: string;
@@ -122,12 +128,12 @@ export const CourseLevelCard: React.FC<CourseLevelCardProps> = ({
           {/* Meta Stats Line with Horizontal Divider */}
           <div className="flex items-center gap-4 text-xs font-medium text-content-secondary py-3 border-t border-line-subtle mb-4">
             <span className="flex items-center gap-1.5">
-              <ClockIcon className="w-4 h-4 text-content-muted" />
+              <DurationIcon size={16} className="text-content-muted" />
               {duration}
             </span>
             {xp && (
               <span className="flex items-center gap-1 text-warning-600 font-bold">
-                <LightningIcon className="w-4 h-4" />
+                <EnergyBoltIcon size={16} />
                 {xp}
               </span>
             )}
@@ -150,7 +156,8 @@ export const CourseLevelCard: React.FC<CourseLevelCardProps> = ({
               onClick={onAction}
               className="w-full rounded-xl border border-brand-500 text-brand-600 hover:bg-brand-50 font-semibold text-xs py-2.5 inline-flex items-center justify-center gap-1 bg-white shadow-2xs"
             >
-              Review →
+              Review
+              <ArrowRightIcon size={14} />
             </Button>
           ) : (
             <Button
@@ -160,6 +167,7 @@ export const CourseLevelCard: React.FC<CourseLevelCardProps> = ({
               className="w-full rounded-xl bg-brand-600 text-white hover:bg-brand-700 font-semibold text-xs py-2.5 inline-flex items-center justify-center gap-1 shadow-xs"
             >
               {actionText}
+              <ArrowRightIcon size={14} />
             </Button>
           )}
         </div>
@@ -185,20 +193,11 @@ export const CourseLevelCard: React.FC<CourseLevelCardProps> = ({
           aria-label={`Level ${levelNumber} indicator`}
         >
           {isCompleted ? (
-            <svg
-              aria-hidden="true"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <CheckIcon size={16} strokeWidth={2.5} />
           ) : isUnlocked ? (
             <span>{levelNumber}</span>
           ) : (
-            <LockIcon className="h-3.5 w-3.5" />
+            <LockIcon size={14} />
           )}
         </div>
 
@@ -285,14 +284,14 @@ export const CourseLevelCard: React.FC<CourseLevelCardProps> = ({
         {/* Footer Meta & Action Row */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-line-subtle">
           <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-content-secondary">
-            <span className="flex items-center gap-1.5">
-              <ClockIcon className="h-4 w-4 text-content-muted" />
+            <span className="flex items-center gap-1">
+              <DurationIcon size={16} className="text-content-muted" />
               {duration}
             </span>
 
             {xp && (
               <span className="flex items-center gap-1 text-warning-600 font-bold">
-                <LightningIcon className="h-4 w-4" />
+                <EnergyBoltIcon size={16} />
                 {xp}
               </span>
             )}
@@ -303,7 +302,7 @@ export const CourseLevelCard: React.FC<CourseLevelCardProps> = ({
           <div>
             {isLocked ? (
               <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-muted px-4 py-2 text-xs font-semibold text-content-muted cursor-not-allowed border-0">
-                <LockIcon className="h-3.5 w-3.5" />
+                <LockIcon size={14} />
                 Locked
               </span>
             ) : isCompleted ? (
@@ -311,18 +310,20 @@ export const CourseLevelCard: React.FC<CourseLevelCardProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={onAction}
-                className="border border-brand-500 text-brand-600 hover:bg-brand-50 font-semibold text-xs rounded-xl px-4 py-2 inline-flex items-center gap-1 bg-white"
+                className="border border-brand-500 text-brand-600 hover:bg-brand-50 font-semibold text-xs rounded-xl px-4 py-2 inline-flex items-center gap-1.5 bg-white"
               >
-                Review →
+                Review
+                <ArrowRightIcon size={14} />
               </Button>
             ) : (
               <Button
                 variant="primary"
                 size="sm"
                 onClick={onAction}
-                className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-xl px-4 py-2 inline-flex items-center gap-1"
+                className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-xl px-4 py-2 shadow-xs inline-flex items-center gap-1.5"
               >
                 {actionText}
+                <ArrowRightIcon size={14} />
               </Button>
             )}
           </div>
@@ -331,45 +332,3 @@ export const CourseLevelCard: React.FC<CourseLevelCardProps> = ({
     </div>
   );
 };
-
-/* ── Inline SVG Helpers ── */
-
-const ClockIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-    />
-  </svg>
-);
-
-const LightningIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
-  <svg aria-hidden="true" className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-  </svg>
-);
-
-const LockIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-    />
-  </svg>
-);

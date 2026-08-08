@@ -1,5 +1,6 @@
 import type React from "react";
 import { cn } from "@/shared/lib";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/shared/ui/icons";
 
 export interface PaginationProps {
   currentPage: number;
@@ -25,7 +26,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         aria-label="Previous page"
         className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-content-secondary bg-surface-primary border border-line-default rounded-lg hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
       >
-        <ChevronLeftIcon />
+        <ChevronLeftIcon size={16} />
         Prev
       </button>
 
@@ -55,38 +56,8 @@ export const Pagination: React.FC<PaginationProps> = ({
         className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-content-secondary bg-surface-primary border border-line-default rounded-lg hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
       >
         Next
-        <ChevronRightIcon />
+        <ChevronRightIcon size={16} />
       </button>
     </nav>
   );
 };
-
-const ChevronLeftIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="15 18 9 12 15 6" />
-  </svg>
-);
-
-const ChevronRightIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);

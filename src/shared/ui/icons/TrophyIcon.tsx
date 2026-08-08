@@ -1,7 +1,7 @@
 import type * as React from "react";
 import type { IconProps } from "./types";
 
-export const GraduationCapIcon: React.FC<IconProps> = ({
+export const TrophyIcon: React.FC<IconProps> = ({
   size = 17,
   className = "",
   stroke = "currentColor",
@@ -22,16 +22,16 @@ export const GraduationCapIcon: React.FC<IconProps> = ({
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={1.417}
-      d="M15.173 7.736a.708.708 0 0 0-.014-1.302L9.09 3.67a1.417 1.417 0 0 0-1.176 0L1.843 6.43a.708.708 0 0 0 0 1.298l6.07 2.768a1.417 1.417 0 0 0 1.175 0l6.085-2.761ZM15.584 7.083v4.25"
+      d="M4.25 6.375H3.186a1.77 1.77 0 0 1 0-3.542h1.062M12.75 6.375h1.063a1.77 1.77 0 1 0 0-3.542H12.75M2.834 15.584h11.333M7.084 10.384v1.658c0 .39-.333.694-.687.857-.836.382-1.438 1.438-1.438 2.684M9.916 10.384v1.658c0 .39.333.694.687.857.836.382 1.438 1.438 1.438 2.684"
     />
     <path
       stroke={stroke}
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={1.417}
-      d="M4.25 8.854v2.48c0 .563.448 1.104 1.245 1.502.797.399 1.878.623 3.005.623s2.208-.224 3.005-.623c.797-.398 1.245-.939 1.245-1.502v-2.48"
+      d="M12.75 1.417h-8.5v4.958a4.25 4.25 0 0 0 8.5 0V1.417Z"
     />
   </svg>
 );
 
-export default GraduationCapIcon;
+export default TrophyIcon;

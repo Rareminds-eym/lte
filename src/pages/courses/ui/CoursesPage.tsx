@@ -8,6 +8,15 @@ import { StartAssessmentButton } from "@/features/start-assessment";
 import { getLogger } from "@/shared";
 import { cn } from "@/shared/lib";
 import { Button, SegmentedControl } from "@/shared/ui";
+import {
+  BookOpenIcon,
+  CheckIcon,
+  ClockIcon,
+  DashboardGridIcon,
+  FilterIcon,
+  LayersIcon,
+  ListIcon,
+} from "@/shared/ui/icons";
 import { Pagination } from "@/widgets";
 import { LearningPathEmptyState } from "@/widgets/learning-path";
 import { COURSE_PAGE_SIZE, getSafeCoursePage, paginateCourses } from "../model/courseFilters";
@@ -119,7 +128,7 @@ export const CoursesPage = () => {
         <div className="py-16 text-center">
           <div className="mx-auto max-w-md space-y-4">
             <div className="mx-auto w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
-              <BookIcon />
+              <BookOpenIcon size={20} className="text-accent-purple-600" />
             </div>
             <h2 className="text-xl font-bold text-content-primary">No learning path yet</h2>
             <p className="text-sm text-content-secondary">
@@ -145,7 +154,7 @@ export const CoursesPage = () => {
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center shrink-0 mt-1">
-              <BookIcon />
+              <BookOpenIcon size={20} className="text-accent-purple-600" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-content-primary leading-tight">My Courses</h1>
@@ -157,19 +166,19 @@ export const CoursesPage = () => {
 
           <div className="flex items-center gap-3 shrink-0 flex-wrap">
             <StatsPill
-              icon={<LayersIconSmall />}
+              icon={<LayersIcon size={14} />}
               count={total}
               label="Enrolled"
               className={STATS_PILL_STYLES.enrolled}
             />
             <StatsPill
-              icon={<CheckIconSmall />}
+              icon={<CheckIcon size={14} />}
               count={completed}
               label="Completed"
               className={STATS_PILL_STYLES.completed}
             />
             <StatsPill
-              icon={<ClockIconSmall />}
+              icon={<ClockIcon size={14} />}
               count={inProgress}
               label="In Progress"
               className={STATS_PILL_STYLES.inProgress}
@@ -224,7 +233,12 @@ export const CoursesPage = () => {
       )}
 
       <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" icon={<FilterIcon />} className="rounded-full">
+        <Button
+          variant="outline"
+          size="sm"
+          icon={<FilterIcon size={16} />}
+          className="rounded-full"
+        >
           Filter
         </Button>
 
@@ -240,12 +254,12 @@ export const CoursesPage = () => {
               {
                 value: "grid",
                 label: "Grid view",
-                icon: <GridIcon />,
+                icon: <DashboardGridIcon size={16} />,
               },
               {
                 value: "list",
                 label: "List view",
-                icon: <ListIcon />,
+                icon: <ListIcon size={16} />,
               },
             ]}
           />
@@ -283,130 +297,13 @@ const StatsPill: React.FC<{
 }> = ({ icon, count, label, className }) => (
   <span
     className={cn(
-      "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-sm font-medium",
+      "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-sm font-medium [&_svg]:block [&_svg]:shrink-0",
       className,
     )}
   >
-    <span className="w-4 h-4">{icon}</span>
-    <span>
+    {icon}
+    <span className="leading-none">
       {count} {label}
     </span>
   </span>
-);
-
-const BookIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-5 h-5 text-accent-purple-600"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-  </svg>
-);
-
-const LayersIconSmall: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-3.5 h-3.5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polygon points="12 2 2 7 12 12 22 7 12 2" />
-    <polyline points="2 12 12 17 22 12" />
-    <polyline points="2 17 12 22 22 17" />
-  </svg>
-);
-
-const CheckIconSmall: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-3.5 h-3.5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const ClockIconSmall: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-3.5 h-3.5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
-const FilterIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-  </svg>
-);
-
-const GridIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.5" />
-    <rect x="14" y="3.5" width="6.5" height="6.5" rx="1.5" />
-    <rect x="14" y="14" width="6.5" height="6.5" rx="1.5" />
-    <rect x="3.5" y="14" width="6.5" height="6.5" rx="1.5" />
-  </svg>
-);
-
-const ListIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="9" y1="6" x2="20" y2="6" />
-    <line x1="9" y1="12" x2="20" y2="12" />
-    <line x1="9" y1="18" x2="20" y2="18" />
-    <circle cx="4.5" cy="6" r="1" fill="currentColor" />
-    <circle cx="4.5" cy="12" r="1" fill="currentColor" />
-    <circle cx="4.5" cy="18" r="1" fill="currentColor" />
-  </svg>
 );

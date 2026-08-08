@@ -573,7 +573,7 @@ export const LevelContentPage: React.FC = () => {
       ? "Mark Done & Next"
       : nextModuleExists
         ? "Mark Done & Next Module"
-        : "Mark Done & Complete Course";
+        : "Finish Course";
 
   const renderStageNavigationBar = () => (
     <div className="sticky bottom-0 z-20 grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-line-default bg-surface-primary px-4 shadow-[0_-4px_12px_rgba(15,23,42,0.05)]">
@@ -623,7 +623,7 @@ export const LevelContentPage: React.FC = () => {
       >
         <span className="inline-flex items-center gap-2">
           {primaryNextLabel}
-          {primaryNextLabel === "Complete Course" ? (
+          {primaryNextLabel === "Complete Course" || primaryNextLabel === "Finish Course" ? (
             <CheckIcon size={16} />
           ) : (
             <ChevronRightIcon size={16} />

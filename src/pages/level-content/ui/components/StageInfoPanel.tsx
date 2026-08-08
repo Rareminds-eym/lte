@@ -64,16 +64,16 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
           type="button"
           variant="ghost"
           size="sm"
-          className={`flex h-auto w-full items-start justify-between gap-2 rounded-none border-0 bg-transparent p-0 text-left font-sans text-content-heading shadow-none hover:bg-transparent disabled:opacity-100 ${
+          className={`grid h-auto w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-none border-0 bg-transparent p-0 text-left font-sans text-content-heading shadow-none hover:bg-transparent disabled:opacity-100 ${
             isScenarioOverflowing ? "cursor-pointer" : "cursor-default"
           }`}
           aria-expanded={isScenarioExpanded}
           disabled={!isScenarioOverflowing}
           onClick={() => setIsScenarioExpanded(!isScenarioExpanded)}
         >
-          <span className="flex items-start gap-1.5 text-[13px] font-bold leading-snug text-content-heading">
+          <span className="flex min-w-0 items-start gap-1.5 text-left text-[13px] font-bold leading-snug text-content-heading">
             <BookOpenIcon size={13} className="mt-0.5 shrink-0 text-brand-600" />
-            {level.levelProblemStatement.title}
+            <span className="min-w-0 flex-1">{level.levelProblemStatement.title}</span>
           </span>
           {isScenarioOverflowing ? (
             <ChevronRightIcon

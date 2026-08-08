@@ -1,5 +1,6 @@
 import type React from "react";
 import { SegmentedProgressBar } from "@/shared/ui";
+import { DurationIcon, EnergyBoltIcon } from "@/shared/ui/icons";
 
 export interface CourseStatsOverlayProps {
   totalDuration: string;
@@ -22,20 +23,7 @@ export const CourseStatsOverlay: React.FC<CourseStatsOverlayProps> = ({
         {/* Total Duration */}
         <div className="flex items-center gap-3.5">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 shadow-sm">
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+            <DurationIcon size={20} />
           </div>
           <div>
             <p className="text-lg font-bold text-content-primary leading-snug">{totalDuration}</p>
@@ -48,9 +36,7 @@ export const CourseStatsOverlay: React.FC<CourseStatsOverlayProps> = ({
         {/* XP Available */}
         <div className="flex items-center gap-3.5">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-orange-50 text-accent-orange-500 shadow-sm">
-            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <EnergyBoltIcon size={20} />
           </div>
           <div>
             <p className="text-lg font-bold text-content-primary leading-snug">{xpAvailable}</p>

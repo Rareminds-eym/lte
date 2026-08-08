@@ -22,6 +22,9 @@ describe("LevelModuleList", () => {
     );
     expect(screen.getByText("Course Modules")).toBeDefined();
     expect(screen.getByText("0 modules · 6E Problem-Based Learning Framework")).toBeDefined();
+    expect(screen.getByText("No modules available")).toBeDefined();
+    expect(screen.getByText("Modules have not been added to this level yet.")).toBeDefined();
+    expect(screen.queryByText("Course completion locked")).toBeNull();
   });
 
   it("parses database JSONB array and object fields correctly and calculates dynamic status", () => {

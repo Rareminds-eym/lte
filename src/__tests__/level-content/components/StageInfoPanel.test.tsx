@@ -86,7 +86,10 @@ describe("StageInfoPanel", () => {
   it("toggles overflowing scenario text from both controls", () => {
     const { setIsScenarioExpanded } = renderPanel();
 
-    fireEvent.click(screen.getByRole("button", { name: /Investigate the incident/i }));
+    const problemToggle = screen.getByRole("button", { name: /Investigate the incident/i });
+    expect(problemToggle).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(problemToggle);
     fireEvent.click(screen.getByRole("button", { name: "Read more" }));
 
     expect(setIsScenarioExpanded).toHaveBeenNthCalledWith(1, true);

@@ -1,6 +1,7 @@
 import type React from "react";
 import type { CapabilityGapItem, GapLevel } from "@/entities/dashboard";
 import { WidgetCard } from "@/shared/ui";
+import { AnalysisIcon, ArrowRightIcon } from "@/shared/ui/icons";
 
 export interface CapabilityGapMapProps {
   data: CapabilityGapItem[];
@@ -16,6 +17,7 @@ export const CapabilityGapMap: React.FC<CapabilityGapMapProps> = ({ data }) => {
 
   return (
     <WidgetCard
+      icon={<AnalysisIcon size={20} className="text-content-primary" />}
       title="Capability Gap Map"
       infoTooltip="Capability information"
       action={{
@@ -27,7 +29,7 @@ export const CapabilityGapMap: React.FC<CapabilityGapMapProps> = ({ data }) => {
           href="#level-guide"
           className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors inline-flex items-center gap-1"
         >
-          See how levels work →
+          See how levels work <ArrowRightIcon size={12} />
         </a>
       }
     >

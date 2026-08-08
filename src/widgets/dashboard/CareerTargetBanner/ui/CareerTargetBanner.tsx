@@ -1,5 +1,6 @@
 import type React from "react";
 import type { CareerTargetData } from "@/entities/dashboard";
+import { ArrowRightIcon, SlidersIcon, TargetArrowIcon } from "@/shared/ui/icons";
 
 export interface CareerTargetBannerProps {
   data: CareerTargetData;
@@ -12,7 +13,10 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
         {/* 1. Left Section: Career Target title stacked ABOVE the Role Readiness donut row */}
         <div className="flex flex-col gap-3">
           <div className="space-y-0.5">
-            <div className="text-[12px] font-medium text-content-secondary">Career Target</div>
+            <div className="text-[12px] font-medium text-content-secondary flex items-center gap-1.5">
+              <TargetArrowIcon size={16} className="text-content-primary" />
+              <span>Career Target</span>
+            </div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-extrabold text-content-primary tracking-tight">
                 {data.title}
@@ -22,20 +26,7 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
                 aria-label="Filter target roles"
                 className="text-content-secondary hover:text-content-body transition-colors cursor-pointer p-0.5"
               >
-                <svg
-                  aria-hidden="true"
-                  className="w-4.5 h-4.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                  />
-                </svg>
+                <SlidersIcon size={16} />
               </button>
             </div>
           </div>
@@ -82,7 +73,7 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
                 href="#readiness-report"
                 className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors pt-0.5"
               >
-                View Readiness Report →
+                View Readiness Report <ArrowRightIcon size={12} />
               </a>
             </div>
           </div>

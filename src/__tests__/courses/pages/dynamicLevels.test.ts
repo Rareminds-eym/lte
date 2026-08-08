@@ -47,7 +47,7 @@ describe("mapApiLevelsToCards", () => {
       duration: "45 hrs",
       xp: "350 XP",
       difficulty: "Beginner",
-      actionText: "Review →",
+      actionText: "Review",
     });
 
     expect(cards[1]).toEqual({
@@ -63,7 +63,7 @@ describe("mapApiLevelsToCards", () => {
       duration: "45 hrs",
       xp: "350 XP",
       difficulty: "Beginner",
-      actionText: "Start →",
+      actionText: "Start",
     });
   });
 
@@ -117,7 +117,7 @@ describe("mapApiLevelsToCards", () => {
     const cards = mapApiLevelsToCards(mockLevels, 0, 2);
 
     expect(cards[0]?.status).toBe("unlocked");
-    expect(cards[0]?.actionText).toBe("Start →");
+    expect(cards[0]?.actionText).toBe("Start");
     expect(cards[1]?.status).toBe("locked");
   });
 });

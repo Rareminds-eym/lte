@@ -9,130 +9,16 @@ import {
   useUpdateProfile,
 } from "@/entities/settings";
 import { Button, TextField, ToggleSwitch, toast } from "@/shared/ui";
+import {
+  CameraIcon,
+  CheckIcon,
+  GraduationCapIcon,
+  LockIcon,
+  SettingsIcon,
+  UserIcon,
+  WarningIcon,
+} from "@/shared/ui/icons";
 import { SettingsPageSkeleton } from "./SettingsPageSkeleton";
-
-// ─── Section Icon Components ────────────────────────────────────────────────
-
-/** Settings gear icon for page header */
-const SettingsHeaderIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-5 h-5 text-brand-600"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-/** Person icon for Profile section header */
-const ProfileIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-5 h-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
-/** Lock/shield icon for Account & Security section header */
-const SecurityIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-5 h-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-
-/** Warning triangle icon for Danger Zone section header */
-const WarningIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-5 h-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-    <line x1="12" y1="9" x2="12" y2="13" />
-    <line x1="12" y1="17" x2="12.01" y2="17" />
-  </svg>
-);
-
-/** Camera icon for avatar edit overlay */
-const CameraIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-3.5 h-3.5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-    <circle cx="12" cy="13" r="4" />
-  </svg>
-);
-
-/** Graduation cap icon for institution info */
-const GraduationIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-    <path d="M6 12v5c3 3 10 3 12 0v-5" />
-  </svg>
-);
-
-/** Checkmark icon for verified badge */
-const CheckIcon: React.FC = () => (
-  <svg
-    aria-hidden="true"
-    className="w-3.5 h-3.5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-// ─── Tab Button Types ───────────────────────────────────────────────────────
 
 type TabId = "profile" | "account-security" | "danger-zone";
 
@@ -144,9 +30,9 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: "profile", label: "Profile", icon: <ProfileIcon /> },
-  { id: "account-security", label: "Account & Security", icon: <SecurityIcon /> },
-  { id: "danger-zone", label: "Danger Zone", icon: <WarningIcon />, isDanger: true },
+  { id: "profile", label: "Profile", icon: <UserIcon size={20} /> },
+  { id: "account-security", label: "Account & Security", icon: <LockIcon size={20} /> },
+  { id: "danger-zone", label: "Danger Zone", icon: <WarningIcon size={20} />, isDanger: true },
 ];
 
 // ─── Main Settings Page ─────────────────────────────────────────────────────
@@ -312,7 +198,7 @@ export const SettingsPage: React.FC = () => {
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center shrink-0 mt-1">
-              <SettingsHeaderIcon />
+              <SettingsIcon size={20} className="text-brand-600" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-content-primary leading-tight">Settings</h1>
@@ -386,7 +272,7 @@ export const SettingsPage: React.FC = () => {
         {/* Section Header */}
         <div className="flex items-center gap-3 mb-6">
           <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-50 text-brand-600">
-            <ProfileIcon />
+            <UserIcon size={20} />
           </span>
           <div>
             <h2 id="heading-profile" className="text-base font-bold text-content-primary">
@@ -408,7 +294,7 @@ export const SettingsPage: React.FC = () => {
               aria-label="Change profile photo"
               className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-brand-600 border-2 border-white flex items-center justify-center text-white cursor-pointer hover:bg-brand-700 transition-colors"
             >
-              <CameraIcon />
+              <CameraIcon size={14} />
             </button>
           </div>
 
@@ -418,7 +304,7 @@ export const SettingsPage: React.FC = () => {
               {profile.fullName || "Learner"}
             </h3>
             <div className="flex items-center gap-1.5 text-xs text-content-secondary mt-0.5">
-              <GraduationIcon />
+              <GraduationCapIcon size={16} />
               <span>
                 {[profile.college, profile.program, profile.section].filter(Boolean).join(" · ") ||
                   "Learner Profile"}
@@ -509,7 +395,7 @@ export const SettingsPage: React.FC = () => {
             Section: <span className="font-bold">{profile.section || "N/A"}</span>
           </span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-content-primary bg-surface-secondary border border-line-default rounded-lg">
-            <CheckIcon />
+            <CheckIcon size={14} />
             Skill Passport:{" "}
             <span className="font-bold">
               {profile.skillPassportVerified ? "Verified" : "Pending"}
@@ -544,7 +430,7 @@ export const SettingsPage: React.FC = () => {
         {/* Section Header */}
         <div className="flex items-center gap-3 mb-6">
           <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-50 text-brand-600">
-            <SecurityIcon />
+            <LockIcon size={20} />
           </span>
           <div>
             <h2 id="heading-security" className="text-base font-bold text-content-primary">
@@ -638,7 +524,7 @@ export const SettingsPage: React.FC = () => {
         {/* Section Header */}
         <div className="flex items-center gap-3 mb-6">
           <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-danger-50 text-danger-500">
-            <WarningIcon />
+            <WarningIcon size={20} />
           </span>
           <div>
             <h2 id="heading-danger" className="text-base font-bold text-danger-600">

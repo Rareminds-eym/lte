@@ -1,6 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 import { IconButton } from "@/shared/ui";
+import { BellIcon, MenuIcon, SearchIcon } from "@/shared/ui/icons";
 import { UserProfileBadge } from "./components/UserProfileBadge";
 import { UserProfileDropdown } from "./components/UserProfileDropdown";
 
@@ -53,20 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="Toggle navigation menu"
             className="w-9 h-9 rounded-xl border border-line-default bg-surface-primary hover:bg-surface-muted flex items-center justify-center text-content-secondary transition-colors shrink-0"
           >
-            <svg
-              aria-hidden="true"
-              className="w-5 h-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
+            <MenuIcon size={20} />
           </button>
           <span className="font-bold text-base text-content-primary capitalize">{pageTitle}</span>
         </div>
@@ -75,19 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="hidden md:flex flex-1 justify-center max-w-xl mx-auto">
           <div className="relative flex items-center w-full bg-white/80 rounded-full px-4 py-2.5 border border-line-default shadow-2xs focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition-all">
             <div className="pointer-events-none text-content-secondary mr-2.5 shrink-0">
-              <svg
-                aria-hidden="true"
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
+              <SearchIcon size={16} />
             </div>
             <input
               type="text"
@@ -105,21 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
             variant="soft-blue"
             size="md"
             badgeCount={notificationCount}
-            icon={
-              <svg
-                aria-hidden="true"
-                className="w-5 h-5 text-content-secondary"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            }
+            icon={<BellIcon size={20} className="text-content-secondary" />}
           />
           <UserProfileBadge
             name={displayName}
@@ -143,19 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex md:hidden w-full pt-1 pb-0.5">
         <div className="relative flex items-center w-full bg-surface-secondary rounded-full px-3.5 py-2.5 border border-line-default focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition-all shadow-2xs">
           <div className="pointer-events-none text-content-secondary mr-2.5 shrink-0">
-            <svg
-              aria-hidden="true"
-              className="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+            <SearchIcon size={16} />
           </div>
           <input
             type="text"
