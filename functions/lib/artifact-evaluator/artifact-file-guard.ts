@@ -24,6 +24,8 @@ export type FileSignatureFamily =
 export const FILE_SIGNATURE_REQUIREMENTS: Record<string, FileSignatureFamily[]> = {
   xlsx: ["zip"],
   docx: ["zip"],
+  pptx: ["zip"],
+  ppt: ["ole", "zip"],
   xls: ["ole", "zip"],
   pdf: ["pdf"],
   csv: ["text"],
