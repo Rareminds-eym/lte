@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AIDebugTelemetry } from "@/../functions/lib/ai-engine/types";
+import type { AIDebugTelemetry } from "@/../functions/lib/artifact-evaluator";
 import { CheckIcon } from "@/shared/ui";
 
 interface AiDebugInspectorProps {

@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import type { AIDebugTelemetry } from "@/../functions/lib/ai-engine/types";
+import type { AIDebugTelemetry } from "@/../functions/lib/artifact-evaluator";
 import type { ModuleArtifactSubmittedFile } from "@/entities/course";
 import { downloadArtifactFile } from "@/features/submit-artifact";
 import {

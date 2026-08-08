@@ -1,4 +1,4 @@
-import type { AIDebugTelemetry } from "@/../functions/lib/ai-engine/types";
+import type { AIDebugTelemetry } from "@/../functions/lib/artifact-evaluator";
 import { apiFetch } from "@/shared/api";
 
 export interface ArtifactAnswerInput {

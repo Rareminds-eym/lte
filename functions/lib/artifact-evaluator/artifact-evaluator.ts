@@ -520,6 +520,7 @@ async function evaluateArtifactSubmissionCore(
       latencyMs,
       modelUsed: modelToUse,
       calculatedXp,
+      confidence: parsed.confidence,
       rawPromptContent: rawPrompt,
       rawResponseContent: rawContent.trim(),
       validatedDecision,
