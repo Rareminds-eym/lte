@@ -20,6 +20,7 @@ const mockUser: AuthUser = {
 };
 
 const mockEnv: LteEnv = {
+  ASSETS: { fetch: async () => new Response() },
   SSO_SERVICE: {} as LteEnv["SSO_SERVICE"],
   STORAGE_BUCKET: {
     put: () => Promise.resolve({}),

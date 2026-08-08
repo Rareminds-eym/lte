@@ -11,7 +11,12 @@ export interface R2BucketBinding {
   delete(key: string): Promise<void>;
 }
 
+export interface AssetsBinding {
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+}
+
 export interface LteEnv {
+  ASSETS: AssetsBinding;
   SSO_SERVICE: SsoRpcService;
   STORAGE_BUCKET: R2BucketBinding;
   R2_PUBLIC_DOMAIN?: string;
