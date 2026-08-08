@@ -134,7 +134,7 @@ describe("ArtifactPanel historical evaluation + AiDebugInspector", () => {
     fireEvent.click(screen.getByRole("tab", { name: /feedback/i }));
     await screen.findByText(/Dev AI Inspector/);
     fireEvent.click(screen.getByRole("button", { name: /Dev AI Inspector/i }));
-    fireEvent.click(screen.getByRole("button", { name: /System Prompt & Payload/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Raw Prompt/i }));
     const copyPrompt = screen.getByRole("button", { name: /Copy Prompt/i });
     expect(copyPrompt).toBeInTheDocument();
     fireEvent.click(copyPrompt);

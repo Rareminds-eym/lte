@@ -47,7 +47,7 @@ export function AiDebugInspector({ telemetry }: AiDebugInspectorProps) {
             🐞 Dev AI Inspector
           </span>
           <span>
-            {telemetry.modelUsed} ({telemetry.latencyMs}ms)
+            {telemetry.modelUsed} ({telemetry.latencyMs ?? "—"}ms)
           </span>
           <svg
             aria-hidden="true"
@@ -93,7 +93,7 @@ export function AiDebugInspector({ telemetry }: AiDebugInspectorProps) {
                   : "text-content-secondary hover:bg-surface-muted"
               }`}
             >
-              System Prompt & Payload
+              Raw Prompt
             </button>
             <button
               type="button"
@@ -105,7 +105,7 @@ export function AiDebugInspector({ telemetry }: AiDebugInspectorProps) {
               }`}
             >
               Raw Response
-            </button>
+            </button>{" "}
             <button
               type="button"
               onClick={() => setActiveTab("stages")}
@@ -131,7 +131,7 @@ export function AiDebugInspector({ telemetry }: AiDebugInspectorProps) {
               </div>
               <div>
                 <span className="font-semibold text-content-secondary">Execution Latency:</span>{" "}
-                {telemetry.latencyMs} ms
+                {telemetry.latencyMs ?? "—"} ms
               </div>
               <div>
                 <span className="font-semibold text-content-secondary">Decision Outcome:</span>{" "}
@@ -144,6 +144,23 @@ export function AiDebugInspector({ telemetry }: AiDebugInspectorProps) {
               <div>
                 <span className="font-semibold text-content-secondary">Calculated XP:</span> +
                 {telemetry.calculatedXp} XP
+              </div>
+              <div>
+                <span className="font-semibold text-content-secondary">Confidence:</span>{" "}
+                {telemetry.confidence}
+              </div>
+              <div>
+                <span className="font-semibold text-content-secondary">Prompt Size:</span>{" "}
+                {telemetry.promptCharCount?.toLocaleString() ?? "—"} chars
+              </div>
+              <div>
+                <span className="font-semibold text-content-secondary">Extracted Content:</span>{" "}
+                {Object.values(telemetry.extractionCharCounts ?? {}).reduce((sum, n) => sum + n, 0)}{" "}
+                chars
+              </div>
+              <div>
+                <span className="font-semibold text-content-secondary">Timestamp:</span>{" "}
+                {new Date(telemetry.timestamp).toLocaleString()}
               </div>
             </div>
           )}
@@ -165,9 +182,16 @@ export function AiDebugInspector({ telemetry }: AiDebugInspectorProps) {
                   {promptCopied ? "Copied!" : "Copy Prompt"}
                 </button>
               </div>
-              <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-content-primary p-3 font-mono text-[11px] leading-relaxed text-content-inverse">
-                {telemetry.rawPromptContent}
-              </pre>
+              {telemetry.rawPromptContent === null ? (
+                <p className="rounded-lg bg-surface-muted p-3 text-content-secondary">
+                  No LLM call was made — evaluation ran on the deterministic fallback (provider:{" "}
+                  {telemetry.provider}).
+                </p>
+              ) : (
+                <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-content-primary p-3 font-mono text-[11px] leading-relaxed text-content-inverse">
+                  {telemetry.rawPromptContent}
+                </pre>
+              )}
             </div>
           )}
 
@@ -188,9 +212,16 @@ export function AiDebugInspector({ telemetry }: AiDebugInspectorProps) {
                   {responseCopied ? "Copied!" : "Copy Response"}
                 </button>
               </div>
-              <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-content-primary p-3 font-mono text-[11px] leading-relaxed text-content-inverse">
-                {telemetry.rawResponseContent}
-              </pre>
+              {telemetry.rawResponseContent === null ? (
+                <p className="rounded-lg bg-surface-muted p-3 text-content-secondary">
+                  No LLM response — evaluation ran on the deterministic fallback (provider:{" "}
+                  {telemetry.provider}).
+                </p>
+              ) : (
+                <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-content-primary p-3 font-mono text-[11px] leading-relaxed text-content-inverse">
+                  {telemetry.rawResponseContent}
+                </pre>
+              )}
             </div>
           )}
 
