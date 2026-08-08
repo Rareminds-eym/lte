@@ -15,6 +15,7 @@ import type { LteEnv } from "@functions/lib/types";
 import type { CompleteSubmissionInput } from "@functions/schemas";
 import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchArtifactTemplateContent, fetchEvaluationContext } from "./evaluation-context";
 
 interface ArtifactQuestionRow {
   id: string;
@@ -158,7 +159,14 @@ async function validateArtifactFileContent(
     throw error;
   }
 
-  if (extension === "xlsx" || extension === "xls" || extension === "docx") {
+  // 1. Zip expansion & Zip bomb protection for all zip-based Office / Archive files
+  if (
+    extension === "xlsx" ||
+    extension === "xls" ||
+    extension === "docx" ||
+    extension === "pptx" ||
+    extension === "zip"
+  ) {
     const expansion = checkZipExpansion(buffer);
     if (!expansion.safe) {
       apiLogger.warn("Rejected artifact upload with abnormal archive expansion.", {
@@ -167,10 +175,69 @@ async function validateArtifactFileContent(
         reason: expansion.reason,
       });
       throw new ArtifactSubmissionError(
-        "The uploaded archive expands beyond a safe processing limit.",
+        `The uploaded archive expands beyond a safe processing limit (${expansion.reason ?? "invalid archive"}).`,
         400,
         "ZIP_BOMB_DETECTED",
       );
+    }
+  }
+
+  // 2. Pre-parse validation for PDF page limits (max 50 pages)
+  if (extension === "pdf") {
+    try {
+      await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+      const doc = await loadingTask.promise;
+      const numPages = doc.numPages;
+      await loadingTask.destroy();
+
+      if (numPages > 50) {
+        throw new ArtifactSubmissionError(
+          `The uploaded PDF contains ${numPages} pages, exceeding the maximum allowed limit of 50 pages.`,
+          400,
+          "EXCEEDS_PAGE_LIMIT",
+        );
+      }
+    } catch (err) {
+      if (err instanceof ArtifactSubmissionError) throw err;
+    }
+  }
+
+  // 3. Pre-parse validation for PPTX slide limits (max 50 slides)
+  if (extension === "pptx") {
+    try {
+      const JSZip = (await import("jszip")).default;
+      const zip = await JSZip.loadAsync(buffer);
+      const slideCount = Object.keys(zip.files).filter((name) =>
+        /^ppt\/slides\/slide\d+\.xml$/i.test(name),
+      ).length;
+      if (slideCount > 50) {
+        throw new ArtifactSubmissionError(
+          `The uploaded presentation contains ${slideCount} slides, exceeding the maximum allowed limit of 50 slides.`,
+          400,
+          "EXCEEDS_SLIDE_LIMIT",
+        );
+      }
+    } catch (err) {
+      if (err instanceof ArtifactSubmissionError) throw err;
+    }
+  }
+
+  // 4. Pre-parse validation for XLSX sheet limits (max 20 sheets)
+  if (extension === "xlsx" || extension === "xls") {
+    try {
+      const XLSX = await import("xlsx/xlsx.mjs");
+      const workbook = XLSX.read(buffer, { type: "buffer", bookSheets: true });
+      if (workbook.SheetNames && workbook.SheetNames.length > 20) {
+        throw new ArtifactSubmissionError(
+          `The uploaded workbook contains ${workbook.SheetNames.length} sheets, exceeding the maximum allowed limit of 20 sheets.`,
+          400,
+          "EXCEEDS_SHEET_LIMIT",
+        );
+      }
+    } catch (err) {
+      if (err instanceof ArtifactSubmissionError) throw err;
     }
   }
 }
@@ -610,6 +677,7 @@ export async function submitArtifactSubmission(
   }
 
   const evalInput = await buildArtifactEvaluationInput({
+    supabase,
     artifactMeta: (artifactMeta as ArtifactMetaRow | null) ?? null,
     questionDetails: (questionDetails as ArtifactQuestionDetailRow[] | null) ?? [],
     input,
@@ -731,12 +799,15 @@ async function buildDuplicateSubmissionResponse(
 }
 
 export async function buildArtifactEvaluationInput(params: {
+  supabase?: SupabaseClient;
   artifactMeta: ArtifactMetaRow | null;
   questionDetails: ArtifactQuestionDetailRow[];
   input: CompleteSubmissionInput;
   filesByQuestionId: Map<string, File>;
   preReadBuffers?: Map<string, ArrayBuffer>;
   attemptNo: number;
+  evaluationContext?: ArtifactEvaluationInput["evaluationContext"];
+  templateContentByQuestionId?: Map<string, string>;
 }): Promise<ArtifactEvaluationInput> {
   const extractedByQuestionId = new Map<string, string>();
   for (const [questionId, file] of params.filesByQuestionId) {
@@ -754,6 +825,19 @@ export async function buildArtifactEvaluationInput(params: {
     }
   }
 
+  let evaluationContext = params.evaluationContext;
+  if (!evaluationContext && params.supabase) {
+    evaluationContext = await fetchEvaluationContext(params.supabase, params.input.artifact_id);
+  }
+
+  let templateContentMap = params.templateContentByQuestionId;
+  if (!templateContentMap && params.supabase) {
+    templateContentMap = await fetchArtifactTemplateContent(
+      params.supabase,
+      params.input.artifact_id,
+    );
+  }
+
   return {
     artifactId: params.input.artifact_id,
     artifactType: (params.artifactMeta?.artifact_type as "practice" | "final") || "final",
@@ -768,6 +852,9 @@ export async function buildArtifactEvaluationInput(params: {
     })),
     answers: params.input.answers.map((a) => {
       const fileObj = params.filesByQuestionId.get(a.question_id);
+      const tplContent = templateContentMap
+        ? (templateContentMap.get(a.question_id) ?? templateContentMap.get("__artifact__"))
+        : undefined;
       return {
         questionId: a.question_id,
         textResponse: a.text_response,
@@ -776,9 +863,11 @@ export async function buildArtifactEvaluationInput(params: {
         fileContentSnippet: fileObj
           ? (extractedByQuestionId.get(a.question_id) ?? undefined)
           : undefined,
+        templateContent: tplContent ?? undefined,
       };
     }),
     attemptNo: params.attemptNo,
+    evaluationContext,
   };
 }
 

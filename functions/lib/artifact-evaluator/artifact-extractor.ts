@@ -15,7 +15,7 @@ export interface ExtractedArtifactContent {
 
 /** Overall cap on extracted text sent to the LLM (TRD §8.4). */
 export const ARTIFACT_TEXT_CAP = 50_000;
-const PDF_PAGE_CAP = 15;
+const PDF_PAGE_CAP = 50;
 const MAX_SHEETS = 20;
 const SHEET_MAX_ROWS = 2_000;
 const SHEET_MAX_COLS = 256;
@@ -218,6 +218,60 @@ async function parseDocx(buffer: ArrayBuffer): Promise<ExtractedArtifactContent>
   return finish(result.value, "docx");
 }
 
+function unescapeXml(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
+async function parsePptx(buffer: ArrayBuffer): Promise<ExtractedArtifactContent> {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(buffer);
+
+  const slideFiles = Object.keys(zip.files)
+    .filter((name) => /^ppt\/slides\/slide\d+\.xml$/i.test(name))
+    .sort((a, b) => {
+      const numA = Number.parseInt(a.match(/\d+/)?.[0] ?? "0", 10);
+      const numB = Number.parseInt(b.match(/\d+/)?.[0] ?? "0", 10);
+      return numA - numB;
+    });
+
+  if (slideFiles.length === 0) {
+    return { format: "pptx", extractedText: "", isReadable: false };
+  }
+
+  const parts: string[] = [];
+  const MAX_SLIDES = 50;
+
+  for (let i = 0; i < Math.min(slideFiles.length, MAX_SLIDES); i += 1) {
+    const filename = slideFiles[i];
+    if (!filename) continue;
+    const xml = await zip.file(filename)?.async("string");
+    if (!xml) continue;
+
+    const matches: string[] = [];
+    const re = /<a:t[^>]*>(.*?)<\/a:t>/gi;
+    let match = re.exec(xml);
+    while (match !== null) {
+      if (match[1]) {
+        const text = unescapeXml(match[1]).trim();
+        if (text) matches.push(text);
+      }
+      match = re.exec(xml);
+    }
+
+    if (matches.length > 0) {
+      parts.push(`--- Slide ${i + 1} ---\n${matches.join("\n")}`);
+    }
+  }
+
+  return finish(parts.join("\n\n"), "pptx");
+}
+
 /**
  * Extracts readable text from an uploaded artifact file.
  *
@@ -241,6 +295,9 @@ export async function extractArtifactContent(
         return await parsePdf(buffer);
       case "docx":
         return await parseDocx(buffer);
+      case "pptx":
+      case "ppt":
+        return await parsePptx(buffer);
       case "txt":
       case "text":
       case "md":

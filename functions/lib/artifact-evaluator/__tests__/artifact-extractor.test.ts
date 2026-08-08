@@ -51,6 +51,29 @@ async function buildDocxFile(text: string): Promise<File> {
   return new File([buffer as unknown as BlobPart], "notes.docx");
 }
 
+async function buildPptxFile(slideTexts: string[]): Promise<File> {
+  const zipModule = (await import("jszip")) as unknown as {
+    default: {
+      new (): {
+        file: (path: string, content: string) => void;
+        generateAsync: (opts: { type: "nodebuffer" }) => Promise<Uint8Array>;
+      };
+    };
+  };
+  const zip = new zipModule.default();
+  slideTexts.forEach((text, idx) => {
+    zip.file(
+      `ppt/slides/slide${idx + 1}.xml`,
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t>${text}</a:t></a:r></a:p></p:txBody></p:sp></p:spTree>
+</p:sld>`,
+    );
+  });
+  const buffer = await zip.generateAsync({ type: "nodebuffer" });
+  return new File([buffer as unknown as BlobPart], "presentation.pptx");
+}
+
 function buildPdfFile(text: string): File {
   const content = `BT /F1 12 Tf 72 720 Td (${text}) Tj ET`;
   return buildPdfFileWithPages([content]);
@@ -259,6 +282,16 @@ describe("ai-engine / artifact-extractor", () => {
       expect(result.extractedText).toContain("Hello docx content");
     });
 
+    it("extracts slide text from a pptx presentation file", async () => {
+      const file = await buildPptxFile(["Executive Summary Slide 1", "Market Analysis Slide 2"]);
+      const result = await extractArtifactContent(file);
+      expect(result.isReadable).toBe(true);
+      expect(result.extractedText).toContain("--- Slide 1 ---");
+      expect(result.extractedText).toContain("Executive Summary Slide 1");
+      expect(result.extractedText).toContain("--- Slide 2 ---");
+      expect(result.extractedText).toContain("Market Analysis Slide 2");
+    });
+
     // Runs FIRST in the pdf group on purpose: pdfjs's fake worker (vitest env)
     // bleeds the previous document's content into a subsequent unparseable
     // getDocument. With a fresh worker the corrupt payload rejects and the
@@ -288,14 +321,14 @@ describe("ai-engine / artifact-extractor", () => {
 
     it("caps the number of pdf pages processed", async () => {
       const wrap = (text: string) => `BT /F1 12 Tf 72 720 Td (${text}) Tj ET`;
-      const pages = Array.from({ length: 16 }, (_, i) => `Page ${i + 1} text`.replaceAll(" ", "_"));
+      const pages = Array.from({ length: 51 }, (_, i) => `Page ${i + 1} text`.replaceAll(" ", "_"));
       const file = buildPdfFileWithPages(pages.map(wrap));
       const result = await extractArtifactContent(file);
       expect(result.isReadable).toBe(true);
       const markerCount = (result.extractedText.match(/\[Page \d+\]/g) ?? []).length;
-      expect(markerCount).toBe(15);
-      expect(result.extractedText).toContain("Page_15_text");
-      expect(result.extractedText).not.toContain("Page_16_text");
+      expect(markerCount).toBe(50);
+      expect(result.extractedText).toContain("Page_50_text");
+      expect(result.extractedText).not.toContain("Page_51_text");
     });
 
     it("marks empty files as unreadable", async () => {
