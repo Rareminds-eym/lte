@@ -1,4 +1,5 @@
 import type React from "react";
+import { LogoutIcon, UserIcon } from "@/shared/ui/icons";
 
 export interface UserProfileDropdownProps {
   email: string;
@@ -39,19 +40,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }}
           className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-content-body hover:text-content-primary hover:bg-surface-muted rounded-xl transition-colors cursor-pointer border-none bg-transparent"
         >
-          <svg
-            aria-hidden="true"
-            className="w-4 h-4 text-content-secondary shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
+          <UserIcon size={16} className="text-content-secondary shrink-0" />
           <span>Your Profile</span>
         </button>
       </div>
@@ -67,20 +56,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }}
           className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-danger-500 hover:text-danger-600 hover:bg-danger-50 rounded-xl transition-colors cursor-pointer border-none bg-transparent"
         >
-          <svg
-            aria-hidden="true"
-            className="w-4 h-4 text-danger-500 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
+          <LogoutIcon size={16} className="text-danger-500 shrink-0" />
           <span>Logout</span>
         </button>
       </div>

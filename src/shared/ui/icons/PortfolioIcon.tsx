@@ -1,7 +1,7 @@
 import type * as React from "react";
 import type { IconProps } from "./types";
 
-export const GraduationCapIcon: React.FC<IconProps> = ({
+export const PortfolioIcon: React.FC<IconProps> = ({
   size = 17,
   className = "",
   stroke = "currentColor",
@@ -22,16 +22,16 @@ export const GraduationCapIcon: React.FC<IconProps> = ({
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={1.417}
-      d="M15.173 7.736a.708.708 0 0 0-.014-1.302L9.09 3.67a1.417 1.417 0 0 0-1.176 0L1.843 6.43a.708.708 0 0 0 0 1.298l6.07 2.768a1.417 1.417 0 0 0 1.175 0l6.085-2.761ZM15.584 7.083v4.25"
+      d="M14.166 4.958H2.833c-.783 0-1.417.634-1.417 1.417v7.083c0 .782.634 1.417 1.417 1.417h11.333c.782 0 1.417-.635 1.417-1.417V6.375c0-.783-.635-1.417-1.417-1.417Z"
     />
     <path
       stroke={stroke}
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={1.417}
-      d="M4.25 8.854v2.48c0 .563.448 1.104 1.245 1.502.797.399 1.878.623 3.005.623s2.208-.224 3.005-.623c.797-.398 1.245-.939 1.245-1.502v-2.48"
+      d="M11.333 14.875V3.542a1.417 1.417 0 0 0-1.417-1.417H7.083a1.417 1.417 0 0 0-1.417 1.417v11.333"
     />
   </svg>
 );
 
-export default GraduationCapIcon;
+export default PortfolioIcon;

@@ -207,7 +207,7 @@ describe("CourseDetail", () => {
     expect(screen.getByText("Guided Foundations")).toBeInTheDocument();
     expect(screen.getByText("6 hrs")).toBeInTheDocument();
     expect(screen.getByText("Setup Worksheet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Review →" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument();
   });
 
   it("renders all 5 course level cards dynamically with appropriate badges and action buttons", () => {
@@ -218,14 +218,14 @@ describe("CourseDetail", () => {
     expect(screen.getByText("Guided Observability & Core Foundations")).toBeInTheDocument();
     expect(screen.getByText("✓ Completed")).toBeInTheDocument();
     expect(screen.getByText("Observability Setup Worksheet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Review →" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument();
 
     // Level 2 - Unlocked / Active
     expect(screen.getByTestId("level-card-2")).toBeInTheDocument();
     expect(screen.getByText("Applied Observability & Implementation")).toBeInTheDocument();
     expect(screen.getByText("Unlocked")).toBeInTheDocument();
     expect(screen.getByText("Observability Config Sheet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start →" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
 
     // Level 3 - Target Level / Locked
     expect(screen.getByTestId("level-card-3")).toBeInTheDocument();
@@ -245,14 +245,14 @@ describe("CourseDetail", () => {
   it("handles course level actions when unlocked vs locked", () => {
     render(<CourseDetail />);
 
-    // Clicking unlocked level action ("Start →") triggers navigation/action
-    const startBtn = screen.getByRole("button", { name: "Start →" });
+    // Clicking unlocked level action ("Start") triggers navigation/action
+    const startBtn = screen.getByRole("button", { name: "Start" });
     fireEvent.click(startBtn);
     expect(mockNavigate).toHaveBeenCalledWith("/courses/TEST-CAP-101/levels/lvl-2");
 
-    // Clicking completed level action ("Review →") also navigates to the level
+    // Clicking completed level action ("Review") also navigates to the level
     mockNavigate.mockClear();
-    const reviewBtn = screen.getByRole("button", { name: "Review →" });
+    const reviewBtn = screen.getByRole("button", { name: "Review" });
     fireEvent.click(reviewBtn);
     expect(mockNavigate).toHaveBeenCalledWith("/courses/TEST-CAP-101/levels/lvl-1");
   });

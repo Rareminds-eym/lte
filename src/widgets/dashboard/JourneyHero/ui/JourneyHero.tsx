@@ -3,6 +3,13 @@ import { useNavigate } from "react-router-dom";
 import type { CurrentJourneyData, JourneyState } from "@/entities/dashboard";
 import { ROUTES, routeForLevel, routeForModule } from "@/shared/config";
 import { Image } from "@/shared/ui";
+import {
+  ArrowRightIcon,
+  BrainIcon,
+  ClockIcon,
+  DocumentIcon,
+  LightbulbIcon,
+} from "@/shared/ui/icons";
 
 export interface JourneyHeroProps {
   data: CurrentJourneyData | null;
@@ -52,16 +59,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
               className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-content-inverse font-semibold text-sm rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
             >
               {state === "completed" ? "Choose Next Capability" : "Explore Career Paths"}
-              <svg
-                aria-hidden="true"
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <ArrowRightIcon size={16} />
             </button>
           </div>
         </div>
@@ -105,32 +103,25 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
               label: "Capability",
               value: data.capability,
               clampClass: "line-clamp-2",
-              icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+              icon: <BrainIcon size={14} className="text-content-on-dark-muted shrink-0 mt-1" />,
             },
             {
               label: "Output",
               value: data.output,
               clampClass: "line-clamp-2",
-              icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+              icon: <DocumentIcon size={14} className="text-content-on-dark-muted shrink-0 mt-1" />,
             },
             {
               label: "Why it matters",
               value: data.whyItMatters,
               clampClass: "line-clamp-3",
-              icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
+              icon: (
+                <LightbulbIcon size={14} className="text-content-on-dark-muted shrink-0 mt-1" />
+              ),
             },
           ].map((item) => (
             <div key={item.label} className="flex items-start gap-2.5">
-              <svg
-                aria-hidden="true"
-                className="w-5 h-5 text-content-on-dark-muted shrink-0 mt-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-              </svg>
+              {item.icon}
               <div>
                 <div className="text-[10px] text-content-on-dark-muted font-medium">
                   {item.label}
@@ -177,20 +168,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <svg
-                aria-hidden="true"
-                className="w-3.5 h-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <ClockIcon size={14} />
               {data.timeRemaining && <span>{data.timeRemaining}</span>}
             </div>
           </div>
@@ -204,16 +182,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
             className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-content-inverse font-semibold text-sm rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
           >
             <span>Continue Challenge</span>
-            <svg
-              aria-hidden="true"
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
+            <ArrowRightIcon size={16} />
           </button>
           <button
             type="button"

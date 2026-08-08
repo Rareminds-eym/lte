@@ -3,28 +3,21 @@ import { useEffect, useState } from "react";
 import {
   BookOpenIcon,
   Button,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClipboardCheckIcon,
+  CompassIcon,
+  CreditCardIcon,
+  DashboardGridIcon,
   IconButton,
   Image,
   LockIcon,
   MessageSquareIcon,
+  SettingsIcon,
   SparklesIcon,
+  TrophyIcon,
   toast,
 } from "@/shared/ui";
-
-const SvgIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <svg
-    aria-hidden="true"
-    className="w-5 h-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    {children}
-  </svg>
-);
 
 const COMING_SOON_TOAST = "⏳";
 
@@ -47,14 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "dashboard",
     label: "Dashboard",
-    icon: (
-      <SvgIcon>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-      </SvgIcon>
-    ),
+    icon: <DashboardGridIcon size={20} />,
   },
   {
     id: "my-courses",
@@ -65,35 +51,19 @@ const NAV_ITEMS: NavItem[] = [
     id: "rewards-milestones",
     label: "Rewards & Milestones",
     locked: true,
-    icon: (
-      <SvgIcon>
-        <rect x="1" y="4" width="22" height="16" rx="2" />
-        <line x1="1" y1="10" x2="23" y2="10" />
-      </SvgIcon>
-    ),
+    icon: <CreditCardIcon size={20} />,
   },
   {
     id: "career-explorer",
     label: "Career Explorer",
     locked: true,
-    icon: (
-      <SvgIcon>
-        <circle cx="12" cy="12" r="10" />
-        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-      </SvgIcon>
-    ),
+    icon: <CompassIcon size={20} />,
   },
   {
     id: "learning-progress",
     label: "Learning Progress",
     locked: true,
-    icon: (
-      <SvgIcon>
-        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-        <path d="m9 14 2 2 4-4" />
-      </SvgIcon>
-    ),
+    icon: <ClipboardCheckIcon size={20} />,
   },
   {
     id: "mentor-feedback",
@@ -105,25 +75,12 @@ const NAV_ITEMS: NavItem[] = [
     id: "achievements",
     label: "Achievements",
     locked: true,
-    icon: (
-      <SvgIcon>
-        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-        <path d="M4 22h16" />
-        <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" />
-        <path d="M12 2a6 6 0 0 0-6 6v5a6 6 0 0 0 12 0V8a6 6 0 0 0-6-6Z" />
-      </SvgIcon>
-    ),
+    icon: <TrophyIcon size={20} />,
   },
   {
     id: "settings",
     label: "Settings",
-    icon: (
-      <SvgIcon>
-        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-        <circle cx="12" cy="12" r="3" />
-      </SvgIcon>
-    ),
+    icon: <SettingsIcon size={20} />,
   },
 ];
 
@@ -171,22 +128,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         className="hidden md:flex w-8 h-8 rounded-full bg-white border border-line-default text-content-secondary shadow-md items-center justify-center -right-4 top-[2.875rem] absolute z-20 cursor-pointer hover:bg-surface-muted hover:text-content-primary transition-all active:scale-95"
       >
-        <svg
-          aria-hidden="true"
-          className="w-4 h-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          {isCollapsed ? (
-            <polyline points="9 18 15 12 9 6" />
-          ) : (
-            <polyline points="15 18 9 12 15 6" />
-          )}
-        </svg>
+        {isCollapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
       </button>
 
       {/* Top Header & Navigation */}

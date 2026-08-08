@@ -1,6 +1,14 @@
 import type React from "react";
 import type { UpcomingFeedbackData } from "@/entities/dashboard";
 import { WidgetCard } from "@/shared/ui";
+import {
+  CalendarIcon,
+  GoodFeedbackIcon,
+  GraduationCapIcon,
+  MonitorIcon,
+  PortfolioIcon,
+  TrophyIcon,
+} from "@/shared/ui/icons";
 
 export interface UpcomingFeedbackProps {
   data: UpcomingFeedbackData;
@@ -11,22 +19,7 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
     <WidgetCard
       title="Upcoming & Feedback"
       infoTooltip="Upcoming events info"
-      icon={
-        <svg
-          aria-hidden="true"
-          className="w-5 h-5 text-content-primary shrink-0"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M11 5H6a2 2 0 00-2 2v11l4-4h10a2 2 0 002-2V7a2 2 0 00-2-2h-5m-2 4h4m-4 4h2"
-          />
-        </svg>
-      }
+      icon={<GoodFeedbackIcon size={18} className="text-content-primary shrink-0" />}
       action={{
         label: "View calendar",
         href: "#calendar",
@@ -50,40 +43,9 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                     }`}
                   >
                     {item.type === "education" ? (
-                      <svg
-                        aria-hidden="true"
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 14l9-5-9-5-9 5 9 5z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
-                        />
-                      </svg>
+                      <GraduationCapIcon size={20} />
                     ) : (
-                      <svg
-                        aria-hidden="true"
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <PortfolioIcon size={20} />
                     )}
                   </div>
                   <div className="min-w-0 pt-0.5">
@@ -124,35 +86,9 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                     }`}
                   >
                     {item.type === "interview" ? (
-                      <svg
-                        aria-hidden="true"
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 3v4M3 5h4m12 0h4m-2-2v4m-5 8h-4m-6 4h14M7 8h10a2 2 0 012 2v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6a2 2 0 012-2z"
-                        />
-                      </svg>
+                      <TrophyIcon size={20} />
                     ) : (
-                      <svg
-                        aria-hidden="true"
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                        />
-                      </svg>
+                      <MonitorIcon size={20} />
                     )}
                   </div>
                   <div className="min-w-0 pt-0.5">
@@ -166,20 +102,7 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                 </div>
 
                 <div className="flex items-center gap-1.5 text-xs text-content-secondary font-semibold shrink-0 pt-0.5">
-                  <svg
-                    aria-hidden="true"
-                    className="w-3.5 h-3.5 text-content-secondary"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
+                  <CalendarIcon size={14} />
                   <span>{item.daysAgo}</span>
                 </div>
               </div>
