@@ -234,6 +234,7 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
       ...base.priorities,
       currentXp: parsedXp.data.todayXp,
     };
+    base.todayEvents = parsedXp.data.todayEvents;
   } else {
     // Never show fabricated fixture XP: honest zeroes when the API fails.
     base.careerTarget = { ...base.careerTarget, xp: 0, xpThisWeek: 0 };

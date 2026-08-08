@@ -8,6 +8,7 @@ import { useAuthStore } from "@/entities/session";
 import { LearningPathInitializer } from "@/features/initialize-learning-path";
 import { getLogger } from "@/shared";
 import { Button, ErrorFallback, SegmentedControl, toast } from "@/shared/ui";
+import { DashboardGridIcon, ListIcon } from "@/shared/ui/icons";
 
 import { mapApiLevelsToCards } from "../model/dynamicLevels";
 import { CourseDetailSkeleton } from "./CourseDetailSkeleton";
@@ -214,46 +215,12 @@ export const CourseDetailPage: React.FC = () => {
                 {
                   value: "card",
                   label: "Cards",
-                  icon: (
-                    <svg
-                      aria-hidden="true"
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.5" />
-                      <rect x="14" y="3.5" width="6.5" height="6.5" rx="1.5" />
-                      <rect x="14" y="14" width="6.5" height="6.5" rx="1.5" />
-                      <rect x="3.5" y="14" width="6.5" height="6.5" rx="1.5" />
-                    </svg>
-                  ),
+                  icon: <DashboardGridIcon size={16} />,
                 },
                 {
                   value: "list",
                   label: "List",
-                  icon: (
-                    <svg
-                      aria-hidden="true"
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="9" y1="6" x2="20" y2="6" />
-                      <line x1="9" y1="12" x2="20" y2="12" />
-                      <line x1="9" y1="18" x2="20" y2="18" />
-                      <circle cx="4.5" cy="6" r="1" fill="currentColor" />
-                      <circle cx="4.5" cy="12" r="1" fill="currentColor" />
-                      <circle cx="4.5" cy="18" r="1" fill="currentColor" />
-                    </svg>
-                  ),
+                  icon: <ListIcon size={16} />,
                 },
               ]}
             />

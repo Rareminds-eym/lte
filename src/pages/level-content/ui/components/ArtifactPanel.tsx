@@ -13,6 +13,7 @@ interface ArtifactPanelProps {
   isPanelExpanded?: boolean;
   expandedArtifactQuestionId: string | null | undefined;
   setExpandedArtifactQuestionId: React.Dispatch<React.SetStateAction<string | null | undefined>>;
+  onXpEarned?: (xpAmount: number) => void;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
@@ -22,6 +23,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   isPanelExpanded = false,
   expandedArtifactQuestionId,
   setExpandedArtifactQuestionId,
+  onXpEarned,
 }) => {
   const [submittedFilesByArtifactId, setSubmittedFilesByArtifactId] = useState<
     Record<string, ModuleArtifactSubmittedFile[]>
@@ -116,6 +118,10 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     setLatestEvaluation(response.evaluation);
     setActiveFeedbackAttemptNo(response.attempt_no);
     setActiveArtifactTab("feedback");
+
+    if (response.evaluation?.calculated_xp && response.evaluation.calculated_xp > 0) {
+      onXpEarned?.(response.evaluation.calculated_xp);
+    }
   };
 
   return (

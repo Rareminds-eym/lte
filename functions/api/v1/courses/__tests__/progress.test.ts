@@ -1,5 +1,7 @@
+import { StageSequenceError } from "@functions/lib/stage-sequence";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { completeStage } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost as onModuleProgressPost } from "../[levelId]/modules/[moduleNo]/progress";
@@ -16,6 +18,23 @@ vi.mock("@functions/middleware", async (importOriginal) => {
 
 vi.mock("@functions/lib/supabase", () => ({
   createServiceSupabase: vi.fn(),
+}));
+
+vi.mock("@functions/api/v1/courses/queries", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/api/v1/courses/queries")>();
+  return {
+    ...actual,
+    recalculateLevelProgress: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+vi.mock("@functions/lib/xp-engine", () => ({
+  completeStage: vi.fn().mockResolvedValue({
+    success: true,
+    xpAwarded: 0,
+    userStageProgressId: "stage-progress-123",
+  }),
+  getUserTotalXp: vi.fn().mockResolvedValue(0),
 }));
 
 interface MockQueryChain {
@@ -543,6 +562,7 @@ describe("Progress API Endpoints", () => {
       vi.mocked(requireAuth).mockResolvedValueOnce(
         mockUser as unknown as Awaited<ReturnType<typeof requireAuth>>,
       );
+      vi.mocked(completeStage).mockRejectedValueOnce(new StageSequenceError("Stage locked"));
 
       const mockSupabase = {
         from: vi.fn().mockImplementation((table: string) => {
@@ -587,6 +607,16 @@ describe("Progress API Endpoints", () => {
           if (table === "modules") {
             return createMockQueryChain({ id: "module-123" });
           }
+          if (table === "e_content") {
+            return createMockQueryChain({ modules_content_id: "content-123" });
+          }
+          if (table === "modules_content") {
+            return createMockQueryChain({
+              id: "content-123",
+              stage_name: "express",
+              module_id: "module-123",
+            });
+          }
           if (table === "user_module_progress") {
             return createMockQueryChain({
               id: "mod-progress-123",
@@ -595,7 +625,24 @@ describe("Progress API Endpoints", () => {
             });
           }
           if (table === "user_stage_progress") {
+            // First query: SELECT for completed stages - should return empty []
+            // Second query: maybeSingle for existing stage progress - should return null
             const chain = createMockQueryChain([]);
+            let callCount = 0;
+            const originalEq = chain.eq;
+            chain.eq = vi.fn((...args: [col: string, val: unknown]) => {
+              callCount++;
+              if (callCount === 1) {
+                // First call is for completed stages query - return empty array
+                return {
+                  ...chain,
+                  data: [],
+                  error: null,
+                };
+              }
+              // Subsequent calls use normal mock chain
+              return originalEq.apply(chain, args);
+            });
             chain.maybeSingle = vi.fn().mockResolvedValue({
               data: null,
               error: null,

@@ -1,6 +1,7 @@
 import type React from "react";
 import type { AchievementsData } from "@/entities/dashboard";
 import { Image, WidgetCard } from "@/shared/ui";
+import { ArrowRightIcon, ConcentricTargetIcon, TrophyIcon } from "@/shared/ui/icons";
 
 export interface AchievementsProps {
   data: AchievementsData;
@@ -18,22 +19,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ data }) => {
     <WidgetCard
       title="Achievements"
       subtitle={`${data.unlockedCount} unlocked • ${data.shownCount} shown`}
-      icon={
-        <svg
-          aria-hidden="true"
-          className="w-5 h-5 text-content-primary"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M5 3v4M3 5h4m12 0h4m-2-2v4m-5 8h-4m-6 4h14M7 8h10a2 2 0 012 2v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6a2 2 0 012-2z"
-          />
-        </svg>
-      }
+      icon={<TrophyIcon size={20} className="text-content-primary" />}
       action={{
         label: "View all",
         href: "#achievements",
@@ -44,7 +30,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ data }) => {
             href="#all-achievements"
             className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors inline-flex items-center gap-1"
           >
-            View all achievements →
+            View all achievements <ArrowRightIcon size={12} />
           </a>
         </div>
       }
@@ -79,20 +65,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ data }) => {
       {/* Next Milestone Box */}
       <div className="p-4 bg-surface-secondary border border-line-default rounded-xl space-y-2 mt-auto">
         <div className="flex items-center gap-2 mb-1">
-          <svg
-            aria-hidden="true"
-            className="w-4 h-4 text-content-secondary"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-            />
-          </svg>
+          <ConcentricTargetIcon size={16} className="text-content-secondary shrink-0" />
           <span className="text-xs font-bold text-content-body">{data.nextMilestoneTitle}</span>
         </div>
 

@@ -5,6 +5,16 @@ export const DashboardXpResponseSchema = z.object({
   totalXp: z.number(),
   xpThisWeek: z.number(),
   todayXp: z.number(),
+  todayEvents: z
+    .array(
+      z.object({
+        id: z.string(),
+        event_type: z.string(),
+        xp_amount: z.number(),
+        metadata: z.record(z.string(), z.unknown()),
+      }),
+    )
+    .optional(),
 });
 
 export const DashboardJourneyResponseSchema = z.object({
