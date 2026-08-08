@@ -360,7 +360,9 @@ describe("artifact submission queries", () => {
         { artifact_id: "artifact-1", answers: [{ question_id: "question-1" }] },
         new Map([["question-1", file]]),
       ),
-    ).rejects.toThrow(/Failed to save uploaded artifact file: insert failed/);
+    ).rejects.toThrow(
+      /Failed to save uploaded artifact file \(question .*, submission .*\): insert failed/,
+    );
   });
 
   it("rejects renamed binaries by content signature before creating anything", async () => {
@@ -429,7 +431,9 @@ describe("artifact submission queries", () => {
         { artifact_id: "artifact-1", answers: [{ question_id: "question-1" }] },
         new Map([["question-1", file]]),
       ),
-    ).rejects.toThrow(/Failed to save uploaded artifact file: insert failed/);
+    ).rejects.toThrow(
+      /Failed to save uploaded artifact file \(question .*, submission .*\): insert failed/,
+    );
 
     expect(env.STORAGE_BUCKET.delete).toHaveBeenCalledWith(
       "submissions/artifacts/users/user-1/artifact-1/submission-1/00000000-0000-4000-8000-000000000001-answer.xlsx",
@@ -538,6 +542,7 @@ describe("artifact submission queries", () => {
     expect(result.status).toBe("human_review");
     expect(result.evaluation?.decision).toBe("human_review");
     expect(result.evaluation?.overall_score).toBe(0);
+    expect(result.evaluation?.confidence).toBe(0);
 
     const flowsPayload = allChains.artifact_evaluation_flows.upsert.mock.calls[0]?.[0] as Record<
       string,

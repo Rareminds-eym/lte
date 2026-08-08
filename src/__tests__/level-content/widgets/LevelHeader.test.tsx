@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { LevelHeader } from "@/widgets/LevelHeader";
+import { LevelHeader } from "@/widgets/level-header";
 
 describe("LevelHeader Widget", () => {
   it("renders overview breadcrumb and level title", () => {

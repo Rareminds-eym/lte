@@ -1,8 +1,8 @@
-import { AuthError, requireAuth, toAuthApiUser } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { authLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { AuthError, requireAuth, toAuthApiUser } from "@functions/middleware";
+import { authLogger } from "@functions/shared/logger";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   try {

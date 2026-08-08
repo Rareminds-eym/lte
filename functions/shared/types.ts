@@ -11,7 +11,12 @@ export interface R2BucketBinding {
   delete(key: string): Promise<void>;
 }
 
+export interface AssetsBinding {
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+}
+
 export interface LteEnv {
+  ASSETS: AssetsBinding;
   SSO_SERVICE: SsoRpcService;
   STORAGE_BUCKET: R2BucketBinding;
   R2_PUBLIC_DOMAIN?: string;
@@ -29,6 +34,7 @@ export interface PagesContext<Env = LteEnv> {
   params: Record<string, string>;
   waitUntil: (promise: Promise<unknown>) => void;
   passThroughOnException: () => void;
+  next: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
   data?: Record<string, unknown>;
 }
 
@@ -60,6 +66,7 @@ export interface SsoExchangeResponse {
 }
 
 export interface SsoRpcService {
+  getJWKS(): Promise<{ keys: Record<string, unknown>[] }>;
   getMe(accessToken: string): Promise<Record<string, unknown>>;
   refreshSession(
     refreshToken: string,

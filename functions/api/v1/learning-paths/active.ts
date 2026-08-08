@@ -1,9 +1,9 @@
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { resolveActiveTrack } from "@functions/lib/learner-track";
-import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { AuthError, requireAuth } from "@functions/middleware";
+import { apiLogger } from "@functions/shared/logger";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();

@@ -1,16 +1,20 @@
-import { processAndSaveArtifactEvaluation } from "@functions/lib/ai-engine/artifact-evaluator";
-import { extractArtifactContent } from "@functions/lib/ai-engine/artifact-extractor";
-import type { AIDebugTelemetry, ArtifactEvaluationInput } from "@functions/lib/ai-engine/types";
+import type { AIDebugTelemetry, ArtifactEvaluationInput } from "@functions/lib/artifact-evaluator";
 import {
   ArtifactFileGuardError,
   assertFileSignature,
+  assertValidArtifactFileName,
   checkZipExpansion,
-} from "@functions/lib/artifact-file-guard";
-import { apiLogger } from "@functions/lib/logger";
+  extractArtifactContent,
+  METRIC,
+  metrics,
+  processAndSaveArtifactEvaluation,
+  sanitizeContentDispositionFilename,
+} from "@functions/lib/artifact-evaluator";
 import { createObjectKey } from "@functions/lib/r2-client";
 import type { LteEnv } from "@functions/lib/types";
+import type { CompleteSubmissionInput } from "@functions/schemas";
+import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { CompleteSubmissionInput } from "./schemas";
 
 interface ArtifactQuestionRow {
   id: string;
@@ -101,6 +105,17 @@ function validateFileForQuestion(file: File, question: ArtifactQuestionRow): str
     );
   }
 
+  // Phase 3: reject empty/overlong/control-character file names (incl. CR/LF
+  // header injection) before anything is stored or rendered into headers.
+  try {
+    assertValidArtifactFileName(file.name);
+  } catch (error) {
+    if (error instanceof ArtifactFileGuardError) {
+      throw new ArtifactSubmissionError(error.message, 400, error.code);
+    }
+    throw error;
+  }
+
   const extension = normalizeFileExtension(file.name);
   const allowedTypes = question.allowed_file_types?.map((type) => type.toLowerCase()) ?? [];
   if (allowedTypes.length > 0 && !allowedTypes.includes(extension)) {
@@ -126,11 +141,14 @@ function validateFileForQuestion(file: File, question: ArtifactQuestionRow): str
 /**
  * P1-2/P1-3: content-level validation - magic-byte signature check (rejects
  * renamed binaries) and zip-expansion check (rejects zip bombs). Runs before
- * any submission row or R2 object is created.
+ * any submission row or R2 object is created. The buffer is read exactly once
+ * by the caller and shared with extraction (Phase 3 perf).
  */
-async function validateArtifactFileContent(file: File, extension: string): Promise<void> {
-  const buffer = await file.arrayBuffer();
-
+async function validateArtifactFileContent(
+  buffer: ArrayBuffer,
+  extension: string,
+  fileName: string,
+): Promise<void> {
   try {
     assertFileSignature(extension, buffer);
   } catch (error) {
@@ -145,7 +163,7 @@ async function validateArtifactFileContent(file: File, extension: string): Promi
     if (!expansion.safe) {
       apiLogger.warn("Rejected artifact upload with abnormal archive expansion.", {
         extension,
-        fileName: file.name,
+        fileName,
         reason: expansion.reason,
       });
       throw new ArtifactSubmissionError(
@@ -196,7 +214,9 @@ async function requireModuleProgress(
     .maybeSingle();
 
   if (progressError) {
-    throw new Error(`Failed to validate artifact access: ${progressError.message}`);
+    throw new Error(
+      `Failed to validate artifact access (artifact ${artifactId}, user ${userId}): ${progressError.message}`,
+    );
   }
   if (!progress) {
     throw new ArtifactSubmissionError(
@@ -225,7 +245,9 @@ async function getLatestSubmission(
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Failed to fetch latest artifact submission: ${error.message}`);
+    throw new Error(
+      `Failed to fetch latest artifact submission (artifact ${artifactId}, user ${userId}): ${error.message}`,
+    );
   }
 
   return (data as ArtifactSubmissionRow | null) ?? null;
@@ -248,7 +270,9 @@ async function findSubmissionByIdempotencyKey(
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Failed to fetch duplicate artifact submission: ${error.message}`);
+    throw new Error(
+      `Failed to fetch duplicate artifact submission (user ${userId}, artifact ${artifactId}): ${error.message}`,
+    );
   }
 
   return (data as ArtifactSubmissionRow | null) ?? null;
@@ -286,7 +310,9 @@ async function createSubmissionAttempt(
         .eq("id", latest.id);
 
       if (error) {
-        throw new Error(`Failed to update previous artifact submission: ${error.message}`);
+        throw new Error(
+          `Failed to update previous artifact submission (submission ${latest.id}, artifact ${artifactId}): ${error.message}`,
+        );
       }
     }
 
@@ -338,10 +364,14 @@ async function createSubmissionAttempt(
       continue;
     }
 
-    throw new Error(`Failed to create artifact submission: ${error?.message ?? "unknown error"}`);
+    throw new Error(
+      `Failed to create artifact submission (artifact ${artifactId}, user ${userId}, attempt ${attemptNo}): ${error?.message ?? "unknown error"}`,
+    );
   }
 
-  throw new Error("Failed to create artifact submission after retrying a concurrent insert.");
+  throw new Error(
+    `Failed to create artifact submission after retrying a concurrent insert (artifact ${artifactId}, user ${userId}).`,
+  );
 }
 
 async function listArtifactQuestions(
@@ -358,7 +388,9 @@ async function listArtifactQuestions(
     .order("question_order", { ascending: true });
 
   if (error) {
-    throw new Error(`Failed to fetch artifact questions: ${error.message}`);
+    throw new Error(
+      `Failed to fetch artifact questions (artifact ${artifactId}): ${error.message}`,
+    );
   }
 
   return (data as ArtifactQuestionRow[] | null) ?? [];
@@ -375,6 +407,7 @@ export interface ArtifactSubmissionResult {
   duplicate: boolean;
   evaluation?: {
     overall_score: number;
+    confidence: number;
     decision: "pass" | "revise_and_resubmit" | "human_review";
     rubric_rows: unknown[];
     feedback: string;
@@ -444,12 +477,23 @@ export async function submitArtifactSubmission(
         "FILE_RESPONSE_REQUIRED",
       );
     }
-    if (file) {
-      const extension = validateFileForQuestion(file, question);
-      // P1-2/P1-3: reject renamed binaries and zip bombs before any
-      // submission row or R2 object is created.
-      await validateArtifactFileContent(file, extension);
-    }
+  }
+
+  // Phase 3: read each file's bytes exactly once and reuse them for both
+  // content validation and text extraction (was 2-3 arrayBuffer() per file).
+  const fileContexts = new Map<
+    string,
+    { file: File; question: ArtifactQuestionRow; extension: string; buffer: ArrayBuffer }
+  >();
+  for (const [questionId, file] of filesByQuestionId) {
+    const question = questionById.get(questionId);
+    if (!question) continue; // matches the upload loop: stray files are ignored
+    const extension = validateFileForQuestion(file, question);
+    // P1-2/P1-3: reject renamed binaries and zip bombs before any
+    // submission row or R2 object is created.
+    const buffer = await file.arrayBuffer();
+    await validateArtifactFileContent(buffer, extension, file.name);
+    fileContexts.set(questionId, { file, question, extension, buffer });
   }
 
   const created = await createSubmissionAttempt(
@@ -481,7 +525,9 @@ export async function submitArtifactSubmission(
       .from("artifact_submission_answers")
       .upsert(answerRows, { onConflict: "submission_id,question_id" });
     if (error) {
-      throw new Error(`Failed to save artifact answers: ${error.message}`);
+      throw new Error(
+        `Failed to save artifact answers (submission ${submission.id}, artifact ${input.artifact_id}): ${error.message}`,
+      );
     }
   }
 
@@ -489,12 +535,8 @@ export async function submitArtifactSubmission(
   const uploadedObjectKeys: string[] = [];
 
   try {
-    for (const [questionId, file] of filesByQuestionId) {
-      const question = questionById.get(questionId);
-      if (!question) continue;
-
+    for (const [questionId, { file, extension }] of fileContexts) {
       const fileId = crypto.randomUUID();
-      const extension = validateFileForQuestion(file, question);
       const objectKey = createObjectKey({
         namespace: "submissions/artifacts",
         ownerId: userId,
@@ -507,7 +549,7 @@ export async function submitArtifactSubmission(
       await env.STORAGE_BUCKET.put(objectKey, file.stream(), {
         httpMetadata: {
           contentType: file.type || "application/octet-stream",
-          contentDisposition: `attachment; filename="${file.name.replace(/"/g, "")}"`,
+          contentDisposition: `attachment; filename="${sanitizeContentDispositionFilename(file.name)}"`,
         },
       });
       uploadedObjectKeys.push(objectKey);
@@ -524,7 +566,9 @@ export async function submitArtifactSubmission(
       });
 
       if (error) {
-        throw new Error(`Failed to save uploaded artifact file: ${error.message}`);
+        throw new Error(
+          `Failed to save uploaded artifact file (question ${questionId}, submission ${submission.id}): ${error.message}`,
+        );
       }
 
       uploadedFiles.push({
@@ -541,23 +585,38 @@ export async function submitArtifactSubmission(
   }
 
   // Fetch full artifact details for AI Evaluation
-  const { data: artifactMeta } = await supabase
+  const { data: artifactMeta, error: artifactMetaError } = await supabase
     .from("module_artifacts")
     .select("artifact_type, passing_score, total_score")
     .eq("id", input.artifact_id)
     .single();
 
-  const { data: questionDetails } = await supabase
+  if (artifactMetaError) {
+    throw new Error(
+      `Failed to fetch artifact meta (artifact ${input.artifact_id}): ${artifactMetaError.message}`,
+    );
+  }
+
+  const { data: questionDetails, error: questionDetailsError } = await supabase
     .from("artifact_questions")
     .select("id, title, description, response_type, instructions")
     .eq("artifact_id", input.artifact_id)
     .eq("is_active", true);
+
+  if (questionDetailsError) {
+    throw new Error(
+      `Failed to fetch artifact questions (artifact ${input.artifact_id}): ${questionDetailsError.message}`,
+    );
+  }
 
   const evalInput = await buildArtifactEvaluationInput({
     artifactMeta: (artifactMeta as ArtifactMetaRow | null) ?? null,
     questionDetails: (questionDetails as ArtifactQuestionDetailRow[] | null) ?? [],
     input,
     filesByQuestionId,
+    // Phase 3: reuse the bytes already read for signature validation instead
+    // of arrayBuffer()-ing every file a second time.
+    preReadBuffers: new Map([...fileContexts].map(([questionId, ctx]) => [questionId, ctx.buffer])),
     attemptNo: submission.attempt_no,
   });
 
@@ -585,6 +644,7 @@ export async function submitArtifactSubmission(
     duplicate: false,
     evaluation: {
       overall_score: evalResult.overallScore,
+      confidence: evalResult.confidence,
       decision: evalResult.decision,
       rubric_rows: evalResult.rubricRows,
       feedback: evalResult.feedback,
@@ -631,10 +691,16 @@ async function buildDuplicateSubmissionResponse(
   const flow = await getSubmissionEvaluationFlow(supabase, submission.id, submission.user_id);
   const meta = (flow?.metadata as Record<string, unknown> | null) ?? null;
 
-  const { data: fileRows } = await supabase
+  const { data: fileRows, error: fileRowsError } = await supabase
     .from("artifact_submission_files")
     .select("id, question_id, file_name")
     .eq("submission_id", submission.id);
+
+  if (fileRowsError) {
+    throw new Error(
+      `Failed to fetch submission files (submission ${submission.id}): ${fileRowsError.message}`,
+    );
+  }
 
   return {
     submission_id: submission.id,
@@ -647,6 +713,7 @@ async function buildDuplicateSubmissionResponse(
     evaluation: flow
       ? {
           overall_score: flow.score ?? 0,
+          confidence: (meta?.["confidence"] as number | null) ?? 0,
           decision:
             (flow.decision as "pass" | "revise_and_resubmit" | "human_review") ?? "human_review",
           rubric_rows: (meta?.["rubric_rows"] as unknown[]) ?? [],
@@ -668,18 +735,21 @@ export async function buildArtifactEvaluationInput(params: {
   questionDetails: ArtifactQuestionDetailRow[];
   input: CompleteSubmissionInput;
   filesByQuestionId: Map<string, File>;
+  preReadBuffers?: Map<string, ArrayBuffer>;
   attemptNo: number;
 }): Promise<ArtifactEvaluationInput> {
   const extractedByQuestionId = new Map<string, string>();
   for (const [questionId, file] of params.filesByQuestionId) {
-    const extracted = await extractArtifactContent(file);
+    const extracted = await extractArtifactContent(file, params.preReadBuffers?.get(questionId));
     if (extracted.isReadable) {
       extractedByQuestionId.set(questionId, extracted.extractedText);
     } else {
+      metrics.inc(METRIC.EXTRACTION_FAILED);
       apiLogger.warn("Artifact file content is not readable for AI evaluation.", {
         questionId,
         fileName: file.name,
         format: extracted.format,
+        artifactId: params.input.artifact_id,
       });
     }
   }
@@ -774,7 +844,10 @@ export async function createArtifactFileDownloadResponse(
 
   const headers = new Headers();
   headers.set("Content-Type", object.httpMetadata?.contentType ?? "application/octet-stream");
-  headers.set("Content-Disposition", `attachment; filename="${file.file_name.replace(/"/g, "")}"`);
+  headers.set(
+    "Content-Disposition",
+    `attachment; filename="${sanitizeContentDispositionFilename(file.file_name)}"`,
+  );
   if (object.size) headers.set("Content-Length", String(object.size));
 
   return new Response(object.body, { status: 200, headers });
@@ -789,12 +862,18 @@ export async function getSubmissionEvaluationFlow(
   submissionId: string,
   userId: string,
 ) {
-  const { data: submission } = await supabase
+  const { data: submission, error: submissionError } = await supabase
     .from("artifact_submissions")
     .select("id")
     .eq("id", submissionId)
     .eq("user_id", userId)
     .maybeSingle();
+
+  if (submissionError) {
+    throw new Error(
+      `Failed to fetch submission evaluation flow (submission ${submissionId}): ${submissionError.message}`,
+    );
+  }
 
   if (!submission) {
     throw new ArtifactSubmissionError("Submission not found.", 404, "SUBMISSION_NOT_FOUND");

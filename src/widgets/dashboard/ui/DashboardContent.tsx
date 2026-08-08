@@ -1,12 +1,12 @@
 import type React from "react";
 import type { DashboardData } from "@/entities/dashboard";
-import { Achievements } from "@/widgets/dashboard/Achievements";
-import { CapabilityGapMap } from "@/widgets/dashboard/CapabilityGapMap";
-import { CareerPaths } from "@/widgets/dashboard/CareerPaths";
-import { CareerTargetBanner } from "@/widgets/dashboard/CareerTargetBanner";
-import { JourneyHero } from "@/widgets/dashboard/JourneyHero";
-import { TodaysPriorities } from "@/widgets/dashboard/TodaysPriorities";
-import { UpcomingFeedback } from "@/widgets/dashboard/UpcomingFeedback";
+import { Achievements } from "@/widgets/dashboard/achievements";
+import { CapabilityGapMap } from "@/widgets/dashboard/capability-gap-map";
+import { CareerPaths } from "@/widgets/dashboard/career-paths";
+import { CareerTargetBanner } from "@/widgets/dashboard/career-target-banner";
+import { JourneyHero } from "@/widgets/dashboard/journey-hero";
+import { TodaysPriorities } from "@/widgets/dashboard/todays-priorities";
+import { UpcomingFeedback } from "@/widgets/dashboard/upcoming-feedback";
 
 interface DashboardContentProps {
   data: DashboardData;

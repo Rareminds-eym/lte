@@ -3,10 +3,10 @@
  * GET /api/v1/courses/:levelId
  */
 
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { AuthError, requireAuth } from "@functions/middleware";
 import { getLevelWithModules } from "../queries";
 import { LevelIdParamsSchema } from "../schemas";
 

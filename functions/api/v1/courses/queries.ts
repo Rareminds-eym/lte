@@ -2,6 +2,7 @@
 export { getLevelWithModules } from "./levelQueries";
 export { getModuleDetails } from "./moduleQueries";
 export {
+  recalculateLevelProgress,
   upsertLevelProgress,
   upsertModuleProgress,
   upsertStageProgress,

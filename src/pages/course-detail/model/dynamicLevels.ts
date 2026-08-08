@@ -38,7 +38,7 @@ export function mapApiLevelsToCards(
       duration: durationLabel(level.durationMinutes),
       xp,
       difficulty,
-      actionText: isCompleted ? "Review →" : isUnlocked ? "Start →" : "Locked",
+      actionText: isCompleted ? "Review" : isUnlocked ? "Start" : "Locked",
     };
   });
 }

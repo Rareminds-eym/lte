@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LightbulbIcon } from "@/shared/ui";
-import { STAGE_STEPS, StageStepperBar } from "@/widgets/StageStepperBar";
+import { STAGE_STEPS, StageStepperBar } from "@/widgets/stage-stepper-bar";
 
 describe("StageStepperBar Widget", () => {
   it("renders all 6E stages with correct titles and subtitles", () => {

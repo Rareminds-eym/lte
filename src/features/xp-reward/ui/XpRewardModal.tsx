@@ -7,6 +7,7 @@ interface XpRewardModalProps {
   totalXp: number;
   stageName: string;
   onClose: () => void;
+  xpCategory?: "evidence" | "engagement";
 }
 
 export const XpRewardModal: React.FC<XpRewardModalProps> = ({
@@ -15,8 +16,11 @@ export const XpRewardModal: React.FC<XpRewardModalProps> = ({
   totalXp,
   stageName,
   onClose,
+  xpCategory = "evidence",
 }) => {
   if (!isOpen) return null;
+
+  const isEngagement = xpCategory === "engagement";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
@@ -31,13 +35,23 @@ export const XpRewardModal: React.FC<XpRewardModalProps> = ({
           <CloseIcon size={16} />
         </button>
 
-        {/* Visual illustration: Pointy double-bordered green hexagon badge with glowing yellowish ray backdrop */}
+        {/* Visual illustration: Pointy double-bordered hexagon badge with glowing ray backdrop */}
         <div className="relative mb-0.5 w-20 h-20 flex items-center justify-center">
-          {/* Glowing backdrop circle: Yellow/Amber */}
-          <div className="absolute w-16 h-16 rounded-full bg-yellow-100/60 blur-lg animate-pulse" />
+          {/* Glowing backdrop circle */}
+          <div
+            className={`absolute w-16 h-16 rounded-full blur-lg animate-pulse ${
+              isEngagement ? "bg-indigo-100/60" : "bg-yellow-100/60"
+            }`}
+          />
 
-          {/* Light rays/sparkles backdrop: Yellowish */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(252,211,77,0.22)_0%,transparent_70%)] animate-spin [animation-duration:15s]" />
+          {/* Light rays/sparkles backdrop */}
+          <div
+            className={`absolute inset-0 animate-spin [animation-duration:15s] ${
+              isEngagement
+                ? "bg-[radial-gradient(circle,rgba(99,102,241,0.22)_0%,transparent_70%)]"
+                : "bg-[radial-gradient(circle,rgba(252,211,77,0.22)_0%,transparent_70%)]"
+            }`}
+          />
 
           {/* Floating tiny particles (sparkles, circles) */}
           <div className="absolute top-0 left-3 text-emerald-400 text-[10px] animate-bounce [animation-delay:0.2s]">
@@ -61,30 +75,107 @@ export const XpRewardModal: React.FC<XpRewardModalProps> = ({
 
         {/* Title */}
         <h3 className="text-2xl font-black tracking-tight text-slate-800 font-sans mb-1">
-          <span className="text-emerald-500">+{xpAmount}</span> XP Earned!
+          {stageName === "course_completed_on_time" && xpAmount === 0 ? (
+            <span className="text-emerald-500">Level Completed!</span>
+          ) : (
+            <>
+              <span className={isEngagement ? "text-indigo-500" : "text-emerald-500"}>
+                +{xpAmount}
+              </span>{" "}
+              XP Earned!
+            </>
+          )}
         </h3>
 
         {/* Star & Line Detail */}
         <div className="flex items-center justify-between gap-3 w-full my-2.5 px-6">
           <div className="h-px bg-slate-200/80 flex-1"></div>
-          <span className="flex items-center gap-1.5 text-[10px] font-bold text-accent-purple-600 uppercase tracking-widest">
-            ★ READINESS XP ★
+          <span
+            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${
+              isEngagement ? "text-indigo-600" : "text-emerald-600"
+            }`}
+          >
+            {isEngagement ? "★ ENGAGEMENT XP ★" : "★ READINESS XP ★"}
           </span>
           <div className="h-px bg-slate-200/80 flex-1"></div>
         </div>
 
         {/* Subtitle / Description */}
         <p className="text-xs text-content-body font-medium leading-relaxed px-2 mb-4">
-          Excellent work! You completed the{" "}
-          <span className="font-extrabold text-emerald-600 capitalize">{stageName}</span> stage.
-          This readiness XP has been logged to your capability profile to boost your overall role
-          readiness.
+          {isEngagement ? (
+            <>
+              {stageName === "daily_login" && (
+                <>
+                  Awesome job! You earned engagement XP for your daily active login. This engagement
+                  XP helps you build strong daily learning habits.
+                </>
+              )}
+              {stageName === "streak_7_day" && (
+                <>
+                  Fantastic! You have logged in for 7 consecutive days and earned a streak bonus.
+                  Keep up this amazing consistency!
+                </>
+              )}
+              {stageName === "consistency_30_day" && (
+                <>
+                  Incredible! You have logged in for 30 consecutive days and earned a consistency
+                  bonus. Your commitment to learning is outstanding!
+                </>
+              )}
+              {stageName === "legacy_consistency_bonus" && (
+                <>
+                  Welcome back! You earned a legacy re-engagement bonus for returning to LTE. We are
+                  excited to support your continued learning journey!
+                </>
+              )}
+              {![
+                "daily_login",
+                "streak_7_day",
+                "consistency_30_day",
+                "legacy_consistency_bonus",
+              ].includes(stageName) && (
+                <>
+                  Awesome job! You earned engagement XP for your login consistency, streak
+                  milestone, or profile completion. This engagement XP helps you build strong
+                  learning habits.
+                </>
+              )}
+            </>
+          ) : stageName === "course_completed_on_time" ? (
+            xpAmount > 0 ? (
+              <>
+                Outstanding! You completed the capability level within the target timeline and
+                earned an on-time completion bonus. This readiness XP has been added to your
+                profile!
+              </>
+            ) : (
+              <>
+                Excellent work! You have completed all modules in this capability level. Keep up the
+                great work to unlock your next levels!
+              </>
+            )
+          ) : (
+            <>
+              Excellent work! You completed the{" "}
+              <span className="font-extrabold text-emerald-600 capitalize">{stageName}</span> stage.
+              This readiness XP has been logged to your capability profile to boost your overall
+              role readiness.
+            </>
+          )}
         </p>
 
         {/* Total XP Summary Card */}
-        <div className="w-full bg-[#f4fbf8] border border-[#e6f4ee] rounded-2xl py-3 px-4 flex items-center justify-between gap-4 mb-4 text-left">
+        <div
+          className={`w-full border rounded-2xl py-3 px-4 flex items-center justify-between gap-4 mb-4 text-left ${
+            isEngagement ? "bg-indigo-50/30 border-indigo-100" : "bg-[#f4fbf8] border-[#e6f4ee]"
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#e3f6ed] flex items-center justify-center text-emerald-600 shrink-0">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                isEngagement ? "bg-indigo-100/50 text-indigo-600" : "bg-[#e3f6ed] text-emerald-600"
+              }`}
+            >
               <TrendUpIcon size={20} />
             </div>
             <div>
@@ -102,7 +193,11 @@ export const XpRewardModal: React.FC<XpRewardModalProps> = ({
               TOTAL XP
             </div>
             <div className="text-xl font-black text-slate-800 leading-none mt-1">
-              <span className="text-emerald-600 font-extrabold">{totalXp}</span>{" "}
+              <span
+                className={`${isEngagement ? "text-indigo-600" : "text-emerald-600"} font-extrabold`}
+              >
+                {totalXp}
+              </span>{" "}
               <span className="text-[11px] font-bold text-slate-500 uppercase">XP</span>
             </div>
           </div>
@@ -112,7 +207,11 @@ export const XpRewardModal: React.FC<XpRewardModalProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 py-2.5 text-xs font-extrabold text-white shadow-lg hover:shadow-xl hover:from-emerald-500 hover:to-teal-600 active:scale-95 transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
+          className={`w-full rounded-2xl py-2.5 text-xs font-extrabold text-white shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer bg-gradient-to-r ${
+            isEngagement
+              ? "from-indigo-600 to-purple-700 hover:from-indigo-500 hover:to-purple-600"
+              : "from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600"
+          }`}
         >
           <span>Continue</span>
           <span className="text-base leading-none">→</span>

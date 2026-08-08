@@ -1,9 +1,9 @@
 import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { AuthError, requireAuth } from "@functions/middleware";
+import { apiLogger } from "@functions/shared/logger";
 import { getUserCapabilitiesForRoles } from "./queries";
 import type { UserCapabilitiesResponse } from "./types";
 

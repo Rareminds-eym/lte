@@ -1,4 +1,3 @@
-import { toAuthApiUser } from "@functions/lib/auth";
 import { createRefreshCookie } from "@functions/lib/cookies";
 import { validateBackendEnv } from "@functions/lib/env";
 import {
@@ -8,7 +7,6 @@ import {
   jsonResponse,
   readJsonObject,
 } from "@functions/lib/http";
-import { ssoLogger } from "@functions/lib/logger";
 import { exchangeAuthorizationCode } from "@functions/lib/sso-client";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import { syncSsoShadowData } from "@functions/lib/sync-shadow";
@@ -18,6 +16,9 @@ import type {
   PagesContext,
   SsoExchangeResponse,
 } from "@functions/lib/types";
+import { triggerDailyLoginWithEngagement } from "@functions/lib/xp-engine";
+import { toAuthApiUser } from "@functions/middleware";
+import { ssoLogger } from "@functions/shared/logger";
 
 function getStringField(body: Record<string, unknown>, field: string): string | null {
   const value = body[field];
@@ -72,6 +73,13 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     try {
       const supabase = createServiceSupabase(context.env);
       await syncSsoShadowData(supabase, exchange.user, exchange.subscription);
+      // Fire-and-forget: award daily login + streak/consistency/legacy XP.
+      // Wrapped in try/catch — never fails the auth response.
+      triggerDailyLoginWithEngagement(supabase, exchange.user.sub).catch((err) => {
+        ssoLogger.error("[XP] daily login engagement failed (exchange)", err, {
+          userId: exchange.user.sub,
+        });
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "SSO shadow sync failed";
       ssoLogger.error("SSO shadow sync failed", err instanceof Error ? err : new Error(message));

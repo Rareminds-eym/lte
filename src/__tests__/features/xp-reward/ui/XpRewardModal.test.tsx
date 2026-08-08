@@ -56,4 +56,74 @@ describe("XpRewardModal", () => {
 
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it("renders engagement variant correctly", () => {
+    const handleClose = vi.fn();
+    render(
+      <XpRewardModal
+        isOpen={true}
+        xpAmount={20}
+        totalXp={200}
+        stageName="explore"
+        onClose={handleClose}
+        xpCategory="engagement"
+      />,
+    );
+
+    expect(screen.getByText("+20")).toBeInTheDocument();
+    expect(screen.getByText(/ENGAGEMENT XP/)).toBeInTheDocument();
+    expect(screen.getByText(/You earned engagement XP/)).toBeInTheDocument();
+    expect(screen.getByText("200")).toBeInTheDocument();
+  });
+
+  it("renders daily login engagement variant correctly", () => {
+    const handleClose = vi.fn();
+    render(
+      <XpRewardModal
+        isOpen={true}
+        xpAmount={1}
+        totalXp={150}
+        stageName="daily_login"
+        onClose={handleClose}
+        xpCategory="engagement"
+      />,
+    );
+
+    expect(screen.getByText("+1")).toBeInTheDocument();
+    expect(screen.getByText(/daily active login/)).toBeInTheDocument();
+  });
+
+  it("renders streak engagement variant correctly", () => {
+    const handleClose = vi.fn();
+    render(
+      <XpRewardModal
+        isOpen={true}
+        xpAmount={5}
+        totalXp={155}
+        stageName="streak_7_day"
+        onClose={handleClose}
+        xpCategory="engagement"
+      />,
+    );
+
+    expect(screen.getByText("+5")).toBeInTheDocument();
+    expect(screen.getByText(/7 consecutive days/)).toBeInTheDocument();
+  });
+
+  it("renders consistency engagement variant correctly", () => {
+    const handleClose = vi.fn();
+    render(
+      <XpRewardModal
+        isOpen={true}
+        xpAmount={30}
+        totalXp={185}
+        stageName="consistency_30_day"
+        onClose={handleClose}
+        xpCategory="engagement"
+      />,
+    );
+
+    expect(screen.getByText("+30")).toBeInTheDocument();
+    expect(screen.getByText(/30 consecutive days/)).toBeInTheDocument();
+  });
 });

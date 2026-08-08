@@ -1,14 +1,14 @@
 import { upsertStageProgress } from "@functions/api/v1/courses/queries";
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
+import { AuthError, requireAuth } from "@functions/middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost } from "../progress";
 
-vi.mock("@functions/lib/auth", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@functions/lib/auth")>();
+vi.mock("@functions/middleware", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/middleware")>();
   return { ...actual, requireAuth: vi.fn() };
 });
 
@@ -21,12 +21,14 @@ vi.mock("@functions/lib/xp-engine", () => ({
 
 vi.mock("@functions/api/v1/courses/queries", () => ({
   upsertStageProgress: vi.fn(),
+  recalculateLevelProgress: vi.fn().mockResolvedValue(undefined),
 }));
 
 interface QueryChain {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
+  maybeSingle: ReturnType<typeof vi.fn>;
   then: (resolve: (val: unknown) => unknown) => Promise<unknown>;
 }
 
@@ -35,6 +37,7 @@ function chainFor(data: unknown, error: unknown = null): QueryChain {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
     single: vi.fn().mockResolvedValue({ data, error }),
+    maybeSingle: vi.fn().mockResolvedValue({ data, error }),
     // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
     then: (resolve: (val: unknown) => unknown) => Promise.resolve({ data, error }).then(resolve),
   };
@@ -173,8 +176,11 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
       completionPercentage: 33,
       xpAwarded: 5,
       totalXp: 430,
+      xpCategory: "evidence",
+      levelCompleted: false,
+      levelXpAwarded: 0,
     });
-    expect(completeStage).toHaveBeenCalledWith(expect.anything(), "user-1", "mc-1", eContentId);
+    expect(completeStage).toHaveBeenCalledWith(expect.anything(), "user-1", "mc-1");
     expect(getUserTotalXp).toHaveBeenCalledWith(expect.anything(), "user-1");
   });
 
@@ -250,6 +256,9 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
       completionPercentage: 17,
       xpAwarded: 0,
       totalXp: 0,
+      levelCompleted: false,
+      levelXpAwarded: 0,
+      xpCategory: "evidence",
     });
     expect(upsertStageProgress).toHaveBeenCalledWith(
       supabase,

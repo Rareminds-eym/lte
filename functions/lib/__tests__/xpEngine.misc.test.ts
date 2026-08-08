@@ -31,18 +31,39 @@ describe("XP Engine Core logic", () => {
       ["course_completed_on_time", "course:u:s"],
       ["fast_track_capability", "fasttrack:u:s"],
       ["capstone_completed", "capstone:u:s"],
-      ["daily_login", "login:u:s"],
       ["profile_completed", "profile:u"],
-      ["streak_7_day", "streak7:u:s"],
-      ["consistency_30_day", "consistency30:u:s"],
       ["readiness_milestone_25", "milestone25:u:s"],
       ["readiness_milestone_50", "milestone50:u:s"],
       ["readiness_milestone_75", "milestone75:u:s"],
       ["readiness_milestone_100", "milestone100:u:s"],
-      ["legacy_consistency_bonus", "legacy_bonus:u"],
       ["promotional_xp", "promo:u:s"],
     ] as const)("should build the key for %s", (eventType, expected) => {
       expect(generateIdempotencyKey("u", eventType, "s")).toBe(expected);
+    });
+
+    it("should build the key for daily_login with metadata", () => {
+      expect(generateIdempotencyKey("u", "daily_login", "s", { login_date: "2026-08-07" })).toBe(
+        "login:u:2026-08-07",
+      );
+    });
+
+    it("should build the key for streak_7_day with metadata", () => {
+      expect(generateIdempotencyKey("u", "streak_7_day", "s", { streak_date: "2026-08-07" })).toBe(
+        "streak7:u:2026-08-07",
+      );
+    });
+
+    it("should build the key for consistency_30_day with metadata", () => {
+      expect(
+        generateIdempotencyKey("u", "consistency_30_day", "s", { consistency_date: "2026-08-07" }),
+      ).toBe("consistency30:u:2026-08-07");
+    });
+
+    it("should build the key for legacy_consistency_bonus with metadata", () => {
+      const currentYear = new Date().getFullYear().toString();
+      expect(generateIdempotencyKey("u", "legacy_consistency_bonus", "s")).toBe(
+        `legacy_bonus:u:${currentYear}`,
+      );
     });
 
     it("should fall back to a generic key for unknown event types", () => {
@@ -126,7 +147,7 @@ describe("XP Engine Core logic", () => {
         expect.objectContaining({
           event_type: "daily_login",
           source_type: "users",
-          source_id: "user-1",
+          source_id: expect.any(String),
           xp_amount: 1,
           metadata: { login_date: expect.any(String) },
         }),
@@ -343,30 +364,132 @@ describe("XP Engine Core logic", () => {
   });
 
   describe("calculateReadiness", () => {
+    interface TestModule {
+      id?: string;
+      module_id?: string;
+      module_status?: string;
+    }
+
+    interface TestSub {
+      id?: string;
+      status?: string;
+      artifact_id?: string;
+      module_artifacts?:
+        | { id?: string; artifact_type?: string }
+        | { id?: string; artifact_type?: string }[]
+        | null;
+    }
+
+    interface TestXp {
+      xp_amount?: number;
+      xp_category?: string;
+      source_type?: string;
+      source_id?: string;
+    }
+
     function createReadinessMock(o: {
-      modules?: unknown;
+      modules?: TestModule[];
       modulesErr?: unknown;
-      subs?: unknown;
+      subs?: TestSub[];
       subsErr?: unknown;
       flows?: unknown;
       flowsErr?: unknown;
-      xp?: unknown;
+      xp?: TestXp[];
       xpErr?: unknown;
       profile?: unknown;
+      expectedXp?: number;
     }) {
       return {
         from: vi.fn().mockImplementation((table: string) => {
+          if (table === "user_capability_level_progress") {
+            const list = Array.isArray(o.modules) ? o.modules : [];
+            const completedCount = list.filter(
+              (m: TestModule) => m.module_status === "mastered" || m.module_status === "completed",
+            ).length;
+            const totalCount = list.length;
+            const completionPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+            return createMockQueryChain([
+              {
+                id: "level-progress-1",
+                level_id: "level-1",
+                completion_percentage: completionPercentage,
+              },
+            ]);
+          }
+          if (table === "levels") {
+            return createMockQueryChain([{ total_xp: o.expectedXp ?? 100 }]);
+          }
+          if (table === "learning_paths") {
+            return createMockQueryChain({ role_id: "role-1" });
+          }
+          if (table === "modules") {
+            const list = Array.isArray(o.modules)
+              ? o.modules.map((m: TestModule) => ({ id: m.module_id || m.id }))
+              : [];
+            return createMockQueryChain(list);
+          }
+          if (table === "modules_content") {
+            const list = Array.isArray(o.modules)
+              ? o.modules.map((m: TestModule) => ({ id: `stage-${m.module_id || m.id}` }))
+              : [];
+            return createMockQueryChain(list);
+          }
+          if (table === "module_artifacts") {
+            const list: TestSub[] = [];
+            if (Array.isArray(o.subs)) {
+              o.subs.forEach((s: TestSub, idx: number) => {
+                const ma = Array.isArray(s.module_artifacts)
+                  ? s.module_artifacts[0]
+                  : s.module_artifacts;
+                if (ma?.artifact_type === "final") {
+                  list.push({ id: s.artifact_id || `art-${idx}` });
+                }
+              });
+            }
+            return createMockQueryChain(list);
+          }
           if (table === "user_module_progress") {
-            return createMockQueryChain(o.modules ?? null, o.modulesErr ?? null);
+            const list = Array.isArray(o.modules)
+              ? o.modules.map((m: TestModule, idx: number) => ({
+                  id: `module-progress-${idx}`,
+                  module_id: m.module_id || m.id,
+                  module_status: m.module_status,
+                }))
+              : null;
+            return createMockQueryChain(list, o.modulesErr ?? null);
+          }
+          if (table === "user_stage_progress") {
+            const list = Array.isArray(o.xp)
+              ? o.xp.map((x: TestXp, idx: number) => ({
+                  id: x.source_id || `stage-progress-${idx}`,
+                }))
+              : [];
+            return createMockQueryChain(list);
           }
           if (table === "artifact_submissions") {
-            return createMockQueryChain(o.subs ?? null, o.subsErr ?? null);
+            const list = Array.isArray(o.subs)
+              ? o.subs.map((s: TestSub, idx: number) => ({
+                  id: s.id,
+                  status: s.status,
+                  artifact_id: s.artifact_id || `art-${idx}`,
+                  module_artifacts: s.module_artifacts,
+                }))
+              : null;
+            return createMockQueryChain(list, o.subsErr ?? null);
           }
           if (table === "artifact_evaluation_flows") {
             return createMockQueryChain(o.flows ?? null, o.flowsErr ?? null);
           }
           if (table === "xp_events") {
-            return createMockQueryChain(o.xp ?? null, o.xpErr ?? null);
+            const list = Array.isArray(o.xp)
+              ? o.xp.map((x: TestXp, idx: number) => ({
+                  xp_amount: x.xp_amount,
+                  xp_category: x.xp_category || "evidence",
+                  source_type: x.source_type || "user_stage_progress",
+                  source_id: x.source_id || `stage-progress-${idx}`,
+                }))
+              : null;
+            return createMockQueryChain(list, o.xpErr ?? null);
           }
           if (table === "user_profiles") {
             return createMockQueryChain(o.profile ?? null);
@@ -430,6 +553,7 @@ describe("XP Engine Core logic", () => {
         flows: [],
         xp: [{ xp_amount: 40 }],
         profile: { bio: "bio", job_title: "engineer", skills: [] },
+        expectedXp: 40,
       });
 
       const result = await calculateReadiness(mockSupabase, "user-1", "path-1");
@@ -475,7 +599,7 @@ describe("XP Engine Core logic", () => {
 
     it("should throw when the artifact submissions query fails", async () => {
       const mockSupabase = createReadinessMock({
-        modules: [],
+        modules: [{ id: "m1", module_status: "in_progress" }],
         subsErr: { message: "query failed" },
       });
 
@@ -486,7 +610,7 @@ describe("XP Engine Core logic", () => {
 
     it("should throw when the evaluation flows query fails", async () => {
       const mockSupabase = createReadinessMock({
-        modules: [],
+        modules: [{ id: "m1", module_status: "in_progress" }],
         subs: [{ id: "s1", status: "accepted", module_artifacts: [{ artifact_type: "final" }] }],
         flowsErr: { message: "query failed" },
       });

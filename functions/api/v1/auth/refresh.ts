@@ -1,9 +1,11 @@
 import { clearRefreshCookies, createRefreshCookie, getRefreshCookie } from "@functions/lib/cookies";
 import { validateBackendEnv } from "@functions/lib/env";
 import { getClientIp, getUserAgent, jsonError, jsonResponse } from "@functions/lib/http";
-import { authLogger } from "@functions/lib/logger";
 import { refreshLteSession, SsoAuthError } from "@functions/lib/sso-client";
+import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { triggerDailyLoginWithEngagement } from "@functions/lib/xp-engine";
+import { authLogger } from "@functions/shared/logger";
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   try {
@@ -34,6 +36,26 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     );
 
     authLogger.info("Refresh successful, returning new tokens");
+
+    // Decode JWT payload (base64url middle part) to extract userId without a full JWT library
+    try {
+      const payloadB64 = refreshed.access_token.split(".")[1];
+      if (payloadB64) {
+        const payloadJson = atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"));
+        const payload = JSON.parse(payloadJson) as Record<string, unknown>;
+        const userId = typeof payload["sub"] === "string" ? payload["sub"] : null;
+        if (userId) {
+          const supabase = createServiceSupabase(context.env);
+          // Fire-and-forget: award daily login + streak/consistency/legacy XP.
+          // Never fails the auth response.
+          triggerDailyLoginWithEngagement(supabase, userId).catch((err) => {
+            authLogger.error("[XP] daily login engagement failed (refresh)", err, { userId });
+          });
+        }
+      }
+    } catch {
+      // Non-fatal: engagement XP errors must never block token refresh
+    }
 
     const headers = new Headers();
     headers.set(

@@ -1,0 +1,716 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  checkArtifactAssessability,
+  evaluateArtifactSubmission,
+  generateFallbackEvaluation,
+} from "../artifact-evaluator";
+import type { ArtifactEvaluationInput } from "../types";
+
+const { callOpenRouterAI } = vi.hoisted(() => ({ callOpenRouterAI: vi.fn() }));
+
+vi.mock("@functions/lib/ai-engine/openrouter", () => ({
+  callOpenRouterAI,
+  DEFAULT_OPENROUTER_MODEL: "google/gemini-2.5-flash",
+  OPENROUTER_API_URL: "https://openrouter.ai/api/v1/chat/completions",
+  DEFAULT_OPENROUTER_SITE_NAME: "LTE",
+  DEFAULT_OPENROUTER_SITE_URL: "https://lte.rareminds.in",
+}));
+
+const mockOpenRouter = (evidence = "incident log 2026-07") =>
+  vi.mocked(callOpenRouterAI).mockResolvedValue(
+    JSON.stringify({
+      overallScore: 90,
+      confidence: 90,
+      decision: "pass",
+      stage1SubmissionCheck: { isAssessable: true, notes: "ok" },
+      stage2CriticalFailures: { hasFailure: false, failuresFound: [] },
+      rubricRows: [
+        {
+          label: "Completeness",
+          score: 3,
+          maxScore: 3,
+          level: "Strongly demonstrated",
+          evidence,
+          tone: "success",
+        },
+        {
+          label: "Accuracy",
+          score: 3,
+          maxScore: 3,
+          level: "Strongly demonstrated",
+          evidence,
+          tone: "success",
+        },
+        {
+          label: "Evidence use",
+          score: 3,
+          maxScore: 3,
+          level: "Strongly demonstrated",
+          evidence,
+          tone: "success",
+        },
+        {
+          label: "Judgement",
+          score: 3,
+          maxScore: 3,
+          level: "Strongly demonstrated",
+          evidence,
+          tone: "success",
+        },
+        {
+          label: "Next action",
+          score: 3,
+          maxScore: 3,
+          level: "Strongly demonstrated",
+          evidence,
+          tone: "success",
+        },
+      ],
+      feedback: "Good",
+      singleImprovementPoint: "Keep going",
+    }),
+  );
+
+describe("ai-engine / artifact-evaluator", () => {
+  const sampleInput: ArtifactEvaluationInput = {
+    artifactId: "art-1",
+    artifactType: "final",
+    passingScore: 60,
+    totalScore: 100,
+    questions: [
+      {
+        id: "q-1",
+        title: "Problem Analysis",
+        description: "Analyze the root causes of the operational bottleneck.",
+        responseType: "text",
+      },
+    ],
+    answers: [
+      {
+        questionId: "q-1",
+        textResponse: "Detailed analysis showing operational constraints and throughput metrics.",
+      },
+    ],
+    attemptNo: 1,
+  };
+
+  const fileInput: ArtifactEvaluationInput = {
+    ...sampleInput,
+    questions: [
+      {
+        id: "q-1",
+        title: "Evidence Classification Register",
+        description: "Complete the evidence classification register sheet.",
+        responseType: "file",
+      },
+    ],
+    answers: [{ questionId: "q-1", fileName: "register.xlsx" }],
+  };
+
+  beforeEach(() => {
+    callOpenRouterAI.mockReset();
+  });
+
+  describe("generateFallbackEvaluation", () => {
+    it("never awards a pass or XP; always routes to human_review", () => {
+      const result = generateFallbackEvaluation(sampleInput);
+      expect(result.overallScore).toBe(0);
+      expect(result.decision).toBe("human_review");
+      expect(result.calculatedXp).toBe(0);
+      expect(result.provider).toBe("fallback");
+      expect(result.requiresManualReview).toBe(true);
+      expect(result.evaluationSource).toBe("fallback");
+      expect(result.rubricRows).toHaveLength(5);
+      expect(result.rubricRows.map((r) => r.label)).toEqual([
+        "Completeness",
+        "Accuracy",
+        "Evidence use",
+        "Judgement",
+        "Next action",
+      ]);
+      expect(result.debugTelemetry).toBeDefined();
+      expect(result.debugTelemetry?.provider).toBe("fallback");
+      expect(result.debugTelemetry?.validatedDecision).toBe("human_review");
+    });
+
+    it("keeps score 0 and XP 0 for attempt 2", () => {
+      const result = generateFallbackEvaluation({ ...sampleInput, attemptNo: 2 });
+      expect(result.overallScore).toBe(0);
+      expect(result.calculatedXp).toBe(0);
+      expect(result.decision).toBe("human_review");
+    });
+
+    it("keeps score 0 and XP 0 for empty answers", () => {
+      const result = generateFallbackEvaluation({ ...sampleInput, answers: [] });
+      expect(result.overallScore).toBe(0);
+      expect(result.decision).toBe("human_review");
+      expect(result.calculatedXp).toBe(0);
+    });
+
+    it("keeps score 0 and XP 0 for a file answer without extracted content", () => {
+      const result = generateFallbackEvaluation(fileInput);
+      expect(result.overallScore).toBe(0);
+      expect(result.decision).toBe("human_review");
+      expect(result.calculatedXp).toBe(0);
+    });
+
+    it("still routes to human_review for a file answer with extracted content", () => {
+      const result = generateFallbackEvaluation({
+        ...fileInput,
+        answers: [
+          {
+            questionId: "q-1",
+            fileName: "register.xlsx",
+            fileContentSnippet: "C-001, incident log 2026-07, High",
+          },
+        ],
+      });
+      expect(result.decision).toBe("human_review");
+      expect(result.overallScore).toBe(0);
+      expect(result.calculatedXp).toBe(0);
+    });
+  });
+
+  describe("checkArtifactAssessability", () => {
+    it("passes submissions without file responses", () => {
+      expect(checkArtifactAssessability(sampleInput).isAssessable).toBe(true);
+    });
+
+    it("fails submissions with a file response that has no extracted content", () => {
+      const check = checkArtifactAssessability(fileInput);
+      expect(check.isAssessable).toBe(false);
+      expect(check.notes).toContain("register.xlsx");
+    });
+
+    it("passes submissions whose file responses have extracted content", () => {
+      const check = checkArtifactAssessability({
+        ...fileInput,
+        answers: [
+          {
+            questionId: "q-1",
+            fileName: "register.xlsx",
+            fileContentSnippet: "C-001",
+          },
+        ],
+      });
+      expect(check.isAssessable).toBe(true);
+    });
+  });
+
+  describe("evaluateArtifactSubmission", () => {
+    it("uses fallback evaluator when OPENROUTER_API_KEY is missing", async () => {
+      const result = await evaluateArtifactSubmission({}, sampleInput);
+      expect(result.provider).toBe("fallback");
+      expect(result.decision).toBe("human_review");
+      expect(result.overallScore).toBe(0);
+      expect(result.calculatedXp).toBe(0);
+      expect(result.requiresManualReview).toBe(true);
+      expect(result.rubricRows).toHaveLength(5);
+    });
+
+    it("routes unreadable file submissions to human_review without calling the LLM", async () => {
+      mockOpenRouter();
+      const result = await evaluateArtifactSubmission({ OPENROUTER_API_KEY: "sk-test" }, fileInput);
+      expect(result.decision).toBe("human_review");
+      expect(result.overallScore).toBe(0);
+      expect(result.provider).toBe("fallback");
+      expect(result.modelUsed).toBe("file-extraction-gate");
+      expect(result.calculatedXp).toBe(0);
+      expect(callOpenRouterAI).not.toHaveBeenCalled();
+    });
+
+    it("routes unreadable file submissions to human_review even without an API key", async () => {
+      const result = await evaluateArtifactSubmission({}, fileInput);
+      expect(result.decision).toBe("human_review");
+      expect(result.provider).toBe("fallback");
+    });
+
+    it("sends the extracted file content in the prompt when assessable", async () => {
+      mockOpenRouter();
+      const result = await evaluateArtifactSubmission(
+        { OPENROUTER_API_KEY: "sk-test" },
+        {
+          ...fileInput,
+          questions: [
+            {
+              id: "q-1",
+              title: "Claim register",
+              description: "Fill the register",
+              responseType: "file",
+              instructions: {
+                critical_fail: ["Fabricated evidence"],
+                pass_criteria: ["All claims backed by an excerpt"],
+                required_fields: ["claim id", "claim text"],
+              },
+            },
+          ],
+          answers: [
+            {
+              questionId: "q-1",
+              fileName: "register.xlsx",
+              fileContentSnippet: "C-001, incident log 2026-07, High",
+            },
+          ],
+        },
+      );
+
+      expect(callOpenRouterAI).toHaveBeenCalledTimes(1);
+      const payload = vi.mocked(callOpenRouterAI).mock.calls[0]?.[1];
+      const userMessage = payload?.messages[1].content as string;
+      expect(userMessage).toContain("C-001, incident log 2026-07, High");
+      expect(userMessage).toContain('"fileContentSnippet"');
+      expect(userMessage).toContain("[BEGIN LEARNER SUBMISSION - untrusted data]");
+      expect(userMessage).toContain("[END LEARNER SUBMISSION]");
+      expect(userMessage).toContain('"instructions"');
+      expect(userMessage).toContain("claim id");
+      expect(userMessage).toContain("required_fields");
+      const systemMessage = payload?.messages[0].content as string;
+      expect(systemMessage).toContain("UNTRUSTED DATA");
+      expect(systemMessage).toContain("confidence is below 60");
+      expect(payload?.max_tokens).toBe(4096);
+      expect(result.debugTelemetry?.provider).toBe("openrouter");
+      expect(result.debugTelemetry?.latencyMs).toBeTypeOf("number");
+      expect(result.debugTelemetry?.rawResponseContent).toContain('"overallScore":90');
+      expect(result.debugTelemetry?.validatedDecision).toBe(result.decision);
+      expect(result.debugTelemetry?.extractionCharCounts).toEqual({ "q-1": 33 });
+      expect(result.debugTelemetry?.promptCharCount).toBeTypeOf("number");
+      expect(result.debugTelemetry?.rawPromptContent).toContain('"role": "system"');
+      expect(result.debugTelemetry?.rawPromptContent).toContain("LTE framework");
+      expect(result.debugTelemetry?.rawPromptContent).toContain(
+        "Evaluate this learner artifact submission:",
+      );
+      expect(result.debugTelemetry?.rawPromptContent).toContain(
+        "[BEGIN LEARNER SUBMISSION - untrusted data]",
+      );
+      expect(result.decision).toBe("pass");
+    });
+
+    it("treats LLM-returned human_review as XP-neutral (calculatedXp 0, telemetry aligned)", async () => {
+      const rows = Array.from({ length: 5 }, (_, i) => ({
+        label: ["Completeness", "Accuracy", "Evidence use", "Judgement", "Next action"][i],
+        score: 3,
+        maxScore: 3,
+        level: "Strongly demonstrated",
+        evidence: "incident log 2026-07",
+        tone: "success",
+      }));
+      vi.mocked(callOpenRouterAI).mockResolvedValue(
+        JSON.stringify({
+          overallScore: 100,
+          confidence: 90,
+          decision: "human_review",
+          stage1SubmissionCheck: { isAssessable: true, notes: "ok" },
+          stage2CriticalFailures: { hasFailure: false, failuresFound: [] },
+          rubricRows: rows,
+          feedback: "Needs manual review",
+          singleImprovementPoint: "Await reviewer",
+        }),
+      );
+      const result = await evaluateArtifactSubmission(
+        { OPENROUTER_API_KEY: "sk-test" },
+        {
+          ...fileInput,
+          questions: [
+            {
+              id: "q-1",
+              title: "Claim register",
+              description: "Fill the register",
+              responseType: "file",
+              instructions: {
+                critical_fail: ["Fabricated evidence"],
+                pass_criteria: ["All claims backed by an excerpt"],
+                required_fields: ["claim id", "claim text"],
+              },
+            },
+          ],
+          answers: [
+            {
+              questionId: "q-1",
+              fileName: "register.xlsx",
+              fileContentSnippet: "C-001, incident log 2026-07, High",
+            },
+          ],
+        },
+      );
+
+      expect(result.decision).toBe("human_review");
+      expect(result.calculatedXp).toBe(0);
+      expect(result.debugTelemetry?.calculatedXp).toBe(0);
+      expect(result.debugTelemetry?.validatedDecision).toBe("human_review");
+    });
+
+    it("overrides an LLM hallucinated pass when a criterion is subpar", async () => {
+      vi.mocked(callOpenRouterAI).mockResolvedValue(
+        JSON.stringify({
+          overallScore: 90,
+          confidence: 90,
+          decision: "pass",
+          stage1SubmissionCheck: { isAssessable: true, notes: "ok" },
+          stage2CriticalFailures: { hasFailure: false, failuresFound: [] },
+          rubricRows: [
+            {
+              label: "Completeness",
+              score: 3,
+              maxScore: 3,
+              level: "Strongly demonstrated",
+              evidence: "operational constraints",
+              tone: "success",
+            },
+            {
+              label: "Accuracy",
+              score: 1,
+              maxScore: 3,
+              level: "Partially demonstrated",
+              evidence: "operational constraints",
+              tone: "error",
+            },
+            {
+              label: "Evidence use",
+              score: 3,
+              maxScore: 3,
+              level: "Strongly demonstrated",
+              evidence: "operational constraints",
+              tone: "success",
+            },
+            {
+              label: "Judgement",
+              score: 3,
+              maxScore: 3,
+              level: "Strongly demonstrated",
+              evidence: "operational constraints",
+              tone: "success",
+            },
+            {
+              label: "Next action",
+              score: 3,
+              maxScore: 3,
+              level: "Strongly demonstrated",
+              evidence: "operational constraints",
+              tone: "success",
+            },
+          ],
+          feedback: "Good",
+          singleImprovementPoint: "Keep going",
+        }),
+      );
+      const result = await evaluateArtifactSubmission(
+        { OPENROUTER_API_KEY: "sk-test" },
+        sampleInput,
+      );
+
+      expect(result.decision).toBe("revise_and_resubmit");
+      expect(result.feedback).toBe("Revise and resubmit required.");
+      expect(result.debugTelemetry?.wasDecisionOverridden).toBe(true);
+      expect(result.debugTelemetry?.validatedDecision).toBe("revise_and_resubmit");
+    });
+
+    it("falls back to deterministic rules when the LLM call throws", async () => {
+      vi.mocked(callOpenRouterAI).mockRejectedValue(new Error("upstream exploded"));
+      const result = await evaluateArtifactSubmission(
+        { OPENROUTER_API_KEY: "sk-test" },
+        sampleInput,
+      );
+
+      expect(result.provider).toBe("fallback");
+      expect(result.decision).toBe("human_review");
+      expect(result.overallScore).toBe(0);
+      expect(result.calculatedXp).toBe(0);
+      expect(result.requiresManualReview).toBe(true);
+      expect(result.debugTelemetry?.provider).toBe("fallback");
+      expect(result.debugTelemetry?.latencyMs).toBeTypeOf("number");
+      expect(result.debugTelemetry?.rawPromptContent).toContain(
+        "[BEGIN LEARNER SUBMISSION - untrusted data]",
+      );
+      expect(result.debugTelemetry?.rawPromptContent).toContain('"role": "user"');
+      expect(result.debugTelemetry?.promptCharCount).toBeTypeOf("number");
+    });
+
+    it("honors an LLM-returned revise_and_resubmit decision and its XP", async () => {
+      vi.mocked(callOpenRouterAI).mockResolvedValue(
+        JSON.stringify({
+          overallScore: 55,
+          confidence: 90,
+          decision: "revise_and_resubmit",
+          stage1SubmissionCheck: { isAssessable: true, notes: "ok" },
+          stage2CriticalFailures: { hasFailure: false, failuresFound: [] },
+          rubricRows: [
+            {
+              label: "Completeness",
+              score: 2,
+              maxScore: 3,
+              level: "Partially demonstrated",
+              evidence: "operational constraints",
+              tone: "warning",
+            },
+            {
+              label: "Accuracy",
+              score: 2,
+              maxScore: 3,
+              level: "Partially demonstrated",
+              evidence: "operational constraints",
+              tone: "warning",
+            },
+            {
+              label: "Evidence use",
+              score: 2,
+              maxScore: 3,
+              level: "Partially demonstrated",
+              evidence: "operational constraints",
+              tone: "warning",
+            },
+            {
+              label: "Judgement",
+              score: 2,
+              maxScore: 3,
+              level: "Partially demonstrated",
+              evidence: "operational constraints",
+              tone: "warning",
+            },
+            {
+              label: "Next action",
+              score: 2,
+              maxScore: 3,
+              level: "Partially demonstrated",
+              evidence: "operational constraints",
+              tone: "warning",
+            },
+          ],
+          feedback: "Improve accuracy",
+          singleImprovementPoint: "Cite more evidence",
+        }),
+      );
+      const result = await evaluateArtifactSubmission(
+        { OPENROUTER_API_KEY: "sk-test" },
+        sampleInput,
+      );
+
+      expect(result.decision).toBe("revise_and_resubmit");
+      expect(result.calculatedXp).toBe(1);
+      expect(result.feedback).toBe("Improve accuracy");
+      expect(result.debugTelemetry?.validatedDecision).toBe("revise_and_resubmit");
+      expect(result.debugTelemetry?.wasDecisionOverridden).toBe(false);
+    });
+
+    it("caps long text responses at 20k chars and file names at 255 chars in the prompt", async () => {
+      mockOpenRouter();
+      const longText = "x".repeat(25_000);
+      const longName = `${"y".repeat(300)}.xlsx`;
+      const result = await evaluateArtifactSubmission(
+        { OPENROUTER_API_KEY: "sk-test" },
+        {
+          ...fileInput,
+          questions: [
+            {
+              id: "q-1",
+              title: "Claim register",
+              description: "Fill the register",
+              responseType: "file",
+              instructions: { pass_criteria: ["All claims backed by an excerpt"] },
+            },
+          ],
+          answers: [
+            {
+              questionId: "q-1",
+              fileName: longName,
+              textResponse: longText,
+              fileContentSnippet: "C-001, incident log 2026-07, High",
+            },
+          ],
+        },
+      );
+
+      expect(result.decision).toBe("pass");
+      const payload = vi.mocked(callOpenRouterAI).mock.calls[0]?.[1];
+      const userMessage = payload?.messages[1].content as string;
+      expect(userMessage).toContain("[CONTENT TRUNCATED]");
+      expect(userMessage.length).toBeLessThan(25_000);
+      expect(userMessage).toContain(longName.slice(0, 255));
+      expect(userMessage).not.toContain(`${"y".repeat(256)}.xlsx`);
+    });
+
+    describe("Phase 2A response validation", () => {
+      const makeRows = (
+        evidence = "operational constraints",
+        score = 3,
+        extra: Partial<Record<string, unknown>> = {},
+      ) =>
+        Array.from({ length: 5 }, (_, i) => ({
+          label: ["Completeness", "Accuracy", "Evidence use", "Judgement", "Next action"][i],
+          score,
+          maxScore: 3,
+          level: "Strongly demonstrated",
+          evidence,
+          tone: "success",
+          ...extra,
+        }));
+
+      const respond = (overrides: Record<string, unknown>) =>
+        vi.mocked(callOpenRouterAI).mockResolvedValue(
+          JSON.stringify({
+            overallScore: 90,
+            confidence: 90,
+            decision: "pass",
+            stage1SubmissionCheck: { isAssessable: true, notes: "ok" },
+            stage2CriticalFailures: { hasFailure: false, failuresFound: [] },
+            rubricRows: makeRows(),
+            feedback: "Good",
+            singleImprovementPoint: "Keep going",
+            ...overrides,
+          }),
+        );
+
+      it("recomputes overallScore from rubric rows, ignoring model arithmetic", async () => {
+        respond({ overallScore: 90 });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.overallScore).toBe(100);
+        expect(result.decision).toBe("pass");
+        expect(result.confidence).toBe(90);
+        expect(result.debugTelemetry?.confidence).toBe(90);
+      });
+
+      it("invalidates fabricated evidence, zeroes the row and forces revise_and_resubmit", async () => {
+        respond({ rubricRows: makeRows("this text does not exist in the submission") });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.decision).toBe("revise_and_resubmit");
+        expect(result.overallScore).toBe(0);
+        expect(result.rubricRows.every((r) => r.evidence === "" && r.score === 0)).toBe(true);
+        expect(result.rubricRows.every((r) => r.evidenceValid === false)).toBe(true);
+        expect(result.rubricRows.every((r) => r.tone === "error")).toBe(true);
+        expect(result.feedback).toBe("Revise and resubmit required.");
+        expect(result.debugTelemetry?.wasDecisionOverridden).toBe(true);
+      });
+
+      it("invalidates empty evidence and forces revise_and_resubmit", async () => {
+        respond({ rubricRows: makeRows("") });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.decision).toBe("revise_and_resubmit");
+        expect(result.rubricRows.every((r) => r.evidenceValid === false)).toBe(true);
+      });
+
+      it("invalidates banned placeholder evidence (e, N/A, None)", async () => {
+        respond({ rubricRows: makeRows("e") });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.decision).toBe("revise_and_resubmit");
+        expect(result.rubricRows.every((r) => r.evidence === "")).toBe(true);
+      });
+
+      it("routes low confidence (<60) to human_review even when the LLM says pass", async () => {
+        respond({ confidence: 50 });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.decision).toBe("human_review");
+        expect(result.calculatedXp).toBe(0);
+        expect(result.feedback).toBe(
+          "AI evaluation was routed for human review; a reviewer will assess this submission.",
+        );
+        expect(result.debugTelemetry?.wasDecisionOverridden).toBe(true);
+      });
+
+      it("derives tone from the score, ignoring model tone", async () => {
+        respond({ rubricRows: makeRows("operational constraints", 1, { tone: "success" }) });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.decision).toBe("revise_and_resubmit");
+        expect(result.rubricRows.every((r) => r.tone === "warning")).toBe(true);
+      });
+
+      it("keeps LLM pass with confidence >= 60 and all rows >= 2", async () => {
+        respond({ confidence: 60 });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.decision).toBe("pass");
+        expect(result.calculatedXp).toBe(20);
+      });
+
+      it("falls back to deterministic evaluation on invalid tone", async () => {
+        respond({ rubricRows: makeRows("operational constraints", 3, { tone: "critical" }) });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.provider).toBe("fallback");
+        expect(result.decision).toBe("human_review");
+        expect(result.overallScore).toBe(0);
+      });
+
+      it("falls back to deterministic evaluation on invalid level", async () => {
+        respond({ rubricRows: makeRows("operational constraints", 3, { level: "Brilliant" }) });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.provider).toBe("fallback");
+        expect(result.decision).toBe("human_review");
+      });
+
+      it("falls back to deterministic evaluation on an invalid decision", async () => {
+        respond({ decision: "fail" });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.provider).toBe("fallback");
+        expect(result.decision).toBe("human_review");
+      });
+
+      it("falls back to deterministic evaluation on invalid confidence", async () => {
+        respond({ confidence: 150 });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.provider).toBe("fallback");
+        expect(result.decision).toBe("human_review");
+      });
+
+      it("falls back to deterministic evaluation on a missing rubric row", async () => {
+        respond({ rubricRows: makeRows().slice(0, 4) });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.provider).toBe("fallback");
+        expect(result.decision).toBe("human_review");
+      });
+
+      it("falls back to deterministic evaluation on malformed JSON", async () => {
+        vi.mocked(callOpenRouterAI).mockResolvedValue("{not valid json");
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.provider).toBe("fallback");
+        expect(result.decision).toBe("human_review");
+        expect(result.overallScore).toBe(0);
+      });
+
+      it("falls back to deterministic evaluation when the schema is violated", async () => {
+        respond({ stage2CriticalFailures: { hasFailure: "yes", failuresFound: [] } });
+        const result = await evaluateArtifactSubmission(
+          { OPENROUTER_API_KEY: "sk-test" },
+          sampleInput,
+        );
+        expect(result.provider).toBe("fallback");
+        expect(result.decision).toBe("human_review");
+      });
+    });
+  });
+});

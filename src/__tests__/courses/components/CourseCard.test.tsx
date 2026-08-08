@@ -145,8 +145,21 @@ describe("CourseCard", () => {
   it("renders correctly in list variant", () => {
     renderWithRouter(<CourseCard course={baseCourse} variant="list" />);
     expect(screen.getByText("Test Course")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continue/i })).toBeInTheDocument();
     const img = screen.getByRole("img");
     expect(img).toHaveAttribute("alt", "Test Course");
     expect(img).toHaveAttribute("loading", "lazy");
+  });
+
+  it("keeps the list variant action available on desktop", () => {
+    renderWithRouter(
+      <CourseCard course={{ ...baseCourse, status: "not_started" }} variant="list" />,
+    );
+
+    const button = screen.getByRole("button", { name: /start/i });
+
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(mockNavigate).toHaveBeenCalledWith("/my-courses/TEST-CAP-01");
   });
 });

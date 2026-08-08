@@ -144,6 +144,7 @@ export const LevelModulesPage: React.FC = () => {
 
   const dynamicTotalLevels = activeCourse?.totalLevels ?? 5;
   const dynamicTargetLevel = activeCourse?.targetLevel ?? "L3";
+  const currentUserLevel = activeCourse?.currentLevel ?? 0;
 
   return (
     <div className="-mx-4 md:-mx-6 -mt-4 md:-mt-6 pb-12">
@@ -171,7 +172,7 @@ export const LevelModulesPage: React.FC = () => {
             modulesCount={totalCount}
             artifactsCount={levelData.artifactsCount}
             hasCertificate={true}
-            currentLevelNo={levelData.levelNo ?? 0}
+            currentLevelNo={currentUserLevel}
             totalLevelsNo={dynamicTotalLevels}
             targetLevel={dynamicTargetLevel}
           />
