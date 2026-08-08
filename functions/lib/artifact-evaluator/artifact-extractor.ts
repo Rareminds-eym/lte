@@ -15,7 +15,7 @@ export interface ExtractedArtifactContent {
 
 /** Overall cap on extracted text sent to the LLM (TRD §8.4). */
 export const ARTIFACT_TEXT_CAP = 50_000;
-const PDF_PAGE_CAP = 15;
+const PDF_PAGE_CAP = 50;
 const MAX_SHEETS = 20;
 const SHEET_MAX_ROWS = 2_000;
 const SHEET_MAX_COLS = 256;

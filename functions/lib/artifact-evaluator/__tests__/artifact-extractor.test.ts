@@ -321,14 +321,14 @@ describe("ai-engine / artifact-extractor", () => {
 
     it("caps the number of pdf pages processed", async () => {
       const wrap = (text: string) => `BT /F1 12 Tf 72 720 Td (${text}) Tj ET`;
-      const pages = Array.from({ length: 16 }, (_, i) => `Page ${i + 1} text`.replaceAll(" ", "_"));
+      const pages = Array.from({ length: 51 }, (_, i) => `Page ${i + 1} text`.replaceAll(" ", "_"));
       const file = buildPdfFileWithPages(pages.map(wrap));
       const result = await extractArtifactContent(file);
       expect(result.isReadable).toBe(true);
       const markerCount = (result.extractedText.match(/\[Page \d+\]/g) ?? []).length;
-      expect(markerCount).toBe(15);
-      expect(result.extractedText).toContain("Page_15_text");
-      expect(result.extractedText).not.toContain("Page_16_text");
+      expect(markerCount).toBe(50);
+      expect(result.extractedText).toContain("Page_50_text");
+      expect(result.extractedText).not.toContain("Page_51_text");
     });
 
     it("marks empty files as unreadable", async () => {
