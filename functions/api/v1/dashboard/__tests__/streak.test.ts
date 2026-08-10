@@ -13,6 +13,8 @@ vi.mock("@functions/lib/auth", async (importOriginal) => {
 
 vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
 
+type SupabaseFromOnly = Pick<SupabaseClient, "from">;
+
 describe("GET /api/v1/dashboard/streak", () => {
   const mockUser: AuthUser = {
     sub: "user-uuid-1234",
@@ -40,14 +42,22 @@ describe("GET /api/v1/dashboard/streak", () => {
 
     vi.mocked(createServiceSupabase).mockReturnValue({
       from: vi.fn().mockReturnValue(query),
-    } as unknown as SupabaseClient);
+    } as SupabaseFromOnly as SupabaseClient);
+  }
+
+  function toDateString(date: Date): string {
+    const dateString = date.toISOString().split("T")[0];
+    if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      throw new Error("Invalid test date generated");
+    }
+    return dateString;
   }
 
   function daysBeforeToday(days: number): string {
-    const today = new Date().toISOString().split("T")[0] || "";
+    const today = toDateString(new Date());
     const date = new Date(`${today}T00:00:00Z`);
     date.setUTCDate(date.getUTCDate() - days);
-    return date.toISOString().split("T")[0] || "";
+    return toDateString(date);
   }
 
   it("returns 401 when requireAuth throws", async () => {

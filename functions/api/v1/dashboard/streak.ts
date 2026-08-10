@@ -10,11 +10,29 @@ export interface DashboardStreakResponse {
   streakDays: number;
 }
 
+function getTodayDateString(): string {
+  const todayStr = new Date().toISOString().split("T")[0];
+  if (!todayStr || !/^\d{4}-\d{2}-\d{2}$/.test(todayStr)) {
+    throw new Error("Invalid date format generated");
+  }
+  return todayStr;
+}
+
+function isLoginDateMetadata(metadata: unknown): metadata is { login_date: string } {
+  return (
+    metadata !== null &&
+    typeof metadata === "object" &&
+    !Array.isArray(metadata) &&
+    "login_date" in metadata &&
+    typeof metadata.login_date === "string"
+  );
+}
+
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
   try {
     const user = await requireAuth(context.request, context.env);
-    const todayStr = new Date().toISOString().split("T")[0] || "";
+    const todayStr = getTodayDateString();
 
     const { data, error } = await createServiceSupabase(context.env)
       .from("xp_events")
@@ -27,22 +45,12 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const loginDates = new Set<string>();
     for (const row of data ?? []) {
       const metadata = row.metadata;
-      const loginDate =
-        metadata !== null &&
-        typeof metadata === "object" &&
-        !Array.isArray(metadata) &&
-        typeof (metadata as Record<string, unknown>)["login_date"] === "string"
-          ? ((metadata as Record<string, unknown>)["login_date"] as string)
-          : null;
-      if (loginDate) loginDates.add(loginDate);
+      if (isLoginDateMetadata(metadata)) loginDates.add(metadata.login_date);
     }
 
     return jsonResponse<DashboardStreakResponse>({
       success: true,
-      streakDays: countConsecutiveDaysFromToday(
-        todayStr,
-        Array.from(loginDates).sort((a, b) => (a > b ? -1 : 1)),
-      ),
+      streakDays: countConsecutiveDaysFromToday(todayStr, Array.from(loginDates).sort().reverse()),
     });
   } catch (error) {
     if (error instanceof AuthError) {
