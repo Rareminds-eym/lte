@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Deterministic evaluation replay tool (Phase 3).
  *

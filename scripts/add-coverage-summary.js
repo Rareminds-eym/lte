@@ -10,8 +10,8 @@ if (!stepSummaryFile) {
 }
 
 if (!fs.existsSync(summaryPath)) {
-  console.error('coverage/coverage-summary.json not found!');
-  process.exit(1);
+  console.log('coverage/coverage-summary.json not found (tests may have been skipped due to a prior failure), skipping step summary.');
+  process.exit(0);
 }
 
 try {
