@@ -16,17 +16,20 @@ export interface RateLimitResult {
 export class SlidingWindowRateLimiter {
   private hits = new Map<string, number[]>();
 
+  private maxWindowMs = 60_000;
+
   /**
    * Records a hit for `key` and reports whether it is within the window.
    * `now` is injectable for tests.
    */
   check(key: string, max: number, windowMs: number, now = Date.now()): RateLimitResult {
+    if (windowMs > this.maxWindowMs) this.maxWindowMs = windowMs;
     const cutoff = now - windowMs;
     const bucket = (this.hits.get(key) ?? []).filter((t) => t > cutoff);
 
     if (bucket.length >= max) {
       this.hits.set(key, bucket);
-      const earliest = bucket[0] ?? now;
+      const earliest = bucket[0]!;
       return { allowed: false, retryAfterMs: Math.max(1, earliest + windowMs - now) };
     }
 
@@ -36,13 +39,13 @@ export class SlidingWindowRateLimiter {
     // ponytail: per-isolate Map grows with distinct user ids; a lazy sweep
     // bounds it when it gets large. A global DB-backed limiter is the upgrade
     // path if multi-isolate accuracy ever matters.
-    if (this.hits.size > 10_000) this.prune(now);
+    if (this.hits.size > 10_000) this.prune(now, windowMs);
     return { allowed: true, retryAfterMs: 0 };
   }
 
   /** Removes keys with no hits inside the window. */
-  prune(now = Date.now()): void {
-    const cutoff = now - 60_000;
+  prune(now = Date.now(), windowMs = this.maxWindowMs): void {
+    const cutoff = now - windowMs;
     for (const [key, bucket] of this.hits) {
       if (!bucket.some((t) => t > cutoff)) this.hits.delete(key);
     }

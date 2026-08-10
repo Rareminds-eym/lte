@@ -94,9 +94,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       (attempt) =>
         attempt.attemptNo === (activeFeedbackAttemptNo ?? submittedAttempts[0]?.attemptNo),
     ) ?? null;
-  const selectedSubmissionId = selectedAttempt?.files.find(
-    (file) => file.submissionId,
-  )?.submissionId;
+  const selectedSubmissionId = selectedAttempt?.files[0]?.submissionId;
   const { data: storedEvaluation, isFetching: isStoredEvaluationFetching } =
     useSubmissionEvaluation(selectedSubmissionId);
   const latestEvaluation = toAttemptEvaluation(storedEvaluation?.evaluation ?? null);

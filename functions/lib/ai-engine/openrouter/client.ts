@@ -38,12 +38,11 @@ export async function callOpenRouterAI(
         signal: AbortSignal.timeout(30_000),
       });
     } catch (error) {
-      metrics.observe(METRIC.OPENROUTER_LATENCY, Math.round(performance.now() - attemptStartedAt));
       lastError = error instanceof Error ? error : new Error(String(error));
       continue;
+    } finally {
+      metrics.observe(METRIC.OPENROUTER_LATENCY, Math.round(performance.now() - attemptStartedAt));
     }
-
-    metrics.observe(METRIC.OPENROUTER_LATENCY, Math.round(performance.now() - attemptStartedAt));
 
     if (!response.ok) {
       const message = `OpenRouter API error [${response.status}]: ${await response.text()}`;

@@ -73,9 +73,12 @@ export function validateRubricEvidence(
   rows: ParsedRubricRow[],
   answers: ArtifactEvaluationInput["answers"],
 ): { rows: RubricCriterionResult[]; failed: boolean } {
-  const haystacks = answers.flatMap((a) => [a.textResponse ?? "", a.fileContentSnippet ?? ""]);
+  const haystacks = answers.flatMap((a) => [
+    (a.textResponse ?? "").toLowerCase(),
+    (a.fileContentSnippet ?? "").toLowerCase(),
+  ]);
   const templateTexts = answers
-    .map((a) => a.templateContent ?? "")
+    .map((a) => (a.templateContent ?? "").toLowerCase())
     .filter((t) => t.trim().length > 0);
   let failed = false;
 
@@ -83,11 +86,11 @@ export function validateRubricEvidence(
     const evidence = row.evidence ?? "";
     const normalized = evidence.trim().toLowerCase();
     const isBanned = BANNED_EVIDENCE.has(normalized);
-    const isVerbatim = !isBanned && haystacks.some((h) => h.includes(evidence));
+    const isVerbatim = !isBanned && haystacks.some((h) => h.includes(normalized));
 
     // Reject evidence if it appears verbatim in the template text provided to the learner
     const isTemplateOnly =
-      isVerbatim && templateTexts.length > 0 && templateTexts.some((t) => t.includes(evidence));
+      isVerbatim && templateTexts.length > 0 && templateTexts.some((t) => t.includes(normalized));
 
     if (!isVerbatim || isTemplateOnly) {
       failed = true;

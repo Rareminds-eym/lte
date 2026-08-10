@@ -26,7 +26,7 @@ export interface DriftStats {
 /** Nearest-rank percentile on a sorted ascending array. */
 export function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
-  const idx = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
+  const idx = Math.max(0, Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1));
   return sorted[idx] ?? 0;
 }
 
@@ -57,18 +57,18 @@ export function computeDriftStats(
     if (a.decision !== b.decision) flips += 1;
   }
 
-  const sortedScores = [...scoreDeltas].sort((x, y) => x - y);
-  const sortedConfidence = [...confidenceDeltas].sort((x, y) => x - y);
+  scoreDeltas.sort((x, y) => x - y);
+  confidenceDeltas.sort((x, y) => x - y);
 
   return {
     comparisons: stored.length,
     decisionFlipRate: stored.length === 0 ? 0 : flips / stored.length,
     avgScoreDelta: average(scoreDeltas),
-    p50ScoreDelta: percentile(sortedScores, 50),
-    p95ScoreDelta: percentile(sortedScores, 95),
+    p50ScoreDelta: percentile(scoreDeltas, 50),
+    p95ScoreDelta: percentile(scoreDeltas, 95),
     avgConfidenceDelta: average(confidenceDeltas),
-    p50ConfidenceDelta: percentile(sortedConfidence, 50),
-    p95ConfidenceDelta: percentile(sortedConfidence, 95),
+    p50ConfidenceDelta: percentile(confidenceDeltas, 50),
+    p95ConfidenceDelta: percentile(confidenceDeltas, 95),
   };
 }
 

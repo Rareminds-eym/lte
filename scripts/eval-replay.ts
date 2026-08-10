@@ -18,7 +18,7 @@
  * grounded in file snippets will fail validation on replay and skew drift.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { evaluateArtifactSubmission } from "../functions/lib/artifact-evaluator";
+import { computeDriftStats, evaluateArtifactSubmission } from "../functions/lib/artifact-evaluator";
 import type { ArtifactEvaluationInput } from "../functions/lib/artifact-evaluator";
 
 interface CliArgs {
@@ -124,7 +124,13 @@ async function loadInput(
         const urlResponse = answer.url_response?.trim();
         if (textResponse) return { questionId: q.id as string, textResponse };
         if (urlResponse) return { questionId: q.id as string, urlResponse };
-        if (answer.file_name) return { questionId: q.id as string, fileName: answer.file_name };
+        if (answer.file_name) {
+          return {
+            questionId: q.id as string,
+            fileName: answer.file_name,
+            fileContentSnippet: textResponse || undefined,
+          };
+        }
         return null;
       })
       .filter((answer): answer is NonNullable<typeof answer> => answer !== null),
@@ -164,9 +170,6 @@ async function main(): Promise<void> {
     );
   }
 
-  const { computeDriftStats } = await import(
-    "../functions/lib/artifact-evaluator"
-  );
   const drift = computeDriftStats(stored, replayed);
   console.log("\nDrift summary:", JSON.stringify(drift, null, 2));
 }

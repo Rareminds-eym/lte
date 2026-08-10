@@ -12,6 +12,7 @@ import {
   AI_RESPONSE_SCHEMA,
   deriveTone,
   enforceValidatedDecision,
+  LTE_CRITERIA_LABELS,
   MIN_AI_CONFIDENCE,
   recomputeOverallScore,
   validateRubricEvidence,
@@ -21,18 +22,9 @@ import type {
   ArtifactDebugTelemetry,
   ArtifactEvaluationInput,
   CriticalFailureCheckResult,
-  LteCriterionLabel,
   RubricCriterionResult,
   SubmissionCheckResult,
 } from "./types";
-
-export const LTE_CRITERIA: LteCriterionLabel[] = [
-  "Completeness",
-  "Accuracy",
-  "Evidence use",
-  "Judgement",
-  "Next action",
-];
 
 function calculateArtifactXp(isPass: boolean, isPractice: boolean, attemptNo: number): number {
   if (!isPass) return 1;
@@ -60,7 +52,7 @@ export function generateFallbackEvaluation(input: ArtifactEvaluationInput): AIEv
   );
   const isComplete = validAnswers.length >= questionCount;
 
-  const rubricRows: RubricCriterionResult[] = LTE_CRITERIA.map((label) => ({
+  const rubricRows: RubricCriterionResult[] = LTE_CRITERIA_LABELS.map((label) => ({
     label,
     score: 0,
     maxScore: 3,
@@ -142,33 +134,27 @@ export function generateUnassessableResult(
   input: ArtifactEvaluationInput,
   submissionCheck: SubmissionCheckResult,
 ): AIEvaluationResult {
-  const passingThreshold = input.passingScore ?? 60;
+  const fallback = generateFallbackEvaluation(input);
+  const rubricRows: RubricCriterionResult[] = LTE_CRITERIA_LABELS.map((label) => ({
+    label,
+    score: 0,
+    maxScore: 3,
+    level: "Not demonstrated",
+    evidence: "Artifact file content could not be read.",
+    evidenceValid: false,
+    tone: "error",
+    feedback: `Cannot score ${label.toLowerCase()} because the artifact file content was unreadable.`,
+  }));
+
   return {
-    overallScore: 0,
-    passingScore: passingThreshold,
-    confidence: 0,
-    decision: "human_review",
+    ...fallback,
     stage1SubmissionCheck: submissionCheck,
-    stage2CriticalFailures: { hasFailure: false, failuresFound: [] },
-    rubricRows: LTE_CRITERIA.map((label) => ({
-      label,
-      score: 0,
-      maxScore: 3,
-      level: "Not demonstrated",
-      evidence: "Artifact file content could not be read.",
-      evidenceValid: false,
-      tone: "error",
-      feedback: `Cannot score ${label.toLowerCase()} because the artifact file content was unreadable.`,
-    })),
+    rubricRows,
     feedback:
       "The submitted file(s) could not be read or parsed. A human reviewer must evaluate this submission.",
     singleImprovementPoint:
       "Re-upload the artifact in a readable format (XLSX, XLS, CSV, PDF, DOCX, TXT, MD).",
-    calculatedXp: 0,
     modelUsed: "file-extraction-gate",
-    provider: "fallback",
-    requiresManualReview: true,
-    evaluationSource: "fallback",
     debugTelemetry: buildTelemetry(input, {
       provider: "fallback",
       modelUsed: "file-extraction-gate",
@@ -761,11 +747,7 @@ export async function processAndSaveArtifactEvaluation(
           ? "practice_artifact_accepted"
           : "practice_artifact_failed"
         : evalResult.decision === "pass"
-          ? input.attemptNo === 1
-            ? "final_artifact_accepted_1"
-            : input.attemptNo === 2
-              ? "final_artifact_accepted_2"
-              : "final_artifact_accepted_3"
+          ? `final_artifact_accepted_${Math.min(3, input.attemptNo)}`
           : "final_artifact_failed";
 
     try {

@@ -218,14 +218,17 @@ async function parseDocx(buffer: ArrayBuffer): Promise<ExtractedArtifactContent>
   return finish(result.value, "docx");
 }
 
+const XML_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+};
+
 function unescapeXml(text: string): string {
-  return text
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'");
+  return text.replace(/&(?:amp|lt|gt|quot|apos|#39);/g, (m) => XML_ENTITIES[m] ?? m);
 }
 
 async function parsePptx(buffer: ArrayBuffer): Promise<ExtractedArtifactContent> {
@@ -319,5 +322,5 @@ async function parseText(buffer: ArrayBuffer): Promise<ExtractedArtifactContent>
 
 export function normalizeArtifactExtension(fileName: string): string {
   if (!fileName.includes(".")) return "";
-  return (fileName.split(".").pop() ?? "").trim().replace(/^\./, "").toLowerCase();
+  return (fileName.split(".").pop() ?? "").trim().toLowerCase();
 }

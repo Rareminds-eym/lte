@@ -11,6 +11,7 @@
  * snapshot; the emission points stay identical.
  */
 import { apiLogger } from "../../shared/logger";
+import { percentile } from "./drift-stats";
 
 export const METRIC = {
   SUBMISSION_RECEIVED: "submission_received",
@@ -45,12 +46,6 @@ export interface MetricsSnapshot {
   histograms: Record<string, HistogramSummary>;
 }
 
-function percentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) return 0;
-  const idx = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
-  return sorted[idx] ?? 0;
-}
-
 export function summarizeHistogram(values: number[]): HistogramSummary {
   if (values.length === 0) {
     return { count: 0, sum: 0, min: 0, max: 0, p50: 0, p95: 0 };
@@ -83,15 +78,12 @@ export class Metrics {
   }
 
   snapshot(): MetricsSnapshot {
-    const counters: Record<string, number> = {};
-    for (const [name, count] of this.counters) counters[name] = count;
-
-    const histograms: Record<string, HistogramSummary> = {};
-    for (const [name, values] of this.histograms) {
-      histograms[name] = summarizeHistogram(values);
-    }
-
-    return { counters, histograms };
+    return {
+      counters: Object.fromEntries(this.counters),
+      histograms: Object.fromEntries(
+        Array.from(this.histograms, ([k, v]) => [k, summarizeHistogram(v)]),
+      ),
+    };
   }
 
   reset(): void {
