@@ -29,6 +29,22 @@ describe("GET /dashboard", () => {
   });
 });
 
+describe("GET /api (exact)", () => {
+  it("returns a JSON 404 for the bare API root, never the SPA shell", async () => {
+    const { context, fetchMock } = createContext("http://localhost/api");
+
+    const response = await onRequest(context);
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { message: "Not Found" },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/v1/unknown", () => {
   it("returns a JSON 404, never the SPA shell", async () => {
     const { context, fetchMock } = createContext("http://localhost/api/v1/unknown");

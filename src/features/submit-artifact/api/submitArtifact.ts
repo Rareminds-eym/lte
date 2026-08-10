@@ -24,7 +24,8 @@ export interface SubmitArtifactResponse {
   duplicate?: boolean;
   evaluation?: {
     overall_score: number;
-    decision: "pass" | "fail" | "human_review";
+    decision: "pass" | "revise_and_resubmit" | "human_review";
+    confidence: number;
     rubric_rows: Array<{
       label: string;
       score: number;

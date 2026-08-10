@@ -4,7 +4,7 @@ import {
   METRIC,
   metrics,
 } from "@functions/lib/artifact-evaluator";
-import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
+import { jsonError, jsonResponse } from "@functions/lib/http";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { rateLimitErrorResponse, rateLimiter } from "@functions/middleware";
@@ -71,6 +71,43 @@ function readSubmissionPayload(
   return { ok: true, files };
 }
 
+/**
+ * Streams the request body with a hard byte cap. Content-Length is advisory
+ * (chunked bodies omit it) and `request.formData()`/`request.json()` buffer
+ * the whole body before any check, so a declared-less or chunked oversized
+ * body would otherwise be fully buffered before the cumulative cap runs.
+ * Reading with a capped reader aborts at `maxRequestBytes`, bounding memory.
+ */
+async function readBodyWithCap(request: Request): Promise<ArrayBuffer> {
+  const reader = request.body?.getReader();
+  if (!reader) return new ArrayBuffer(0);
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > ARTIFACT_LIMITS.maxRequestBytes) {
+      await reader.cancel();
+      throw new ArtifactSubmissionError(
+        "The submission request is larger than the allowed size.",
+        413,
+        "PAYLOAD_TOO_LARGE",
+      );
+    }
+    chunks.push(value);
+  }
+
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return merged.buffer;
+}
+
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
 
@@ -104,12 +141,14 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     let payload: string;
     try {
       const contentType = context.request.headers.get("Content-Type") ?? "";
+      const bytes = await readBodyWithCap(context.request);
       if (!contentType.includes("multipart/form-data")) {
-        const body = await readJsonObject(context.request);
-        payload = JSON.stringify(body);
+        payload = new TextDecoder().decode(bytes);
         formData = new FormData();
       } else {
-        formData = await context.request.formData();
+        formData = await new Response(bytes, {
+          headers: { "Content-Type": contentType },
+        }).formData();
         const raw = formData.get("payload");
         if (typeof raw !== "string") {
           throw new ArtifactSubmissionError(

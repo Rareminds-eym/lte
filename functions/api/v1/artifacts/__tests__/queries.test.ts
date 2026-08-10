@@ -19,6 +19,7 @@ interface MockChain {
   eq: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
   insert: ReturnType<typeof vi.fn>;
   upsert: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
@@ -37,6 +38,7 @@ function mockChain(
     eq: vi.fn(() => chain),
     order: vi.fn(() => chain),
     update: vi.fn(() => chain),
+    delete: vi.fn(() => chain),
     insert: vi.fn(() => Promise.resolve(ok(null))),
     upsert: vi.fn(() => Promise.resolve(ok(null))),
     maybeSingle: vi.fn().mockResolvedValue(options.maybeSingle ?? ok(null)),
@@ -434,6 +436,9 @@ describe("artifact submission queries", () => {
     expect(env.STORAGE_BUCKET.delete).toHaveBeenCalledWith(
       "submissions/artifacts/users/user-1/artifact-1/submission-1/00000000-0000-4000-8000-000000000001-answer.xlsx",
     );
+    expect(chains.artifact_submission_files.delete).toHaveBeenCalled();
+    expect(chains.artifact_submission_answers.delete).toHaveBeenCalled();
+    expect(chains.artifact_submissions.delete).toHaveBeenCalled();
   });
 
   it("returns the original submission for a retried request with the same idempotency key", async () => {
@@ -460,9 +465,12 @@ describe("artifact submission queries", () => {
         ok([{ id: "file-1", question_id: "question-1", file_name: "answer.xlsx" }]),
       ).then(resolve),
     );
-    // Call 1: getLatestSubmission (none). Call 2: findSubmissionByIdempotencyKey.
+    // Call 1: findSubmissionByIdempotencyKey (none). Call 2: getLatestSubmission
+    // (existing). Call 3: findSubmissionByIdempotencyKey again after the
+    // concurrent-race 23505 on the idempotency index.
     chains.artifact_submissions.maybeSingle
       .mockResolvedValueOnce(ok(null))
+      .mockResolvedValueOnce(ok(existing))
       .mockResolvedValueOnce(ok(existing));
     const supabase = createSupabase(chains);
     const file = createTestFile([xlsxBuffer], "answer.xlsx");
@@ -483,6 +491,43 @@ describe("artifact submission queries", () => {
       { file_id: "file-1", question_id: "question-1", file_name: "answer.xlsx" },
     ]);
     expect(chains.artifact_submissions.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns the existing submission without demoting is_latest on a retried request", async () => {
+    const existing = {
+      id: "submission-1",
+      artifact_id: "artifact-1",
+      user_id: "user-1",
+      user_module_progress_id: "progress-1",
+      attempt_no: 1,
+      version_label: "v1",
+      is_latest: true,
+      status: "submitted",
+      previous_submission_id: null,
+      submitted_at: "2026-08-05T10:00:00.000Z",
+      sealed_at: null,
+    };
+    const chains = createSubmitChains({});
+    // findSubmissionByIdempotencyKey hit on the first call - the retry short-
+    // circuits before getLatestSubmission, so neither the demote nor the
+    // insert runs and the exactly-one-latest invariant survives the retry.
+    chains.artifact_submissions.maybeSingle.mockResolvedValueOnce(ok(existing));
+    const supabase = createSupabase(chains);
+    const file = createTestFile([xlsxBuffer], "answer.xlsx");
+
+    const result = await submitArtifactSubmission(
+      supabase,
+      createEnv(),
+      "user-1",
+      { artifact_id: "artifact-1", answers: [{ question_id: "question-1" }] },
+      new Map([["question-1", file]]),
+      "idem-key-1",
+    );
+
+    expect(result.duplicate).toBe(true);
+    expect(result.submission_id).toBe("submission-1");
+    expect(chains.artifact_submissions.insert).not.toHaveBeenCalled();
+    expect(chains.artifact_submissions.update).not.toHaveBeenCalled();
   });
 
   it("rejects resubmission when the latest submission is already accepted", async () => {

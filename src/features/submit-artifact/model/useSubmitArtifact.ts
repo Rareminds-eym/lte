@@ -16,7 +16,7 @@ export const useSubmitArtifact = () => {
       idempotencyKeyRef.current ??= crypto.randomUUID();
       return submitArtifact(input, idempotencyKeyRef.current);
     },
-    onSettled: () => {
+    onSuccess: () => {
       idempotencyKeyRef.current = undefined;
     },
   });

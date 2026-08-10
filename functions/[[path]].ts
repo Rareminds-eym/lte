@@ -10,7 +10,7 @@ export const onRequest = async ({ request, env }: PagesContext<LteEnv>) => {
   const url = new URL(request.url);
   const { pathname } = url;
 
-  if (pathname.startsWith("/api/")) {
+  if (pathname === "/api" || pathname.startsWith("/api/")) {
     return jsonError("Not Found", 404);
   }
 

@@ -6,7 +6,7 @@ vi.mock("@/shared/api", () => ({
   apiFetch: (...args: unknown[]) => mockApiFetch(...args),
 }));
 
-import { getSubmissionEvaluation } from "@/features/submit-artifact/api/getSubmissionEvaluation";
+import { getSubmissionEvaluation } from "@/features/submit-artifact";
 
 describe("getSubmissionEvaluation", () => {
   beforeEach(() => {

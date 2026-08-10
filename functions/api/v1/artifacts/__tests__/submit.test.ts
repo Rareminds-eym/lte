@@ -152,6 +152,27 @@ describe("POST /api/v1/artifacts/submit", () => {
     expect(body.error.code).toBe("PAYLOAD_TOO_LARGE");
   });
 
+  it("rejects a chunked body (no Content-Length) above maxRequestBytes", async () => {
+    const oversized = new Uint8Array(ARTIFACT_LIMITS.maxRequestBytes + 1);
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(oversized);
+        controller.close();
+      },
+    });
+    const request = new Request("http://localhost/api/v1/artifacts/submit", {
+      method: "POST",
+      body: stream,
+      duplex: "half",
+      headers: { "Content-Type": "application/json" },
+    } as RequestInit);
+
+    const response = await onRequestPost(createContext(request));
+    expect(response.status).toBe(413);
+    const body = (await response.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("PAYLOAD_TOO_LARGE");
+  });
+
   it("rejects more than maxFilesPerSubmission files", async () => {
     const files = Array.from({ length: ARTIFACT_LIMITS.maxFilesPerSubmission + 1 }, (_, i) => [
       `22222222-2222-4222-8222-${String(i).padStart(12, "0")}`,

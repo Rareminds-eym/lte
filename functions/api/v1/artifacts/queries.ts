@@ -1,9 +1,5 @@
 import type { ArtifactEvaluationInput } from "@functions/lib/artifact-evaluator";
 import {
-  ArtifactFileGuardError,
-  assertFileSignature,
-  assertValidArtifactFileName,
-  checkZipExpansion,
   extractArtifactContent,
   METRIC,
   metrics,
@@ -16,6 +12,11 @@ import type { CompleteSubmissionInput } from "@functions/schemas";
 import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchArtifactTemplateContent, fetchEvaluationContext } from "./evaluation-context";
+import {
+  ArtifactSubmissionError,
+  validateArtifactFileContent,
+  validateFileForQuestion,
+} from "./file-validation";
 
 interface ArtifactQuestionRow {
   id: string;
@@ -65,23 +66,7 @@ interface ArtifactQuestionDetailRow {
   instructions: Record<string, unknown> | string | null;
 }
 
-export class ArtifactSubmissionError extends Error {
-  constructor(
-    message: string,
-    public readonly status = 400,
-    public readonly code = "ARTIFACT_SUBMISSION_ERROR",
-  ) {
-    super(message);
-    this.name = "ArtifactSubmissionError";
-  }
-}
-
-export function normalizeFileExtension(fileName: string): string {
-  return (fileName.includes(".") ? (fileName.split(".").pop() ?? "") : "")
-    ?.trim()
-    .replace(/^\./, "")
-    .toLowerCase();
-}
+export { ArtifactSubmissionError } from "./file-validation";
 
 function getObjectKeyFromFileUrl(fileUrl: string): string {
   try {
@@ -95,151 +80,6 @@ function getObjectKeyFromFileUrl(fileUrl: string): string {
 function createPublicFileUrl(publicDomain: string | undefined, objectKey: string): string | null {
   const baseUrl = publicDomain?.trim().replace(/\/+$/, "");
   return baseUrl ? `${baseUrl}/${objectKey}` : null;
-}
-
-function validateFileForQuestion(file: File, question: ArtifactQuestionRow): string {
-  if (question.response_type !== "file") {
-    throw new ArtifactSubmissionError(
-      "This question does not accept file uploads.",
-      400,
-      "INVALID_RESPONSE_TYPE",
-    );
-  }
-
-  // Phase 3: reject empty/overlong/control-character file names (incl. CR/LF
-  // header injection) before anything is stored or rendered into headers.
-  try {
-    assertValidArtifactFileName(file.name);
-  } catch (error) {
-    if (error instanceof ArtifactFileGuardError) {
-      throw new ArtifactSubmissionError(error.message, 400, error.code);
-    }
-    throw error;
-  }
-
-  const extension = normalizeFileExtension(file.name);
-  const allowedTypes = question.allowed_file_types?.map((type) => type.toLowerCase()) ?? [];
-  if (allowedTypes.length > 0 && !allowedTypes.includes(extension)) {
-    throw new ArtifactSubmissionError(
-      "This file type is not allowed for the artifact question.",
-      400,
-      "FILE_TYPE_NOT_ALLOWED",
-    );
-  }
-
-  const maxBytes = (question.max_file_size_mb ?? 10) * 1024 * 1024;
-  if (file.size > maxBytes) {
-    throw new ArtifactSubmissionError(
-      "The selected file is larger than the allowed upload size.",
-      400,
-      "FILE_TOO_LARGE",
-    );
-  }
-
-  return extension || "file";
-}
-
-/**
- * P1-2/P1-3: content-level validation - magic-byte signature check (rejects
- * renamed binaries) and zip-expansion check (rejects zip bombs). Runs before
- * any submission row or R2 object is created. The buffer is read exactly once
- * by the caller and shared with extraction (Phase 3 perf).
- */
-async function validateArtifactFileContent(
-  buffer: ArrayBuffer,
-  extension: string,
-  fileName: string,
-): Promise<void> {
-  try {
-    assertFileSignature(extension, buffer);
-  } catch (error) {
-    if (error instanceof ArtifactFileGuardError) {
-      throw new ArtifactSubmissionError(error.message, 400, error.code);
-    }
-    throw error;
-  }
-
-  // 1. Zip expansion & Zip bomb protection for all zip-based Office / Archive files
-  if (
-    extension === "xlsx" ||
-    extension === "xls" ||
-    extension === "docx" ||
-    extension === "pptx" ||
-    extension === "zip"
-  ) {
-    const expansion = checkZipExpansion(buffer);
-    if (!expansion.safe) {
-      apiLogger.warn("Rejected artifact upload with abnormal archive expansion.", {
-        extension,
-        fileName,
-        reason: expansion.reason,
-      });
-      throw new ArtifactSubmissionError(
-        `The uploaded archive expands beyond a safe processing limit (${expansion.reason ?? "invalid archive"}).`,
-        400,
-        "ZIP_BOMB_DETECTED",
-      );
-    }
-  }
-
-  // 2. Pre-parse validation for PDF page limits (max 50 pages)
-  if (extension === "pdf") {
-    try {
-      await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
-      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-      const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
-      const doc = await loadingTask.promise;
-      const numPages = doc.numPages;
-      await loadingTask.destroy();
-
-      if (numPages > 50) {
-        throw new ArtifactSubmissionError(
-          `The uploaded PDF contains ${numPages} pages, exceeding the maximum allowed limit of 50 pages.`,
-          400,
-          "EXCEEDS_PAGE_LIMIT",
-        );
-      }
-    } catch (err) {
-      if (err instanceof ArtifactSubmissionError) throw err;
-    }
-  }
-
-  // 3. Pre-parse validation for PPTX slide limits (max 50 slides)
-  if (extension === "pptx") {
-    try {
-      const JSZip = (await import("jszip")).default;
-      const zip = await JSZip.loadAsync(buffer);
-      const slideCount = Object.keys(zip.files).filter((name) =>
-        /^ppt\/slides\/slide\d+\.xml$/i.test(name),
-      ).length;
-      if (slideCount > 50) {
-        throw new ArtifactSubmissionError(
-          `The uploaded presentation contains ${slideCount} slides, exceeding the maximum allowed limit of 50 slides.`,
-          400,
-          "EXCEEDS_SLIDE_LIMIT",
-        );
-      }
-    } catch (err) {
-      if (err instanceof ArtifactSubmissionError) throw err;
-    }
-  }
-
-  // 4. Pre-parse validation for XLSX sheet limits (max 20 sheets)
-  if (extension === "xlsx" || extension === "xls") {
-    try {
-      const XLSX = await import("xlsx/xlsx.mjs");
-      const workbook = XLSX.read(buffer, { type: "buffer", bookSheets: true });
-      if (workbook.SheetNames && workbook.SheetNames.length > 20) {
-        throw new ArtifactSubmissionError(
-          `The uploaded workbook contains ${workbook.SheetNames.length} sheets, exceeding the maximum allowed limit of 20 sheets.`,
-          400,
-          "EXCEEDS_SHEET_LIMIT",
-        );
-      }
-    } catch (err) {
-      if (err instanceof ArtifactSubmissionError) throw err;
-    }
-  }
 }
 
 async function requireModuleProgress(
@@ -355,6 +195,22 @@ async function createSubmissionAttempt(
   moduleProgressId: string,
   idempotencyKey?: string,
 ): Promise<{ submission: ArtifactSubmissionRow; duplicate: boolean }> {
+  // P0-2: a retried request with the same idempotency key returns the original
+  // row BEFORE any state changes. Checking first is required: demoting
+  // is_latest on the retry path would corrupt the exactly-one-latest invariant
+  // (the demoted row would be returned as the "duplicate", leaving no latest).
+  if (idempotencyKey) {
+    const existing = await findSubmissionByIdempotencyKey(
+      supabase,
+      userId,
+      artifactId,
+      idempotencyKey,
+    );
+    if (existing) {
+      return { submission: existing, duplicate: true };
+    }
+  }
+
   // P1-1: a unique-violation retry re-reads the latest row, so a concurrent
   // insert converges instead of failing. The uq_artifact_submissions_latest
   // partial unique index guarantees exactly one latest row either way.
@@ -410,7 +266,8 @@ async function createSubmissionAttempt(
     }
 
     if (error?.code === "23505") {
-      // P0-2: same idempotency key = a retried request - return the original.
+      // P0-2 race: a concurrent request with the same idempotency key won the
+      // insert between the early lookup and this insert - return its row.
       if (idempotencyKey) {
         const existing = await findSubmissionByIdempotencyKey(
           supabase,
@@ -644,8 +501,22 @@ export async function submitArtifactSubmission(
       });
     }
   } catch (error) {
-    // P0-4: persistence failed after upload - best-effort delete so no orphan
-    // R2 object is left behind. Cleanup results are always logged.
+    // P0-4: persistence failed after upload - roll back the partial state
+    // (submission row, its answers/files) so a retried idempotency key re-runs
+    // the whole flow instead of returning a half-built "duplicate" submission
+    // with rows whose R2 objects were deleted. Best-effort: original error wins.
+    try {
+      await supabase.from("artifact_submission_files").delete().eq("submission_id", submission.id);
+      await supabase
+        .from("artifact_submission_answers")
+        .delete()
+        .eq("submission_id", submission.id);
+      await supabase.from("artifact_submissions").delete().eq("id", submission.id);
+    } catch (rollbackError) {
+      apiLogger.error("Failed to roll back partial artifact submission.", rollbackError, {
+        submissionId: submission.id,
+      });
+    }
     await cleanupUploadedObjects(env, uploadedObjectKeys);
     throw error;
   }
@@ -754,7 +625,20 @@ async function buildDuplicateSubmissionResponse(
   supabase: SupabaseClient,
   submission: ArtifactSubmissionRow,
 ): Promise<ArtifactSubmissionResult> {
-  const flow = await getSubmissionEvaluationFlow(supabase, submission.id, submission.user_id);
+  const { data: flow, error: flowError } = await supabase
+    .from("artifact_evaluation_flows")
+    .select(
+      "id, submission_id, stage, status, score, decision, feedback, improvements, completed_at, metadata",
+    )
+    .eq("submission_id", submission.id)
+    .eq("is_current_stage", true)
+    .maybeSingle();
+
+  if (flowError) {
+    throw new Error(
+      `Failed to fetch evaluation flow for duplicate submission (${submission.id}): ${flowError.message}`,
+    );
+  }
   const meta = (flow?.metadata as Record<string, unknown> | null) ?? null;
 
   const { data: fileRows, error: fileRowsError } = await supabase
