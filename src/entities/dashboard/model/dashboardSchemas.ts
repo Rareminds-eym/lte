@@ -17,11 +17,6 @@ export const DashboardXpResponseSchema = z.object({
     .optional(),
 });
 
-export const DashboardStreakResponseSchema = z.object({
-  success: z.literal(true),
-  streakDays: z.number(),
-});
-
 export const DashboardJourneyResponseSchema = z.object({
   success: z.literal(true),
   state: z.enum(["active", "completed", "no_track"]),

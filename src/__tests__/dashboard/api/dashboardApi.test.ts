@@ -15,7 +15,6 @@ describe("dashboardApi", () => {
   it("overrides the mock XP with the real totals from the API", async () => {
     vi.mocked(apiFetch)
       .mockResolvedValueOnce({ success: true, totalXp: 430, xpThisWeek: 75, todayXp: 20 })
-      .mockResolvedValueOnce({ success: true, streakDays: 4 })
       .mockResolvedValueOnce({ success: true, data: null, state: "active" });
     const data = await fetchDashboardData();
 
@@ -24,7 +23,7 @@ describe("dashboardApi", () => {
     expect(data.priorities.currentXp).toBe(20);
     expect(data.careerTarget).toMatchObject({
       title: MOCK_DASHBOARD_DATA.careerTarget.title,
-      streakDays: 4,
+      streakDays: MOCK_DASHBOARD_DATA.careerTarget.streakDays,
     });
     const calledPath = (vi.mocked(apiFetch).mock.calls[0]?.[0] as string) ?? "";
     expect(calledPath).toContain("/api/v1/dashboard/xp?since=");
@@ -37,7 +36,6 @@ describe("dashboardApi", () => {
   it("replaces the mock journey with the real current module", async () => {
     vi.mocked(apiFetch)
       .mockResolvedValueOnce({ success: true, totalXp: 0, xpThisWeek: 0, todayXp: 0 })
-      .mockResolvedValueOnce({ success: true, streakDays: 0 })
       .mockResolvedValueOnce({
         success: true,
         state: "active",
@@ -64,9 +62,6 @@ describe("dashboardApi", () => {
     expect(data.journey?.moduleNo).toBe(0);
     expect(data.journeyState).toBe("active");
     expect((vi.mocked(apiFetch).mock.calls[1]?.[0] as string) ?? "").toBe(
-      "/api/v1/dashboard/streak",
-    );
-    expect((vi.mocked(apiFetch).mock.calls[2]?.[0] as string) ?? "").toBe(
       "/api/v1/dashboard/journey",
     );
   });
@@ -74,7 +69,6 @@ describe("dashboardApi", () => {
   it("clears the journey and carries the state when the API returns null", async () => {
     vi.mocked(apiFetch)
       .mockResolvedValueOnce({ success: true, totalXp: 0, xpThisWeek: 0, todayXp: 0 })
-      .mockResolvedValueOnce({ success: true, streakDays: 0 })
       .mockResolvedValueOnce({ success: true, data: null, state: "completed" });
     const data = await fetchDashboardData();
     expect(data.journey).toBeNull();
@@ -93,7 +87,6 @@ describe("dashboardApi", () => {
   it("returns a well-formed payload with all dashboard sections", async () => {
     vi.mocked(apiFetch)
       .mockResolvedValueOnce({ success: true, totalXp: 0, xpThisWeek: 0, todayXp: 0 })
-      .mockResolvedValueOnce({ success: true, streakDays: 0 })
       .mockResolvedValueOnce({ success: true, data: null, state: "active" });
     const data = await fetchDashboardData();
 
@@ -112,7 +105,6 @@ describe("dashboardApi", () => {
   it("keeps priority item types within the allowed union", async () => {
     vi.mocked(apiFetch)
       .mockResolvedValueOnce({ success: true, totalXp: 0, xpThisWeek: 0, todayXp: 0 })
-      .mockResolvedValueOnce({ success: true, streakDays: 0 })
       .mockResolvedValueOnce({ success: true, data: null, state: "active" });
     const data = await fetchDashboardData();
     const allowed = new Set(["green", "purple", "amber"]);
