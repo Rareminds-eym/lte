@@ -3,6 +3,7 @@ import {
   AI_RESPONSE_SCHEMA,
   deriveTone,
   enforceValidatedDecision,
+  normalizeForEvidenceMatching,
   recomputeOverallScore,
   validateRubricEvidence,
 } from "../response-schema";
@@ -90,6 +91,29 @@ describe("validateRubricEvidence", () => {
     const { rows, failed } = validateRubricEvidence(makeRows(3, "anything"), []);
     expect(failed).toBe(true);
     expect(rows.every((r) => r.evidenceValid === false)).toBe(true);
+  });
+
+  it("normalizes smart quotes, apostrophes, and collapsed multi-line whitespace during evidence validation", () => {
+    const smartAnswers = [
+      {
+        questionId: "q-1",
+        textResponse:
+          'The team\'s decision was "approved" after reviewing\n\nthe incident log—and risk assessment.',
+      },
+    ];
+
+    // LLM output using curly quotes and em-dash
+    const llmEvidence = "team’s decision was “approved” after reviewing the incident log—and risk";
+    const { rows, failed } = validateRubricEvidence(makeRows(3, llmEvidence), smartAnswers);
+    expect(failed).toBe(false);
+    expect(rows.every((r) => r.evidenceValid)).toBe(true);
+  });
+});
+
+describe("normalizeForEvidenceMatching", () => {
+  it("normalizes smart quotes, apostrophes, em-dashes, and collapses whitespace", () => {
+    const input = "  “Hello World” — It’s\n\ta  Test…  ";
+    expect(normalizeForEvidenceMatching(input)).toBe('"hello world" - it\'s a test…');
   });
 });
 
