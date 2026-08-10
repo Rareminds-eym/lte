@@ -67,7 +67,7 @@ const BANNED_EVIDENCE = new Set(["", "e", "n/a", "na", "none"]);
 /**
  * Normalizes text for verbatim evidence string matching:
  * - Converts to lower case
- * - Replaces smart/curly quotes, apostrophes, and em/en dashes with standard ASCII equivalents
+ * - Replaces smart/curly quotes, apostrophes, em/en dashes, and ellipses with standard ASCII equivalents
  * - Collapses multi-line breaks and whitespace sequences into a single space
  */
 export function normalizeForEvidenceMatching(text: string): string {
@@ -76,6 +76,7 @@ export function normalizeForEvidenceMatching(text: string): string {
     .replace(/[“”«»]/g, '"')
     .replace(/[‘’`´]/g, "'")
     .replace(/[–—]/g, "-")
+    .replace(/…/g, "...")
     .replace(/\s+/g, " ")
     .trim();
 }

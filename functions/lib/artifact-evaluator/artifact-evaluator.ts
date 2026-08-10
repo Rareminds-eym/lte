@@ -253,10 +253,15 @@ Stage 2 - Critical failure check:
 Stage 3 - Criterion scoring:
 Score exactly these 5 standard criteria from 0 to 3. All five criteria are essential: a high score in one criterion never compensates for a low score in another.
 1. "Completeness" - All required sections, fields, or outputs are present.
+   Pass threshold: Score >= 2 required. All mandatory fields contain learner-authored content.
 2. "Accuracy" - Content matches supplied case evidence and instructions.
+   Pass threshold: Score >= 2 required. Facts and calculations match case details without hallucinations.
 3. "Evidence use" - Sources or case evidence are correctly identified and used.
+   Pass threshold: Score >= 2 required. Verbatim learner evidence provided for claims.
 4. "Judgement" - Learner identifies gaps, risks, mismatches, or uncertainty.
+   Pass threshold: Score >= 2 required. Professional reasoning and risk identification shown.
 5. "Next action" - Recommended action is appropriate for the learner role.
+   Pass threshold: Score >= 2 required. Proposed next action fits learner role and authority.
 
 Scoring Scale per Criterion:
 - 0: "Not demonstrated" (No valid evidence, missing response, or fundamentally incorrect)
@@ -396,49 +401,6 @@ export function buildEvaluationUserContent(
     artifactType: input.artifactType,
     passingScore,
     attemptNo: input.attemptNo,
-    rubricGuide: {
-      scoringScale: {
-        0: "Not demonstrated: Missing response, no valid evidence, or fundamentally incorrect.",
-        1: "Partially demonstrated: Some correct elements present, but important gaps or inaccuracies remain.",
-        2: "Demonstrated: Meets expected task and level requirements with clear evidence.",
-        3: "Strongly demonstrated: Accurate, complete, and highly usable with sound professional judgement.",
-      },
-      criteria: [
-        {
-          label: "Completeness",
-          description:
-            "All required sections, fields, tables, or prompt outputs must be filled in.",
-          passThreshold:
-            "Score >= 2 required. All mandatory fields contain learner-authored content.",
-        },
-        {
-          label: "Accuracy",
-          description: "Content matches supplied case evidence, calculations, and instructions.",
-          passThreshold:
-            "Score >= 2 required. Facts and calculations match case details without hallucinations.",
-        },
-        {
-          label: "Evidence use",
-          description:
-            "Case data and evidence are correctly cited with verbatim quotes from learner text.",
-          passThreshold: "Score >= 2 required. Verbatim learner evidence provided for claims.",
-        },
-        {
-          label: "Judgement",
-          description:
-            "Learner identifies operational risks, data gaps, trade-offs, or uncertainties.",
-          passThreshold:
-            "Score >= 2 required. Professional reasoning and risk identification shown.",
-        },
-        {
-          label: "Next action",
-          description:
-            "Recommended next step or decision is actionable and appropriate for learner role.",
-          passThreshold:
-            "Score >= 2 required. Proposed next action fits learner role and authority.",
-        },
-      ],
-    },
     questions: input.questions.map((q) => ({
       title: q.title,
       description: q.description,

@@ -133,7 +133,7 @@ describe("POST /api/v1/artifacts/submit", () => {
       responses.push(await onRequestPost(createContext(request(), { sub: "rate-limit-user" })));
     }
 
-    const rejected = responses[responses.length - 1]!;
+    const rejected = responses[responses.length - 1] as (typeof responses)[number];
     expect(rejected.status).toBe(429);
     const body = (await rejected.json()) as { error: { code: string } };
     expect(body.error.code).toBe("RATE_LIMITED");

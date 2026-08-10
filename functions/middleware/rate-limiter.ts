@@ -29,7 +29,7 @@ export class SlidingWindowRateLimiter {
 
     if (bucket.length >= max) {
       this.hits.set(key, bucket);
-      const earliest = bucket[0]!;
+      const earliest = bucket[0] as number;
       return { allowed: false, retryAfterMs: Math.max(1, earliest + windowMs - now) };
     }
 

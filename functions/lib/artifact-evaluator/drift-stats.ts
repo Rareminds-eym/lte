@@ -50,8 +50,8 @@ export function computeDriftStats(
   let flips = 0;
 
   for (let i = 0; i < stored.length; i += 1) {
-    const a = stored[i]!;
-    const b = replayed[i]!;
+    const a = stored[i] as (typeof stored)[number];
+    const b = replayed[i] as (typeof replayed)[number];
     scoreDeltas.push(Math.abs(a.score - b.score));
     confidenceDeltas.push(Math.abs(a.confidence - b.confidence));
     if (a.decision !== b.decision) flips += 1;

@@ -28,7 +28,7 @@ interface ArtifactPanelProps {
 const toAttemptEvaluation = (
   evaluation: NonNullable<SubmissionEvaluationResponse["evaluation"]> | null,
 ): SubmittedArtifactAttempt["evaluation"] | undefined => {
-  if (!evaluation || evaluation.status !== "completed" || evaluation.score === null) {
+  if (evaluation?.status !== "completed" || evaluation.score === null) {
     return undefined;
   }
   return {

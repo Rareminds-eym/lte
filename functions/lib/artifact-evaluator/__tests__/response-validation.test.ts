@@ -111,9 +111,9 @@ describe("validateRubricEvidence", () => {
 });
 
 describe("normalizeForEvidenceMatching", () => {
-  it("normalizes smart quotes, apostrophes, em-dashes, and collapses whitespace", () => {
+  it("normalizes smart quotes, apostrophes, em-dashes, ellipses, and collapses whitespace", () => {
     const input = "  “Hello World” — It’s\n\ta  Test…  ";
-    expect(normalizeForEvidenceMatching(input)).toBe('"hello world" - it\'s a test…');
+    expect(normalizeForEvidenceMatching(input)).toBe('"hello world" - it\'s a test...');
   });
 });
 
