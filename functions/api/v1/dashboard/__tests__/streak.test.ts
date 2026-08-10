@@ -1,23 +1,29 @@
 import { AuthError, requireAuth } from "@functions/lib/auth";
-import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import type { AuthUser } from "@rareminds-eym/auth-core";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestGet } from "../streak";
+
+type StreakQueryMock = {
+  select: ReturnType<typeof vi.fn>;
+  eq: ReturnType<typeof vi.fn>;
+};
+type StreakSupabaseMock = {
+  from: ReturnType<typeof vi.fn>;
+};
+
+const supabaseMockState = vi.hoisted(() => ({
+  current: null as StreakSupabaseMock | null,
+}));
 
 vi.mock("@functions/lib/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@functions/lib/auth")>();
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
-
-type SupabaseFromOnly = Pick<SupabaseClient, "from">;
-type StreakQueryMock = {
-  select: ReturnType<typeof vi.fn>;
-  eq: ReturnType<typeof vi.fn>;
-};
+vi.mock("@functions/lib/supabase", () => ({
+  createServiceSupabase: vi.fn(() => supabaseMockState.current),
+}));
 
 describe("GET /api/v1/dashboard/streak", () => {
   const mockUser: AuthUser = {
@@ -32,9 +38,13 @@ describe("GET /api/v1/dashboard/streak", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    supabaseMockState.current = null;
   });
 
-  function mockDailyLoginDates(loginDates: string[]): StreakQueryMock {
+  function mockDailyLoginDates(loginDates: string[]): {
+    query: StreakQueryMock;
+    supabase: StreakSupabaseMock;
+  } {
     const query: StreakQueryMock = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -44,11 +54,12 @@ describe("GET /api/v1/dashboard/streak", () => {
       error: null,
     });
 
-    vi.mocked(createServiceSupabase).mockReturnValue({
+    const supabase: StreakSupabaseMock = {
       from: vi.fn().mockReturnValue(query),
-    } as SupabaseFromOnly as SupabaseClient);
+    };
+    supabaseMockState.current = supabase;
 
-    return query;
+    return { query, supabase };
   }
 
   function toDateString(date: Date): string {
@@ -79,7 +90,11 @@ describe("GET /api/v1/dashboard/streak", () => {
 
   it("returns the current login streak from daily_login event dates", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    const query = mockDailyLoginDates([daysBeforeToday(0), daysBeforeToday(1), daysBeforeToday(3)]);
+    const { query, supabase } = mockDailyLoginDates([
+      daysBeforeToday(0),
+      daysBeforeToday(1),
+      daysBeforeToday(3),
+    ]);
 
     const response = await onRequestGet({
       request: new Request("http://localhost/api/v1/dashboard/streak"),
@@ -87,7 +102,7 @@ describe("GET /api/v1/dashboard/streak", () => {
     } as PagesContext<LteEnv>);
 
     expect(response.status).toBe(200);
-    expect(createServiceSupabase({} as LteEnv).from).toHaveBeenCalledWith("xp_events");
+    expect(supabase.from).toHaveBeenCalledWith("xp_events");
     expect(query.select).toHaveBeenCalledWith("metadata");
     expect(query.eq).toHaveBeenNthCalledWith(1, "user_id", mockUser.sub);
     expect(query.eq).toHaveBeenNthCalledWith(2, "event_type", "daily_login");
