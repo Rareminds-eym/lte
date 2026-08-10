@@ -15,13 +15,14 @@ describe("Metrics", () => {
   it("summarizes observed histograms", () => {
     const metrics = new Metrics();
     for (const v of [10, 20, 30, 40, 100]) metrics.observe(METRIC.EVALUATION_DURATION, v);
-    const summary = metrics.snapshot().histograms[METRIC.EVALUATION_DURATION]!;
-    expect(summary.count).toBe(5);
-    expect(summary.min).toBe(10);
-    expect(summary.max).toBe(100);
-    expect(summary.sum).toBe(200);
-    expect(summary.p50).toBe(30);
-    expect(summary.p95).toBe(100);
+    const summary = metrics.snapshot().histograms[METRIC.EVALUATION_DURATION];
+    expect(summary).toBeDefined();
+    expect(summary?.count).toBe(5);
+    expect(summary?.min).toBe(10);
+    expect(summary?.max).toBe(100);
+    expect(summary?.sum).toBe(200);
+    expect(summary?.p50).toBe(30);
+    expect(summary?.p95).toBe(100);
   });
 
   it("caps histogram buckets", () => {

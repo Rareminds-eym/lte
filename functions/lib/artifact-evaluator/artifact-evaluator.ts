@@ -253,10 +253,15 @@ Stage 2 - Critical failure check:
 Stage 3 - Criterion scoring:
 Score exactly these 5 standard criteria from 0 to 3. All five criteria are essential: a high score in one criterion never compensates for a low score in another.
 1. "Completeness" - All required sections, fields, or outputs are present.
+   Pass threshold: Score >= 2 required. All mandatory fields contain learner-authored content.
 2. "Accuracy" - Content matches supplied case evidence and instructions.
+   Pass threshold: Score >= 2 required. Facts and calculations match case details without hallucinations.
 3. "Evidence use" - Sources or case evidence are correctly identified and used.
+   Pass threshold: Score >= 2 required. Verbatim learner evidence provided for claims.
 4. "Judgement" - Learner identifies gaps, risks, mismatches, or uncertainty.
+   Pass threshold: Score >= 2 required. Professional reasoning and risk identification shown.
 5. "Next action" - Recommended action is appropriate for the learner role.
+   Pass threshold: Score >= 2 required. Proposed next action fits learner role and authority.
 
 Scoring Scale per Criterion:
 - 0: "Not demonstrated" (No valid evidence, missing response, or fundamentally incorrect)

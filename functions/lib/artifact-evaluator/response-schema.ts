@@ -65,6 +65,23 @@ export function recomputeOverallScore(rows: RubricCriterionResult[]): number {
 const BANNED_EVIDENCE = new Set(["", "e", "n/a", "na", "none"]);
 
 /**
+ * Normalizes text for verbatim evidence string matching:
+ * - Converts to lower case
+ * - Replaces smart/curly quotes, apostrophes, em/en dashes, and ellipses with standard ASCII equivalents
+ * - Collapses multi-line breaks and whitespace sequences into a single space
+ */
+export function normalizeForEvidenceMatching(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[“”«»]/g, '"')
+    .replace(/[‘’`´]/g, "'")
+    .replace(/[–—]/g, "-")
+    .replace(/…/g, "...")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Verifies every rubric row's evidence against the submission (Part 4):
  * the exact string must appear verbatim inside a textResponse or
  * fileContentSnippet. Unverifiable rows are blanked, zeroed and flagged.
@@ -74,17 +91,17 @@ export function validateRubricEvidence(
   answers: ArtifactEvaluationInput["answers"],
 ): { rows: RubricCriterionResult[]; failed: boolean } {
   const haystacks = answers.flatMap((a) => [
-    (a.textResponse ?? "").toLowerCase(),
-    (a.fileContentSnippet ?? "").toLowerCase(),
+    normalizeForEvidenceMatching(a.textResponse ?? ""),
+    normalizeForEvidenceMatching(a.fileContentSnippet ?? ""),
   ]);
   const templateTexts = answers
-    .map((a) => (a.templateContent ?? "").toLowerCase())
-    .filter((t) => t.trim().length > 0);
+    .map((a) => normalizeForEvidenceMatching(a.templateContent ?? ""))
+    .filter((t) => t.length > 0);
   let failed = false;
 
   const validated = rows.map((row) => {
     const evidence = row.evidence ?? "";
-    const normalized = evidence.trim().toLowerCase();
+    const normalized = normalizeForEvidenceMatching(evidence);
     const isBanned = BANNED_EVIDENCE.has(normalized);
     const isVerbatim = !isBanned && haystacks.some((h) => h.includes(normalized));
 
