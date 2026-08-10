@@ -135,7 +135,7 @@ async function setupHusky() {
 		console.log("  1. File type validation");
 		console.log("  2. File length validation (max 1000 lines)");
 		console.log("  3. Console usage detection");
-		console.log("  4. Biome linting and formatting checks");
+		console.log("  4. Biome linter and formatting checks");
 		console.log("  5. ESLint checks");
 		console.log("  6. TypeScript type checking\n");
 		console.log("Pre-push hooks will now run:");

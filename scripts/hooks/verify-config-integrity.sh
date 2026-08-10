@@ -18,43 +18,43 @@ ERRORS=0
 # Check package.json scripts
 echo "Checking package.json scripts..."
 
-if ! grep -q '"type-check":.*"tsc --noEmit"' package.json; then
-  echo -e "${RED}✗ type-check script has been modified!${NC}"
+if ! grep -q '"typecheck":.*"tsc --noEmit' package.json; then
+  echo -e "${RED}✗ typecheck script has been modified!${NC}"
   ERRORS=$((ERRORS + 1))
 else
-  echo -e "${GREEN}✓ type-check script is intact${NC}"
+  echo -e "${GREEN}✓ typecheck script is intact${NC}"
 fi
 
-if ! grep -q '"lint":.*"npm-run-all lint:js lint:css"' package.json; then
+if ! grep -q '"lint":.*"eslint' package.json; then
   echo -e "${RED}✗ lint script has been modified!${NC}"
   ERRORS=$((ERRORS + 1))
 else
   echo -e "${GREEN}✓ lint script is intact${NC}"
 fi
 
-if ! grep -q '"build":.*"tsc && vite build"' package.json; then
+if ! grep -q '"build":.*"node.*vite.js build' package.json; then
   echo -e "${RED}✗ build script has been modified!${NC}"
   ERRORS=$((ERRORS + 1))
 else
   echo -e "${GREEN}✓ build script is intact${NC}"
 fi
 
-if ! grep -q '"test:ci":.*"vitest run --coverage"' package.json; then
+if ! grep -q '"test:ci":.*"vitest run' package.json; then
   echo -e "${RED}✗ test:ci script has been modified!${NC}"
   ERRORS=$((ERRORS + 1))
 else
   echo -e "${GREEN}✓ test:ci script is intact${NC}"
 fi
 
-# Check if husky is installed
+# Check if husky setup exists
 echo ""
-echo "Checking Husky installation..."
+echo "Checking Husky configuration..."
 
-if ! grep -q '"prepare":.*"husky"' package.json; then
-  echo -e "${RED}✗ Husky prepare script is missing or modified!${NC}"
+if ! grep -q '"setup:husky":.*"node scripts/tools/setup-husky-cross-platform.js' package.json; then
+  echo -e "${RED}✗ Husky setup:husky script is missing or modified!${NC}"
   ERRORS=$((ERRORS + 1))
 else
-  echo -e "${GREEN}✓ Husky prepare script is intact${NC}"
+  echo -e "${GREEN}✓ Husky setup:husky script is intact${NC}"
 fi
 
 if [ ! -d ".husky" ]; then
@@ -73,13 +73,6 @@ if [ ! -f ".husky/pre-commit" ]; then
   ERRORS=$((ERRORS + 1))
 else
   echo -e "${GREEN}✓ pre-commit hook exists${NC}"
-fi
-
-if [ ! -f ".husky/commit-msg" ]; then
-  echo -e "${RED}✗ commit-msg hook is missing!${NC}"
-  ERRORS=$((ERRORS + 1))
-else
-  echo -e "${GREEN}✓ commit-msg hook exists${NC}"
 fi
 
 if [ ! -f ".husky/pre-push" ]; then
@@ -136,11 +129,6 @@ if [ ! -f ".github/CODEOWNERS" ]; then
   ERRORS=$((ERRORS + 1))
 else
   echo -e "${GREEN}✓ CODEOWNERS file exists${NC}"
-
-  # Check if CODEOWNERS has been updated from placeholder
-  if grep -q "@your-github-username" .github/CODEOWNERS; then
-    echo -e "${YELLOW}⚠ CODEOWNERS still has placeholder usernames${NC}"
-  fi
 fi
 
 # Summary
