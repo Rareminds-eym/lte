@@ -20,6 +20,13 @@
 - **Fixed by working-tree remediation (verified)**: H1 (idempotency), H4 (mock-data UI), H5 (evaluation via TanStack Query), H6 (decision union), H7 (silent catches), H9 (tests out of source tree), L13, L14, L15, "ArtifactFeedbackTab untested"
 - **Passed clean**: auth migration repo-wide, SSO typed RPC, FSD direction + `@/` alias, API versioning, IDOR guards, file guards (magic bytes/zip-bomb), R2 orphan cleanup, P0-1 fallback guarantees, Zod at AI-response boundary, no console/secrets/hex/`<img>`/local-Toaster violations, query keys include userId, kebab-case renames fully propagated, backend tests co-located, migrations idempotent (`IF NOT EXISTS`)
 
+## Session log 2026-08-10 (commits on top of the audit)
+
+- **`17afc0c`** — remediation committed (C1): early idempotency lookup, race re-find, body-size cap (`readBodyWithCap`), DML-to-seed migration split, `is_latest` partial unique index + DDL pre-check. Also satisfied the `lint:lengths` gate (1000-line cap) by splitting `queries.ts` → `file-validation.ts` (`validateFileForQuestion`, `validateArtifactFileContent`, `normalizeFileExtension`, `ArtifactSubmissionError` moved; queries.ts re-exports the error class for tests) and splitting `queries.test.ts` → `queries-insert.test.ts` (last describe block). Verified: validator, tsc, biome, 51 backend tests.
+- **`fc00516`** — C4 completion: file-persistence failure now rolls back the partial state (`artifact_submission_files`/`artifact_submission_answers`/`artifact_submissions` deletes for the submission id) in addition to R2 orphan cleanup, so an idempotent retry re-runs the whole flow instead of returning a half-built "duplicate" submission with dangling file URLs. Regression assertions added to "deletes the orphaned R2 object when the file row insert fails" (`queries.test.ts`).
+- **L4 (duplicated submit/evaluation flow) — investigated, no duplication**: `useSubmissionEvaluation.ts` is a 20-line TanStack Query wrapper over `GET /api/v1/artifacts/submissions/[id]/evaluation` → `getSubmissionEvaluationFlow` (queries.ts). One evaluation pipeline: POST /submit persists via `processAndSaveArtifactEvaluation` and returns the result inline; GET reads the stored flow. No logic duplicated frontend/backend; the graph subgraph reflected shared row types only. No change required.
+- **M8 (stale P0 flags list)** — verified already resolved by the remediation: all `P0-2` (idempotency), `P0-3` (sealed 409), `P1-1` (collision retry), `P0-4` (cleanup) comments match the current naming in `queries.ts`, `submit/index.ts`, and the frontend submit API. The remaining `P0-1` references in `artifact-evaluator.ts` belong to the separate fallback-XP guarantee and are consistent.
+
 ## 🔴 Critical / blocking
 
 | # | Finding | Rule | Status |
