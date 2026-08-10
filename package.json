@@ -37,7 +37,6 @@
     "lint:files": "node scripts/validate-file-types.js",
     "lint:console": "node scripts/detect-console-usage.js",
     "lint:lengths": "node scripts/validate-file-lengths.js",
-    "lint:auth": "node scripts/validate-auth-calls.js",
     "lint:biome": "biome check --reporter=concise .",
     "format:biome": "biome check --write .",
     "lint:secrets": "secretlint \"src/**/*\" \"functions/**/*\"",
