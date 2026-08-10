@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { Header } from "@/widgets/app/Header";
+import { Header } from "@/widgets/app/header";
 
 const renderHeader = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 

@@ -1,4 +1,4 @@
-import { apiLogger } from "@functions/lib/logger";
+import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface ActiveTrackRole {

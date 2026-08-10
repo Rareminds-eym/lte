@@ -4,16 +4,16 @@ import {
 } from "@functions/api/v1/capabilities/queries";
 import { getLevelWithModules } from "@functions/api/v1/courses/queries";
 import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestGet } from "../journey";
 
-vi.mock("@functions/lib/auth", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@functions/lib/auth")>();
+vi.mock("@functions/middleware", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/middleware")>();
   return { ...actual, requireAuth: vi.fn() };
 });
 

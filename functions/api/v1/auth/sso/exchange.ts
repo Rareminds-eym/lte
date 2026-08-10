@@ -1,4 +1,3 @@
-import { toAuthApiUser } from "@functions/lib/auth";
 import { createRefreshCookie } from "@functions/lib/cookies";
 import { validateBackendEnv } from "@functions/lib/env";
 import {
@@ -8,7 +7,6 @@ import {
   jsonResponse,
   readJsonObject,
 } from "@functions/lib/http";
-import { ssoLogger } from "@functions/lib/logger";
 import { exchangeAuthorizationCode } from "@functions/lib/sso-client";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import { syncSsoShadowData } from "@functions/lib/sync-shadow";
@@ -19,6 +17,8 @@ import type {
   SsoExchangeResponse,
 } from "@functions/lib/types";
 import { triggerDailyLoginWithEngagement } from "@functions/lib/xp-engine";
+import { toAuthApiUser } from "@functions/middleware";
+import { ssoLogger } from "@functions/shared/logger";
 
 function getStringField(body: Record<string, unknown>, field: string): string | null {
   const value = body[field];

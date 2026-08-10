@@ -1,9 +1,9 @@
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { countConsecutiveDaysFromToday } from "@functions/lib/xp-engine";
+import { AuthError, requireAuth } from "@functions/middleware";
+import { apiLogger } from "@functions/shared/logger";
 
 export interface DashboardStreakResponse {
   success: boolean;
@@ -11,22 +11,11 @@ export interface DashboardStreakResponse {
 }
 
 function getTodayDateString(): string {
-  const todayStr = new Date().toISOString().split("T")[0];
-  if (!todayStr || !/^\d{4}-\d{2}-\d{2}$/.test(todayStr)) {
-    throw new Error("Invalid date format generated");
-  }
-  return todayStr;
+  return new Date().toISOString().slice(0, 10);
 }
 
 function isLoginDateMetadata(metadata: unknown): metadata is { login_date: string } {
-  return (
-    metadata !== null &&
-    typeof metadata === "object" &&
-    !Array.isArray(metadata) &&
-    "login_date" in metadata &&
-    typeof metadata.login_date === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(metadata.login_date)
-  );
+  return typeof (metadata as Record<string, unknown> | null)?.["login_date"] === "string";
 }
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {

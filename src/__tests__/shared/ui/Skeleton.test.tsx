@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Skeleton, SkeletonGroup } from "@/shared/ui/Skeleton";
+import { Skeleton, SkeletonGroup } from "@/shared/ui/skeleton";
 
 describe("Skeleton", () => {
   it("renders with aria-hidden='true' by default", () => {

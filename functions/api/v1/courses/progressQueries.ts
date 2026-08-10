@@ -1,4 +1,3 @@
-import { apiLogger } from "@functions/lib/logger";
 import {
   assertStageSequenceAllowed,
   getStageCompletionPercentage,
@@ -6,6 +5,7 @@ import {
   LTE_STAGE_COUNT,
   normalizeStageName,
 } from "@functions/lib/stage-sequence";
+import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function upsertLevelProgress(

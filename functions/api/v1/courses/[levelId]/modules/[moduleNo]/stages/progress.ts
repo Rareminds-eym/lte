@@ -1,10 +1,10 @@
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
-import { apiLogger } from "@functions/lib/logger";
 import { LTE_STAGE_SEQUENCE, StageSequenceError } from "@functions/lib/stage-sequence";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
+import { AuthError, requireAuth } from "@functions/middleware";
+import { apiLogger } from "@functions/shared/logger";
 import { z } from "zod";
 import { recalculateLevelProgress, upsertStageProgress } from "../../../../queries";
 import { LevelModuleParamsSchema } from "../../../../schemas";

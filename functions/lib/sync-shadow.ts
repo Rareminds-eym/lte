@@ -1,6 +1,6 @@
 import type { AuthUser } from "@rareminds-eym/auth-core";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { authLogger } from "./logger";
+import { authLogger } from "../shared/logger";
 import type { SsoSubscriptionSnapshot } from "./types";
 
 interface UserRow {

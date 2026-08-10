@@ -87,7 +87,7 @@ export async function getSubmittedFilesByArtifactId(
       )
     `)
     .eq("user_id", userId)
-    .eq("status", "submitted")
+    .in("status", ["submitted", "resubmission_required", "human_review"])
     .in("artifact_id", artifactIds)
     .order("attempt_no", { ascending: false });
 

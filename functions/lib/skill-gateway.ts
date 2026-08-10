@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createLogger } from "./logger";
+import { createLogger } from "../shared/logger";
 
 const logger = createLogger("skill-gateway");
 
@@ -7,8 +7,9 @@ const logger = createLogger("skill-gateway");
  * Caller-side client for the LTE ↔ SkillPassport internal gateway
  * (`POST {SKILLPASSPORT_INTERNAL_URL}/api/internal/lte/v1`).
  *
- * Signs a scoped service token (app: "lte") and a 60s per-user claim with the
- * shared HMAC secret, then POSTs an action envelope. Response is Zod-validated.
+ * Signing is delegated to `@rareminds-eym/auth-core` (verifyJWT/createJWT
+ * utilities) using the shared HMAC secret, then the gateway POSTs an action
+ * envelope. Response is Zod-validated.
  *
  * Failure modes are typed: a non-ok / malformed / unreachable gateway throws
  * `GatewayCallError` — callers (learner-track) treat it as "fall through".

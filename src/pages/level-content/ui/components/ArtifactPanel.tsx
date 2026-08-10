@@ -1,7 +1,11 @@
 import type React from "react";
 import { useMemo, useState } from "react";
 import type { ModuleArtifact, ModuleArtifactSubmittedFile } from "@/entities/course";
-import type { SubmitArtifactResponse } from "@/features/submit-artifact";
+import type {
+  SubmissionEvaluationResponse,
+  SubmitArtifactResponse,
+} from "@/features/submit-artifact";
+import { useSubmissionEvaluation } from "@/features/submit-artifact";
 import { Button, LabFlaskIcon, LightningBoltIcon } from "@/shared/ui";
 import { ArtifactFeedbackTab, type SubmittedArtifactAttempt } from "./ArtifactFeedbackTab";
 import { ArtifactSubmitTab } from "./ArtifactSubmitTab";
@@ -15,6 +19,27 @@ interface ArtifactPanelProps {
   setExpandedArtifactQuestionId: React.Dispatch<React.SetStateAction<string | null | undefined>>;
   onXpEarned?: (xpAmount: number) => void;
 }
+
+/**
+ * Maps a stored evaluation flow (GET /submissions/[id]/evaluation) onto the
+ * attempt shape the feedback tab renders. Returns undefined while the flow is
+ * pending or absent so the UI never fabricates results.
+ */
+const toAttemptEvaluation = (
+  evaluation: NonNullable<SubmissionEvaluationResponse["evaluation"]> | null,
+): SubmittedArtifactAttempt["evaluation"] | undefined => {
+  if (!evaluation || evaluation.status !== "completed" || evaluation.score === null) {
+    return undefined;
+  }
+  return {
+    overall_score: evaluation.score,
+    decision: evaluation.decision ?? "human_review",
+    rubric_rows: evaluation.rubric_rows,
+    feedback: evaluation.feedback ?? "",
+    improvements: evaluation.improvements ?? "",
+    calculated_xp: evaluation.calculated_xp,
+  };
+};
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   activeArtifact,
@@ -63,6 +88,16 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
     return [...attemptsByNo.values()].sort((a, b) => b.attemptNo - a.attemptNo);
   }, [submittedFileVersions]);
+
+  const selectedAttempt =
+    submittedAttempts.find(
+      (attempt) =>
+        attempt.attemptNo === (activeFeedbackAttemptNo ?? submittedAttempts[0]?.attemptNo),
+    ) ?? null;
+  const selectedSubmissionId = selectedAttempt?.files[0]?.submissionId;
+  const { data: storedEvaluation, isFetching: isStoredEvaluationFetching } =
+    useSubmissionEvaluation(selectedSubmissionId);
+  const latestEvaluation = toAttemptEvaluation(storedEvaluation?.evaluation ?? null);
 
   if (!activeArtifact || !activeArtifactType) {
     return (
@@ -196,6 +231,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           activeFeedbackAttemptNo={activeFeedbackAttemptNo}
           isPanelExpanded={isPanelExpanded}
           onSelectAttempt={setActiveFeedbackAttemptNo}
+          latestEvaluation={latestEvaluation}
+          isEvaluationLoading={isStoredEvaluationFetching}
         />
       ) : null}
 

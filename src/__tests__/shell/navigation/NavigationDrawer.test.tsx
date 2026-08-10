@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { NavigationDrawer } from "@/widgets/app/NavigationDrawer";
+import { NavigationDrawer } from "@/widgets/app/navigation-drawer";
 
 const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }));
 

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { apiLogger } from "./logger";
+import { apiLogger } from "../shared/logger";
 
 // Event to XP amount mapping (TRD-DB-007 enum values)
 export const XP_AMOUNTS: Record<string, number> = {

@@ -303,7 +303,7 @@ Backend test structure follows the existing `functions/` pattern (Vitest).
 | Rule | Status | How |
 |------|--------|-----|
 | Endpoint versioning | ✅ | `/api/v1/dashboard` |
-| requireAuth / withAuth | ✅ | `requireAuth()` from `functions/lib/auth.ts` |
+| requireAuth / withAuth | ✅ | `requireAuth()` from `functions/middleware/auth.ts` |
 | TanStack Query | ✅ | `useDashboardData` unchanged — still uses `useQuery` |
 | Zod validation | ✅ | Backend validates params; frontend validates response shape |
 | Strict FSD layers | ✅ | handler in `functions/`, entity in `src/entities/dashboard/`, wrappers in `src/shared/api/` |

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ApplicationLoader } from "@/shared/ui/ApplicationLoader";
+import { ApplicationLoader } from "@/shared/ui/application-loader";
 
 // Mock the shared Image component to avoid needing actual image loading in tests
 vi.mock("@/shared/ui/Image", () => ({

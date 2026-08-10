@@ -1,4 +1,8 @@
 export { downloadArtifactFile } from "./downloadArtifactFile";
+export {
+  getSubmissionEvaluation,
+  type SubmissionEvaluationResponse,
+} from "./getSubmissionEvaluation";
 export type {
   ArtifactAnswerInput,
   SubmitArtifactInput,

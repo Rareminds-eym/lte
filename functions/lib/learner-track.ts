@@ -6,9 +6,9 @@ import {
   upsertLearningPath,
   upsertLearningTrack,
 } from "@functions/api/v1/learning-paths/queries";
-import { createLogger } from "@functions/lib/logger";
 import { callSkill } from "@functions/lib/skill-gateway";
 import type { LteEnv } from "@functions/lib/types";
+import { createLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 

@@ -3,10 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   changeSsoPassword,
   exchangeAuthorizationCode,
-  getMe,
   getSsoService,
   logoutLteSession,
-  normalizeAuthUser,
   refreshLteSession,
   SsoAuthError,
 } from "../sso-client";
@@ -14,16 +12,6 @@ import {
 function envWith(service: unknown) {
   return { SSO_SERVICE: service } as LteEnv;
 }
-
-const validClaims = {
-  sub: "user-1",
-  email: "learner@rareminds.com",
-  org_id: "org-1",
-  roles: ["learner"],
-  products: ["lte"],
-  membership_status: "active",
-  is_email_verified: true,
-};
 
 describe("getSsoService", () => {
   it("throws ConfigError when the binding is missing", () => {
@@ -149,78 +137,5 @@ describe("logoutLteSession", () => {
     const result = await logoutLteSession(envWith({ logoutSession }), "refresh-tok");
     expect(result).toEqual({ success: true });
     expect(logoutSession).toHaveBeenCalledWith("refresh-tok", undefined, undefined);
-  });
-});
-
-describe("getMe", () => {
-  it("returns the normalized user on success", async () => {
-    const mockGetMe = vi.fn().mockResolvedValue({
-      ...validClaims,
-      user_metadata: { program: "BCA" },
-    });
-    const result = await getMe(envWith({ getMe: mockGetMe }), "access-tok");
-    expect(result).toEqual({
-      sub: "user-1",
-      email: "learner@rareminds.com",
-      org_id: "org-1",
-      roles: ["learner"],
-      products: ["lte"],
-      membership_status: "active",
-      is_email_verified: true,
-      user_metadata: { program: "BCA" },
-    });
-  });
-
-  it("wraps service errors in SsoAuthError", async () => {
-    const mockGetMe = vi.fn().mockRejectedValue(new Error("boom"));
-    await expect(getMe(envWith({ getMe: mockGetMe }), "access-tok")).rejects.toThrow(SsoAuthError);
-  });
-
-  it("rethrows ConfigError without wrapping", async () => {
-    await expect(getMe({} as LteEnv, "access-tok")).rejects.toThrowError(/not configured/);
-    try {
-      await getMe({} as LteEnv, "access-tok");
-    } catch (err) {
-      expect((err as Error).name).toBe("ConfigError");
-    }
-  });
-});
-
-describe("normalizeAuthUser", () => {
-  it("normalizes a valid user", () => {
-    expect(normalizeAuthUser(validClaims)).toEqual({
-      sub: "user-1",
-      email: "learner@rareminds.com",
-      org_id: "org-1",
-      roles: ["learner"],
-      products: ["lte"],
-      membership_status: "active",
-      is_email_verified: true,
-      user_metadata: {},
-    });
-  });
-
-  it("filters non-string roles/products and handles invalid metadata", () => {
-    const result = normalizeAuthUser({
-      ...validClaims,
-      roles: ["learner", 42, null],
-      products: "not-an-array",
-      user_metadata: "nope",
-    });
-    expect(result.roles).toEqual(["learner"]);
-    expect(result.products).toEqual([]);
-    expect(result.user_metadata).toEqual({});
-  });
-
-  it("throws for missing claims", () => {
-    expect(() => normalizeAuthUser({ ...validClaims, sub: undefined })).toThrowError(
-      "Invalid SSO user claims",
-    );
-  });
-
-  it("throws for an invalid membership status", () => {
-    expect(() => normalizeAuthUser({ ...validClaims, membership_status: "bogus" })).toThrowError(
-      "Invalid SSO membership status",
-    );
   });
 });

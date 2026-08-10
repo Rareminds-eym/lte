@@ -196,6 +196,10 @@ Serverless backend functions.
 - `middleware/` - Backend middleware.
 - `schemas/` - Backend schemas.
 - `shared/` - Backend shared utilities.
+- `lib/artifact-evaluator/` - Artifact evaluation AI engine: `artifact-extractor.ts` (XLSX/CSV/PDF/DOCX/TXT → text, 50k-char cap, 15-page cap, 20-sheet cap; dynamic `import()` of parsers incl. SheetJS; empty pages/sheets never count as content — scanned PDFs and empty/bogus files route to `human_review`; strict utf-8 with windows-1252 fallback for latin1 text), `artifact-evaluator.ts` (deterministic assessability gate keyed on `questions[].responseType` → `human_review` for unreadable/missing file answers, LLM prompt with `instructions` + isolation delimiters, 20k text / 255 filename caps, `max_tokens: 4096`, `debug_telemetry` persisted to `artifact_evaluation_flows.metadata`, `human_review` is XP-neutral, XP award failures logged not surfaced). See ADR-006.
+- `lib/ai-engine/openrouter/` - OpenRouter client: 30s `AbortSignal.timeout`, one retry on 5xx/429/network, 4xx fails fast, `data.error` bodies rejected.
+- `shared/` - `artifact-broker.ts` (enqueues evaluation work into the artifact broker Queue), `ai-invoker.ts` (HTTP polling helper against the broker endpoint), `logger.ts` (structured JSON logger), `schemas.ts` (Zod schema barrels), `lte-stages.ts` (stage sequence definitions).
+- `api/v1/artifacts/` - Artifact submit/evaluation endpoints; extraction happens server-side at submit time (raw bytes → R2, extracted text → LLM prompt only, never stored); submitted-files listing includes `human_review`/`resubmission_required` statuses.
 
 ## Public Assets
 

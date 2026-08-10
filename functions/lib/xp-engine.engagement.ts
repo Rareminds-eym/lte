@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { apiLogger } from "./logger";
+import { apiLogger } from "../shared/logger";
 import { awardXp } from "./xp-engine.core";
 
 // ---------------------------------------------------------------------------

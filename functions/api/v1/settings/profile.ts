@@ -1,9 +1,9 @@
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
-import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { completeProfile } from "@functions/lib/xp-engine";
+import { AuthError, requireAuth } from "@functions/middleware";
+import { apiLogger } from "@functions/shared/logger";
 import { ProfileUpdateSchema } from "./schemas";
 
 export interface SettingsProfileResponse {

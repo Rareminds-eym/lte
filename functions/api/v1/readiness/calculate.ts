@@ -1,9 +1,9 @@
-import { AuthError, requireAuth } from "@functions/lib/auth";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { apiLogger } from "@functions/lib/logger";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { calculateReadiness } from "@functions/lib/xp-engine.progress";
+import { AuthError, requireAuth } from "@functions/middleware";
+import { apiLogger } from "@functions/shared/logger";
 
 // In-memory sliding window rate limiter
 // Key: userId, Value: timestamps of calls in the last 60 seconds
