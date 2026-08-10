@@ -29,7 +29,7 @@ const backendEnvSchema = z.object({
   SKILLPASSPORT_INTERNAL_SECRET: z
     .string()
     .min(32, "SKILLPASSPORT_INTERNAL_SECRET must be at least 32 characters long"),
-  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().trim().min(1, "OPENROUTER_API_KEY must not be empty"),
 });
 
 export function validateBackendEnv(env: unknown): LteEnv {

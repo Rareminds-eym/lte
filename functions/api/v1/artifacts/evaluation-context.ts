@@ -14,7 +14,15 @@ export async function fetchEvaluationContext(
       .eq("id", artifactId)
       .single();
 
-    if (artError || !art?.modules_content_id) return undefined;
+    if (artError || !art?.modules_content_id) {
+      if (artError) {
+        apiLogger.warn("Failed to fetch module_artifacts for evaluation context", {
+          artifactId,
+          error: artError,
+        });
+      }
+      return undefined;
+    }
 
     const { data: mc, error: mcError } = await supabase
       .from("modules_content")
@@ -22,7 +30,16 @@ export async function fetchEvaluationContext(
       .eq("id", art.modules_content_id)
       .single();
 
-    if (mcError || !mc?.module_id) return undefined;
+    if (mcError || !mc?.module_id) {
+      if (mcError) {
+        apiLogger.warn("Failed to fetch modules_content for evaluation context", {
+          artifactId,
+          modulesContentId: art.modules_content_id,
+          error: mcError,
+        });
+      }
+      return undefined;
+    }
 
     const { data: mod, error: modError } = await supabase
       .from("modules")
@@ -32,13 +49,29 @@ export async function fetchEvaluationContext(
       .eq("id", mc.module_id)
       .single();
 
-    if (modError || !mod?.level_id) return undefined;
+    if (modError || !mod?.level_id) {
+      if (modError) {
+        apiLogger.warn("Failed to fetch module for evaluation context", {
+          artifactId,
+          moduleId: mc.module_id,
+          error: modError,
+        });
+      }
+      return undefined;
+    }
 
-    const { data: lvl } = await supabase
+    const { data: lvl, error: lvlError } = await supabase
       .from("levels")
       .select("id, capability_id, title, problem_statement, observable_behavior")
       .eq("id", mod.level_id)
       .maybeSingle();
+    if (lvlError) {
+      apiLogger.warn("Failed to fetch level for evaluation context", {
+        artifactId,
+        levelId: mod.level_id,
+        error: lvlError,
+      });
+    }
 
     const { data: cap } = lvl?.capability_id
       ? await supabase
@@ -109,7 +142,7 @@ export async function fetchArtifactTemplateContent(
     if (error || !templates || templates.length === 0) return templateMap;
 
     for (const template of templates) {
-      if (!template.file_url?.startsWith("http")) continue;
+      if (!template.file_url?.startsWith("https")) continue;
       if (template.file_type === "image" || template.file_type === "video") continue;
 
       const key = template.question_id ?? "__artifact__";

@@ -1,5 +1,6 @@
 -- Migration: Artifact submission idempotency + exactly-one-latest guarantee
--- Phase: 1 of 1 (Expand)
+-- Phase: 2 of 3 (Migrate) — schema side; data backfill in
+--         seed/dev|production/seed_lte_catalog_16_artifact_submission_latest_demote.sql
 -- Breaking: No
 -- Rollback: Drop uq_artifact_submissions_latest, uq_artifact_submissions_idempotency,
 --           and the idempotency_key column in a follow-up migration.
@@ -50,6 +51,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_artifact_submissions_latest
     ON public.artifact_submissions(artifact_id, user_id)
     WHERE is_latest;
 
--- 4. Duplicate submission request deduplication (P0-2).CREATE UNIQUE INDEX IF NOT EXISTS uq_artifact_submissions_idempotency
+-- 4. Duplicate submission request deduplication (P0-2).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_artifact_submissions_idempotency
     ON public.artifact_submissions(user_id, artifact_id, idempotency_key)
     WHERE idempotency_key IS NOT NULL;

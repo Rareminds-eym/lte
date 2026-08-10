@@ -1,6 +1,7 @@
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { getAuthUser } from "@functions/middleware";
 import { uuidSchema } from "@functions/schemas";
 import { apiLogger } from "@functions/shared/logger";
 import { ArtifactSubmissionError, getSubmissionEvaluationFlow } from "../../queries";
@@ -19,7 +20,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
   const validSubmissionId = parsedId.data;
 
   try {
-    const user = context.data?.["user"] as { sub: string } | undefined;
+    const user = getAuthUser(context);
     if (!user) {
       return jsonError("Unauthorized", 401, { code: "UNAUTHORIZED", requestId });
     }

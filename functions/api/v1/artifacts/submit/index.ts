@@ -7,7 +7,7 @@ import {
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { rateLimitErrorResponse, rateLimiter } from "@functions/middleware";
+import { getAuthUser, rateLimitErrorResponse, rateLimiter } from "@functions/middleware";
 import { completeSubmissionSchema } from "@functions/schemas";
 import { apiLogger } from "@functions/shared/logger";
 import { ArtifactSubmissionError, submitArtifactSubmission } from "../queries";
@@ -112,7 +112,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
   const requestId = crypto.randomUUID();
 
   try {
-    const user = context.data?.["user"] as { sub: string } | undefined;
+    const user = getAuthUser(context);
     if (!user) {
       return jsonError("Unauthorized", 401, { code: "UNAUTHORIZED", requestId });
     }

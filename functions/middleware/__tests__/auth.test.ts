@@ -2,7 +2,7 @@ import type { LteEnv } from "@functions/lib/types";
 import type { AuthUser } from "@rareminds-eym/auth-core";
 import { initAuth, verifyJWT } from "@rareminds-eym/auth-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { extractBearerToken, requireAuth, toAuthApiUser } from "../auth";
+import { extractBearerToken, getAuthUser, requireAuth, toAuthApiUser } from "../auth";
 
 vi.mock("@rareminds-eym/auth-core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@rareminds-eym/auth-core")>();
@@ -32,6 +32,7 @@ const mockEnv: LteEnv = {
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   SKILLPASSPORT_INTERNAL_URL: "https://skillpassport.example.com",
   SKILLPASSPORT_INTERNAL_SECRET: "a-secret-that-is-at-least-32-characters-long",
+  OPENROUTER_API_KEY: "sk-or-test-key",
 };
 
 describe("extractBearerToken", () => {
@@ -128,5 +129,22 @@ describe("toAuthApiUser", () => {
 
   it("defaults user_metadata to an empty object", () => {
     expect(toAuthApiUser(mockUser).user_metadata).toEqual({});
+  });
+});
+
+describe("getAuthUser", () => {
+  it("returns null when context.data or user is missing", () => {
+    expect(getAuthUser({})).toBeNull();
+    expect(getAuthUser({ data: {} })).toBeNull();
+    expect(getAuthUser({ data: { user: null } })).toBeNull();
+  });
+
+  it("returns null when user is not an object or lacks sub", () => {
+    expect(getAuthUser({ data: { user: "invalid-user" } })).toBeNull();
+    expect(getAuthUser({ data: { user: { email: "test@example.com" } } })).toBeNull();
+  });
+
+  it("returns the AuthUser object when valid user is present in context.data", () => {
+    expect(getAuthUser({ data: { user: mockUser } })).toEqual(mockUser);
   });
 });

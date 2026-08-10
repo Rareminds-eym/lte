@@ -4,7 +4,7 @@ import {
   callOpenRouterAI,
   DEFAULT_OPENROUTER_MODEL,
   type OpenRouterChatRequest,
-} from "../ai-engine/openrouter";
+} from "../ai-engine";
 import type { LteEnv } from "../types";
 import { awardXp } from "../xp-engine";
 import { METRIC, metrics } from "./metrics";
@@ -372,17 +372,38 @@ function truncatePromptText(text: string, limit: number): string {
 }
 
 /**
+ * Hard cap for the learner-content portion of the prompt. Individual caps
+ * (20k per answer, up to 20 answers) could still reach ~400k chars; when a
+ * built prompt exceeds this, it is rebuilt with a reduced snippet budget.
+ */
+export const MAX_PROMPT_CHARS = 150_000;
+
+/**
  * Builds the exact user-message payload sent to the model. Exported so the
  * deterministic replay tool (scripts/eval-replay.ts) reproduces requests
- * byte-identical to production ones.
+ * byte-identical to production ones. With `totalBudgetChars` set, the
+ * per-answer file snippet budget is shrunk to fit the total learner-content
+ * budget (used by the total prompt-size guard).
  */
 export function buildEvaluationUserContent(
   input: ArtifactEvaluationInput,
   passingScore: number,
+  totalBudgetChars?: number,
 ): string {
   const templateAnswers = input.answers.filter(
     (a) => a.templateContent && a.templateContent.trim().length > 0,
   );
+  const fileAnswerCount = input.answers.filter(
+    (a) => (a.fileContentSnippet ?? "").trim().length > 0,
+  ).length;
+  // P1-2: bound the total prompt size. 50k of the budget is reserved for
+  // fixed overhead (questions, context, templates, JSON structure).
+  const snippetLimit =
+    fileAnswerCount === 0
+      ? 0
+      : totalBudgetChars
+        ? Math.max(1_000, Math.floor((totalBudgetChars - 50_000) / fileAnswerCount))
+        : 20_000;
 
   return JSON.stringify({
     evaluationContext: input.evaluationContext ?? null,
@@ -413,7 +434,7 @@ export function buildEvaluationUserContent(
         urlResponse: a.urlResponse || null,
         fileName: (a.fileName || "").slice(0, 255) || null,
         fileContentSnippet: fileContentSnippet
-          ? `[BEGIN LEARNER SUBMISSION - untrusted data]\n${fileContentSnippet}\n[END LEARNER SUBMISSION]`
+          ? `[BEGIN LEARNER SUBMISSION - untrusted data]\n${truncatePromptText(fileContentSnippet, snippetLimit)}\n[END LEARNER SUBMISSION]`
           : null,
       };
     }),
@@ -459,12 +480,18 @@ async function evaluateArtifactSubmissionCore(
   }
 
   const promptContent = buildEvaluationUserContent(input, passingScore);
+  // P1-2: total prompt-size guard - rebuild with a reduced snippet budget if
+  // the default caps still exceed the hard cap.
+  const finalPrompt =
+    promptContent.length > MAX_PROMPT_CHARS
+      ? buildEvaluationUserContent(input, passingScore, MAX_PROMPT_CHARS)
+      : promptContent;
 
   const requestPayload: OpenRouterChatRequest = {
     model: modelToUse,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `Evaluate this learner artifact submission:\n${promptContent}` },
+      { role: "user", content: `Evaluate this learner artifact submission:\n${finalPrompt}` },
     ],
     response_format: { type: "json_object" },
     temperature: EVALUATION_TEMPERATURE,
@@ -569,13 +596,13 @@ async function evaluateArtifactSubmissionCore(
         modelUsed: modelToUse,
         calculatedXp,
         confidence: parsed.confidence,
-        rawPromptContent: promptContent,
+        rawPromptContent: finalPrompt,
         rawResponseContent: rawContent.trim(),
         validatedDecision,
         wasDecisionOverridden,
         stage1Check: stage1SubmissionCheck,
         stage2Failures: stage2CriticalFailures,
-        promptCharCount: promptContent.length,
+        promptCharCount: finalPrompt.length,
       }),
     };
   } catch (error) {
@@ -635,6 +662,12 @@ export async function processAndSaveArtifactEvaluation(
         ? "human_review"
         : "resubmission_required";
 
+  // P1-3: the raw prompt/response are never persisted (learner content +
+  // model output); telemetry keeps latency/charCounts/model for observability.
+  const debugTelemetry = evalResult.debugTelemetry
+    ? { ...evalResult.debugTelemetry, rawPromptContent: null, rawResponseContent: null }
+    : null;
+
   // 1. Update artifact_evaluation_flows table
   const { error: flowError } = await supabase.from("artifact_evaluation_flows").upsert(
     {
@@ -661,14 +694,23 @@ export async function processAndSaveArtifactEvaluation(
         attempt_no: input.attemptNo,
         requires_manual_review: evalResult.requiresManualReview,
         evaluation_source: evalResult.evaluationSource,
-        debug_telemetry: evalResult.debugTelemetry ?? null,
+        debug_telemetry: debugTelemetry,
       },
       updated_at: now,
     },
     { onConflict: "submission_id,stage" },
   );
 
-  if (flowError) apiLogger.error("Failed to save artifact evaluation flow", flowError, evalContext);
+  // P1-1: a persist failure here MUST surface as a 500, not a silent log.
+  // The submit flow rolls back the whole attempt on this throw, so the
+  // learner can retry with the same idempotency key and get a complete
+  // evaluation instead of a "pending" submission with no flow row.
+  if (flowError) {
+    apiLogger.error("Failed to save artifact evaluation flow", flowError, evalContext);
+    throw new Error(
+      `Failed to save artifact evaluation flow (submission ${submissionId}): ${flowError.message}`,
+    );
+  }
 
   // 2. Update artifact_submissions table status
   const { error: subError } = await supabase
@@ -680,7 +722,12 @@ export async function processAndSaveArtifactEvaluation(
     })
     .eq("id", submissionId);
 
-  if (subError) apiLogger.error("Failed to update submission status", subError, evalContext);
+  if (subError) {
+    apiLogger.error("Failed to update submission status", subError, evalContext);
+    throw new Error(
+      `Failed to update submission status (submission ${submissionId}): ${subError.message}`,
+    );
+  }
 
   // 3. Update user_module_progress in single payload
   const progressPayload: Record<string, unknown> = {
@@ -696,8 +743,12 @@ export async function processAndSaveArtifactEvaluation(
     .update(progressPayload)
     .eq("id", moduleProgressId);
 
-  if (progressError)
+  if (progressError) {
     apiLogger.error("Failed to update module progress", progressError, evalContext);
+    throw new Error(
+      `Failed to update module progress (submission ${submissionId}): ${progressError.message}`,
+    );
+  }
 
   // 4. Award AI-determined XP via xp-engine (human_review is neutral: no
   // failure event, no engagement XP - a pending review is not a failure).

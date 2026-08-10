@@ -82,3 +82,15 @@ export function toAuthApiUser(user: AuthUser) {
     user_metadata: user.user_metadata ?? {},
   };
 }
+
+/**
+ * Type-safe accessor for the authenticated user set by _middleware.ts.
+ * Returns the full AuthUser from `context.data.user` or null when the
+ * middleware hasn't run (should not happen behind _middleware.ts, but
+ * the null-check keeps handlers safe if called from a test harness).
+ */
+export function getAuthUser(context: { data?: Record<string, unknown> }): AuthUser | null {
+  const user = context.data?.["user"];
+  if (!user || typeof user !== "object" || !("sub" in user)) return null;
+  return user as AuthUser;
+}

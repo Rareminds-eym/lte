@@ -41,17 +41,6 @@ interface ArtifactSubmissionRow {
   sealed_at: string | null;
 }
 
-interface ArtifactFileRow {
-  id: string;
-  submission_id: string;
-  question_id: string;
-  file_name: string;
-  file_url: string | null;
-  object_key: string | null;
-  file_type: string;
-  file_size_bytes: number | null;
-}
-
 interface ArtifactMetaRow {
   artifact_type: string | null;
   passing_score: number | null;
@@ -67,15 +56,6 @@ interface ArtifactQuestionDetailRow {
 }
 
 export { ArtifactSubmissionError } from "./file-validation";
-
-function getObjectKeyFromFileUrl(fileUrl: string): string {
-  try {
-    const url = new URL(fileUrl);
-    return decodeURIComponent(url.pathname.replace(/^\/+/, ""));
-  } catch {
-    return fileUrl.replace(/^\/+/, "");
-  }
-}
 
 function createPublicFileUrl(publicDomain: string | undefined, objectKey: string): string | null {
   const baseUrl = publicDomain?.trim().replace(/\/+$/, "");
@@ -429,35 +409,44 @@ export async function submitArtifactSubmission(
   if (created.duplicate) {
     // P0-2: the same request was already processed - return the original
     // submission instead of creating a new attempt.
-    return buildDuplicateSubmissionResponse(supabase, created.submission);
+    return buildDuplicateSubmissionResponse(supabase, env, userId, created.submission);
   }
   const submission = created.submission;
   const now = new Date().toISOString();
-  const answerRows = input.answers
-    .filter((answer) => answer.text_response || answer.url_response)
-    .map((answer) => ({
-      submission_id: submission.id,
-      question_id: answer.question_id,
-      text_response: answer.text_response || null,
-      url_response: answer.url_response || null,
-      updated_at: now,
-    }));
-
-  if (answerRows.length > 0) {
-    const { error } = await supabase
-      .from("artifact_submission_answers")
-      .upsert(answerRows, { onConflict: "submission_id,question_id" });
-    if (error) {
-      throw new Error(
-        `Failed to save artifact answers (submission ${submission.id}, artifact ${input.artifact_id}): ${error.message}`,
-      );
-    }
-  }
 
   const uploadedFiles: Array<{ file_id: string; question_id: string; file_name: string }> = [];
   const uploadedObjectKeys: string[] = [];
 
+  // P0-2: everything after attempt creation - answer upsert, uploads, meta
+  // fetch, evaluation - is one rollback envelope: any failure deletes the
+  // whole attempt so a retried idempotency key re-runs the full flow instead
+  // of finding a half-built submission with no evaluation flow (the "stuck
+  // pending" failure mode). The submission row's children (answers, files,
+  // evaluation flows) cascade-delete with it; R2 objects are cleaned up
+  // separately.
+  let evalResult: Awaited<ReturnType<typeof processAndSaveArtifactEvaluation>>;
   try {
+    const answerRows = input.answers
+      .filter((answer) => answer.text_response || answer.url_response)
+      .map((answer) => ({
+        submission_id: submission.id,
+        question_id: answer.question_id,
+        text_response: answer.text_response || null,
+        url_response: answer.url_response || null,
+        updated_at: now,
+      }));
+
+    if (answerRows.length > 0) {
+      const { error } = await supabase
+        .from("artifact_submission_answers")
+        .upsert(answerRows, { onConflict: "submission_id,question_id" });
+      if (error) {
+        throw new Error(
+          `Failed to save artifact answers (submission ${submission.id}, artifact ${input.artifact_id}): ${error.message}`,
+        );
+      }
+    }
+
     for (const [questionId, { file, extension }] of fileContexts) {
       const fileId = crypto.randomUUID();
       const objectKey = createObjectKey({
@@ -500,72 +489,62 @@ export async function submitArtifactSubmission(
         file_name: file.name,
       });
     }
-  } catch (error) {
-    // P0-4: persistence failed after upload - roll back the partial state
-    // (submission row, its answers/files) so a retried idempotency key re-runs
-    // the whole flow instead of returning a half-built "duplicate" submission
-    // with rows whose R2 objects were deleted. Best-effort: original error wins.
-    try {
-      await supabase.from("artifact_submission_files").delete().eq("submission_id", submission.id);
-      await supabase
-        .from("artifact_submission_answers")
-        .delete()
-        .eq("submission_id", submission.id);
-      await supabase.from("artifact_submissions").delete().eq("id", submission.id);
-    } catch (rollbackError) {
-      apiLogger.error("Failed to roll back partial artifact submission.", rollbackError, {
-        submissionId: submission.id,
-      });
+
+    // Fetch full artifact details for AI Evaluation
+    const { data: artifactMeta, error: artifactMetaError } = await supabase
+      .from("module_artifacts")
+      .select("artifact_type, passing_score, total_score")
+      .eq("id", input.artifact_id)
+      .single();
+
+    if (artifactMetaError) {
+      throw new Error(
+        `Failed to fetch artifact meta (artifact ${input.artifact_id}): ${artifactMetaError.message}`,
+      );
     }
-    await cleanupUploadedObjects(env, uploadedObjectKeys);
+
+    const { data: questionDetails, error: questionDetailsError } = await supabase
+      .from("artifact_questions")
+      .select("id, title, description, response_type, instructions")
+      .eq("artifact_id", input.artifact_id)
+      .eq("is_active", true);
+
+    if (questionDetailsError) {
+      throw new Error(
+        `Failed to fetch artifact questions (artifact ${input.artifact_id}): ${questionDetailsError.message}`,
+      );
+    }
+
+    const evalInput = await buildArtifactEvaluationInput({
+      supabase,
+      artifactMeta: (artifactMeta as ArtifactMetaRow | null) ?? null,
+      questionDetails: (questionDetails as ArtifactQuestionDetailRow[] | null) ?? [],
+      input,
+      filesByQuestionId,
+      // Phase 3: reuse the bytes already read for signature validation instead
+      // of arrayBuffer()-ing every file a second time.
+      preReadBuffers: new Map(
+        [...fileContexts].map(([questionId, ctx]) => [questionId, ctx.buffer]),
+      ),
+      attemptNo: submission.attempt_no,
+    });
+
+    evalResult = await processAndSaveArtifactEvaluation(
+      supabase,
+      env,
+      submission.id,
+      evalInput,
+      userId,
+      moduleProgressId,
+    );
+  } catch (error) {
+    // P0-2: roll back the partial attempt (the row cascade-deletes its
+    // answers, files and evaluation flows) so a retried idempotency key
+    // re-runs the whole flow instead of returning a half-built "duplicate"
+    // submission. Best-effort: the original error always wins.
+    await rollbackArtifactSubmission(supabase, env, submission.id, uploadedObjectKeys);
     throw error;
   }
-
-  // Fetch full artifact details for AI Evaluation
-  const { data: artifactMeta, error: artifactMetaError } = await supabase
-    .from("module_artifacts")
-    .select("artifact_type, passing_score, total_score")
-    .eq("id", input.artifact_id)
-    .single();
-
-  if (artifactMetaError) {
-    throw new Error(
-      `Failed to fetch artifact meta (artifact ${input.artifact_id}): ${artifactMetaError.message}`,
-    );
-  }
-
-  const { data: questionDetails, error: questionDetailsError } = await supabase
-    .from("artifact_questions")
-    .select("id, title, description, response_type, instructions")
-    .eq("artifact_id", input.artifact_id)
-    .eq("is_active", true);
-
-  if (questionDetailsError) {
-    throw new Error(
-      `Failed to fetch artifact questions (artifact ${input.artifact_id}): ${questionDetailsError.message}`,
-    );
-  }
-
-  const evalInput = await buildArtifactEvaluationInput({
-    supabase,
-    artifactMeta: (artifactMeta as ArtifactMetaRow | null) ?? null,
-    questionDetails: (questionDetails as ArtifactQuestionDetailRow[] | null) ?? [],
-    input,
-    filesByQuestionId,
-    // Phase 3: reuse the bytes already read for signature validation instead
-    // of arrayBuffer()-ing every file a second time.
-    preReadBuffers: new Map([...fileContexts].map(([questionId, ctx]) => [questionId, ctx.buffer])),
-    attemptNo: submission.attempt_no,
-  });
-
-  const evalResult = await processAndSaveArtifactEvaluation(
-    supabase,
-    env,
-    submission.id,
-    evalInput,
-    userId,
-    moduleProgressId,
-  );
 
   return {
     submission_id: submission.id,
@@ -591,6 +570,32 @@ export async function submitArtifactSubmission(
     },
     files: uploadedFiles,
   };
+}
+
+/**
+ * P0-2: best-effort rollback of a partial submission attempt. The submission
+ * row's children (answers, files, evaluation flows) cascade-delete with it;
+ * uploaded R2 objects are deleted too. Never silent: every failure is logged.
+ */
+async function rollbackArtifactSubmission(
+  supabase: SupabaseClient,
+  env: Pick<LteEnv, "STORAGE_BUCKET">,
+  submissionId: string,
+  uploadedObjectKeys: string[],
+): Promise<void> {
+  try {
+    const { error } = await supabase.from("artifact_submissions").delete().eq("id", submissionId);
+    if (error) {
+      throw new Error(
+        `Failed to delete partial artifact submission (${submissionId}): ${error.message}`,
+      );
+    }
+  } catch (rollbackError) {
+    apiLogger.error("Failed to roll back partial artifact submission.", rollbackError, {
+      submissionId,
+    });
+  }
+  await cleanupUploadedObjects(env, uploadedObjectKeys);
 }
 
 /**
@@ -623,23 +628,20 @@ async function cleanupUploadedObjects(
  */
 async function buildDuplicateSubmissionResponse(
   supabase: SupabaseClient,
+  env: Pick<LteEnv, "STORAGE_BUCKET" | "R2_PUBLIC_DOMAIN" | "OPENROUTER_API_KEY">,
+  userId: string,
   submission: ArtifactSubmissionRow,
 ): Promise<ArtifactSubmissionResult> {
-  const { data: flow, error: flowError } = await supabase
-    .from("artifact_evaluation_flows")
-    .select(
-      "id, submission_id, stage, status, score, decision, feedback, improvements, completed_at, metadata",
-    )
-    .eq("submission_id", submission.id)
-    .eq("is_current_stage", true)
-    .maybeSingle();
+  const { data: flow, error: flowError } = await fetchCurrentEvaluationFlow(
+    supabase,
+    submission.id,
+  );
 
   if (flowError) {
     throw new Error(
       `Failed to fetch evaluation flow for duplicate submission (${submission.id}): ${flowError.message}`,
     );
   }
-  const meta = (flow?.metadata as Record<string, unknown> | null) ?? null;
 
   const { data: fileRows, error: fileRowsError } = await supabase
     .from("artifact_submission_files")
@@ -652,32 +654,189 @@ async function buildDuplicateSubmissionResponse(
     );
   }
 
+  // P0-2: a duplicate request with no flow row means the original request
+  // died mid-evaluation (e.g. isolate timeout/kill): the submission, its
+  // answers and files persisted, but no evaluation was ever written. Instead
+  // of returning "pending" forever, re-run the evaluation from the persisted
+  // rows and R2 objects, then return the completed result.
+  let currentFlow = flow;
+  if (!currentFlow) {
+    currentFlow = await rerunEvaluationForDuplicateSubmission(supabase, env, userId, submission);
+    if (!currentFlow) {
+      throw new Error(
+        `Evaluation re-run completed without a flow row (submission ${submission.id}).`,
+      );
+    }
+  }
+
+  const meta = (currentFlow.metadata as Record<string, unknown> | null) ?? null;
+
   return {
     submission_id: submission.id,
     attempt_no: submission.attempt_no,
     version_label: submission.version_label ?? `v${submission.attempt_no}`,
     submitted_at: submission.submitted_at,
     status: submission.status as ArtifactSubmissionResult["status"],
-    evaluation_status: flow ? "completed" : "pending",
+    evaluation_status: "completed",
     duplicate: true,
-    evaluation: flow
-      ? {
-          overall_score: flow.score ?? 0,
-          confidence: (meta?.["confidence"] as number | null) ?? 0,
-          decision:
-            (flow.decision as "pass" | "revise_and_resubmit" | "human_review") ?? "human_review",
-          rubric_rows: (meta?.["rubric_rows"] as unknown[]) ?? [],
-          feedback: flow.feedback ?? "",
-          improvements: flow.improvements ?? "",
-          calculated_xp: (meta?.["calculated_xp"] as number) ?? 0,
-        }
-      : undefined,
+    evaluation: {
+      overall_score: currentFlow.score ?? 0,
+      confidence: (meta?.["confidence"] as number | null) ?? 0,
+      decision:
+        (currentFlow.decision as "pass" | "revise_and_resubmit" | "human_review") ?? "human_review",
+      rubric_rows: (meta?.["rubric_rows"] as unknown[]) ?? [],
+      feedback: currentFlow.feedback ?? "",
+      improvements: currentFlow.improvements ?? "",
+      calculated_xp: (meta?.["calculated_xp"] as number) ?? 0,
+    },
     files: (fileRows ?? []).map((fileRow) => ({
       file_id: fileRow.id,
       question_id: fileRow.question_id,
       file_name: fileRow.file_name,
     })),
   };
+}
+
+/**
+ * Shared read of the current (is_current_stage) evaluation flow row for a
+ * submission. Used by the duplicate-response path (before and after a
+ * re-run) and by the status endpoint.
+ */
+async function fetchCurrentEvaluationFlow(supabase: SupabaseClient, submissionId: string) {
+  return supabase
+    .from("artifact_evaluation_flows")
+    .select(
+      "id, submission_id, stage, status, score, decision, feedback, improvements, completed_at, metadata",
+    )
+    .eq("submission_id", submissionId)
+    .eq("is_current_stage", true)
+    .maybeSingle();
+}
+
+interface EvaluationFlowRow {
+  id: string;
+  submission_id: string;
+  stage: string;
+  status: string;
+  score: number | null;
+  decision: string | null;
+  feedback: string | null;
+  improvements: string | null;
+  completed_at: string | null;
+  metadata: unknown;
+}
+
+/**
+ * P0-2: re-runs the AI evaluation for a submission whose original request died
+ * before any flow row was written. Rebuilds the evaluation input from the
+ * persisted answers and R2 objects, then delegates to the same persistence
+ * path as a fresh submission. Returns the flow row it wrote (null only if the
+ * persistence path silently succeeded without writing - it throws on write
+ * failure, so this is effectively never). The flow upsert is idempotent per
+ * (submission_id, stage), so concurrent retries converge on one flow row.
+ */
+async function rerunEvaluationForDuplicateSubmission(
+  supabase: SupabaseClient,
+  env: Pick<LteEnv, "STORAGE_BUCKET" | "R2_PUBLIC_DOMAIN" | "OPENROUTER_API_KEY">,
+  userId: string,
+  submission: ArtifactSubmissionRow,
+): Promise<EvaluationFlowRow | null> {
+  apiLogger.warn("Re-running evaluation for submission with no evaluation flow.", {
+    submissionId: submission.id,
+    artifactId: submission.artifact_id,
+  });
+
+  const { data: artifactMeta, error: artifactMetaError } = await supabase
+    .from("module_artifacts")
+    .select("artifact_type, passing_score, total_score")
+    .eq("id", submission.artifact_id)
+    .single();
+  if (artifactMetaError) {
+    throw new Error(
+      `Failed to fetch artifact meta for re-run (artifact ${submission.artifact_id}): ${artifactMetaError.message}`,
+    );
+  }
+
+  const { data: questionDetails, error: questionDetailsError } = await supabase
+    .from("artifact_questions")
+    .select("id, title, description, response_type, instructions")
+    .eq("artifact_id", submission.artifact_id)
+    .eq("is_active", true);
+  if (questionDetailsError) {
+    throw new Error(
+      `Failed to fetch artifact questions for re-run (artifact ${submission.artifact_id}): ${questionDetailsError.message}`,
+    );
+  }
+
+  const { data: answerRows, error: answerError } = await supabase
+    .from("artifact_submission_answers")
+    .select("question_id, text_response, url_response")
+    .eq("submission_id", submission.id);
+  if (answerError) {
+    throw new Error(
+      `Failed to fetch artifact answers for re-run (submission ${submission.id}): ${answerError.message}`,
+    );
+  }
+
+  const { data: fileRows, error: fileRowsError } = await supabase
+    .from("artifact_submission_files")
+    .select("question_id, file_name, object_key, file_type")
+    .eq("submission_id", submission.id);
+  if (fileRowsError) {
+    throw new Error(
+      `Failed to fetch artifact files for re-run (submission ${submission.id}): ${fileRowsError.message}`,
+    );
+  }
+
+  const filesByQuestionId = new Map<string, File>();
+  for (const fileRow of fileRows ?? []) {
+    if (!fileRow.object_key) continue;
+    const object = (await env.STORAGE_BUCKET.get(fileRow.object_key)) as {
+      arrayBuffer: () => Promise<ArrayBuffer>;
+    } | null;
+    if (!object) continue;
+    const bytes = await object.arrayBuffer();
+    filesByQuestionId.set(
+      fileRow.question_id,
+      new File([bytes], fileRow.file_name, { type: fileRow.file_type }),
+    );
+  }
+
+  const evalInput = await buildArtifactEvaluationInput({
+    supabase,
+    artifactMeta: (artifactMeta as ArtifactMetaRow | null) ?? null,
+    questionDetails: (questionDetails as ArtifactQuestionDetailRow[] | null) ?? [],
+    input: {
+      artifact_id: submission.artifact_id,
+      answers: (answerRows ?? []).map((answer) => ({
+        question_id: answer.question_id,
+        text_response: answer.text_response ?? undefined,
+        url_response: answer.url_response ?? undefined,
+      })),
+    },
+    filesByQuestionId,
+    attemptNo: submission.attempt_no,
+  });
+
+  await processAndSaveArtifactEvaluation(
+    supabase,
+    env,
+    submission.id,
+    evalInput,
+    userId,
+    submission.user_module_progress_id,
+  );
+
+  const { data: flow, error: flowError } = await fetchCurrentEvaluationFlow(
+    supabase,
+    submission.id,
+  );
+  if (flowError) {
+    throw new Error(
+      `Failed to fetch evaluation flow after re-run (submission ${submission.id}): ${flowError.message}`,
+    );
+  }
+  return (flow as EvaluationFlowRow | null) ?? null;
 }
 
 export async function buildArtifactEvaluationInput(params: {
@@ -751,81 +910,6 @@ export async function buildArtifactEvaluationInput(params: {
     attemptNo: params.attemptNo,
     evaluationContext,
   };
-}
-
-export async function requireOwnedFile(
-  supabase: SupabaseClient,
-  fileId: string,
-  userId: string,
-): Promise<ArtifactFileRow> {
-  const { data, error } = await supabase
-    .from("artifact_submission_files")
-    .select(`
-      id,
-      submission_id,
-      question_id,
-      file_name,
-      file_url,
-      object_key,
-      file_type,
-      file_size_bytes,
-      artifact_submissions!inner(user_id)
-    `)
-    .eq("id", fileId)
-    .eq("artifact_submissions.user_id", userId)
-    .single();
-
-  if (error || !data) {
-    throw new ArtifactSubmissionError("Artifact file was not found.", 404, "FILE_NOT_FOUND");
-  }
-
-  return data as ArtifactFileRow;
-}
-
-export async function createArtifactFileDownloadResponse(
-  supabase: SupabaseClient,
-  env: Pick<LteEnv, "STORAGE_BUCKET">,
-  userId: string,
-  fileId: string,
-): Promise<Response> {
-  const file = await requireOwnedFile(supabase, fileId, userId);
-  const objectKey =
-    file.object_key ?? (file.file_url ? getObjectKeyFromFileUrl(file.file_url) : null);
-  if (!objectKey) {
-    throw new ArtifactSubmissionError(
-      "Artifact file is not available for download.",
-      404,
-      "FILE_NOT_AVAILABLE",
-    );
-  }
-
-  const object = (await env.STORAGE_BUCKET.get(objectKey)) as {
-    body?: BodyInit | null;
-    httpMetadata?: { contentType?: string };
-    size?: number;
-  } | null;
-
-  if (!object?.body) {
-    throw new ArtifactSubmissionError(
-      "Artifact file is not available for download.",
-      404,
-      "FILE_NOT_AVAILABLE",
-    );
-  }
-
-  const headers = new Headers();
-  headers.set("Content-Type", object.httpMetadata?.contentType ?? "application/octet-stream");
-  headers.set(
-    "Content-Disposition",
-    `attachment; filename="${sanitizeContentDispositionFilename(file.file_name)}"`,
-  );
-  if (object.size) headers.set("Content-Length", String(object.size));
-
-  return new Response(object.body, { status: 200, headers });
-}
-
-export function createDownloadUrl(fileId: string, requestUrl: string): string {
-  return new URL(`/api/v1/artifacts/files/${fileId}/download`, requestUrl).toString();
 }
 
 export async function getSubmissionEvaluationFlow(
