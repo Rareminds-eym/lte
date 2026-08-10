@@ -501,8 +501,22 @@ export async function submitArtifactSubmission(
       });
     }
   } catch (error) {
-    // P0-4: persistence failed after upload - best-effort delete so no orphan
-    // R2 object is left behind. Cleanup results are always logged.
+    // P0-4: persistence failed after upload - roll back the partial state
+    // (submission row, its answers/files) so a retried idempotency key re-runs
+    // the whole flow instead of returning a half-built "duplicate" submission
+    // with rows whose R2 objects were deleted. Best-effort: original error wins.
+    try {
+      await supabase.from("artifact_submission_files").delete().eq("submission_id", submission.id);
+      await supabase
+        .from("artifact_submission_answers")
+        .delete()
+        .eq("submission_id", submission.id);
+      await supabase.from("artifact_submissions").delete().eq("id", submission.id);
+    } catch (rollbackError) {
+      apiLogger.error("Failed to roll back partial artifact submission.", rollbackError, {
+        submissionId: submission.id,
+      });
+    }
     await cleanupUploadedObjects(env, uploadedObjectKeys);
     throw error;
   }

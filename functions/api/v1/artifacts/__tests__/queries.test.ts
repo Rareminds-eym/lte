@@ -19,6 +19,7 @@ interface MockChain {
   eq: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
   insert: ReturnType<typeof vi.fn>;
   upsert: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
@@ -37,6 +38,7 @@ function mockChain(
     eq: vi.fn(() => chain),
     order: vi.fn(() => chain),
     update: vi.fn(() => chain),
+    delete: vi.fn(() => chain),
     insert: vi.fn(() => Promise.resolve(ok(null))),
     upsert: vi.fn(() => Promise.resolve(ok(null))),
     maybeSingle: vi.fn().mockResolvedValue(options.maybeSingle ?? ok(null)),
@@ -434,6 +436,9 @@ describe("artifact submission queries", () => {
     expect(env.STORAGE_BUCKET.delete).toHaveBeenCalledWith(
       "submissions/artifacts/users/user-1/artifact-1/submission-1/00000000-0000-4000-8000-000000000001-answer.xlsx",
     );
+    expect(chains.artifact_submission_files.delete).toHaveBeenCalled();
+    expect(chains.artifact_submission_answers.delete).toHaveBeenCalled();
+    expect(chains.artifact_submissions.delete).toHaveBeenCalled();
   });
 
   it("returns the original submission for a retried request with the same idempotency key", async () => {
