@@ -96,4 +96,17 @@ describe("GET /api/v1/dashboard/streak", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ success: true, streakDays: 1 });
   });
+
+  it("ignores malformed login dates when calculating the current streak", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
+    mockDailyLoginDates([daysBeforeToday(0), "bad-date", daysBeforeToday(1)]);
+
+    const response = await onRequestGet({
+      request: new Request("http://localhost/api/v1/dashboard/streak"),
+      env: {} as LteEnv,
+    } as PagesContext<LteEnv>);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ success: true, streakDays: 2 });
+  });
 });

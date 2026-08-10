@@ -24,7 +24,8 @@ function isLoginDateMetadata(metadata: unknown): metadata is { login_date: strin
     typeof metadata === "object" &&
     !Array.isArray(metadata) &&
     "login_date" in metadata &&
-    typeof metadata.login_date === "string"
+    typeof metadata.login_date === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(metadata.login_date)
   );
 }
 
