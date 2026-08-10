@@ -14,6 +14,10 @@ vi.mock("@functions/lib/auth", async (importOriginal) => {
 vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
 
 type SupabaseFromOnly = Pick<SupabaseClient, "from">;
+type StreakQueryMock = {
+  select: ReturnType<typeof vi.fn>;
+  eq: ReturnType<typeof vi.fn>;
+};
 
 describe("GET /api/v1/dashboard/streak", () => {
   const mockUser: AuthUser = {
@@ -30,8 +34,8 @@ describe("GET /api/v1/dashboard/streak", () => {
     vi.restoreAllMocks();
   });
 
-  function mockDailyLoginDates(loginDates: string[]): void {
-    const query = {
+  function mockDailyLoginDates(loginDates: string[]): StreakQueryMock {
+    const query: StreakQueryMock = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
     };
@@ -43,6 +47,8 @@ describe("GET /api/v1/dashboard/streak", () => {
     vi.mocked(createServiceSupabase).mockReturnValue({
       from: vi.fn().mockReturnValue(query),
     } as SupabaseFromOnly as SupabaseClient);
+
+    return query;
   }
 
   function toDateString(date: Date): string {
@@ -73,7 +79,7 @@ describe("GET /api/v1/dashboard/streak", () => {
 
   it("returns the current login streak from daily_login event dates", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    mockDailyLoginDates([daysBeforeToday(0), daysBeforeToday(1), daysBeforeToday(3)]);
+    const query = mockDailyLoginDates([daysBeforeToday(0), daysBeforeToday(1), daysBeforeToday(3)]);
 
     const response = await onRequestGet({
       request: new Request("http://localhost/api/v1/dashboard/streak"),
@@ -81,6 +87,10 @@ describe("GET /api/v1/dashboard/streak", () => {
     } as PagesContext<LteEnv>);
 
     expect(response.status).toBe(200);
+    expect(createServiceSupabase({} as LteEnv).from).toHaveBeenCalledWith("xp_events");
+    expect(query.select).toHaveBeenCalledWith("metadata");
+    expect(query.eq).toHaveBeenNthCalledWith(1, "user_id", mockUser.sub);
+    expect(query.eq).toHaveBeenNthCalledWith(2, "event_type", "daily_login");
     await expect(response.json()).resolves.toMatchObject({ success: true, streakDays: 2 });
   });
 
