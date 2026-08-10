@@ -31,6 +31,12 @@ describe("Dashboard Page", () => {
           todayXp: 20,
         });
       }
+      if (url.includes("/api/v1/dashboard/streak")) {
+        return Promise.resolve({
+          success: true,
+          streakDays: 7,
+        });
+      }
       if (url.includes("/api/v1/dashboard/journey")) {
         return Promise.resolve({
           success: true,
@@ -95,6 +101,12 @@ describe("Dashboard Page", () => {
               metadata: { login_date: "2026-08-07" },
             },
           ],
+        });
+      }
+      if (url.includes("/api/v1/dashboard/streak")) {
+        return Promise.resolve({
+          success: true,
+          streakDays: 7,
         });
       }
       if (url.includes("/api/v1/dashboard/journey")) {

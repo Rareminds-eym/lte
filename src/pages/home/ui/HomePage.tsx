@@ -1,12 +1,6 @@
 import type React from "react";
+import { Navigate } from "react-router-dom";
 
 export const HomePage: React.FC = () => {
-  return (
-    <div className="p-8">
-      <span>home </span>
-      <a href="/dashboard" className="text-brand-600 underline">
-        Dashboard
-      </a>
-    </div>
-  );
+  return <Navigate to="/login" replace />;
 };
