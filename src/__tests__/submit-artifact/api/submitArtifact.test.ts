@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { submitArtifact } from "@/features/submit-artifact";
 import { apiFetch } from "@/shared/api";
-import { submitArtifact } from "./submitArtifact";
 
 vi.mock("@/shared/api", () => ({
   apiFetch: vi.fn().mockResolvedValue({

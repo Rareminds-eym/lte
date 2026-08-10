@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { downloadArtifactFile } from "@/features/submit-artifact";
 import { apiFetchBlob } from "@/shared/api";
-import { downloadArtifactFile } from "./downloadArtifactFile";
 
 vi.mock("@/shared/api", () => ({
   apiFetchBlob: vi.fn().mockResolvedValue(new Blob(["artifact"])),

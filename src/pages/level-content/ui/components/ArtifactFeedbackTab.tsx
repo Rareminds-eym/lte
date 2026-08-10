@@ -20,7 +20,7 @@ export interface SubmittedArtifactAttempt {
   files: ModuleArtifactSubmittedFile[];
   evaluation?: {
     overall_score: number;
-    decision: "pass" | "revise_and_resubmit" | "human_review" | "fail";
+    decision: "pass" | "revise_and_resubmit" | "human_review";
     rubric_rows: Array<{
       label: string;
       score: number;
@@ -42,45 +42,13 @@ interface ArtifactFeedbackTabProps {
   isPanelExpanded: boolean;
   onSelectAttempt: (attemptNo: number) => void;
   latestEvaluation?: SubmittedArtifactAttempt["evaluation"];
+  isEvaluationLoading?: boolean;
 }
 
 const formatSubmittedDate = (uploadedAt: string | null | undefined) => {
   if (!uploadedAt) return "Submitted";
   return `Submitted ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(uploadedAt))}`;
 };
-
-const DEFAULT_RUBRIC_ROWS = [
-  {
-    label: "Completeness",
-    score: 3,
-    level: "Strongly demonstrated",
-    evidence: "Required prompt sections and fields are present.",
-  },
-  {
-    label: "Accuracy",
-    score: 2,
-    level: "Demonstrated",
-    evidence: "Content matches baseline evidence and instructions.",
-  },
-  {
-    label: "Evidence use",
-    score: 2,
-    level: "Demonstrated",
-    evidence: "Citations and source references included.",
-  },
-  {
-    label: "Judgement",
-    score: 2,
-    level: "Demonstrated",
-    evidence: "Identifies risks, gaps, and uncertainty.",
-  },
-  {
-    label: "Next action",
-    score: 2,
-    level: "Demonstrated",
-    evidence: "Role-appropriate recommendation provided.",
-  },
-].map((r) => ({ ...r, maxScore: 3, tone: "success" as const }));
 
 const DECISION_META = {
   pass: { label: "Passed", bg: "bg-success-50 text-success-700", border: "border-success-500" },
@@ -94,11 +62,6 @@ const DECISION_META = {
     bg: "bg-warning-50 text-warning-700",
     border: "border-warning-500",
   },
-  fail: {
-    label: "Failed",
-    bg: "bg-error-50 text-error-700",
-    border: "border-error-500",
-  },
 } as const;
 
 type DecisionMeta = (typeof DECISION_META)[keyof typeof DECISION_META];
@@ -109,6 +72,7 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
   isPanelExpanded,
   onSelectAttempt,
   latestEvaluation,
+  isEvaluationLoading = false,
 }) => {
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const selectedAttempt =
@@ -118,19 +82,16 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
   const submittedFileList = selectedAttempt?.files ?? [];
 
   const evaluationData = selectedAttempt?.evaluation ?? latestEvaluation;
-  const selectedScore = evaluationData?.overall_score ?? 85;
-  const decisionMeta: DecisionMeta =
-    DECISION_META[evaluationData?.decision ?? "revise_and_resubmit"] ??
-    DECISION_META.revise_and_resubmit;
-  const rubricList = evaluationData?.rubric_rows?.length
-    ? evaluationData.rubric_rows
-    : DEFAULT_RUBRIC_ROWS;
-  const feedbackText =
-    evaluationData?.feedback ||
-    "Pass: No critical failures and all essential criteria demonstrate target mastery.";
-  const improvementsText =
-    evaluationData?.improvements ||
-    "Elaborate further on root-cause evidence and specify concrete ownership for next steps.";
+  const selectedScore = evaluationData?.overall_score;
+  const decisionMeta: DecisionMeta | null = evaluationData
+    ? (DECISION_META[evaluationData.decision] ?? DECISION_META.human_review)
+    : null;
+  const rubricList = evaluationData?.rubric_rows ?? [];
+  const feedbackText = evaluationData?.feedback ?? "";
+  const improvementsText = evaluationData?.improvements ?? "";
+  const statusLabel = isEvaluationLoading
+    ? "Evaluation in progress…"
+    : "Evaluation not available for this attempt.";
 
   const handleDownload = async (
     file: Pick<ModuleArtifactSubmittedFile, "id" | "fileName" | "downloadUrl">,
@@ -158,7 +119,9 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Submitted artifact versions">
         {submittedAttempts.map((attempt) => {
           const isSelected = attempt.attemptNo === selectedAttempt?.attemptNo;
-          const attemptScore = attempt.evaluation?.overall_score ?? selectedScore;
+          const attemptScore =
+            attempt.evaluation?.overall_score ??
+            (attempt.attemptNo === selectedAttempt?.attemptNo ? selectedScore : null);
           return (
             <Button
               key={attempt.attemptNo}
@@ -178,7 +141,7 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
               <span
                 className={`rounded px-1.5 py-0.5 text-[10px] ${isSelected ? "bg-surface-primary text-success-700" : "bg-surface-primary text-content-muted"}`}
               >
-                {attemptScore}
+                {attemptScore ?? "–"}
               </span>
             </Button>
           );
@@ -188,15 +151,19 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
       <div className="rounded-xl border border-line-default bg-brand-50/30 p-3.5">
         <div className="flex items-center gap-3">
           <div
-            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 text-sm font-bold bg-surface-primary ${decisionMeta.border}`}
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 text-sm font-bold bg-surface-primary ${
+              decisionMeta?.border ?? "border-line-default"
+            }`}
           >
-            {selectedScore}
+            {selectedScore ?? "–"}
           </div>
           <div className="min-w-0 space-y-1">
             <span
-              className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-bold ${decisionMeta.bg}`}
+              className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-bold ${
+                decisionMeta?.bg ?? "bg-surface-muted text-content-muted"
+              }`}
             >
-              {decisionMeta.label}
+              {decisionMeta?.label ?? (isEvaluationLoading ? "Pending" : "Not Available")}
             </span>
             <p className="text-[11px] font-medium text-content-muted">
               {formatSubmittedDate(selectedAttempt?.submittedAt)}
@@ -223,7 +190,7 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
         <span
           className={`inline-flex items-center gap-1.5 text-brand-600 transition-all duration-300 ${isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"}`}
         >
-          <span className="h-5 w-5 rounded-full border-2 border-brand-200 border-t-brand-600 transition-transform duration-300 motion-safe:animate-spin" />
+          <span className="h-5 w-5 rounded-full border border-line-default bg-brand-50" />
           Staff Review
         </span>
         {isPanelExpanded ? (
@@ -232,7 +199,7 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
         <span
           className={`inline-flex items-center gap-1.5 text-content-muted transition-all duration-300 ${isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"}`}
         >
-          <span className="h-5 w-5 rounded-full border border-line-strong" />
+          <span className="h-5 w-5 rounded-full border border-line-default" />
           Industry Review
         </span>
       </div>
@@ -277,29 +244,33 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
         <h5 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-content-primary">
           LTE Standard Rubric Breakdown (0–3 Scale)
         </h5>
-        <div className="space-y-3">
-          {rubricList.map((row) => (
-            <div key={row.label} className="space-y-1">
-              <div className="flex items-center justify-between gap-2 text-[11px]">
-                <span className="font-bold text-content-primary">{row.label}</span>
-                <span className="font-bold text-brand-600">
-                  {row.score}/3 {row.level ? `(${row.level})` : ""}
-                </span>
+        {rubricList.length > 0 ? (
+          <div className="space-y-3">
+            {rubricList.map((row) => (
+              <div key={row.label} className="space-y-1">
+                <div className="flex items-center justify-between gap-2 text-[11px]">
+                  <span className="font-bold text-content-primary">{row.label}</span>
+                  <span className="font-bold text-brand-600">
+                    {row.score}/3 {row.level ? `(${row.level})` : ""}
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-line-subtle">
+                  <div
+                    className={`h-full rounded-full ${row.score >= 2 ? "bg-success-500" : "bg-warning-500"}`}
+                    style={{ width: `${(row.score / (row.maxScore || 3)) * 100}%` }}
+                  />
+                </div>
+                {row.evidence ? (
+                  <p className="text-[11px] italic leading-tight text-content-muted">
+                    Evidence: &ldquo;{row.evidence}&rdquo;
+                  </p>
+                ) : null}
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-line-subtle">
-                <div
-                  className={`h-full rounded-full ${row.score >= 2 ? "bg-success-500" : "bg-warning-500"}`}
-                  style={{ width: `${(row.score / (row.maxScore || 3)) * 100}%` }}
-                />
-              </div>
-              {row.evidence ? (
-                <p className="text-[11px] italic leading-tight text-content-muted">
-                  Evidence: &ldquo;{row.evidence}&rdquo;
-                </p>
-              ) : null}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-content-muted">{statusLabel}</p>
+        )}
       </div>
 
       <div className="rounded-xl border border-brand-100 bg-brand-50 p-3.5">
@@ -307,13 +278,19 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
           <MessageSquareIcon size={13} />
           AI & Evaluator Feedback
         </h5>
-        <p className="text-[12px] leading-relaxed text-content-primary">{feedbackText}</p>
-        {improvementsText ? (
-          <div className="mt-2.5 rounded-md bg-warning-50 p-2.5 text-[11px] font-medium text-warning-700">
-            <span className="block font-bold mb-0.5">Clear Actionable Improvement Point:</span>
-            {improvementsText}
-          </div>
-        ) : null}
+        {feedbackText ? (
+          <>
+            <p className="text-[12px] leading-relaxed text-content-primary">{feedbackText}</p>
+            {improvementsText ? (
+              <div className="mt-2.5 rounded-md bg-warning-50 p-2.5 text-[11px] font-medium text-warning-700">
+                <span className="block font-bold mb-0.5">Clear Actionable Improvement Point:</span>
+                {improvementsText}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <p className="text-[11px] text-content-muted">{statusLabel}</p>
+        )}
       </div>
     </div>
   );

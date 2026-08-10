@@ -8,7 +8,8 @@ export interface SubmissionEvaluationResponse {
     stage: string;
     status: string;
     score: number | null;
-    decision: "pass" | "fail" | null;
+    confidence: number | null;
+    decision: "pass" | "revise_and_resubmit" | "human_review" | null;
     feedback: string | null;
     improvements: string | null;
     completed_at: string | null;
