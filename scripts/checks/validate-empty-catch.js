@@ -21,7 +21,7 @@ async function main() {
   const filesToCheck = files.filter((file) => !allowedCatchFiles.includes(file));
 
   const violations = [];
-  for (const file of files) {
+  for (const file of filesToCheck) {
     try {
       const content = await readFile(file, "utf-8");
       let match;

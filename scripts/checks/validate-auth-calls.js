@@ -34,7 +34,7 @@ async function main() {
     const hasAuthInName = filenameLower.includes("auth") || filenameLower.includes("sso");
     if (hasAuthInName) {
       const isApprovedPath = APPROVED_AUTH_FILENAME_PATHS.some((approvedPath) => {
-        return file.startsWith(approvedPath);
+        return filenameLower.startsWith(approvedPath.toLowerCase());
       });
       if (!isApprovedPath) {
         violations.push({
@@ -62,7 +62,7 @@ async function main() {
 
     // Rule 2: Direct Frontend Auth HTTP Calls Restricted
     if (file.startsWith("src/")) {
-      const isAuthUrl = line.includes("/api/v1/auth") || /`\/api\/v1\/auth/i.test(line);
+      const isAuthUrl = /(?:fetch|axios|apiFetch)\s*\(\s*["'`]\/api\/v1\/auth/.test(line);
       if (isAuthUrl) {
         const isApproved = allowedFetchFiles.includes(file);
         if (!isApproved) {

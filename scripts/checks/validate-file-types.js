@@ -2,6 +2,7 @@
 
 import { collectFiles, reportFindings } from "../lib/walker.js";
 import { readFileSync } from "node:fs";
+import { extname } from "node:path";
 
 // Load configuration
 const config = JSON.parse(readFileSync(new URL("../config/codereview-rules.json", import.meta.url), "utf-8"));
@@ -19,7 +20,7 @@ async function main() {
 
   const violations = [];
   for (const file of allFiles) {
-    const ext = file.substring(file.lastIndexOf("."));
+    const ext = extname(file);
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       violations.push({
         file,

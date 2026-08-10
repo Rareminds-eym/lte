@@ -15,12 +15,10 @@ async function main() {
     excludeTests: true,
   });
 
-  const violations = [];
-
   // Focus on router files
   const routerFiles = files.filter((file) => file.includes("src/app/router/") || file.includes("AppRouter"));
 
-  const lineViolations = await scanLines(routerFiles, (line, lineNum) => {
+  const violations = await scanLines(routerFiles, (line, lineNum) => {
     // 1. Check for static imports of pages (allow skeletons as they must be static for Suspense fallbacks)
     const hasStaticPageImport = /import\s+.*?\s+from\s+["']@\/pages\/[^"']+/i.test(line) && !line.includes("Skeleton");
     if (hasStaticPageImport) {
@@ -42,8 +40,6 @@ async function main() {
 
     return null;
   });
-
-  violations.push(...lineViolations);
 
   reportFindings(violations, {
     headline: "Validating route-based lazy loading and Suspense wrapper configuration...",

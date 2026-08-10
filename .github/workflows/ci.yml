@@ -96,5 +96,5 @@ jobs:
 
       - name: Add Coverage to Job Summary
         if: always()
-        run: node scripts/add-coverage-summary.js
+        run: node scripts/tools/add-coverage-summary.js
 

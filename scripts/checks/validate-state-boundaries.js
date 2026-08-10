@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { collectFiles, scanLines, reportFindings } from "../lib/walker.js";
+import { collectFiles, reportFindings } from "../lib/walker.js";
 import { readFileSync } from "node:fs";
 
 const config = JSON.parse(readFileSync(new URL("../config/codereview-rules.json", import.meta.url), "utf-8"));

@@ -17,7 +17,7 @@ async function main() {
 
   const violations = await scanLines(files, (line, lineNum) => {
     // Match patterns like text-[#abc], bg-[#123456], etc.
-    const match = line.match(/(bg|text|border|ring|shadow|fill|stroke|from|to|via)-\[#([a-fA-F0-9]{3,6})\]/);
+    const match = line.match(/(bg|text|border|ring|shadow|fill|stroke|from|to|via)-\[#([a-fA-F0-9]{3,8})\]/);
     if (match && !line.trim().startsWith("//") && !line.trim().startsWith("*")) {
       return {
         rule: "Styling: Arbitrary design token usage",

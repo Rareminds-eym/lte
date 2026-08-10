@@ -22,7 +22,7 @@ async function main() {
         line.includes("@functions/") || 
         line.includes("from \"functions/") || 
         line.includes("from 'functions/") ||
-        /from\s+["'](\.\.\/)+functions\//.test(line);
+        /from\s+["'](\.\.\/)+functions(?:\/|["'])/.test(line);
 
       if (hasBackendImport) {
         return {
@@ -39,7 +39,7 @@ async function main() {
         line.includes("from '@/") || 
         line.includes("from \"src/") || 
         line.includes("from 'src/") ||
-        /from\s+["'](\.\.\/)+src\//.test(line);
+        /from\s+["'](\.\.\/)+src(?:\/|["'])/.test(line);
 
       if (hasFrontendImport) {
         return {

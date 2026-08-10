@@ -12,7 +12,6 @@ const DIRECTORIES_TO_CHECK = ["src"];
 // Regex patterns
 const KEBAB_CASE_REGEX = /^[a-z0-9-]+$/;
 const APPROVED_FILENAMES = ["index.ts", "main.tsx", "vite-env.d.ts", "setupTests.ts", "README.md"];
-const CAMEL_OR_PASCAL_REGEX = /^[a-zA-Z][a-zA-Z0-9]*(\.[a-z]+)?$/;
 
 async function main() {
   // Collect all files including tests (but exclude standard directories)
@@ -25,16 +24,18 @@ async function main() {
   const checkedDirs = new Set();
 
   for (const file of files) {
-    const dir = dirname(file);
+    const dir = dirname(file).replace(/\\/g, "/");
     const filename = file.substring(file.lastIndexOf("/") + 1);
 
     // 1. Validate Directory Naming (Kebab-case)
     if (dir !== "src") {
+      let currentPath = "src";
       const dirParts = dir.split("/");
       for (const part of dirParts) {
         if (part === "src" || part === "__tests__" || part === "__mocks__") continue;
-        if (!checkedDirs.has(part)) {
-          checkedDirs.add(part);
+        currentPath = currentPath + "/" + part;
+        if (!checkedDirs.has(currentPath)) {
+          checkedDirs.add(currentPath);
           if (!KEBAB_CASE_REGEX.test(part)) {
             violations.push({
               file,
@@ -50,7 +51,7 @@ async function main() {
     // 2. Validate File Naming (PascalCase for component files, camelCase for hooks and utilities)
     // Strip test prefixes like .test.tsx or .spec.ts to determine original source file naming type
     const isTestFile = filename.includes(".test.") || filename.includes(".spec.");
-    const cleanFilename = filename.replace(/\.(test|spec)\.[a-z]+$/, "");
+    const cleanFilename = filename.replace(/\.(test|spec)\.([a-z0-9]+)$/, ".$2");
     
     if (!APPROVED_FILENAMES.includes(filename) && !APPROVED_FILENAMES.includes(cleanFilename)) {
       const extIndex = cleanFilename.lastIndexOf(".");

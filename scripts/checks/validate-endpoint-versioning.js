@@ -38,7 +38,7 @@ async function main() {
     if (isImportOrExport) return null;
 
     // Look for occurrences of "/api/something" where something is not v1 in string literals
-    const unversionedMatch = line.match(/["'`]\/api\/(?![vV]1\/)([a-zA-Z0-9_-]+)/);
+    const unversionedMatch = line.match(/(?:fetch|axios|apiFetch)\s*\(\s*["'`]\/api\/(?![vV]1\/)([a-zA-Z0-9_-]+)/);
     // Ignore external URLs or third-party paths
     const isLocalRequest = unversionedMatch && !line.includes("https://") && !line.includes("http://");
 

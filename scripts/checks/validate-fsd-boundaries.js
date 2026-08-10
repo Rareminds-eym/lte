@@ -55,7 +55,7 @@ async function main() {
 
   // Scan import statements
   const lineViolations = await scanLines(files, (line, lineNum, file) => {
-    const importMatch = line.match(/import\s+.*?\s+from\s+["'](@\/([^"'\s]+))["']/);
+    const importMatch = line.match(/(?:from|import)\s*\(?\s*["'](@\/([^"'\s]+))["']/);
     if (!importMatch) return null;
 
     const importPath = importMatch[2]; // e.g. "features/xp-reward/ui/XpRewardModal"
