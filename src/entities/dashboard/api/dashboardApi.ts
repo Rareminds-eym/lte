@@ -1,6 +1,7 @@
 import { apiFetch } from "@/shared/api";
 import {
   DashboardJourneyResponseSchema,
+  DashboardStreakResponseSchema,
   DashboardXpResponseSchema,
 } from "../model/dashboardSchemas";
 import type { DashboardData } from "../model/types";
@@ -213,10 +214,11 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
   const localMonday = new Date(now);
   localMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
 
-  const [xpResult, journeyResult] = await Promise.allSettled([
+  const [xpResult, streakResult, journeyResult] = await Promise.allSettled([
     apiFetch(
       `/api/v1/dashboard/xp?since=${encodeURIComponent(localMidnight(localMonday).toISOString())}&todaySince=${encodeURIComponent(localMidnight(now).toISOString())}`,
     ),
+    apiFetch("/api/v1/dashboard/streak"),
     apiFetch("/api/v1/dashboard/journey"),
   ]);
 
@@ -240,6 +242,15 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
     base.careerTarget = { ...base.careerTarget, xp: 0, xpThisWeek: 0 };
     base.priorities = { ...base.priorities, currentXp: 0 };
   }
+
+  const parsedStreak =
+    streakResult.status === "fulfilled"
+      ? DashboardStreakResponseSchema.safeParse(streakResult.value)
+      : null;
+  base.careerTarget = {
+    ...base.careerTarget,
+    streakDays: parsedStreak?.success ? parsedStreak.data.streakDays : 0,
+  };
 
   const parsedJourney =
     journeyResult.status === "fulfilled"
