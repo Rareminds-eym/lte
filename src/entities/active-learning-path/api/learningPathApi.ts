@@ -9,6 +9,8 @@ const ActiveTrackRoleSchema = z.object({
   readinessScore: z.number().optional().default(0),
   status: z.string().optional().default("not_started"),
   updatedAt: z.string().nullable().default(null),
+  domain: z.string().optional(),
+  metadata: z.record(z.string(), z.any()).optional().default({}),
 });
 
 const CareerTrackItemSchema = z.object({

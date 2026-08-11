@@ -92,6 +92,11 @@ export const DashboardPage: React.FC = () => {
               firstRole?.readinessScore !== undefined
                 ? firstRole.readinessScore
                 : activeTrack.matchScore,
+            domain: firstRole?.domain || data.careerTarget.domain,
+            industry:
+              typeof firstRole?.metadata?.["industry"] === "string"
+                ? firstRole.metadata["industry"]
+                : data.careerTarget.industry,
           },
           careerPaths: {
             ...data.careerPaths,

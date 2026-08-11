@@ -25,6 +25,7 @@ const LearningTrackDataSchema = z.object({
       fit: z.string(),
       matchScore: z.number(),
       whyItFits: z.string(),
+      industry: z.string().optional(),
     })
     .optional(),
   tracks: z
@@ -37,6 +38,7 @@ const LearningTrackDataSchema = z.object({
         fit: z.string(),
         matchScore: z.number(),
         whyItFits: z.string(),
+        industry: z.string().optional(),
       }),
     )
     .optional(),
@@ -127,6 +129,7 @@ export async function resolveActiveTrack(
             userId,
             trackId,
             roleId,
+            metadata: trackItem.industry ? { industry: trackItem.industry } : {},
           });
 
           // Sync capabilities for any role belonging to the active track

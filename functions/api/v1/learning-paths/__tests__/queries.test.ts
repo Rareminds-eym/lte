@@ -140,6 +140,8 @@ describe("learning-paths queries", () => {
             readinessScore: 75,
             status: "in_progress",
             updatedAt: "2026-08-11T09:00:00Z",
+            domain: "",
+            metadata: {},
           },
           {
             roleId: "role-1",
@@ -148,6 +150,8 @@ describe("learning-paths queries", () => {
             readinessScore: 10,
             status: "not_started",
             updatedAt: "2026-08-11T08:00:00Z",
+            domain: "",
+            metadata: {},
           },
         ],
         tracks: [
@@ -313,7 +317,7 @@ describe("learning-paths queries", () => {
       const supabase = supabaseWith({
         learning_paths: {
           insert: { error: uniqueViolation },
-          query: { data: { id: "lp1" } },
+          update: { data: { id: "lp1" } },
         },
       });
 
@@ -330,7 +334,7 @@ describe("learning-paths queries", () => {
       });
 
       await expect(upsertLearningPath(supabase, params)).rejects.toThrow(
-        "Failed to retrieve existing learning path: boom",
+        "Failed to retrieve or update existing learning path: boom",
       );
     });
 
