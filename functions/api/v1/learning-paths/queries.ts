@@ -96,10 +96,13 @@ export async function getActiveLearningTrack(
       const scoreB =
         b.status === PATH_STATUS.IN_PROGRESS ? 2 : b.status === PATH_STATUS.COMPLETED ? 1 : 0;
       if (scoreA !== scoreB) return scoreB - scoreA;
-      let timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-      let timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-      if (Number.isNaN(timeA)) timeA = 0;
-      if (Number.isNaN(timeB)) timeB = 0;
+      const parseTime = (dateStr: string | null): number => {
+        if (!dateStr) return 0;
+        const time = new Date(dateStr).getTime();
+        return Number.isNaN(time) ? 0 : time;
+      };
+      const timeA = parseTime(a.updatedAt);
+      const timeB = parseTime(b.updatedAt);
       return timeB - timeA;
     });
 
