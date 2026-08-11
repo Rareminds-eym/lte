@@ -36,7 +36,7 @@ export interface ActiveTrackRole {
   learningPathId: string;
   readinessScore: number;
   status: string;
-  updatedAt: string;
+  updatedAt: string | null;
 }
 
 export interface CareerTrackItem {

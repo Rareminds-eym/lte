@@ -1,13 +1,19 @@
 import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export const PATH_STATUS = {
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  NOT_STARTED: "not_started",
+} as const;
+
 export interface ActiveTrackRole {
   roleId: string;
   roleName: string;
   learningPathId: string;
   readinessScore: number;
   status: string;
-  updatedAt: string;
+  updatedAt: string | null;
 }
 
 export interface CareerTrackItem {
@@ -80,15 +86,19 @@ export async function getActiveLearningTrack(
         readinessScore: p.role_readiness_percentage
           ? Math.round(Number(p.role_readiness_percentage))
           : 0,
-        status: p.status ?? "not_started",
-        updatedAt: p.updated_at ?? new Date().toISOString(),
+        status: p.status ?? PATH_STATUS.NOT_STARTED,
+        updatedAt: p.updated_at ?? null,
       };
     })
     .sort((a, b) => {
-      const scoreA = a.status === "in_progress" ? 2 : a.status === "completed" ? 1 : 0;
-      const scoreB = b.status === "in_progress" ? 2 : b.status === "completed" ? 1 : 0;
+      const scoreA =
+        a.status === PATH_STATUS.IN_PROGRESS ? 2 : a.status === PATH_STATUS.COMPLETED ? 1 : 0;
+      const scoreB =
+        b.status === PATH_STATUS.IN_PROGRESS ? 2 : b.status === PATH_STATUS.COMPLETED ? 1 : 0;
       if (scoreA !== scoreB) return scoreB - scoreA;
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return timeB - timeA;
     });
 
   // 3. Fetch all recommended tracks for the user

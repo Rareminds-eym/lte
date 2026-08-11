@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useLearningPathStore } from "@/entities/active-learning-path";
 import { Dashboard } from "@/pages/dashboard";
 
 vi.mock("@/shared/api", () => ({
@@ -22,6 +23,50 @@ const createTestQueryClient = () =>
 describe("Dashboard Page", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    useLearningPathStore.setState({
+      activeTrack: {
+        learningTrackId: "lt-1",
+        track: "Backend Engineering",
+        fit: "High",
+        matchScore: 46,
+        whyItFits: "This role aligns...",
+        roles: [
+          {
+            roleId: "role-1",
+            roleName: "Backend Engineer",
+            learningPathId: "lp-1",
+            readinessScore: 45,
+            status: "in_progress",
+            updatedAt: null,
+          },
+        ],
+        tracks: [
+          {
+            id: "tr-1",
+            title: "Backend Engineering",
+            matchPercentage: 46,
+            isSelected: true,
+            fit: "High",
+          },
+          {
+            id: "tr-2",
+            title: "Full-Stack Development",
+            matchPercentage: 25,
+            isSelected: false,
+            fit: "Medium",
+          },
+          {
+            id: "tr-3",
+            title: "DevOps & Platform Engineering",
+            matchPercentage: 0,
+            isSelected: false,
+            fit: "Explore",
+          },
+        ],
+      },
+      needsAssessment: false,
+      activeLearningPathLoading: false,
+    });
     vi.mocked(apiFetch).mockImplementation((url: string) => {
       if (url.includes("/api/v1/dashboard/xp")) {
         return Promise.resolve({

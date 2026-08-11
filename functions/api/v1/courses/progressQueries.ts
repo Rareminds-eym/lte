@@ -107,6 +107,24 @@ export async function upsertLevelProgress(
       if (updateError) {
         throw new Error(`Failed to update level progress status: ${updateError.message}`);
       }
+
+      // Check and update learning path status to in_progress
+      const { data: pathData } = await supabase
+        .from("learning_paths")
+        .select("status, started_at")
+        .eq("id", learningPathId)
+        .maybeSingle();
+
+      if (pathData && pathData.status === "not_started") {
+        await supabase
+          .from("learning_paths")
+          .update({
+            status: "in_progress",
+            started_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", learningPathId);
+      }
     }
     return existingProgress.id;
   }
@@ -201,6 +219,26 @@ export async function upsertLevelProgress(
 
   if (insertError) {
     throw new Error(`Failed to insert level progress: ${insertError.message}`);
+  }
+
+  // Check and update learning path status to in_progress
+  if (status === "in_progress") {
+    const { data: pathData } = await supabase
+      .from("learning_paths")
+      .select("status, started_at")
+      .eq("id", learningPathId)
+      .maybeSingle();
+
+    if (pathData && pathData.status === "not_started") {
+      await supabase
+        .from("learning_paths")
+        .update({
+          status: "in_progress",
+          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", learningPathId);
+    }
   }
 
   return inserted.id;

@@ -93,7 +93,7 @@ async function calculateReadinessInternal(
   // Query level progress to identify levels associated with this learning path
   const { data: levelProgressRows, error: levelProgressErr } = await supabase
     .from("user_capability_level_progress")
-    .select("id, level_id, completion_percentage")
+    .select("id, level_id, completion_percentage, status, started_at")
     .eq("learning_path_id", learningPathId);
 
   if (levelProgressErr) throw levelProgressErr;
@@ -317,35 +317,83 @@ async function calculateReadinessInternal(
   else if (readinessScore >= 60) band = "Internship Ready";
   else if (readinessScore >= 40) band = "Learning in Progress";
 
-  // Update learning path role readiness percentage
+  // Update learning path role readiness percentage, status, started_at, completed_at, and updated_at
   const { data: learningPath } = await supabase
     .from("learning_paths")
-    .select("role_id, role_readiness_percentage")
+    .select("role_id, role_readiness_percentage, status, started_at, completed_at")
     .eq("id", learningPathId)
     .maybeSingle();
 
   const currentPercentage = learningPath?.role_readiness_percentage || 0;
 
-  if (readinessScore > currentPercentage) {
-    await supabase
-      .from("learning_paths")
-      .update({
-        role_readiness_percentage: readinessScore,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", learningPathId);
+  let newStatus = "not_started";
+  const hasStartedAnyLevel = (levelProgressRows || []).some(
+    (row) => row.status === "in_progress" || row.status === "completed",
+  );
 
-    // 7. Auto-evaluate and award readiness milestones after score update
-    if (learningPath?.role_id) {
-      try {
-        await evaluateMilestones(supabase, userId, learningPath.role_id, readinessScore);
-      } catch (err) {
-        // Non-fatal: milestone evaluation failure should not break readiness calculation
-        apiLogger.error("[XP] evaluateMilestones failed", err, {
-          userId,
-          roleId: learningPath.role_id,
-        });
+  const allLevelsCompleted =
+    (levelProgressRows || []).length > 0 &&
+    (levelProgressRows || []).every((row) => row.status === "completed");
+
+  if (allLevelsCompleted) {
+    newStatus = "completed";
+  } else if (hasStartedAnyLevel) {
+    newStatus = "in_progress";
+  }
+
+  // Comply with learning_paths database check constraints:
+  // 1. If status is not_started: started_at and completed_at MUST be null.
+  // 2. If status is in_progress: started_at MUST be non-null and completed_at MUST be null.
+  // 3. If status is completed: both started_at and completed_at MUST be non-null.
+  let startedAt: string | null = null;
+  let completedAt: string | null = null;
+
+  if (newStatus === "in_progress" || newStatus === "completed") {
+    // Find the earliest started_at timestamp from the user's capability level progress rows
+    const activeLevelsWithStart = (levelProgressRows || []).filter(
+      (row) => (row.status === "in_progress" || row.status === "completed") && row.started_at,
+    );
+
+    if (activeLevelsWithStart.length > 0) {
+      const dates = activeLevelsWithStart
+        .map((row) => (row.started_at ? new Date(row.started_at).getTime() : 0))
+        .filter((time) => time > 0);
+      if (dates.length > 0) {
+        const earliestTime = Math.min(...dates);
+        startedAt = new Date(earliestTime).toISOString();
+      } else {
+        startedAt = learningPath?.started_at ?? new Date().toISOString();
       }
+    } else {
+      startedAt = learningPath?.started_at ?? new Date().toISOString();
+    }
+  }
+
+  if (newStatus === "completed") {
+    completedAt = learningPath?.completed_at ?? new Date().toISOString();
+  }
+
+  await supabase
+    .from("learning_paths")
+    .update({
+      role_readiness_percentage: readinessScore,
+      status: newStatus,
+      started_at: startedAt,
+      completed_at: completedAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", learningPathId);
+
+  // Auto-evaluate and award readiness milestones after score update
+  if (readinessScore > currentPercentage && learningPath?.role_id) {
+    try {
+      await evaluateMilestones(supabase, userId, learningPath.role_id, readinessScore);
+    } catch (err) {
+      // Non-fatal: milestone evaluation failure should not break readiness calculation
+      apiLogger.error("[XP] evaluateMilestones failed", err, {
+        userId,
+        roleId: learningPath.role_id,
+      });
     }
   }
 

@@ -47,7 +47,7 @@ const MOCK_TRACK = {
       learningPathId: "path-1",
       readinessScore: 0,
       status: "not_started",
-      updatedAt: "",
+      updatedAt: null,
     },
   ],
   tracks: [],
