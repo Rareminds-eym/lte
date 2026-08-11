@@ -3,6 +3,7 @@ import {
   getLevelsForCapability,
 } from "@functions/api/v1/capabilities/queries";
 import { getLevelWithModules } from "@functions/api/v1/courses/queries";
+import type { ActiveTrackDetail } from "@functions/api/v1/learning-paths/queries";
 import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
@@ -34,13 +35,22 @@ vi.mock("@functions/api/v1/courses/queries", async (importOriginal) => {
   return { ...actual, getLevelWithModules: vi.fn() };
 });
 
-const MOCK_TRACK = {
+const MOCK_TRACK: ActiveTrackDetail = {
   learningTrackId: "track-1",
   track: "Backend",
   fit: "high",
   matchScore: 80,
   whyItFits: "",
-  roles: [{ roleId: "role-1", roleName: "Developer", learningPathId: "path-1" }],
+  roles: [
+    {
+      roleId: "role-1",
+      roleName: "Developer",
+      learningPathId: "path-1",
+      readinessScore: 0,
+      status: "not_started",
+      updatedAt: null,
+    },
+  ],
   tracks: [],
   overallProgress: 0,
   completionCount: 0,

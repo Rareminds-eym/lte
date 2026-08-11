@@ -1,10 +1,19 @@
 import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export const PATH_STATUS = {
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  NOT_STARTED: "not_started",
+} as const;
+
 export interface ActiveTrackRole {
   roleId: string;
   roleName: string;
   learningPathId: string;
+  readinessScore: number;
+  status: "in_progress" | "completed" | "not_started";
+  updatedAt: string | null;
 }
 
 export interface CareerTrackItem {
@@ -53,6 +62,9 @@ export async function getActiveLearningTrack(
     .select(`
       id,
       role_id,
+      role_readiness_percentage,
+      status,
+      updated_at,
       roles (
         role_name
       )
@@ -64,14 +76,35 @@ export async function getActiveLearningTrack(
     throw new Error(`Failed to fetch paths for active track: ${pathsError.message}`);
   }
 
-  const roles: ActiveTrackRole[] = (pathsData ?? []).map((p) => {
-    const roleData = Array.isArray(p.roles) ? p.roles[0] : p.roles;
-    return {
-      roleId: p.role_id,
-      roleName: roleData?.role_name ?? "",
-      learningPathId: p.id,
-    };
-  });
+  const roles: ActiveTrackRole[] = (pathsData ?? [])
+    .map((p) => {
+      const roleData = Array.isArray(p.roles) ? p.roles[0] : p.roles;
+      return {
+        roleId: p.role_id,
+        roleName: roleData?.role_name ?? "",
+        learningPathId: p.id,
+        readinessScore: p.role_readiness_percentage
+          ? Math.round(Number(p.role_readiness_percentage))
+          : 0,
+        status: p.status ?? PATH_STATUS.NOT_STARTED,
+        updatedAt: p.updated_at ?? null,
+      };
+    })
+    .sort((a, b) => {
+      const scoreA =
+        a.status === PATH_STATUS.IN_PROGRESS ? 2 : a.status === PATH_STATUS.COMPLETED ? 1 : 0;
+      const scoreB =
+        b.status === PATH_STATUS.IN_PROGRESS ? 2 : b.status === PATH_STATUS.COMPLETED ? 1 : 0;
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      const parseTime = (dateStr: string | null): number => {
+        if (!dateStr) return 0;
+        const time = new Date(dateStr).getTime();
+        return Number.isNaN(time) || time <= 0 ? 0 : time;
+      };
+      const timeA = parseTime(a.updatedAt);
+      const timeB = parseTime(b.updatedAt);
+      return timeB - timeA;
+    });
 
   // 3. Fetch all recommended tracks for the user
   const { data: tracksData, error: tracksError } = await supabase

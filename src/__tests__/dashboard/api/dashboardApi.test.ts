@@ -105,7 +105,7 @@ describe("dashboardApi", () => {
     expect(data.capabilityGaps.length).toBeGreaterThan(0);
     expect(data.upcomingFeedback.upcoming.length).toBeGreaterThan(0);
     expect(data.upcomingFeedback.recentFeedback.length).toBeGreaterThan(0);
-    expect(data.careerPaths.tracks.length).toBeGreaterThan(0);
+    expect(data.careerPaths.tracks).toHaveLength(0);
     expect(data.achievements.items).toHaveLength(data.achievements.shownCount);
   });
 

@@ -108,7 +108,18 @@ describe("learning-paths queries", () => {
               {
                 id: "lp-1",
                 role_id: "role-1",
+                role_readiness_percentage: 10,
+                status: "not_started",
+                updated_at: "2026-08-11T08:00:00Z",
                 roles: [{ role_name: "React Developer" }],
+              },
+              {
+                id: "lp-2",
+                role_id: "role-2",
+                role_readiness_percentage: 75,
+                status: "in_progress",
+                updated_at: "2026-08-11T09:00:00Z",
+                roles: [{ role_name: "Lead Developer" }],
               },
             ],
           },
@@ -123,9 +134,20 @@ describe("learning-paths queries", () => {
         whyItFits: "Good match",
         roles: [
           {
+            roleId: "role-2",
+            roleName: "Lead Developer",
+            learningPathId: "lp-2",
+            readinessScore: 75,
+            status: "in_progress",
+            updatedAt: "2026-08-11T09:00:00Z",
+          },
+          {
             roleId: "role-1",
             roleName: "React Developer",
             learningPathId: "lp-1",
+            readinessScore: 10,
+            status: "not_started",
+            updatedAt: "2026-08-11T08:00:00Z",
           },
         ],
         tracks: [

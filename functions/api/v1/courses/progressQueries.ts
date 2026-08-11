@@ -472,25 +472,31 @@ export async function upsertStageProgress(
 
   if (existingProgress) {
     stageProgressId = existingProgress.id;
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: {
+      last_viewed_at?: string;
+      updated_at?: string;
+      time_spent_seconds?: number;
+      status?: string;
+      completed_at?: string;
+    } = {};
     const isCompletingStage = existingProgress.status !== "completed" && status === "completed";
     const shouldUpdateViewingTouch = status !== "completed" || sanitizedDurationSeconds > 0;
 
     if (shouldUpdateViewingTouch) {
-      updatePayload["last_viewed_at"] = now;
-      updatePayload["updated_at"] = now;
+      updatePayload.last_viewed_at = now;
+      updatePayload.updated_at = now;
     }
 
     if (sanitizedDurationSeconds > 0) {
-      updatePayload["time_spent_seconds"] =
+      updatePayload.time_spent_seconds =
         (existingProgress.time_spent_seconds ?? 0) + sanitizedDurationSeconds;
     }
 
     // Only transition status if moving to completed
     if (isCompletingStage) {
-      updatePayload["status"] = "completed";
-      updatePayload["completed_at"] = now;
-      updatePayload["updated_at"] = now;
+      updatePayload.status = "completed";
+      updatePayload.completed_at = now;
+      updatePayload.updated_at = now;
     }
 
     if (Object.keys(updatePayload).length > 0) {

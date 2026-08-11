@@ -80,14 +80,18 @@ export const DashboardPage: React.FC = () => {
   }
 
   // Merge the real active track details and list of tracks from store if available
+  const firstRole = activeTrack?.roles?.[0];
   const mergedData =
     data && activeTrack
       ? {
           ...data,
           careerTarget: {
             ...data.careerTarget,
-            title: activeTrack.track,
-            readinessPercentage: activeTrack.matchScore,
+            title: firstRole?.roleName || activeTrack.track,
+            readinessPercentage:
+              firstRole?.readinessScore !== undefined
+                ? firstRole.readinessScore
+                : activeTrack.matchScore,
           },
           careerPaths: {
             ...data.careerPaths,

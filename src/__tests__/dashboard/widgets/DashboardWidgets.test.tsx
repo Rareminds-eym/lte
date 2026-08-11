@@ -124,9 +124,44 @@ describe("Dashboard Widgets", () => {
   });
 
   it("renders CareerPaths with track explorer and match stats", () => {
+    const mockCareerPaths = {
+      activeTrackTitle: "Backend Engineering",
+      matchPercentage: 45,
+      description:
+        "This role channels the student's analytical mindset into designing APIs, databases, and scalable services that power real-world products used by thousands of people.",
+      whyItFits:
+        "This role aligns perfectly with the student's logical reasoning and problem-solving strengths, enabling them to build powerful, reliable systems that form the backbone of modern applications.",
+      overallProgress: 35,
+      capabilitiesCount: 6,
+      competitionCount: 1,
+      marketStatusPercentage: 80,
+      tracks: [
+        {
+          id: "tr-1",
+          title: "Backend Engineering",
+          matchPercentage: 45,
+          isSelected: true,
+          fit: "High",
+        },
+        {
+          id: "tr-2",
+          title: "Full-Stack Development",
+          matchPercentage: 25,
+          isSelected: false,
+          fit: "Medium",
+        },
+        {
+          id: "tr-3",
+          title: "DevOps & Platform Engineering",
+          isExplore: true,
+          isSelected: false,
+          fit: "Explore",
+        },
+      ],
+    };
     render(
       <MemoryRouter>
-        <CareerPaths data={MOCK_DASHBOARD_DATA.careerPaths} />
+        <CareerPaths data={mockCareerPaths} />
       </MemoryRouter>,
     );
     expect(screen.getByText("Recommended Career Paths")).toBeInTheDocument();
