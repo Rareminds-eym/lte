@@ -40,7 +40,16 @@ const MOCK_TRACK = {
   fit: "high",
   matchScore: 80,
   whyItFits: "",
-  roles: [{ roleId: "role-1", roleName: "Developer", learningPathId: "path-1" }],
+  roles: [
+    {
+      roleId: "role-1",
+      roleName: "Developer",
+      learningPathId: "path-1",
+      readinessScore: 0,
+      status: "not_started",
+      updatedAt: "",
+    },
+  ],
   tracks: [],
   overallProgress: 0,
   completionCount: 0,

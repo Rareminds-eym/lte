@@ -86,8 +86,11 @@ export const DashboardPage: React.FC = () => {
           ...data,
           careerTarget: {
             ...data.careerTarget,
-            title: activeTrack.track,
-            readinessPercentage: activeTrack.matchScore,
+            title: activeTrack.roles?.[0]?.roleName || activeTrack.track,
+            readinessPercentage:
+              activeTrack.roles?.[0]?.readinessScore !== undefined
+                ? activeTrack.roles[0].readinessScore
+                : activeTrack.matchScore,
           },
           careerPaths: {
             ...data.careerPaths,

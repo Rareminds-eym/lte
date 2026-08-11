@@ -5,6 +5,9 @@ export interface ActiveTrackRole {
   roleId: string;
   roleName: string;
   learningPathId: string;
+  readinessScore: number;
+  status: string;
+  updatedAt: string;
 }
 
 export interface CareerTrackItem {
@@ -53,6 +56,9 @@ export async function getActiveLearningTrack(
     .select(`
       id,
       role_id,
+      role_readiness_percentage,
+      status,
+      updated_at,
       roles (
         role_name
       )
@@ -64,14 +70,26 @@ export async function getActiveLearningTrack(
     throw new Error(`Failed to fetch paths for active track: ${pathsError.message}`);
   }
 
-  const roles: ActiveTrackRole[] = (pathsData ?? []).map((p) => {
-    const roleData = Array.isArray(p.roles) ? p.roles[0] : p.roles;
-    return {
-      roleId: p.role_id,
-      roleName: roleData?.role_name ?? "",
-      learningPathId: p.id,
-    };
-  });
+  const roles: ActiveTrackRole[] = (pathsData ?? [])
+    .map((p) => {
+      const roleData = Array.isArray(p.roles) ? p.roles[0] : p.roles;
+      return {
+        roleId: p.role_id,
+        roleName: roleData?.role_name ?? "",
+        learningPathId: p.id,
+        readinessScore: p.role_readiness_percentage
+          ? Math.round(Number(p.role_readiness_percentage))
+          : 0,
+        status: p.status ?? "not_started",
+        updatedAt: p.updated_at ?? new Date().toISOString(),
+      };
+    })
+    .sort((a, b) => {
+      const scoreA = a.status === "in_progress" ? 2 : a.status === "completed" ? 1 : 0;
+      const scoreB = b.status === "in_progress" ? 2 : b.status === "completed" ? 1 : 0;
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
 
   // 3. Fetch all recommended tracks for the user
   const { data: tracksData, error: tracksError } = await supabase
