@@ -341,6 +341,8 @@ async function calculateReadinessInternal(
     newStatus = "in_progress";
   }
 
+  const now = new Date().toISOString();
+
   // Comply with learning_paths database check constraints:
   // 1. If status is not_started: started_at and completed_at MUST be null.
   // 2. If status is in_progress: started_at MUST be non-null and completed_at MUST be null.
@@ -357,20 +359,20 @@ async function calculateReadinessInternal(
     if (activeLevelsWithStart.length > 0) {
       const dates = activeLevelsWithStart
         .map((row) => (row.started_at ? new Date(row.started_at).getTime() : 0))
-        .filter((time) => time > 0);
+        .filter((time) => !Number.isNaN(time) && time > 0);
       if (dates.length > 0) {
         const earliestTime = Math.min(...dates);
         startedAt = new Date(earliestTime).toISOString();
       } else {
-        startedAt = learningPath?.started_at ?? new Date().toISOString();
+        startedAt = learningPath?.started_at ?? now;
       }
     } else {
-      startedAt = learningPath?.started_at ?? new Date().toISOString();
+      startedAt = learningPath?.started_at ?? now;
     }
   }
 
   if (newStatus === "completed") {
-    completedAt = learningPath?.completed_at ?? new Date().toISOString();
+    completedAt = learningPath?.completed_at ?? now;
   }
 
   await supabase
@@ -380,7 +382,7 @@ async function calculateReadinessInternal(
       status: newStatus,
       started_at: startedAt,
       completed_at: completedAt,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })
     .eq("id", learningPathId);
 

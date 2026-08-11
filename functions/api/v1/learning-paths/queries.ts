@@ -12,7 +12,7 @@ export interface ActiveTrackRole {
   roleName: string;
   learningPathId: string;
   readinessScore: number;
-  status: string;
+  status: "in_progress" | "completed" | "not_started";
   updatedAt: string | null;
 }
 
@@ -96,8 +96,10 @@ export async function getActiveLearningTrack(
       const scoreB =
         b.status === PATH_STATUS.IN_PROGRESS ? 2 : b.status === PATH_STATUS.COMPLETED ? 1 : 0;
       if (scoreA !== scoreB) return scoreB - scoreA;
-      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      let timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      let timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      if (Number.isNaN(timeA)) timeA = 0;
+      if (Number.isNaN(timeB)) timeB = 0;
       return timeB - timeA;
     });
 

@@ -8,7 +8,7 @@ const ActiveTrackRoleSchema = z.object({
   learningPathId: z.string(),
   readinessScore: z.number().optional().default(0),
   status: z.string().optional().default("not_started"),
-  updatedAt: z.string().nullable().optional().default(null),
+  updatedAt: z.string().nullable().default(null),
 });
 
 const CareerTrackItemSchema = z.object({
