@@ -2,12 +2,15 @@ import type React from "react";
 import type { TodaysPrioritiesData } from "@/entities/dashboard";
 import { WidgetCard } from "@/shared/ui";
 import {
+  ApiLatencyAnalysisIcon,
   ArrowRightIcon,
   BookOpenIcon,
   CalendarIcon,
   ClipboardCheckIcon,
   ClockIcon,
   DocumentIcon,
+  KnowledgeCheckIcon,
+  VisualHierarchyIcon,
 } from "@/shared/ui/icons";
 
 export interface TodaysPrioritiesProps {
@@ -53,9 +56,12 @@ export const TodaysPriorities: React.FC<TodaysPrioritiesProps> = ({ data }) => {
                 <div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconStyles}`}
                 >
-                  {item.type === "green" && <DocumentIcon size={20} />}
-                  {item.type === "purple" && <BookOpenIcon size={20} />}
-                  {item.type === "amber" && <ClipboardCheckIcon size={20} />}
+                  {item.id === "pri-1" && <ApiLatencyAnalysisIcon size={26} />}
+                  {item.id !== "pri-1" && item.type === "green" && <DocumentIcon size={20} />}
+                  {item.id === "pri-2" && <VisualHierarchyIcon size={26} />}
+                  {item.id !== "pri-2" && item.type === "purple" && <BookOpenIcon size={20} />}
+                  {item.id === "pri-3" && <KnowledgeCheckIcon size={26} />}
+                  {item.id !== "pri-3" && item.type === "amber" && <ClipboardCheckIcon size={20} />}
                 </div>
                 <div className="min-w-0 pt-0.5">
                   <h3 className="text-sm font-bold text-content-primary group-hover:text-brand-600 transition-colors leading-snug">

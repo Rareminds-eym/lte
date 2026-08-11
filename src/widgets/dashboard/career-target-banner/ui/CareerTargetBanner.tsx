@@ -1,6 +1,13 @@
 import type React from "react";
 import type { CareerTargetData } from "@/entities/dashboard";
-import { ArrowRightIcon, SlidersIcon, TargetArrowIcon } from "@/shared/ui/icons";
+import {
+  ArrowRightIcon,
+  BadgeMedalIcon,
+  SlidersIcon,
+  StreakFlameIcon,
+  TargetArrowIcon,
+  XpStatIcon,
+} from "@/shared/ui/icons";
 
 export interface CareerTargetBannerProps {
   data: CareerTargetData;
@@ -10,7 +17,6 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
   return (
     <div className="bg-surface-primary rounded-2xl border border-line-default p-6 sm:px-8 sm:py-6 shadow-xs">
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-6">
-        {/* 1. Left Section: Career Target title stacked ABOVE the Role Readiness donut row */}
         <div className="flex flex-col gap-3">
           <div className="space-y-0.5">
             <div className="text-[12px] font-medium text-content-secondary flex items-center gap-1.5">
@@ -32,8 +38,6 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Readiness Ring — decorative segmented cyan→blue gradient ring (4 rounded
-                segments with gaps), percentage shown as the centered label. */}
             <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
               <svg aria-hidden="true" className="w-16 h-16" viewBox="0 0 36 36">
                 <defs>
@@ -42,7 +46,6 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
                     <stop offset="100%" className="[stop-color:var(--color-accent-cyan)]" />
                   </linearGradient>
                 </defs>
-                {/* pathLength normalizes the circle to 100 units: 4 dashes of 16 + 4 gaps of 9 */}
                 <path
                   stroke="url(#readinessRingGradient)"
                   strokeWidth="3.5"
@@ -79,11 +82,8 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
           </div>
         </div>
 
-        {/* Vertical Divider 1 */}
         <div className="hidden lg:block w-px h-16 bg-line-default self-center mx-2" />
 
-        {/* 2. Middle Section: Domain, Industry, Level — labels + pills left-aligned on shared columns */}
-        {/* 2. Middle Section: Domain, Industry, Level — labels + pills left-aligned on shared columns */}
         <div className="flex flex-col justify-center space-y-2.5">
           {[
             { label: "Domain", value: data.domain },
@@ -101,17 +101,12 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
           ))}
         </div>
 
-        {/* Vertical Divider 2 */}
         <div className="hidden lg:block w-px h-16 bg-line-default self-center mx-2" />
 
-        {/* 3. Right Section: Gamification Stats (XP, Streak, Badges - Stacked Vertically Centered) */}
         <div className="flex items-center justify-around sm:justify-end gap-8 sm:gap-10">
-          {/* XP Stat */}
           <div className="flex flex-col items-center text-center">
             <div className="w-11 h-11 rounded-full bg-accent-lime-100/70 border border-accent-lime-200/80 flex items-center justify-center shrink-0 mb-1.5 shadow-2xs">
-              <span className="text-[10px] font-black text-success-800 bg-success-200/60 px-1 py-0.5 rounded border border-success-300/40">
-                XP
-              </span>
+              <XpStatIcon size={28} />
             </div>
             <div className="text-[11px] font-medium text-content-secondary">XP</div>
             <div className="text-xl font-black text-content-primary leading-tight my-0.5">
@@ -122,10 +117,9 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
             </div>
           </div>
 
-          {/* Streak Stat */}
           <div className="flex flex-col items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-accent-orange-100/70 border border-accent-orange-200/80 flex items-center justify-center text-lg shrink-0 mb-1.5 shadow-2xs">
-              🔥
+            <div className="w-11 h-11 rounded-full bg-accent-orange-100/70 border border-accent-orange-200/80 flex items-center justify-center shrink-0 mb-1.5 shadow-2xs">
+              <StreakFlameIcon size={28} />
             </div>
             <div className="text-[11px] font-medium text-content-secondary">Streak</div>
             <div className="text-xl font-black text-content-primary leading-tight my-0.5">
@@ -134,10 +128,9 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
             <div className="text-[11px] font-normal text-content-muted">Keep it up!</div>
           </div>
 
-          {/* Badges Stat */}
           <div className="flex flex-col items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-accent-purple-100/70 border border-accent-purple-200/80 flex items-center justify-center text-lg shrink-0 mb-1.5 shadow-2xs">
-              🏅
+            <div className="w-11 h-11 rounded-full bg-accent-purple-100/70 border border-accent-purple-200/80 flex items-center justify-center shrink-0 mb-1.5 shadow-2xs">
+              <BadgeMedalIcon size={28} />
             </div>
             <div className="text-[11px] font-medium text-content-secondary">Badges</div>
             <div className="text-xl font-black text-content-primary leading-tight my-0.5">

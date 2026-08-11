@@ -249,9 +249,15 @@ describe("SettingsPage", () => {
     const user = userEvent.setup();
     render(<SettingsPage />);
 
-    await user.type(screen.getByPlaceholderText("••••••••••"), "oldpass");
-    await user.type(screen.getByPlaceholderText("Enter new password"), "newpass123");
-    await user.type(screen.getByPlaceholderText("Re-enter new password"), "newpass123");
+    fireEvent.change(screen.getByPlaceholderText("••••••••••"), {
+      target: { value: "oldpass" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter new password"), {
+      target: { value: "newpass123" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Re-enter new password"), {
+      target: { value: "newpass123" },
+    });
     await user.click(screen.getByRole("button", { name: "Update Password" }));
 
     const options = mockPasswordMutate.mock.calls.at(-1)?.[1] as {
