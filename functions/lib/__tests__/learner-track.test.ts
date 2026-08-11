@@ -191,6 +191,7 @@ describe("Learner Track Resolution (3-layer logic)", () => {
         userId,
         trackId: "lt-1",
         roleId: "role-123",
+        metadata: {},
       });
       expect(syncUserCapabilities).toHaveBeenCalledWith(mockSupabase, {
         userId,

@@ -14,6 +14,8 @@ export interface ActiveTrackRole {
   readinessScore: number;
   status: "in_progress" | "completed" | "not_started";
   updatedAt: string | null;
+  domain?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CareerTrackItem {
@@ -65,8 +67,10 @@ export async function getActiveLearningTrack(
       role_readiness_percentage,
       status,
       updated_at,
+      metadata,
       roles (
-        role_name
+        role_name,
+        domain_name
       )
     `)
     .eq("learning_track_id", trackData.id);
@@ -88,6 +92,8 @@ export async function getActiveLearningTrack(
           : 0,
         status: p.status ?? PATH_STATUS.NOT_STARTED,
         updatedAt: p.updated_at ?? null,
+        domain: roleData?.domain_name ?? "",
+        metadata: (p.metadata as Record<string, unknown>) ?? {},
       };
     })
     .sort((a, b) => {
@@ -364,6 +370,7 @@ export async function upsertLearningPath(
     userId: string;
     trackId: string;
     roleId: string;
+    metadata?: Record<string, unknown>;
   },
 ): Promise<string> {
   const { data: inserted, error: insertError } = await supabase
@@ -375,26 +382,30 @@ export async function upsertLearningPath(
       role_readiness_percentage: 0.0,
       level: 1,
       status: "not_started",
+      metadata: params.metadata ?? {},
     })
     .select("id")
     .single();
 
   if (!insertError) return inserted.id;
 
-  // 23505 = unique_violation — row already exists, just retrieve the existing ID
+  // 23505 = unique_violation — row already exists, just update its metadata and retrieve the ID
   if (insertError.code === PG_UNIQUE_VIOLATION) {
     const { data: updated, error: updateError } = await supabase
       .from("learning_paths")
-      .select("id")
+      .update({
+        metadata: params.metadata ?? {},
+      })
       .eq("user_id", params.userId)
       .eq("learning_track_id", params.trackId)
       .eq("role_id", params.roleId)
+      .select("id")
       .maybeSingle();
 
     if (updateError || !updated) {
-      apiLogger.error("Failed to retrieve existing learning path", updateError);
+      apiLogger.error("Failed to retrieve or update existing learning path", updateError);
       throw new Error(
-        `Failed to retrieve existing learning path: ${updateError?.message ?? "Not found"}`,
+        `Failed to retrieve or update existing learning path: ${updateError?.message ?? "Not found"}`,
       );
     }
 

@@ -37,6 +37,8 @@ export interface ActiveTrackRole {
   readinessScore: number;
   status: string;
   updatedAt: string | null;
+  domain?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CareerTrackItem {
