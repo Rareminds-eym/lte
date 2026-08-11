@@ -99,7 +99,7 @@ export async function getActiveLearningTrack(
       const parseTime = (dateStr: string | null): number => {
         if (!dateStr) return 0;
         const time = new Date(dateStr).getTime();
-        return Number.isNaN(time) ? 0 : time;
+        return Number.isNaN(time) || time <= 0 ? 0 : time;
       };
       const timeA = parseTime(a.updatedAt);
       const timeB = parseTime(b.updatedAt);
