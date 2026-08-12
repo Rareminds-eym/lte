@@ -1,5 +1,6 @@
-import { z } from "zod";
 import { createLogger } from "../shared/logger";
+import { signServiceToken, signUserClaim } from "./gateway-crypto";
+import { GatewayEnvelopeSchema } from "./gateway-envelope";
 
 const logger = createLogger("skill-gateway");
 
@@ -25,51 +26,6 @@ export class GatewayCallError extends Error {
 }
 
 const GATEWAY_TIMEOUT_MS = 2000;
-const encoder = new TextEncoder();
-
-function b64urlEncode(bytes: Uint8Array): string {
-  let bin = "";
-  for (const byte of bytes) bin += String.fromCharCode(byte);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-async function hmacKey(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-}
-
-async function signServiceToken(
-  secret: string,
-  claims: { app: string; actions: string[]; iat: number; exp: number },
-): Promise<string> {
-  const key = await hmacKey(secret);
-  const header = b64urlEncode(encoder.encode(JSON.stringify({ alg: "HS256", typ: "svc" })));
-  const payload = b64urlEncode(encoder.encode(JSON.stringify(claims)));
-  const data = `${header}.${payload}`;
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  return `${data}.${b64urlEncode(new Uint8Array(signature))}`;
-}
-
-async function signUserClaim(secret: string, sub: string): Promise<{ claim: string; sig: string }> {
-  const claim = b64urlEncode(
-    encoder.encode(JSON.stringify({ sub, exp: Math.floor(Date.now() / 1000) + 60 })),
-  );
-  const key = await hmacKey(secret);
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(claim));
-  return { claim, sig: b64urlEncode(new Uint8Array(signature)) };
-}
-
-const GatewayEnvelopeSchema = z.object({
-  ok: z.boolean(),
-  data: z.unknown().optional(),
-  error: z.object({ code: z.string(), message: z.string() }).optional(),
-  requestId: z.string().optional(),
-});
 
 export interface SkillGatewayEnv {
   SKILLPASSPORT_INTERNAL_URL: string;

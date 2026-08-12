@@ -26,6 +26,7 @@ export interface LteEnv {
   SKILLPASSPORT_INTERNAL_URL: string;
   SKILLPASSPORT_INTERNAL_SECRET: string;
   OPENROUTER_API_KEY?: string;
+  LTE_PUBLIC_URL?: string;
 }
 
 export interface PagesContext<Env = LteEnv> {
