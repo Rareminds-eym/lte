@@ -69,17 +69,22 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
         "legacy_consistency_bonus",
       ]);
 
-    const todayEvents = (eventsData ?? []).map((row) => {
-      const metadata = row.metadata;
-      const isObject =
-        metadata !== null && typeof metadata === "object" && !Array.isArray(metadata);
-      return {
-        id: row.id,
-        event_type: row.event_type,
-        xp_amount: row.xp_amount,
-        metadata: isObject ? (metadata as Record<string, unknown>) : {},
-      };
-    });
+    const todayEvents = (eventsData ?? [])
+      .filter((row) => {
+        const metadata = row.metadata as Record<string, unknown> | null;
+        return metadata?.["modal_shown"] !== true;
+      })
+      .map((row) => {
+        const metadata = row.metadata;
+        const isObject =
+          metadata !== null && typeof metadata === "object" && !Array.isArray(metadata);
+        return {
+          id: row.id,
+          event_type: row.event_type,
+          xp_amount: row.xp_amount,
+          metadata: isObject ? (metadata as Record<string, unknown>) : {},
+        };
+      });
 
     return jsonResponse<DashboardXpResponse>({
       success: true,
@@ -97,6 +102,44 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     apiLogger.error("Failed to fetch dashboard XP", error, { requestId });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+  }
+}
+
+export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
+  const requestId = crypto.randomUUID();
+  try {
+    const user = await requireAuth(context.request, context.env);
+    const body = (await context.request.json()) as { eventIds?: string[] };
+    if (!body.eventIds || !Array.isArray(body.eventIds)) {
+      return jsonError("Invalid request body", 400, {
+        code: "VALIDATION_ERROR",
+        requestId,
+      });
+    }
+
+    const supabase = createServiceSupabase(context.env);
+
+    const { error } = await supabase.rpc("mark_xp_events_shown", {
+      p_event_ids: body.eventIds,
+      p_user_id: user.sub,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return jsonResponse({ success: true });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return jsonError(error.message, error.code === "UNAUTHORIZED" ? 401 : 403, {
+        code: error.code,
+        requestId,
+      });
+    }
+
+    apiLogger.error("Failed to mark XP events as shown", error, { requestId });
     const message = error instanceof Error ? error.message : "Internal server error";
     return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
   }

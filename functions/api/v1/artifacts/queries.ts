@@ -317,6 +317,7 @@ export interface ArtifactSubmissionResult {
     feedback: string;
     improvements: string;
     calculated_xp: number;
+    event_type?: string;
   };
   files: Array<{ file_id: string; question_id: string; file_name: string }>;
 }
@@ -567,6 +568,7 @@ export async function submitArtifactSubmission(
       feedback: evalResult.feedback,
       improvements: evalResult.singleImprovementPoint,
       calculated_xp: evalResult.calculatedXp,
+      event_type: evalResult.eventType,
     },
     files: uploadedFiles,
   };
@@ -688,6 +690,7 @@ async function buildDuplicateSubmissionResponse(
       feedback: currentFlow.feedback ?? "",
       improvements: currentFlow.improvements ?? "",
       calculated_xp: (meta?.["calculated_xp"] as number) ?? 0,
+      event_type: (meta?.["event_type"] as string) ?? undefined,
     },
     files: (fileRows ?? []).map((fileRow) => ({
       file_id: fileRow.id,

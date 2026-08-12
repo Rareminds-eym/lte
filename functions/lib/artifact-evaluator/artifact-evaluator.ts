@@ -682,6 +682,7 @@ export async function processAndSaveArtifactEvaluation(
         provider: evalResult.provider,
         confidence: evalResult.confidence,
         calculated_xp: evalResult.calculatedXp,
+        event_type: evalResult.eventType,
         attempt_no: input.attemptNo,
         requires_manual_review: evalResult.requiresManualReview,
         evaluation_source: evalResult.evaluationSource,
@@ -769,6 +770,9 @@ export async function processAndSaveArtifactEvaluation(
         },
         evalResult.calculatedXp,
       );
+
+      // Attach event type to eval result so frontend can show correct modal
+      evalResult.eventType = eventType;
     } catch (error) {
       apiLogger.error(`Failed to award artifact XP (${eventType})`, error, {
         submissionId,
