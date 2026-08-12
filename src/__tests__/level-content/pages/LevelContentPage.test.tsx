@@ -576,20 +576,8 @@ describe("LevelContentPage", () => {
     const docTab = screen.getByRole("button", { name: "Doc details" });
     fireEvent.click(docTab);
 
-    // Click download resource button
-    const downloadBtn = screen.getByLabelText("Download selected resource");
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
-    vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.reject(new Error("Network Error")),
-    );
-    fireEvent.click(downloadBtn);
-    await waitFor(() =>
-      expect(openSpy).toHaveBeenCalledWith(
-        "https://example.com/doc",
-        "_blank",
-        "noopener,noreferrer",
-      ),
-    );
+    expect(screen.queryByLabelText("Download selected resource")).not.toBeInTheDocument();
 
     // Click expand resource button
     const expandBtn = screen.getByLabelText("Expand selected resource");

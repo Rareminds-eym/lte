@@ -22,7 +22,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
-  DownloadIcon,
   ExpandIcon,
   IconButton,
   type IconProps,
@@ -61,7 +60,6 @@ export const LevelContentPage: React.FC = () => {
   const [isStageInfoOpen, setIsStageInfoOpen] = useState(true);
   const [isStageInfoExpanded, setIsStageInfoExpanded] = useState(false);
   const [mobilePanelOpen, setMobilePanelOpen] = useState<"modules" | "stageInfo" | null>(null);
-  const isDownloading = false;
   const [prevModuleId, setPrevModuleId] = useState<string | undefined>(undefined);
   const [isScenarioExpanded, setIsScenarioExpanded] = useState(false);
   const [expandedArtifactQuestionId, setExpandedArtifactQuestionId] = useState<
@@ -191,10 +189,6 @@ export const LevelContentPage: React.FC = () => {
   const handleToggleStageInfo = () => {
     setIsStageInfoOpen((prev) => !prev);
     setMobilePanelOpen((prev) => (prev === "stageInfo" ? null : "stageInfo"));
-  };
-
-  const handleDownloadContent = async (item: EContentItem) => {
-    window.open(item.url, "_blank", "noopener,noreferrer");
   };
 
   const handleExpandContent = async (item: EContentItem) => {
@@ -732,15 +726,6 @@ export const LevelContentPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <IconButton
-                onClick={() => void handleDownloadContent(selectedContent)}
-                disabled={isDownloading}
-                aria-label="Download selected resource"
-                icon={<DownloadIcon size={15} />}
-                size="sm"
-                variant="outline"
-                className="rounded-lg"
-              />
               <IconButton
                 onClick={() => void handleExpandContent(selectedContent)}
                 aria-label="Expand selected resource"
