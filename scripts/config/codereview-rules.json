@@ -1,0 +1,47 @@
+{
+  "allowedFetchFiles": [
+    "src/shared/api/client.ts",
+    "src/shared/api/authApi.ts",
+    "src/entities/course/ui/ResourceContentViewer/DocxContentViewer.tsx",
+    "src/entities/course/ui/PptxContentViewer.tsx",
+    "src/entities/course/ui/ResourceContentViewer/types.ts"
+  ],
+  "allowedImageFiles": [
+    "src/shared/ui/Image/Image.tsx"
+  ],
+  "allowedCatchFiles": [
+    "functions/lib/cookies.ts",
+    "functions/api/v1/courses/[levelId]/progress.ts",
+    "auth/refresh.ts",
+    "capabilities/queries.ts"
+  ],
+  "excludedDirs": [
+    "node_modules",
+    ".git",
+    "dist",
+    "build",
+    "coverage",
+    ".wrangler",
+    "__tests__",
+    "__mocks__"
+  ],
+  "excludedFilePatterns": [
+    ".test.",
+    ".spec."
+  ],
+  "authModuleFiles": [
+    "src/shared/api/authApi.ts",
+    "src/entities/session/model/authStore.ts",
+    "functions/lib/auth.ts",
+    "functions/lib/sso-client.ts",
+    "functions/middleware/auth.ts"
+  ],
+  "consolePatterns": [
+    { "pattern": "console\\.log\\s*\\(", "method": "console.log" },
+    { "pattern": "console\\.debug\\s*\\(", "method": "console.debug" },
+    { "pattern": "console\\.info\\s*\\(", "method": "console.info" },
+    { "pattern": "console\\.warn\\s*\\(", "method": "console.warn" },
+    { "pattern": "console\\.error\\s*\\(", "method": "console.error" },
+    { "pattern": "console\\.trace\\s*\\(", "method": "console.trace" }
+  ]
+}

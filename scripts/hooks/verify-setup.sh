@@ -69,7 +69,6 @@ echo ""
 echo "🐶 Checking Husky hooks..."
 hooks=(
     ".husky/pre-commit"
-    ".husky/commit-msg"
     ".husky/pre-push"
 )
 
@@ -86,12 +85,6 @@ echo ""
 echo "📚 Checking documentation..."
 docs=(
     "README.md"
-    "TEAM_ONBOARDING.md"
-    "CONTRIBUTING.md"
-    "CODE_OF_CONDUCT.md"
-    "SECURITY.md"
-    "CHANGELOG.md"
-    "LICENSE"
 )
 
 for doc in "${docs[@]}"; do
@@ -107,7 +100,6 @@ echo ""
 echo "🔄 Checking CI/CD workflows..."
 workflows=(
     ".github/workflows/ci.yml"
-    ".github/workflows/codeql.yml"
 )
 
 for workflow in "${workflows[@]}"; do
@@ -161,10 +153,8 @@ scripts=(
     "build"
     "test"
     "lint"
-    "lint:fix"
-    "format"
-    "type-check"
-    "validate"
+    "typecheck"
+    "lint:biome"
 )
 
 for script in "${scripts[@]}"; do
@@ -181,7 +171,7 @@ echo "🧪 Running quick validation..."
 echo ""
 
 echo "   Running type check..."
-if npm run type-check > /dev/null 2>&1; then
+if npm run typecheck > /dev/null 2>&1; then
     echo -e "${GREEN}   ✅ Type check passed${NC}"
 else
     echo -e "${YELLOW}   ⚠️  Type check has issues${NC}"
@@ -194,7 +184,7 @@ echo "════════════════════════�
 echo ""
 echo "Next steps:"
 echo "  1. Run: npm install (if not done)"
-echo "  2. Run: npm run validate"
-echo "  3. Test git hooks: git commit -m 'test: verify hooks'"
-echo "  4. Read: TEAM_ONBOARDING.md"
+2. Run: npm run lint
+3. Run: npm run typecheck
+4. Test git hooks: git commit -m 'test: verify hooks'
 echo ""
