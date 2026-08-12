@@ -82,7 +82,7 @@ describe("defineAction", () => {
     });
   });
 
-  it("propagates handler exceptions for the dispatcher to map to 500", async () => {
+  it("catches handler exceptions and maps them to an INTERNAL_ERROR envelope", async () => {
     const action = defineAction({
       payloadSchema: PayloadSchema,
       run: async () => {
@@ -90,6 +90,11 @@ describe("defineAction", () => {
       },
     });
 
-    await expect(action(ctx, { userId: USER_ID })).rejects.toThrow("db exploded");
+    const result = await action(ctx, { userId: USER_ID });
+
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "INTERNAL_ERROR", message: "db exploded" },
+    });
   });
 });

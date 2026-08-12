@@ -16,8 +16,10 @@ type ServiceSupabase = SupabaseClient;
  * subject. Handlers no longer repeat that boilerplate.
  *
  * The `run` callback returns only the `data` payload; it is wrapped as
- * `{ ok: true, data }`. Business errors can be surfaced either by throwing
- * (dispatcher → 500) or by returning an error envelope via `errorResult`.
+ * `{ ok: true, data }`. Business errors are surfaced by throwing — they are
+ * caught here and mapped to an `INTERNAL_ERROR` envelope, which the
+ * dispatcher turns into a 500. Handlers may also return an error envelope
+ * via `errorResult` (wrapped as data).
  */
 export function defineAction<TPayload extends { userId: string }>(opts: {
   payloadSchema: z.ZodType<TPayload>;
@@ -34,7 +36,14 @@ export function defineAction<TPayload extends { userId: string }>(opts: {
     }
 
     const supabase = createServiceSupabase(ctx.env);
-    const data = await opts.run(ctx, parsed.data, supabase);
-    return { ok: true, data };
+    try {
+      const data = await opts.run(ctx, parsed.data, supabase);
+      return { ok: true, data };
+    } catch (error) {
+      return errorResult(
+        "INTERNAL_ERROR",
+        error instanceof Error ? error.message : "Unknown action error",
+      );
+    }
   };
 }

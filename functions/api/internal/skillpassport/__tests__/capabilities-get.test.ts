@@ -115,11 +115,14 @@ describe("handleCapabilitiesGet", () => {
     );
   });
 
-  it("propagates query failures so the dispatcher can map them to 500", async () => {
+  it("maps query failures to an INTERNAL_ERROR envelope for the dispatcher", async () => {
     vi.mocked(getActiveLearningTrack).mockRejectedValue(new Error("track query failed"));
 
-    await expect(handleCapabilitiesGet(ctx, { userId: USER_ID })).rejects.toThrow(
-      "track query failed",
-    );
+    const result = await handleCapabilitiesGet(ctx, { userId: USER_ID });
+
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "INTERNAL_ERROR", message: "track query failed" },
+    });
   });
 });

@@ -250,6 +250,41 @@ describe("onRequestPost pipeline", () => {
     });
   });
 
+  it("returns 400 VALIDATION_ERROR when the action payload is invalid", async () => {
+    const request = await buildRequest({
+      action: "capabilities:get",
+      requestId: "req-44",
+      payload: { userId: "not-a-uuid" },
+    });
+
+    const response = await onRequestPost(context(request));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: { code: "VALIDATION_ERROR" },
+    });
+  });
+
+  it("returns 403 FORBIDDEN when the payload userId does not match the claim", async () => {
+    const request = await buildRequest({
+      action: "capabilities:get",
+      requestId: "req-45",
+      payload: { userId: "22222222-2222-4222-8222-222222222222" },
+    });
+
+    const response = await onRequestPost(context(request));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "FORBIDDEN",
+        message: "Requested user does not match the authenticated claim",
+      },
+    });
+  });
+
   it("maps handler failures to a 500 INTERNAL_ERROR", async () => {
     vi.mocked(getActiveLearningTrack).mockRejectedValue(new Error("db down"));
 
@@ -264,7 +299,7 @@ describe("onRequestPost pipeline", () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toMatchObject({
       ok: false,
-      error: { code: "INTERNAL_ERROR", message: "Internal gateway error" },
+      error: { code: "INTERNAL_ERROR", message: "db down" },
     });
   });
 });

@@ -109,6 +109,16 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
 
     const result = await handler({ env, request, requestId, userId: userClaim.sub }, payload);
+    if (!result.ok) {
+      const status =
+        {
+          VALIDATION_ERROR: 400,
+          FORBIDDEN: 403,
+          UNKNOWN_ACTION: 404,
+          INTERNAL_ERROR: 500,
+        }[result.error?.code ?? ""] ?? 500;
+      return gatewayResponse(result, requestId, status);
+    }
     return gatewayResponse(result, requestId);
   } catch (error) {
     if (error instanceof GatewayAuthError) {
