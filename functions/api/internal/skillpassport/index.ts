@@ -34,6 +34,17 @@ export const REGISTRY: Record<string, GatewayAction> = {
 /** Actions this gateway advertises — derived from the registry so it can't drift. */
 export const SUPPORTED_ACTIONS: readonly string[] = Object.keys(REGISTRY);
 
+/**
+ * Public origin of the request, used to build deep-links (resumeUrl) that the
+ * caller opens in a browser. Production: the real request URL. Local dev under
+ * `wrangler pages dev` depends on wrangler.toml `[dev] host = "localhost:8789"`
+ * (host WITH port) — a bare host like "localhost" makes the dev proxy rewrite
+ * the URL to "http://localhost" and the port is lost from origin.
+ */
+export function getPublicOrigin(request: Request): string {
+  return new URL(request.url).origin;
+}
+
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   const { request, env } = context;
 
@@ -108,7 +119,10 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       );
     }
 
-    const result = await handler({ env, request, requestId, userId: userClaim.sub }, payload);
+    const result = await handler(
+      { env, request, requestId, userId: userClaim.sub, origin: getPublicOrigin(request) },
+      payload,
+    );
     if (!result.ok) {
       const status =
         {

@@ -10,6 +10,8 @@ export interface GatewayContext {
   requestId: string;
   /** Verified subject of the per-user signed claim — never trust a payload userId blindly. */
   userId: string;
+  /** Origin of the request that reached this gateway (used for public deep-links). */
+  origin: string;
 }
 
 export type GatewayAction = (

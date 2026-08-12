@@ -23,13 +23,13 @@ const USER_ID = "11111111-1111-4111-8111-111111111111";
 
 const ctx = {
   env: {
-    LTE_PUBLIC_URL: "https://lte.test/",
     SUPABASE_URL: "https://example.supabase.co",
     SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   } as unknown as LteEnv,
   request: new Request("http://lte.test/api/internal/skillpassport"),
   requestId: "req-1",
   userId: USER_ID,
+  origin: "http://lte.test",
 } as unknown as GatewayContext;
 
 const track = {
@@ -98,7 +98,7 @@ describe("handleCapabilitiesGet", () => {
             totalLevels: 5,
             durationHours: 12,
             roleName: "AI Engineer",
-            resumeUrl: "https://lte.test/my-courses/voice-ai",
+            resumeUrl: "http://lte.test/my-courses/voice-ai",
           },
         ],
       },
@@ -113,6 +113,19 @@ describe("handleCapabilitiesGet", () => {
       ["role-1"],
       [{ roleId: "role-1", roleName: "AI Engineer" }],
     );
+  });
+
+  it("builds the resumeUrl from the request origin", async () => {
+    vi.mocked(getActiveLearningTrack).mockResolvedValue(track);
+
+    const result = await handleCapabilitiesGet(ctx, { userId: USER_ID });
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        capabilities: [{ resumeUrl: "http://lte.test/my-courses/voice-ai" }],
+      },
+    });
   });
 
   it("maps query failures to an INTERNAL_ERROR envelope for the dispatcher", async () => {

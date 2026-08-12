@@ -16,8 +16,8 @@ export interface SyncCapability {
 
 /**
  * Trim a learner's capabilities to the SkillPassport sync payload, building each
- * `resumeUrl` deep-link. When `ltePublicUrl` is unset, `resumeUrl` is omitted
- * rather than emitting a broken relative URL.
+ * `resumeUrl` deep-link against the request origin. When the origin is empty,
+ * `resumeUrl` is omitted rather than emitting a broken relative URL.
  */
 export function mapCapabilitiesToSyncPayload(
   capabilities: UserCapability[],

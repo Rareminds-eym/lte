@@ -22,7 +22,6 @@ const backendEnvSchema = z.object({
       },
     ),
   R2_PUBLIC_DOMAIN: z.string().url("R2_PUBLIC_DOMAIN must be a valid URL").optional(),
-  LTE_PUBLIC_URL: z.string().url("LTE_PUBLIC_URL must be a valid URL").optional(),
   SUPABASE_URL: z.string().url("SUPABASE_URL must be a valid URL"),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY must not be empty"),
   COOKIE_DOMAIN: z.string().optional(),

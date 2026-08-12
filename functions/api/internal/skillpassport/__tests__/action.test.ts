@@ -13,10 +13,11 @@ vi.mock("@functions/lib/supabase", () => ({
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 
 const ctx = {
-  env: { LTE_PUBLIC_URL: "https://lte.test" } as unknown as LteEnv,
+  env: {} as unknown as LteEnv,
   request: new Request("http://lte.test/api/internal/skillpassport"),
   requestId: "req-1",
   userId: USER_ID,
+  origin: "http://lte.test",
 } as unknown as GatewayContext;
 
 const PayloadSchema = z.object({ userId: z.string().uuid(), extra: z.string().optional() });

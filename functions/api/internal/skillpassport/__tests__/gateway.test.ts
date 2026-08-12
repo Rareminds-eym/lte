@@ -25,7 +25,6 @@ const URL = "http://lte.test/api/internal/skillpassport";
 
 const env = {
   SKILLPASSPORT_INTERNAL_SECRET: SECRET,
-  LTE_PUBLIC_URL: "https://lte.test",
 } as unknown as LteEnv;
 
 async function buildRequest(
@@ -281,6 +280,95 @@ describe("onRequestPost pipeline", () => {
       error: {
         code: "FORBIDDEN",
         message: "Requested user does not match the authenticated claim",
+      },
+    });
+  });
+
+  it("derives resumeUrl from the request origin", async () => {
+    vi.mocked(getActiveLearningTrack).mockResolvedValue({
+      id: "track-1",
+      roles: [{ roleId: "role-1", roleName: "AI Engineer" }],
+    } as never);
+    vi.mocked(getUserCapabilitiesForRoles).mockResolvedValue([
+      {
+        id: "cap-1",
+        name: "Voice AI",
+        description: "Build voice agents",
+        code: "voice-ai",
+        status: "in_progress",
+        currentLevel: 2,
+        totalLevels: 5,
+        progress: 40,
+        durationHours: 12,
+      },
+    ]);
+
+    const request = await buildRequest({
+      action: "capabilities:get",
+      requestId: "req-46",
+      payload: { userId: USER_ID },
+    });
+
+    const response = await onRequestPost(context(request));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      data: {
+        capabilities: [{ resumeUrl: "http://lte.test/my-courses/voice-ai" }],
+      },
+    });
+  });
+
+  it("preserves the port in resumeUrl when the request host includes one", async () => {
+    vi.mocked(getActiveLearningTrack).mockResolvedValue({
+      id: "track-1",
+      roles: [{ roleId: "role-1", roleName: "AI Engineer" }],
+    } as never);
+    vi.mocked(getUserCapabilitiesForRoles).mockResolvedValue([
+      {
+        id: "cap-1",
+        name: "Voice AI",
+        description: "Build voice agents",
+        code: "voice-ai",
+        status: "in_progress",
+        currentLevel: 2,
+        totalLevels: 5,
+        progress: 40,
+        durationHours: 12,
+      },
+    ]);
+
+    const now = Math.floor(Date.now() / 1000);
+    const token = await signServiceToken(SECRET, {
+      app: APP,
+      actions: ["capabilities:get"],
+      iat: now,
+      exp: now + 300,
+    });
+    const { claim, sig } = await signUserClaim(SECRET, USER_ID);
+    const request = new Request("http://127.0.0.1:8789/api/internal/skillpassport", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-Lte-Claim": claim,
+        "X-Lte-Sig": sig,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "capabilities:get",
+        requestId: "req-47",
+        payload: { userId: USER_ID },
+      }),
+    });
+
+    const response = await onRequestPost(context(request));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      data: {
+        capabilities: [{ resumeUrl: "http://127.0.0.1:8789/my-courses/voice-ai" }],
       },
     });
   });
