@@ -653,6 +653,20 @@ export async function processAndSaveArtifactEvaluation(
         ? "human_review"
         : "resubmission_required";
 
+  // Compute eventType early so it gets persisted correctly in the database flow row
+  let eventType: string | undefined;
+  if (evalResult.decision !== "human_review") {
+    eventType =
+      input.artifactType === "practice"
+        ? evalResult.decision === "pass"
+          ? "practice_artifact_accepted"
+          : "practice_artifact_failed"
+        : evalResult.decision === "pass"
+          ? `final_artifact_accepted_${Math.min(3, input.attemptNo)}`
+          : "final_artifact_failed";
+    evalResult.eventType = eventType;
+  }
+
   // P1-3: the raw prompt/response are never persisted (learner content +
   // model output); telemetry keeps latency/charCounts/model for observability.
   const debugTelemetry = evalResult.debugTelemetry
@@ -746,16 +760,7 @@ export async function processAndSaveArtifactEvaluation(
   // failure event, no engagement XP - a pending review is not a failure).
   // XP insert failures must not surface as a 500 to the learner after the
   // evaluation is already persisted - log and let the idempotent upsert retry.
-  if (evalResult.decision !== "human_review") {
-    const eventType =
-      input.artifactType === "practice"
-        ? evalResult.decision === "pass"
-          ? "practice_artifact_accepted"
-          : "practice_artifact_failed"
-        : evalResult.decision === "pass"
-          ? `final_artifact_accepted_${Math.min(3, input.attemptNo)}`
-          : "final_artifact_failed";
-
+  if (eventType) {
     try {
       await awardXp(
         supabase,
@@ -770,9 +775,6 @@ export async function processAndSaveArtifactEvaluation(
         },
         evalResult.calculatedXp,
       );
-
-      // Attach event type to eval result so frontend can show correct modal
-      evalResult.eventType = eventType;
     } catch (error) {
       apiLogger.error(`Failed to award artifact XP (${eventType})`, error, {
         submissionId,
