@@ -36,6 +36,8 @@ export interface SubmitArtifactResponse {
     feedback: string;
     improvements: string;
     calculated_xp: number;
+    /** XP event type (practice_artifact_accepted, final_artifact_failed, etc.) for modal display */
+    event_type?: string;
   };
   files: Array<{
     file_id: string;

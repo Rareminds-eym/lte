@@ -15,7 +15,7 @@ import {
   useUpdateStageProgress,
 } from "@/entities/course";
 import { DASHBOARD_QUERY_KEY } from "@/entities/dashboard";
-import { XpRewardModal } from "@/features/xp-reward";
+import { useXpModalStore } from "@/shared/store";
 import {
   Button,
   CheckIcon,
@@ -66,16 +66,9 @@ export const LevelContentPage: React.FC = () => {
     string | null | undefined
   >();
   const contentViewerRef = useRef<HTMLDivElement>(null);
+  const addEvent = useXpModalStore((s) => s.addEvent);
 
-  const [showXpModal, setShowXpModal] = useState(false);
-  const [xpModalSource, setXpModalSource] = useState<
-    "stage_complete" | "artifact_submit" | "level_complete" | null
-  >(null);
-  const [xpAwardedAmount, setXpAwardedAmount] = useState(0);
   const [totalXpAmount, setTotalXpAmount] = useState(0);
-  const [xpCategory, setXpCategory] = useState<"evidence" | "engagement">("evidence");
-  const [pendingNextStage, setPendingNextStage] = useState<LteStage | null>(null);
-  const [pendingNextModuleNo, setPendingNextModuleNo] = useState<number | null>(null);
   const [optimisticCompletedStages, setOptimisticCompletedStages] = useState<LteStage[]>([]);
 
   const moduleNumber = Number(moduleNo);
@@ -420,11 +413,11 @@ export const LevelContentPage: React.FC = () => {
     };
   });
 
-  const handleCloseXpModal = () => {
-    setShowXpModal(false);
-    const source = xpModalSource;
-    setXpModalSource(null);
-
+  const triggerNavigationTransition = (
+    source: "stage_complete" | "artifact_submit" | "level_complete",
+    pendingStage: LteStage | null,
+    pendingModule: number | null,
+  ) => {
     if (source === "artifact_submit") {
       return;
     }
@@ -437,16 +430,15 @@ export const LevelContentPage: React.FC = () => {
       return;
     }
 
-    if (pendingNextStage) {
-      setPendingNextStage(null);
-      handleStageSelect(pendingNextStage);
-    } else if (pendingNextModuleNo && levelId) {
-      const moduleToOpen = pendingNextModuleNo;
-      setPendingNextModuleNo(null);
-      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${moduleToOpen}?stage=engage`);
+    if (pendingStage) {
+      handleStageSelect(pendingStage);
+    } else if (pendingModule && levelId) {
+      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${pendingModule}?stage=engage`);
     } else {
       toast.success("Course completed successfully!");
-      navigate(getCourseOverviewPath(level.capabilityCode));
+      if (level?.capabilityCode) {
+        navigate(getCourseOverviewPath(level.capabilityCode));
+      }
     }
   };
 
@@ -508,21 +500,32 @@ export const LevelContentPage: React.FC = () => {
             );
 
             if (data?.levelCompleted) {
-              setXpAwardedAmount(data.levelXpAwarded ?? 0);
-              setTotalXpAmount(data.totalXp ?? 0);
-              setXpCategory("evidence");
-              setXpModalSource("level_complete");
-              setShowXpModal(true);
+              const awarded = data.levelXpAwarded ?? 0;
+              const total = data.totalXp ?? 0;
+              setTotalXpAmount(total);
+              addEvent({
+                id: crypto.randomUUID(),
+                xpAmount: awarded,
+                totalXp: total,
+                eventType: "course_completed_on_time",
+                xpCategory: "evidence",
+                onClose: () => triggerNavigationTransition("level_complete", null, null),
+              });
             } else if (data?.xpAwarded && data.xpAwarded > 0) {
-              setXpAwardedAmount(data.xpAwarded);
-              setTotalXpAmount(data.totalXp ?? 0);
-              setXpCategory(data.xpCategory ?? "evidence");
-              setPendingNextStage(nextStageAfterCurrentCompletion);
-              setPendingNextModuleNo(
-                isModuleCompleteAfterCurrentStage && nextModuleExists ? nextModuleNo : null,
-              );
-              setXpModalSource("stage_complete");
-              setShowXpModal(true);
+              const awarded = data.xpAwarded;
+              const total = data.totalXp ?? 0;
+              setTotalXpAmount(total);
+              const pStage = nextStageAfterCurrentCompletion;
+              const pModule =
+                isModuleCompleteAfterCurrentStage && nextModuleExists ? nextModuleNo : null;
+              addEvent({
+                id: crypto.randomUUID(),
+                xpAmount: awarded,
+                totalXp: total,
+                eventType: activeStage,
+                xpCategory: (data.xpCategory as "evidence" | "engagement") ?? "evidence",
+                onClose: () => triggerNavigationTransition("stage_complete", pStage, pModule),
+              });
             } else {
               if (nextStageAfterCurrentCompletion) {
                 handleStageNavigation(nextStageAfterCurrentCompletion, completedStageSetAfterSave);
@@ -648,14 +651,16 @@ export const LevelContentPage: React.FC = () => {
           isPanelExpanded={isStageInfoExpanded}
           expandedArtifactQuestionId={expandedArtifactQuestionId}
           setExpandedArtifactQuestionId={setExpandedArtifactQuestionId}
-          onXpEarned={(xpAmount) => {
-            setXpAwardedAmount(xpAmount);
+          onXpEarned={(xpAmount, eventType) => {
             setTotalXpAmount((prev) => prev + xpAmount);
-            setXpCategory("evidence");
-            setPendingNextStage(null);
-            setPendingNextModuleNo(null);
-            setXpModalSource("artifact_submit");
-            setShowXpModal(true);
+            addEvent({
+              id: crypto.randomUUID(),
+              xpAmount: xpAmount,
+              totalXp: totalXpAmount + xpAmount,
+              eventType: eventType,
+              xpCategory: "evidence",
+              onClose: () => triggerNavigationTransition("artifact_submit", null, null),
+            });
           }}
         />
       )}
@@ -861,15 +866,6 @@ export const LevelContentPage: React.FC = () => {
             )}
           </div>
         )}
-
-        <XpRewardModal
-          isOpen={showXpModal}
-          xpAmount={xpAwardedAmount}
-          totalXp={totalXpAmount}
-          stageName={xpModalSource === "level_complete" ? "course_completed_on_time" : activeStage}
-          onClose={handleCloseXpModal}
-          xpCategory={xpCategory}
-        />
       </div>
     </div>
   );

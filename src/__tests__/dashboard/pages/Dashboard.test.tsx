@@ -2,8 +2,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { XpModalProvider } from "@/app/providers/XpModalProvider";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { Dashboard } from "@/pages/dashboard";
+import { useXpModalStore } from "@/shared/store";
 
 vi.mock("@/shared/api", () => ({
   apiFetch: vi.fn(),
@@ -131,8 +133,11 @@ describe("Dashboard Page", () => {
   it("renders XpRewardModal when there is an unshown daily login event", async () => {
     localStorage.clear();
     vi.restoreAllMocks();
-    vi.mocked(apiFetch).mockImplementation((url: string) => {
+    vi.mocked(apiFetch).mockImplementation((url: string, init?: Parameters<typeof apiFetch>[1]) => {
       if (url.includes("/api/v1/dashboard/xp")) {
+        if (init?.method === "POST") {
+          return Promise.resolve({ success: true });
+        }
         return Promise.resolve({
           success: true,
           totalXp: 1240,
@@ -169,6 +174,7 @@ describe("Dashboard Page", () => {
       <MemoryRouter>
         <QueryClientProvider client={queryClient}>
           <Dashboard />
+          <XpModalProvider />
         </QueryClientProvider>
       </MemoryRouter>,
     );
@@ -186,12 +192,10 @@ describe("Dashboard Page", () => {
     const continueBtn = screen.getByRole("button", { name: /Continue/i });
     continueBtn.click();
 
-    // Verify it is closed and stored in localStorage
+    // Verify it is closed and stored in shownEventIds set
     await waitFor(() => {
       expect(screen.queryByText("+1")).not.toBeInTheDocument();
     });
-    expect(JSON.parse(localStorage.getItem("lte-shown-xp-event-ids") ?? "[]")).toContain(
-      "evt-login-123",
-    );
+    expect(useXpModalStore.getState().shownEventIds.has("evt-login-123")).toBe(true);
   });
 });

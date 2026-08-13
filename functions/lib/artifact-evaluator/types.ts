@@ -70,6 +70,8 @@ export interface AIEvaluationResult {
   requiresManualReview: boolean;
   /** "ai" for LLM evaluation, "fallback" for the deterministic rules engine. */
   evaluationSource: "ai" | "fallback";
+  /** XP event type for frontend modal display (practice_artifact_accepted, final_artifact_failed, etc.) */
+  eventType?: string;
   debugTelemetry?: ArtifactDebugTelemetry;
 }
 
