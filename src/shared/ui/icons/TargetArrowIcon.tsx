@@ -25,5 +25,3 @@ export const TargetArrowIcon: React.FC<IconProps> = ({
     />
   </svg>
 );
-
-export default TargetArrowIcon;

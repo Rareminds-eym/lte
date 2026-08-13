@@ -33,5 +33,3 @@ export const CalendarIcon: React.FC<IconProps> = ({
     </defs>
   </svg>
 );
-
-export default CalendarIcon;

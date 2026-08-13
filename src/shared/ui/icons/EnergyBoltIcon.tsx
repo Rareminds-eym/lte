@@ -34,5 +34,3 @@ export const EnergyBoltIcon: React.FC<IconProps> = ({ size = 16, className = "",
     />
   </svg>
 );
-
-export default EnergyBoltIcon;

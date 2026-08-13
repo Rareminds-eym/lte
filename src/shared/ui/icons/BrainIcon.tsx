@@ -35,5 +35,3 @@ export const BrainIcon: React.FC<IconProps> = ({
     </defs>
   </svg>
 );
-
-export default BrainIcon;

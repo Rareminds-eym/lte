@@ -19,14 +19,29 @@ async function main() {
   const filesToCheck = files.filter((file) => file !== APPROVED_TOASTER_FILE);
 
   const violations = await scanLines(filesToCheck, (line, lineNum) => {
-    // Check for `<Toaster` component mounting but ignore commented lines
-    const hasToasterMount = /<Toaster\b/i.test(line) && !line.trim().startsWith("//") && !line.trim().startsWith("*");
+    const trimmedLine = line.trim();
+    const isComment = trimmedLine.startsWith("//") || trimmedLine.startsWith("*") || trimmedLine.startsWith("/*");
+
+    if (isComment) return null;
+
+    // 1. Check for `<Toaster` component mounting
+    const hasToasterMount = /<Toaster\b/i.test(line);
     if (hasToasterMount) {
       return {
         rule: "UI: Duplicate Toaster declaration",
         message: `Local <Toaster /> instance detected. Declare Toast providers globally and only inside '${APPROVED_TOASTER_FILE}'.`,
       };
     }
+
+    // 2. Check for bare toast() call (untyped)
+    const hasBareToast = /\btoast\s*\(/i.test(line);
+    if (hasBareToast) {
+      return {
+        rule: "UI: Bare untyped toast call",
+        message: "Untyped bare toast() call detected. Use typed notifications like 'toast.success()' or 'toast.error()' to ensure standard visual cues.",
+      };
+    }
+
     return null;
   });
 

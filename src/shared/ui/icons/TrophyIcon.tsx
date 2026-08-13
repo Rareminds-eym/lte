@@ -33,5 +33,3 @@ export const TrophyIcon: React.FC<IconProps> = ({
     />
   </svg>
 );
-
-export default TrophyIcon;

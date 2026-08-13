@@ -26,5 +26,3 @@ export const ClipboardCheckIcon: React.FC<IconProps> = ({
     <path d="m9 14 2 2 4-4" />
   </svg>
 );
-
-export default ClipboardCheckIcon;

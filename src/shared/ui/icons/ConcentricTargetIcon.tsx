@@ -35,5 +35,3 @@ export const ConcentricTargetIcon: React.FC<IconProps> = ({
     </defs>
   </svg>
 );
-
-export default ConcentricTargetIcon;

@@ -29,5 +29,3 @@ export const ListIcon: React.FC<IconProps> = ({
     <circle cx="4.5" cy="18" r="1" fill="currentColor" />
   </svg>
 );
-
-export default ListIcon;
