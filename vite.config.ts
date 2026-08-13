@@ -15,31 +15,10 @@ export default defineConfig({
 		react(),
 	],
 	resolve: {
-		tsconfigPaths: true,
-		...(process.env.VITEST
-			? {
-					// Mock bare specifiers only, so functions/** subpath imports
-					// (e.g. pdfjs-dist/legacy/build/pdf.mjs) resolve to the real libs.
-					alias: [
-						{
-							find: /^@file-viewer\/pptx$/,
-							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						},
-						{
-							find: /^docx-preview$/,
-							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						},
-						{
-							find: /^pdfjs-dist$/,
-							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						},
-						{
-							find: /^xlsx$/,
-							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						},
-					],
-				}
-			: {}),
+		alias: {
+			"@": path.resolve(__dirname, "./src"),
+			"@functions": path.resolve(__dirname, "./functions"),
+		},
 	},
   optimizeDeps: {
     exclude: ["@file-viewer/pptx"],
@@ -102,9 +81,64 @@ export default defineConfig({
 	},
 	test: {
 		globals: true,
-		environment: "jsdom",
-		setupFiles: "./src/setupTests.ts",
-		css: true,
+		// Tier 1: Skip Tailwind v4 + PostCSS transform during tests.
+		css: false,
+		// Tier 1: Run test files in parallel across worker threads.
+		pool: "threads",
+		maxWorkers: "50%",
+		// Tier 3: Pre-bundle heavy dependencies with esbuild so each worker doesn't
+		// re-resolve and re-transform them from the module graph individually.
+		deps: {
+			optimizer: {
+				client: {
+					enabled: true,
+					include: [
+						"react",
+						"react-dom",
+						"react-dom/client",
+						"@tanstack/react-query",
+						"zustand",
+						"react-hot-toast",
+						"react-error-boundary",
+					],
+				},
+			},
+		},
+		projects: [
+			{
+				extends: true,
+				test: {
+					name: "frontend",
+					globals: true,
+					environment: "happy-dom",
+					isolate: true,
+					include: ["src/**/*.test.{ts,tsx}"],
+					setupFiles: "./src/setupTests.ts",
+					alias: {
+						"@": path.resolve(__dirname, "./src"),
+						"@functions": path.resolve(__dirname, "./functions"),
+						"@file-viewer/pptx": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						"docx-preview": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						"pdfjs-dist": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+						"xlsx": path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+				},
+			},
+			{
+				extends: true,
+				test: {
+					name: "backend",
+					globals: true,
+					environment: "node",
+					isolate: true,
+					include: ["functions/**/*.test.ts"],
+					alias: {
+						"@": path.resolve(__dirname, "./src"),
+						"@functions": path.resolve(__dirname, "./functions"),
+					},
+				},
+			},
+		],
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "lcov", "html", "json-summary"],
@@ -130,3 +164,4 @@ export default defineConfig({
 		},
 	},
 });
+
