@@ -33,5 +33,3 @@ export const CompassIcon: React.FC<IconProps> = ({
     />
   </svg>
 );
-
-export default CompassIcon;

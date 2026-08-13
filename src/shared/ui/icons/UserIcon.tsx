@@ -25,5 +25,3 @@ export const UserIcon: React.FC<IconProps> = ({
     <circle cx="12" cy="7" r="4" />
   </svg>
 );
-
-export default UserIcon;

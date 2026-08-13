@@ -25,5 +25,3 @@ export const CreditCardIcon: React.FC<IconProps> = ({
     <line x1="1" y1="10" x2="23" y2="10" />
   </svg>
 );
-
-export default CreditCardIcon;

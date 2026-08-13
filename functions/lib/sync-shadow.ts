@@ -100,8 +100,6 @@ export async function syncUsers(supabase: SupabaseClient, user: AuthUser): Promi
   });
 }
 
-export const syncUsersShadow = syncUsers;
-
 export async function syncSubscriptionCache(
   supabase: SupabaseClient,
   subscription: SsoSubscriptionSnapshot | null,

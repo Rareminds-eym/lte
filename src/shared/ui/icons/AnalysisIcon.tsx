@@ -39,5 +39,3 @@ export const AnalysisIcon: React.FC<IconProps> = ({ size = 20, className = "", .
     </defs>
   </svg>
 );
-
-export default AnalysisIcon;

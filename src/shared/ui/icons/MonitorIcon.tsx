@@ -26,5 +26,3 @@ export const MonitorIcon: React.FC<IconProps> = ({
     />
   </svg>
 );
-
-export default MonitorIcon;

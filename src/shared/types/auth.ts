@@ -61,9 +61,3 @@ export interface ActiveTrackDetail {
   overallProgress?: number;
   completionCount?: number;
 }
-
-export interface ActiveLearningPathResponse {
-  success: boolean;
-  data: ActiveTrackDetail | null;
-  needsAssessment?: boolean;
-}
