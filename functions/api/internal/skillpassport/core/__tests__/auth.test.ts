@@ -1,11 +1,6 @@
 import type { LteEnv } from "@functions/lib/types";
 import { describe, expect, it } from "vitest";
-import {
-  GatewayAuthError,
-  getGatewaySecret,
-  signServiceToken,
-  verifyServiceToken,
-} from "../tokens";
+import { GatewayAuthError, getGatewaySecret, signServiceToken, verifyServiceToken } from "../auth";
 
 const VALID_SECRET = "a-real-gateway-secret-that-is-long-enough";
 

@@ -4,8 +4,10 @@ import type { ActiveTrackDetail } from "@functions/api/v1/learning-paths/queries
 import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
 import type { LteEnv } from "@functions/lib/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { GatewayContext } from "../../core/types";
 import { handleCapabilitiesGet } from "../actions/capabilities-get";
-import type { GatewayContext } from "../types";
+import { getCapabilityModuleSummaries } from "../queries/module-summaries";
+import { computeFingerprint } from "../sync/fingerprint";
 
 vi.mock("@functions/api/v1/learning-paths/queries", () => ({
   getActiveLearningTrack: vi.fn(),
@@ -13,6 +15,10 @@ vi.mock("@functions/api/v1/learning-paths/queries", () => ({
 
 vi.mock("@functions/api/v1/capabilities/queries", () => ({
   getUserCapabilitiesForRoles: vi.fn(),
+}));
+
+vi.mock("../queries/module-summaries", () => ({
+  getCapabilityModuleSummaries: vi.fn(),
 }));
 
 vi.mock("@functions/lib/supabase", () => ({
@@ -56,6 +62,7 @@ describe("handleCapabilitiesGet", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getUserCapabilitiesForRoles).mockResolvedValue(capabilities);
+    vi.mocked(getCapabilityModuleSummaries).mockResolvedValue({});
   });
 
   it("returns an empty list when the learner has no active track", async () => {
@@ -84,6 +91,7 @@ describe("handleCapabilitiesGet", () => {
 
     const result = await handleCapabilitiesGet(ctx, { userId: USER_ID });
 
+    const expectedFingerprint = await computeFingerprint(capabilities[0] as UserCapability);
     expect(result).toEqual({
       ok: true,
       data: {
@@ -97,8 +105,11 @@ describe("handleCapabilitiesGet", () => {
             currentLevel: 2,
             totalLevels: 5,
             durationHours: 12,
+            totalModules: 0,
+            completedModules: 0,
             roleName: "AI Engineer",
             resumeUrl: "http://lte.test/my-courses/voice-ai",
+            fingerprint: expectedFingerprint,
           },
         ],
       },
@@ -113,6 +124,54 @@ describe("handleCapabilitiesGet", () => {
       ["role-1"],
       [{ roleId: "role-1", roleName: "AI Engineer" }],
     );
+  });
+
+  it("deduplicates a capability that maps to multiple roles into one sync entry", async () => {
+    vi.mocked(getActiveLearningTrack).mockResolvedValue({
+      ...track,
+      roles: [
+        { roleId: "role-a", roleName: "Role A" },
+        { roleId: "role-b", roleName: "Role B" },
+      ] as ActiveTrackDetail["roles"],
+    });
+    // Same capability id, but returned once per role with a different roleName.
+    vi.mocked(getUserCapabilitiesForRoles).mockResolvedValue([
+      {
+        id: "cap-shared",
+        name: "Shared Capability",
+        description: "shared",
+        code: "shared",
+        status: "not_started",
+        currentLevel: 0,
+        totalLevels: 5,
+        progress: 0,
+        durationHours: 0,
+        level: "L2",
+        roleName: "Role A",
+      },
+      {
+        id: "cap-shared",
+        name: "Shared Capability",
+        description: "shared",
+        code: "shared",
+        status: "not_started",
+        currentLevel: 0,
+        totalLevels: 5,
+        progress: 0,
+        durationHours: 0,
+        level: "L3",
+        roleName: "Role B",
+      },
+    ]);
+    vi.mocked(getCapabilityModuleSummaries).mockResolvedValue({});
+
+    const result = await handleCapabilitiesGet(ctx, { userId: USER_ID });
+
+    expect(result.ok).toBe(true);
+    const syncedCaps = (result as { data?: { capabilities?: unknown[] } }).data?.capabilities ?? [];
+    expect(syncedCaps).toHaveLength(1); // one row per course, not one per role
+    // The higher required-level role wins as the representative.
+    expect(syncedCaps[0]).toMatchObject({ id: "cap-shared", roleName: "Role B" });
   });
 
   it("builds the resumeUrl from the request origin", async () => {

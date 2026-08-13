@@ -1,11 +1,16 @@
 import { gatewayResponse } from "@functions/lib/gateway-envelope";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { apiLogger } from "@functions/shared/logger";
-import { handleCapabilitiesGet } from "./actions/capabilities-get";
-import { CALLER_APP } from "./contract";
-import { EnvelopeSchema } from "./schemas";
-import { GatewayAuthError, getGatewaySecret, verifyServiceToken, verifyUserClaim } from "./tokens";
-import type { GatewayAction } from "./types";
+import { handleCapabilitiesGet } from "./capabilities/actions/capabilities-get";
+import {
+  GatewayAuthError,
+  getGatewaySecret,
+  verifyServiceToken,
+  verifyUserClaim,
+} from "./core/auth";
+import { CALLER_APP } from "./core/contract";
+import { EnvelopeSchema } from "./core/envelope";
+import type { GatewayAction } from "./core/types";
 
 /**
  * SkillPassport → LTE internal gateway — the single door for SP to read LTE data.

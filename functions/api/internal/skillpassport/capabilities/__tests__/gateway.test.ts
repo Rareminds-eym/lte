@@ -3,8 +3,8 @@ import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries
 import { signServiceToken, signUserClaim } from "@functions/lib/gateway-crypto";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { onRequestPost, REGISTRY, SUPPORTED_ACTIONS } from "../../index";
 import { handleCapabilitiesGet } from "../actions/capabilities-get";
-import { onRequestPost, REGISTRY, SUPPORTED_ACTIONS } from "../index";
 
 vi.mock("@functions/api/v1/learning-paths/queries", () => ({
   getActiveLearningTrack: vi.fn(),
@@ -16,6 +16,10 @@ vi.mock("@functions/api/v1/capabilities/queries", () => ({
 
 vi.mock("@functions/lib/supabase", () => ({
   createServiceSupabase: vi.fn(() => ({ mockClient: true })),
+}));
+
+vi.mock("../queries/module-summaries", () => ({
+  getCapabilityModuleSummaries: vi.fn(() => Promise.resolve({})),
 }));
 
 const SECRET = "test-gateway-secret-that-is-at-least-32-chars";
