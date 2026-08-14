@@ -11,7 +11,7 @@ export const useActiveCourse = (
     const slugLower = capabilitySlug.toLowerCase();
 
     // 1. Prioritized exact match on slug
-    const slugMatch = courses.find((c) => c.slug?.toLowerCase() === slugLower);
+    const slugMatch = courses.find((c) => c.slug && c.slug.toLowerCase() === slugLower);
     if (slugMatch) return slugMatch;
 
     // 2. Fallback matching on other identifiers (code, capabilityId, or id)

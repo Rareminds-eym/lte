@@ -57,9 +57,9 @@ export const CourseDetailPage: React.FC = () => {
     if (
       activeCourse?.slug &&
       activeCourse.slug.length > 0 &&
-      capabilitySlug !== activeCourse.slug
+      decodeURIComponent(capabilitySlug || "") !== activeCourse.slug
     ) {
-      navigate(`/my-courses/${activeCourse.slug}`, { replace: true });
+      navigate(`/my-courses/${encodeURIComponent(activeCourse.slug)}`, { replace: true });
     }
   }, [activeCourse, capabilitySlug, navigate]);
 

@@ -53,10 +53,13 @@ export const LevelModulesPage: React.FC = () => {
     if (
       activeCourse?.slug &&
       activeCourse.slug.length > 0 &&
-      capabilitySlug !== activeCourse.slug &&
+      decodeURIComponent(capabilitySlug || "") !== activeCourse.slug &&
       levelId
     ) {
-      navigate(`/courses/${activeCourse.slug}/levels/${levelId}`, { replace: true });
+      navigate(
+        `/courses/${encodeURIComponent(activeCourse.slug)}/levels/${encodeURIComponent(levelId)}`,
+        { replace: true },
+      );
     }
   }, [activeCourse, capabilitySlug, levelId, navigate]);
 
