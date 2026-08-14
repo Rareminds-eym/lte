@@ -14,7 +14,7 @@ function chainFor(data: unknown, error: unknown = null): QueryChain {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
     in: vi.fn().mockImplementation(() => chain),
-    // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
+    // biome-ignore lint/suspicious/noThenProperty: intentional mock of thenable for Supabase query chain.
     then: (resolve: (val: unknown) => unknown) => Promise.resolve({ data, error }).then(resolve),
   };
   return chain;

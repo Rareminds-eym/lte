@@ -1,3 +1,4 @@
+import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserLevelProgress } from "../types";
 
@@ -49,6 +50,7 @@ export async function getCapabilityModuleSummaries(
     .eq("status", "published");
 
   if (levelsError) {
+    apiLogger.error("Failed to fetch capability module levels", levelsError);
     throw new Error(`Failed to fetch capability module levels: ${levelsError.message}`);
   }
 
@@ -72,9 +74,11 @@ export async function getCapabilityModuleSummaries(
   ]);
 
   if (modulesResult.error) {
+    apiLogger.error("Failed to fetch capability modules", modulesResult.error);
     throw new Error(`Failed to fetch capability modules: ${modulesResult.error.message}`);
   }
   if (levelProgressResult.error) {
+    apiLogger.error("Failed to fetch capability level progress", levelProgressResult.error);
     throw new Error(
       `Failed to fetch capability level progress: ${levelProgressResult.error.message}`,
     );
@@ -109,6 +113,7 @@ export async function getCapabilityModuleSummaries(
     : null;
 
   if (moduleProgressResult?.error) {
+    apiLogger.error("Failed to fetch user module progress", moduleProgressResult.error);
     throw new Error(`Failed to fetch user module progress: ${moduleProgressResult.error.message}`);
   }
 

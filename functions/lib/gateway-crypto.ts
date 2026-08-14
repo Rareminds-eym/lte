@@ -30,6 +30,21 @@ export interface UserClaim {
   exp: number;
 }
 
+/** Raw, unvalidated shape of a decoded service-token claims object. */
+interface RawServiceTokenClaims {
+  app?: unknown;
+  actions?: unknown;
+  iat?: unknown;
+  exp?: unknown;
+  nbf?: unknown;
+}
+
+/** Raw, unvalidated shape of a decoded per-user claim payload. */
+interface RawUserClaim {
+  sub?: unknown;
+  exp?: unknown;
+}
+
 const encoder = new TextEncoder();
 
 function b64urlEncode(bytes: Uint8Array): string {
@@ -117,7 +132,7 @@ export async function verifyServiceToken(
     throw new GatewayAuthError("Invalid service token payload");
   }
 
-  const c = claims as Partial<ServiceTokenClaims>;
+  const c = claims as RawServiceTokenClaims;
   if (
     typeof c.app !== "string" ||
     !Array.isArray(c.actions) ||
@@ -136,7 +151,14 @@ export async function verifyServiceToken(
     throw new GatewayAuthError("Service token not yet valid");
   }
 
-  return c as ServiceTokenClaims;
+  // Every field was validated above; only now is it narrowed into the typed claims.
+  return {
+    app: c.app,
+    actions: c.actions as string[],
+    iat: c.iat,
+    exp: c.exp,
+    ...(typeof c.nbf === "number" ? { nbf: c.nbf } : {}),
+  };
 }
 
 export async function signUserClaim(
@@ -177,7 +199,7 @@ export async function verifyUserClaim(
     throw new GatewayAuthError("Invalid user claim payload");
   }
 
-  const c = payload as Partial<UserClaim>;
+  const c = payload as RawUserClaim;
   if (typeof c.sub !== "string" || !isValidUUID(c.sub)) {
     throw new GatewayAuthError("Invalid user claim subject", "BAD_REQUEST");
   }
@@ -185,5 +207,6 @@ export async function verifyUserClaim(
     throw new GatewayAuthError("User claim expired");
   }
 
+  // c.sub / c.exp are validated above; only now are they narrowed into the typed claim.
   return { sub: c.sub, exp: c.exp };
 }

@@ -23,23 +23,45 @@ export async function mapCapabilitiesToSyncPayload(
 ): Promise<SyncCapability[]> {
   const base = (ltePublicUrl ?? "").replace(/\/+$/, "");
   // Parallelize the (async) fingerprint computation — Promise.all preserves input order.
-  const result: SyncCapability[] = await Promise.all(
-    capabilities.map(async (cap) => ({
-      id: cap.id,
-      code: cap.code,
-      name: cap.name,
-      description: cap.description,
-      status: cap.status,
-      currentLevel: cap.currentLevel,
-      totalLevels: cap.totalLevels,
-      durationHours: cap.durationHours,
-      totalModules: cap.totalModules ?? 0,
-      completedModules: cap.completedModules ?? 0,
-      levels: cap.levels && cap.levels.length > 0 ? cap.levels.map(mapLevel) : undefined,
-      roleName: cap.roleName,
-      resumeUrl: base ? `${base}/my-courses/${encodeURIComponent(cap.code ?? cap.id)}` : undefined,
-      fingerprint: await computeFingerprint(cap),
-    })),
-  );
-  return result;
+  return Promise.all(capabilities.map((cap) => mapCapability(cap, base)));
+}
+
+/**
+ * Map one capability into its sync payload. The fingerprint hashing is the only
+ * fallible step, so it is isolated so a failure names WHICH course broke the
+ * batch instead of a bare rejection from `Promise.all`.
+ */
+async function mapCapability(cap: CapabilityWithModules, base: string): Promise<SyncCapability> {
+  return {
+    id: cap.id,
+    code: cap.code,
+    name: cap.name,
+    description: cap.description,
+    status: cap.status,
+    currentLevel: cap.currentLevel,
+    totalLevels: cap.totalLevels,
+    durationHours: cap.durationHours,
+    totalModules: cap.totalModules ?? 0,
+    completedModules: cap.completedModules ?? 0,
+    levels: cap.levels && cap.levels.length > 0 ? cap.levels.map(mapLevel) : undefined,
+    roleName: cap.roleName,
+    resumeUrl: base ? `${base}/my-courses/${encodeURIComponent(cap.code ?? cap.id)}` : undefined,
+    fingerprint: await computeCapabilityFingerprint(cap),
+  };
+}
+
+/**
+ * Content fingerprint with a contextual error on failure, so a batch failure
+ * identifies the capability (and reason) that broke it.
+ */
+async function computeCapabilityFingerprint(cap: CapabilityWithModules): Promise<string> {
+  try {
+    return await computeFingerprint(cap);
+  } catch (error) {
+    throw new Error(
+      `Failed to compute sync fingerprint for capability ${cap.code ?? cap.id}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
 }
