@@ -1,8 +1,7 @@
+import { TEST_GATEWAY_SECRET as VALID_SECRET } from "@functions/lib/__tests__/test-secrets";
 import type { LteEnv } from "@functions/lib/types";
 import { describe, expect, it } from "vitest";
 import { GatewayAuthError, getGatewaySecret, signServiceToken, verifyServiceToken } from "../auth";
-
-const VALID_SECRET = "a-real-gateway-secret-that-is-long-enough";
 
 describe("getGatewaySecret", () => {
   it("returns the secret when it is configured and long enough", () => {

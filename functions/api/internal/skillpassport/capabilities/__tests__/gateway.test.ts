@@ -1,5 +1,6 @@
 import { getUserCapabilitiesForRoles } from "@functions/api/v1/capabilities/queries";
 import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
+import { TEST_GATEWAY_SECRET as SECRET } from "@functions/lib/__tests__/test-secrets";
 import { signServiceToken, signUserClaim } from "@functions/lib/gateway-crypto";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,7 +23,6 @@ vi.mock("../queries/module-summaries", () => ({
   getCapabilityModuleSummaries: vi.fn(() => Promise.resolve({})),
 }));
 
-const SECRET = "test-gateway-secret-that-is-at-least-32-chars";
 const APP = "skillpassport";
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const URL = "http://lte.test/api/internal/skillpassport";

@@ -85,7 +85,10 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (error) {
+      apiLogger.warn("SkillPassport gateway received an invalid JSON body", {
+        error: error instanceof Error ? error.message : "Unknown parse error",
+      });
       return gatewayResponse(
         { ok: false, error: { code: "BAD_REQUEST", message: "Request body must be valid JSON" } },
         crypto.randomUUID(),

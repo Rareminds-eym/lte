@@ -62,7 +62,7 @@ export async function getCapabilityModuleSummaries(
 
   const levelIds = levels.map((lvl) => lvl.id);
 
-  const [{ data: modulesData }, { data: levelProgressData }] = await Promise.all([
+  const [modulesResult, levelProgressResult] = await Promise.all([
     supabase.from("modules").select("id, level_id").in("level_id", levelIds).eq("is_active", true),
     supabase
       .from("user_capability_level_progress")
@@ -71,7 +71,16 @@ export async function getCapabilityModuleSummaries(
       .in("level_id", levelIds),
   ]);
 
-  const modules = (modulesData ?? []) as Array<{ id: string; level_id: string }>;
+  if (modulesResult.error) {
+    throw new Error(`Failed to fetch capability modules: ${modulesResult.error.message}`);
+  }
+  if (levelProgressResult.error) {
+    throw new Error(
+      `Failed to fetch capability level progress: ${levelProgressResult.error.message}`,
+    );
+  }
+
+  const modules = (modulesResult.data ?? []) as Array<{ id: string; level_id: string }>;
   const moduleIds = modules.map((m) => m.id);
   const moduleLevelById = new Map(modules.map((m) => [m.id, m.level_id]));
   const moduleCountByLevel = modules.reduce<Record<string, number>>((counts, m) => {
@@ -83,7 +92,7 @@ export async function getCapabilityModuleSummaries(
     string,
     { status: string; completion_percentage: number | null }
   >();
-  for (const row of (levelProgressData ?? []) as Array<{
+  for (const row of (levelProgressResult.data ?? []) as Array<{
     level_id: string;
     status: string;
     completion_percentage: number | null;
@@ -91,13 +100,19 @@ export async function getCapabilityModuleSummaries(
     levelProgressByLevel.set(row.level_id, row);
   }
 
-  const { data: moduleProgressData } = moduleIds.length
+  const moduleProgressResult = moduleIds.length
     ? await supabase
         .from("user_module_progress")
         .select("module_id, module_status, completion_percentage")
         .eq("user_id", userId)
         .in("module_id", moduleIds)
-    : { data: [] };
+    : null;
+
+  if (moduleProgressResult?.error) {
+    throw new Error(`Failed to fetch user module progress: ${moduleProgressResult.error.message}`);
+  }
+
+  const moduleProgressData = moduleProgressResult?.data ?? [];
 
   const completedModuleByLevel: Record<string, number> = {};
   for (const row of (moduleProgressData ?? []) as Array<{

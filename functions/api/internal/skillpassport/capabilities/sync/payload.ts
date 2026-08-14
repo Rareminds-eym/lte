@@ -22,9 +22,9 @@ export async function mapCapabilitiesToSyncPayload(
   ltePublicUrl?: string,
 ): Promise<SyncCapability[]> {
   const base = (ltePublicUrl ?? "").replace(/\/+$/, "");
-  const result: SyncCapability[] = [];
-  for (const cap of capabilities) {
-    result.push({
+  // Parallelize the (async) fingerprint computation — Promise.all preserves input order.
+  const result: SyncCapability[] = await Promise.all(
+    capabilities.map(async (cap) => ({
       id: cap.id,
       code: cap.code,
       name: cap.name,
@@ -39,7 +39,7 @@ export async function mapCapabilitiesToSyncPayload(
       roleName: cap.roleName,
       resumeUrl: base ? `${base}/my-courses/${encodeURIComponent(cap.code ?? cap.id)}` : undefined,
       fingerprint: await computeFingerprint(cap),
-    });
-  }
+    })),
+  );
   return result;
 }

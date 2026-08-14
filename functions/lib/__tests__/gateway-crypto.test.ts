@@ -8,7 +8,8 @@ import {
   verifyUserClaim,
 } from "../gateway-crypto";
 
-const SECRET = "test-gateway-secret-that-is-at-least-32-chars";
+import { TEST_GATEWAY_SECRET as SECRET } from "./test-secrets";
+
 const SUB = "11111111-1111-4111-8111-111111111111";
 
 async function makeToken(payload: unknown, secret = SECRET): Promise<string> {
@@ -55,15 +56,16 @@ describe("service tokens", () => {
   const now = () => Math.floor(Date.now() / 1000);
 
   it("signs and verifies a token roundtrip", async () => {
+    const exp = now() + 300;
     const token = await signServiceToken(SECRET, {
       app: "skillpassport",
       actions: ["capabilities:get"],
       iat: now(),
-      exp: now() + 300,
+      exp,
     });
     const claims = await verifyServiceToken(SECRET, token);
     expect(claims).toMatchObject({ app: "skillpassport", actions: ["capabilities:get"] });
-    expect(claims.exp).toBe(now() + 300);
+    expect(claims.exp).toBe(exp);
   });
 
   it("rejects tokens signed with a different secret", async () => {
