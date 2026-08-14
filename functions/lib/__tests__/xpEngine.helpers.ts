@@ -1,5 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
-import type { awardXp } from "../xp-engine";
 
 export const mockSingle = vi.fn();
 export const mockMaybeSingle = vi.fn();
@@ -65,7 +65,7 @@ export function createChain(): XpMockChain {
 
 export const mockSupabase = {
   from: vi.fn().mockImplementation(() => createChain()),
-} as unknown as Parameters<typeof awardXp>[0];
+} as unknown as SupabaseClient;
 
 export function resetMocks(): void {
   vi.clearAllMocks();

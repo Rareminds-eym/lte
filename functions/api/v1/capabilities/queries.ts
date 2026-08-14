@@ -1,5 +1,9 @@
+import {
+  asQueryGateway,
+  QueryGatewayDatabaseError,
+  type QueryGatewaySource,
+} from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   Capability,
   CapabilityLevel,
@@ -7,13 +11,10 @@ import type {
   UserCapability,
 } from "./types";
 
-export async function getCapabilitiesByRoleId(
-  supabase: SupabaseClient,
-  roleId: string,
-): Promise<Capability[]> {
-  const { data, error } = await supabase
-    .from("role_capability_sequence")
-    .select(`
+const roleCapabilitiesReadPolicy = {
+  table: "role_capability_sequence",
+  operation: "read",
+  select: `
       id,
       sequence_step,
       required_level,
@@ -24,12 +25,98 @@ export async function getCapabilitiesByRoleId(
         name,
         description
       )
-    `)
-    .eq("role_id", roleId)
-    .order("sequence_step", { ascending: true });
+    `,
+  filters: ["role_id"],
+  sorts: ["sequence_step"],
+} as const;
 
-  if (error) {
-    throw new Error(`Failed to fetch role capabilities: ${error.message}`);
+const levelStatsReadPolicy = {
+  table: "levels",
+  operation: "read",
+  columns: ["capability_id", "id", "total_xp", "duration_minutes"],
+  filters: ["capability_id", "is_active", "status"],
+  defaultFilters: [
+    { column: "is_active", op: "eq", value: true },
+    { column: "status", op: "eq", value: "published" },
+  ],
+} as const;
+
+const capabilityProgressLevelsReadPolicy = {
+  table: "levels",
+  operation: "read",
+  columns: ["id", "capability_id", "level_code"],
+  filters: ["capability_id", "is_active", "status"],
+  defaultFilters: [
+    { column: "is_active", op: "eq", value: true },
+    { column: "status", op: "eq", value: "published" },
+  ],
+} as const;
+
+const modulesByLevelReadPolicy = {
+  table: "modules",
+  operation: "read",
+  columns: ["id", "level_id"],
+  filters: ["level_id", "is_active"],
+  defaultFilters: [{ column: "is_active", op: "eq", value: true }],
+} as const;
+
+const userModuleProgressReadPolicy = {
+  table: "user_module_progress",
+  operation: "read",
+  columns: ["module_id", "module_status", "completion_percentage"],
+  filters: ["user_id", "module_id"],
+  ownership: {
+    column: "user_id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+} as const;
+
+const levelsForCapabilityReadPolicy = {
+  table: "levels",
+  operation: "read",
+  columns: [
+    "id",
+    "level_code",
+    "title",
+    "description",
+    "example_outputs",
+    "duration_minutes",
+    "difficulty_level",
+    "status",
+    "total_xp",
+  ],
+  filters: ["capability_id", "is_active", "status"],
+  defaultFilters: [
+    { column: "is_active", op: "eq", value: true },
+    { column: "status", op: "eq", value: "published" },
+  ],
+} as const;
+
+function rethrowQueryError(error: unknown, message: string): never {
+  if (error instanceof QueryGatewayDatabaseError) {
+    const causeMessage =
+      error.cause && typeof error.cause === "object" && "message" in error.cause
+        ? String(error.cause.message)
+        : error.message;
+    throw new Error(`${message}: ${causeMessage}`);
+  }
+  throw error;
+}
+
+export async function getCapabilitiesByRoleId(
+  source: QueryGatewaySource,
+  roleId: string,
+): Promise<Capability[]> {
+  const qb = asQueryGateway(source);
+  let data: RoleCapabilitySequenceRow[] | null;
+  try {
+    data = (await qb.read(roleCapabilitiesReadPolicy, {
+      filters: [{ column: "role_id", op: "eq", value: roleId }],
+      sort: [{ column: "sequence_step", ascending: true }],
+    })) as RoleCapabilitySequenceRow[] | null;
+  } catch (error) {
+    rethrowQueryError(error, "Failed to fetch role capabilities");
   }
 
   if (!data || data.length === 0) {
@@ -52,7 +139,7 @@ export async function getCapabilitiesByRoleId(
 }
 
 export async function getLevelStatsForCapabilities(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   capabilityIds: string[],
 ): Promise<{
   counts: Record<string, number>;
@@ -61,15 +148,24 @@ export async function getLevelStatsForCapabilities(
 }> {
   if (capabilityIds.length === 0) return { counts: {}, xpSums: {}, durationHours: {} };
 
-  const { data, error } = await supabase
-    .from("levels")
-    .select("capability_id, id, total_xp, duration_minutes")
-    .in("capability_id", capabilityIds)
-    .eq("is_active", true)
-    .eq("status", "published");
-
-  if (error) {
-    throw new Error(`Failed to fetch level counts: ${error.message}`);
+  const qb = asQueryGateway(source);
+  let data: Array<{
+    capability_id: string;
+    id: string;
+    total_xp?: number;
+    duration_minutes?: number | null;
+  }> | null;
+  try {
+    data = (await qb.read(levelStatsReadPolicy, {
+      filters: [{ column: "capability_id", op: "in", value: capabilityIds }],
+    })) as Array<{
+      capability_id: string;
+      id: string;
+      total_xp?: number;
+      duration_minutes?: number | null;
+    }> | null;
+  } catch (error) {
+    rethrowQueryError(error, "Failed to fetch level counts");
   }
 
   const counts: Record<string, number> = {};
@@ -106,21 +202,28 @@ const parseLevelNumber = (levelCode: string) =>
   parseInt(levelCode.match(/L(\d+)/i)?.[1] ?? "1", 10);
 
 export async function getUserCapabilityProgressSummaries(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   capabilityIds: string[],
 ): Promise<Record<string, CapabilityProgressSummary>> {
   if (capabilityIds.length === 0) return {};
 
-  const { data: levels, error: levelsError } = await supabase
-    .from("levels")
-    .select("id, capability_id, level_code")
-    .in("capability_id", capabilityIds)
-    .eq("is_active", true)
-    .eq("status", "published");
-
-  if (levelsError) {
-    throw new Error(`Failed to fetch capability progress levels: ${levelsError.message}`);
+  const qb = asQueryGateway(source);
+  let levels: Array<{
+    id: string;
+    capability_id: string;
+    level_code: string;
+  }> | null;
+  try {
+    levels = (await qb.read(capabilityProgressLevelsReadPolicy, {
+      filters: [{ column: "capability_id", op: "in", value: capabilityIds }],
+    })) as Array<{
+      id: string;
+      capability_id: string;
+      level_code: string;
+    }> | null;
+  } catch (error) {
+    rethrowQueryError(error, "Failed to fetch capability progress levels");
   }
 
   const levelRows = (levels ?? []) as Array<{
@@ -131,14 +234,13 @@ export async function getUserCapabilityProgressSummaries(
   const levelIds = levelRows.map((level) => level.id);
   if (levelIds.length === 0) return {};
 
-  const { data: moduleRows, error: modulesError } = await supabase
-    .from("modules")
-    .select("id, level_id")
-    .in("level_id", levelIds)
-    .eq("is_active", true);
-
-  if (modulesError) {
-    throw new Error(`Failed to fetch capability progress modules: ${modulesError.message}`);
+  let moduleRows: Array<{ id: string; level_id: string }> | null;
+  try {
+    moduleRows = (await qb.read(modulesByLevelReadPolicy, {
+      filters: [{ column: "level_id", op: "in", value: levelIds }],
+    })) as Array<{ id: string; level_id: string }> | null;
+  } catch (error) {
+    rethrowQueryError(error, "Failed to fetch capability progress modules");
   }
 
   const modules = (moduleRows ?? []) as Array<{ id: string; level_id: string }>;
@@ -149,16 +251,24 @@ export async function getUserCapabilityProgressSummaries(
     return counts;
   }, {});
 
-  const { data: moduleProgressRows, error: moduleProgressError } = moduleIds.length
-    ? await supabase
-        .from("user_module_progress")
-        .select("module_id, module_status, completion_percentage")
-        .eq("user_id", userId)
-        .in("module_id", moduleIds)
-    : { data: [], error: null };
-
-  if (moduleProgressError) {
-    throw new Error(`Failed to fetch user module progress: ${moduleProgressError.message}`);
+  let moduleProgressRows: Array<{
+    module_id: string;
+    module_status: string;
+    completion_percentage: number | null;
+  }> = [];
+  if (moduleIds.length) {
+    try {
+      moduleProgressRows = ((await qb.read(userModuleProgressReadPolicy, {
+        auth: { userId },
+        filters: [{ column: "module_id", op: "in", value: moduleIds }],
+      })) ?? []) as Array<{
+        module_id: string;
+        module_status: string;
+        completion_percentage: number | null;
+      }>;
+    } catch (error) {
+      rethrowQueryError(error, "Failed to fetch user module progress");
+    }
   }
 
   const completedModuleCountByLevel: Record<string, number> = {};
@@ -222,7 +332,7 @@ export async function getUserCapabilityProgressSummaries(
 }
 
 export async function getUserCapabilitiesForRoles(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   roleIds: string[],
   rolesInfo: Array<{ roleId: string; roleName: string }>,
@@ -233,7 +343,7 @@ export async function getUserCapabilitiesForRoles(
   const roleNameMap = new Map<string, string>(rolesInfo.map((r) => [r.roleId, r.roleName]));
 
   for (const roleId of roleIds) {
-    const capabilities = await getCapabilitiesByRoleId(supabase, roleId);
+    const capabilities = await getCapabilitiesByRoleId(source, roleId);
     if (capabilities.length === 0) continue;
 
     const capIds = capabilities.map((c) => c.id);
@@ -241,8 +351,8 @@ export async function getUserCapabilitiesForRoles(
       counts: levelCounts,
       xpSums,
       durationHours,
-    } = await getLevelStatsForCapabilities(supabase, capIds);
-    const progressSummaries = await getUserCapabilityProgressSummaries(supabase, userId, capIds);
+    } = await getLevelStatsForCapabilities(source, capIds);
+    const progressSummaries = await getUserCapabilityProgressSummaries(source, userId, capIds);
     const roleName = roleNameMap.get(roleId) ?? "";
 
     const userCaps = capabilities.map((cap) => {
@@ -273,20 +383,37 @@ export async function getUserCapabilitiesForRoles(
 }
 
 export async function getLevelsForCapability(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   capabilityId: string,
 ): Promise<CapabilityLevel[]> {
-  const { data, error } = await supabase
-    .from("levels")
-    .select(
-      "id, level_code, title, description, example_outputs, duration_minutes, difficulty_level, status, total_xp",
-    )
-    .eq("capability_id", capabilityId)
-    .eq("is_active", true)
-    .eq("status", "published");
-
-  if (error) {
-    throw new Error(`Failed to fetch capability levels: ${error.message}`);
+  const qb = asQueryGateway(source);
+  let data: Array<{
+    id: string;
+    level_code: string;
+    title: string;
+    description: string;
+    example_outputs: unknown;
+    duration_minutes: number | null;
+    difficulty_level: string | null;
+    status: string;
+    total_xp?: number;
+  }> | null;
+  try {
+    data = (await qb.read(levelsForCapabilityReadPolicy, {
+      filters: [{ column: "capability_id", op: "eq", value: capabilityId }],
+    })) as Array<{
+      id: string;
+      level_code: string;
+      title: string;
+      description: string;
+      example_outputs: unknown;
+      duration_minutes: number | null;
+      difficulty_level: string | null;
+      status: string;
+      total_xp?: number;
+    }> | null;
+  } catch (error) {
+    rethrowQueryError(error, "Failed to fetch capability levels");
   }
 
   return (data ?? [])

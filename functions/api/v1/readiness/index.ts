@@ -1,5 +1,5 @@
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
@@ -21,33 +21,120 @@ interface ReadinessDisplay {
   improvementActions: string[]; // ordered by impact
 }
 
+const activeReadinessPathReadPolicy = {
+  table: "learning_paths",
+  operation: "read",
+  select: `
+    id,
+    role_readiness_percentage,
+    updated_at,
+    role_id,
+    roles (
+      role_name,
+      role_family_name,
+      domain_name
+    )
+  `,
+  filters: ["user_id", "is_latest"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const readinessLevelProgressReadPolicy = {
+  table: "user_capability_level_progress",
+  operation: "read",
+  columns: ["level_id"],
+  filters: ["learning_path_id"],
+} as const;
+
+const readinessModulesReadPolicy = {
+  table: "modules",
+  operation: "read",
+  columns: ["id", "module_no", "level_id"],
+  filters: ["level_id", "is_active"],
+  sorts: ["module_no"],
+} as const;
+
+const readinessLevelsReadPolicy = {
+  table: "levels",
+  operation: "read",
+  columns: ["total_xp"],
+  filters: ["id"],
+} as const;
+
+const readinessStagesReadPolicy = {
+  table: "modules_content",
+  operation: "read",
+  columns: ["id", "module_id", "stage_name"],
+  filters: ["module_id", "is_active"],
+} as const;
+
+const readinessArtifactsReadPolicy = {
+  table: "module_artifacts",
+  operation: "read",
+  columns: ["id", "modules_content_id"],
+  filters: ["modules_content_id", "artifact_type", "is_active"],
+} as const;
+
+const readinessModuleProgressReadPolicy = {
+  table: "user_module_progress",
+  operation: "read",
+  columns: ["module_status", "module_id"],
+  filters: ["user_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  maxPageSize: 1000,
+} as const;
+
+const readinessArtifactSubmissionsReadPolicy = {
+  table: "artifact_submissions",
+  operation: "read",
+  select: "id, status, artifact_id, module_artifacts ( id, artifact_type )",
+  filters: ["user_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  maxPageSize: 1000,
+} as const;
+
+const readinessEvaluationFlowsReadPolicy = {
+  table: "artifact_evaluation_flows",
+  operation: "read",
+  columns: ["score"],
+  filters: ["submission_id", "is_current_stage"],
+} as const;
+
+const readinessXpReadPolicy = {
+  table: "xp_events",
+  operation: "read",
+  columns: ["xp_amount"],
+  filters: ["user_id", "xp_category"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  maxPageSize: 1000,
+} as const;
+
+const readinessProfileReadPolicy = {
+  table: "user_profiles",
+  operation: "read",
+  columns: ["bio", "job_title", "skills"],
+  filters: ["user_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
   try {
     const user = await requireAuth(context.request, context.env);
     const userId = user.sub;
 
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
     // 1. Fetch active learning path and join with roles
-    const { data: path, error: pathError } = await supabase
-      .from("learning_paths")
-      .select(`
-        id,
-        role_readiness_percentage,
-        updated_at,
-        role_id,
-        roles (
-          role_name,
-          role_family_name,
-          domain_name
-        )
-      `)
-      .eq("user_id", userId)
-      .eq("is_latest", true)
-      .maybeSingle();
-
-    if (pathError) throw pathError;
+    const path = (await qb.read(activeReadinessPathReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "is_latest", op: "eq", value: true }],
+      result: "maybeSingle",
+    })) as {
+      id: string;
+      updated_at: string;
+      roles?: Record<string, unknown> | Array<Record<string, unknown>>;
+    } | null;
 
     if (!path) {
       return jsonError("No active learning path found", 404, {
@@ -66,10 +153,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     };
 
     // 2. Identify the levels in this learning path
-    const { data: levelProgressRows } = await supabase
-      .from("user_capability_level_progress")
-      .select("level_id")
-      .eq("learning_path_id", path.id);
+    const levelProgressRows = (await qb.read(readinessLevelProgressReadPolicy, {
+      filters: [{ column: "learning_path_id", op: "eq", value: path.id }],
+    })) as Array<{ level_id: string }> | null;
 
     interface RequiredModule {
       id: string;
@@ -90,22 +176,22 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     if (levelIds.length > 0) {
       // Fetch modules for these levels
-      const { data: modules } = await supabase
-        .from("modules")
-        .select("id, module_no, level_id")
-        .in("level_id", levelIds)
-        .eq("is_active", true)
-        .order("module_no", { ascending: true });
+      const modules = (await qb.read(readinessModulesReadPolicy, {
+        filters: [
+          { column: "level_id", op: "in", value: levelIds },
+          { column: "is_active", op: "eq", value: true },
+        ],
+        sort: [{ column: "module_no", ascending: true }],
+      })) as RequiredModule[] | null;
 
       if (modules) {
         requiredModules = modules;
       }
 
       // Fetch expected evidence XP from the levels
-      const { data: levelsData } = await supabase
-        .from("levels")
-        .select("total_xp")
-        .in("id", levelIds);
+      const levelsData = (await qb.read(readinessLevelsReadPolicy, {
+        filters: [{ column: "id", op: "in", value: levelIds }],
+      })) as Array<{ total_xp: number | null }> | null;
 
       if (levelsData) {
         expectedEvidenceXp = levelsData.reduce((sum, lvl) => sum + (lvl.total_xp || 0), 0);
@@ -114,20 +200,22 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       // Fetch required mandatory artifacts for these levels
       const moduleIds = requiredModules.map((m) => m.id);
       if (moduleIds.length > 0) {
-        const { data: stages } = await supabase
-          .from("modules_content")
-          .select("id, module_id, stage_name")
-          .in("module_id", moduleIds)
-          .eq("is_active", true);
+        const stages = (await qb.read(readinessStagesReadPolicy, {
+          filters: [
+            { column: "module_id", op: "in", value: moduleIds },
+            { column: "is_active", op: "eq", value: true },
+          ],
+        })) as Array<{ id: string; module_id: string; stage_name: string | null }> | null;
 
         const stageIds = stages?.map((s) => s.id) || [];
         if (stageIds.length > 0) {
-          const { data: artifacts } = await supabase
-            .from("module_artifacts")
-            .select("id, modules_content_id")
-            .in("modules_content_id", stageIds)
-            .eq("artifact_type", "final")
-            .eq("is_active", true);
+          const artifacts = (await qb.read(readinessArtifactsReadPolicy, {
+            filters: [
+              { column: "modules_content_id", op: "in", value: stageIds },
+              { column: "artifact_type", op: "eq", value: "final" },
+              { column: "is_active", op: "eq", value: true },
+            ],
+          })) as Array<{ id: string; modules_content_id: string }> | null;
 
           if (artifacts) {
             requiredArtifacts = artifacts.map((art) => {
@@ -147,10 +235,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     // 3. Component Calculations
     // A. Course Completion (30%)
-    const { data: modulesProgress } = await supabase
-      .from("user_module_progress")
-      .select("module_status, module_id")
-      .eq("user_id", userId);
+    const modulesProgress = (await qb.read(readinessModuleProgressReadPolicy, {
+      auth: { userId },
+    })) as Array<{ module_status: string | null; module_id: string }> | null;
 
     const totalModules =
       requiredModules.length > 0 ? requiredModules.length : modulesProgress?.length || 0;
@@ -166,10 +253,14 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const courseCompletion = totalModules > 0 ? (masteredModules / totalModules) * 100 : 0;
 
     // B. Artifact Completion (25%)
-    const { data: artifactSubmissions } = await supabase
-      .from("artifact_submissions")
-      .select("id, status, artifact_id, module_artifacts ( id, artifact_type )")
-      .eq("user_id", userId);
+    const artifactSubmissions = (await qb.read(readinessArtifactSubmissionsReadPolicy, {
+      auth: { userId },
+    })) as Array<{
+      id: string;
+      status: string;
+      artifact_id: string;
+      module_artifacts?: Record<string, unknown> | Array<Record<string, unknown>>;
+    }> | null;
 
     const finalSubmissions = (artifactSubmissions || []).filter((s) => {
       const ma =
@@ -207,11 +298,12 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const submissionIds = acceptedFinalSubmissions.map((s) => s.id);
     let aiAverageScore = 0;
     if (submissionIds.length > 0) {
-      const { data: flows } = await supabase
-        .from("artifact_evaluation_flows")
-        .select("score")
-        .in("submission_id", submissionIds)
-        .eq("is_current_stage", true);
+      const flows = (await qb.read(readinessEvaluationFlowsReadPolicy, {
+        filters: [
+          { column: "submission_id", op: "in", value: submissionIds },
+          { column: "is_current_stage", op: "eq", value: true },
+        ],
+      })) as Array<{ score: number | null }> | null;
 
       const scores = (flows || [])
         .map((f) => f.score)
@@ -222,22 +314,20 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     // D. XP Achievement (10%)
-    const { data: xpData } = await supabase
-      .from("xp_events")
-      .select("xp_amount")
-      .eq("user_id", userId)
-      .eq("xp_category", "evidence");
+    const xpData = (await qb.read(readinessXpReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "xp_category", op: "eq", value: "evidence" }],
+    })) as Array<{ xp_amount: number | null }> | null;
 
-    const evidenceXpEarned = xpData?.reduce((sum, item) => sum + item.xp_amount, 0) || 0;
+    const evidenceXpEarned = xpData?.reduce((sum, item) => sum + (item.xp_amount ?? 0), 0) || 0;
     const xpAchievement =
       expectedEvidenceXp > 0 ? Math.min((evidenceXpEarned / expectedEvidenceXp) * 100, 100) : 0;
 
     // E. Profile Completion (10%)
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("bio, job_title, skills")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const profile = (await qb.read(readinessProfileReadPolicy, {
+      auth: { userId },
+      result: "maybeSingle",
+    })) as { bio?: string | null; job_title?: string | null; skills?: unknown } | null;
 
     let completedFields = 0;
     const totalFields = 3;

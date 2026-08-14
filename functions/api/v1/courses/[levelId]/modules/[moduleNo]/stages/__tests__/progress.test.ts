@@ -1,7 +1,7 @@
 import { upsertStageProgress } from "@functions/api/v1/courses/queries";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
+import { awardXp, completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +17,7 @@ vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
 vi.mock("@functions/lib/xp-engine", () => ({
   completeStage: vi.fn(),
   getUserTotalXp: vi.fn(),
+  awardXp: vi.fn(),
 }));
 
 vi.mock("@functions/api/v1/courses/queries", () => ({
@@ -27,6 +28,9 @@ vi.mock("@functions/api/v1/courses/queries", () => ({
 interface QueryChain {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  gte: ReturnType<typeof vi.fn>;
+  in: ReturnType<typeof vi.fn>;
+  range: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
   then: (resolve: (val: unknown) => unknown) => Promise<unknown>;
@@ -36,6 +40,9 @@ function chainFor(data: unknown, error: unknown = null): QueryChain {
   const chain: QueryChain = {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
+    gte: vi.fn().mockImplementation(() => chain),
+    in: vi.fn().mockImplementation(() => chain),
+    range: vi.fn().mockImplementation(() => chain),
     single: vi.fn().mockResolvedValue({ data, error }),
     maybeSingle: vi.fn().mockResolvedValue({ data, error }),
     // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
@@ -90,6 +97,16 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
       success: true,
       xpAwarded: 1,
       userStageProgressId: "sp-1",
+    });
+    vi.mocked(awardXp).mockResolvedValue({
+      success: true,
+      xpAwarded: 1,
+      alreadyAwarded: false,
+    });
+    vi.mocked(upsertStageProgress).mockResolvedValue({
+      stageProgressId: "stage-1",
+      stagesCompleted: 1,
+      completionPercentage: 17,
     });
     vi.mocked(getUserTotalXp).mockResolvedValue(120);
   });
@@ -152,15 +169,16 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
   });
 
   it("completes a stage and returns updated progress plus XP", async () => {
-    vi.mocked(completeStage).mockResolvedValueOnce({
+    vi.mocked(awardXp).mockResolvedValueOnce({
       success: true,
       xpAwarded: 5,
-      userStageProgressId: "stage-1",
+      alreadyAwarded: false,
     });
     vi.mocked(getUserTotalXp).mockResolvedValueOnce(430);
     vi.mocked(createServiceSupabase).mockReturnValueOnce(
       supabaseWith({
         e_content: { data: { modules_content_id: "mc-1" } },
+        xp_events: { data: [{ xp_amount: 430 }] },
         user_stage_progress: { data: { user_module_progress_id: "ump-1" } },
         user_module_progress: { data: { stages_completed: 2, completion_percentage: 33 } },
       }),
@@ -180,8 +198,14 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
       levelCompleted: false,
       levelXpAwarded: 0,
     });
-    expect(completeStage).toHaveBeenCalledWith(expect.anything(), "user-1", "mc-1");
-    expect(getUserTotalXp).toHaveBeenCalledWith(expect.anything(), "user-1");
+    expect(awardXp).toHaveBeenCalledWith(
+      expect.anything(),
+      "user-1",
+      "stage_completed",
+      "user_stage_progress",
+      "stage-1",
+      { modules_content_id: "mc-1", stage_name: "engage" },
+    );
   });
 
   it("returns 500 when the stage progress lookup errors after completion", async () => {
@@ -261,7 +285,14 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
       xpCategory: "evidence",
     });
     expect(upsertStageProgress).toHaveBeenCalledWith(
-      supabase,
+      expect.objectContaining({
+        read: expect.any(Function),
+        insert: expect.any(Function),
+        update: expect.any(Function),
+        upsert: expect.any(Function),
+        delete: expect.any(Function),
+        rpc: expect.any(Function),
+      }),
       "user-1",
       "level-1",
       1,
@@ -284,7 +315,7 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
   });
 
   it("returns 500 with a generic message for non-Error throws", async () => {
-    vi.mocked(completeStage).mockRejectedValueOnce("boom-string");
+    vi.mocked(awardXp).mockRejectedValueOnce("boom-string");
     vi.mocked(createServiceSupabase).mockReturnValueOnce(
       supabaseWith({ e_content: { data: { modules_content_id: "mc-1" } } }),
     );

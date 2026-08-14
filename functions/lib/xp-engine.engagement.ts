@@ -1,6 +1,29 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { apiLogger } from "../shared/logger";
+import { asQueryGateway, type QueryGatewayFilter, type QueryGatewaySource } from "./query-gateway";
 import { awardXp } from "./xp-engine.core";
+
+const loginXpEventsReadPolicy = {
+  table: "xp_events",
+  operation: "read",
+  columns: ["metadata"],
+  filters: ["user_id", "event_type"],
+  maxPageSize: 1000,
+} as const;
+
+const userLastActivityReadPolicy = {
+  table: "users",
+  operation: "read",
+  columns: ["last_activity_at"],
+  filters: ["id"],
+} as const;
+
+const userXpTotalReadPolicy = {
+  table: "xp_events",
+  operation: "read",
+  columns: ["xp_amount"],
+  filters: ["user_id", "created_at"],
+  maxPageSize: 1000,
+} as const;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -41,15 +64,16 @@ export function countConsecutiveDaysFromToday(todayStr: string, sortedDescDates:
  * Idempotency key: login:{userId}:{YYYY-MM-DD}
  */
 export async function triggerDailyLogin(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
 ): Promise<{ success: boolean; xpAwarded: number }> {
+  const qb = asQueryGateway(source);
   const todayDate = new Date().toISOString().split("T")[0] || "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(todayDate)) {
     throw new Error("Invalid date format generated");
   }
 
-  const xpResult = await awardXp(supabase, userId, "daily_login", "users", userId, {
+  const xpResult = await awardXp(qb, userId, "daily_login", "users", userId, {
     login_date: todayDate,
   });
 
@@ -65,10 +89,11 @@ export async function triggerDailyLogin(
  * Idempotency key: profile:{userId}
  */
 export async function completeProfile(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
 ): Promise<{ success: boolean; xpAwarded: number }> {
-  const xpRes = await awardXp(supabase, userId, "profile_completed", "users", userId);
+  const qb = asQueryGateway(source);
+  const xpRes = await awardXp(qb, userId, "profile_completed", "users", userId);
   return { success: true, xpAwarded: xpRes.xpAwarded };
 }
 
@@ -84,19 +109,19 @@ export async function completeProfile(
  * Streak resets to 0 when any calendar day is missed.
  */
 export async function checkAndAwardStreak(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
 ): Promise<{ xpAwarded: number; consecutiveDays: number }> {
+  const qb = asQueryGateway(source);
   const todayStr = new Date().toISOString().split("T")[0] || "";
 
   // Fetch all distinct daily_login dates for this user, descending
-  const { data: loginRows, error } = await supabase
-    .from("xp_events")
-    .select("metadata")
-    .eq("user_id", userId)
-    .eq("event_type", "daily_login");
-
-  if (error) throw error;
+  const loginRows = (await qb.read(loginXpEventsReadPolicy, {
+    filters: [
+      { column: "user_id", op: "eq", value: userId },
+      { column: "event_type", op: "eq", value: "daily_login" },
+    ],
+  })) as Array<{ metadata: unknown }> | null;
 
   // Extract and deduplicate YYYY-MM-DD strings from metadata.login_date
   const dateSet = new Set<string>();
@@ -117,7 +142,7 @@ export async function checkAndAwardStreak(
 
   // Award on every multiple of 7
   if (consecutive > 0 && consecutive % 7 === 0) {
-    const res = await awardXp(supabase, userId, "streak_7_day", "xp_events", userId, {
+    const res = await awardXp(qb, userId, "streak_7_day", "xp_events", userId, {
       consecutive_days: consecutive,
       streak_milestone: consecutive / 7,
       streak_date: todayStr,
@@ -140,18 +165,18 @@ export async function checkAndAwardStreak(
  * A new award is possible if the user breaks and rebuilds a new 30-day streak.
  */
 export async function checkAndAwardConsistency(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
 ): Promise<{ xpAwarded: number; consecutiveDays: number }> {
+  const qb = asQueryGateway(source);
   const todayStr = new Date().toISOString().split("T")[0] || "";
 
-  const { data: loginRows, error } = await supabase
-    .from("xp_events")
-    .select("metadata")
-    .eq("user_id", userId)
-    .eq("event_type", "daily_login");
-
-  if (error) throw error;
+  const loginRows = (await qb.read(loginXpEventsReadPolicy, {
+    filters: [
+      { column: "user_id", op: "eq", value: userId },
+      { column: "event_type", op: "eq", value: "daily_login" },
+    ],
+  })) as Array<{ metadata: unknown }> | null;
 
   const dateSet = new Set<string>();
   for (const row of loginRows ?? []) {
@@ -172,7 +197,7 @@ export async function checkAndAwardConsistency(
     startDt.setUTCDate(startDt.getUTCDate() - (consecutive - 1));
     const streakStartDate = startDt.toISOString().split("T")[0] || "";
 
-    const res = await awardXp(supabase, userId, "consistency_30_day", "xp_events", userId, {
+    const res = await awardXp(qb, userId, "consistency_30_day", "xp_events", userId, {
       consecutive_days: consecutive,
       streak_start: streakStartDate,
       consistency_date: todayStr,
@@ -195,16 +220,15 @@ export async function checkAndAwardConsistency(
  * Source: users.last_activity_at (updated by sync-shadow on every login/sync)
  */
 export async function checkAndAwardLegacyBonus(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
 ): Promise<{ xpAwarded: number; gapDays: number }> {
-  const { data: userRow, error } = await supabase
-    .from("users")
-    .select("last_activity_at")
-    .eq("id", userId)
-    .maybeSingle();
+  const qb = asQueryGateway(source);
+  const userRow = (await qb.read(userLastActivityReadPolicy, {
+    filters: [{ column: "id", op: "eq", value: userId }],
+    result: "maybeSingle",
+  })) as { last_activity_at?: string | null } | null;
 
-  if (error) throw error;
   if (!userRow?.last_activity_at) return { xpAwarded: 0, gapDays: 0 };
 
   const lastActivity = new Date(userRow.last_activity_at);
@@ -213,7 +237,7 @@ export async function checkAndAwardLegacyBonus(
   const gapDays = Math.floor(gapMs / (1000 * 60 * 60 * 24));
 
   if (gapDays > 120) {
-    const res = await awardXp(supabase, userId, "legacy_consistency_bonus", "users", userId, {
+    const res = await awardXp(qb, userId, "legacy_consistency_bonus", "users", userId, {
       gap_days: gapDays,
       last_activity_at: userRow.last_activity_at,
     });
@@ -232,11 +256,12 @@ export async function checkAndAwardLegacyBonus(
  * Idempotency keys: milestone25/50/75/100:{userId}:{roleId}
  */
 export async function evaluateMilestones(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   roleId: string,
   readinessScore: number,
 ): Promise<{ success: boolean; milestonesAwarded: string[] }> {
+  const qb = asQueryGateway(source);
   const thresholds = [
     { score: 25, event: "readiness_milestone_25" },
     { score: 50, event: "readiness_milestone_50" },
@@ -248,7 +273,7 @@ export async function evaluateMilestones(
 
   for (const t of thresholds) {
     if (readinessScore >= t.score) {
-      const res = await awardXp(supabase, userId, t.event, "roles", roleId);
+      const res = await awardXp(qb, userId, t.event, "roles", roleId);
       if (!res.alreadyAwarded && res.xpAwarded > 0) {
         awarded.push(t.event);
       }
@@ -279,9 +304,10 @@ export interface DailyLoginEngagementResult {
  * and logged internally so they never fail the parent auth response.
  */
 export async function triggerDailyLoginWithEngagement(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
 ): Promise<DailyLoginEngagementResult> {
+  const qb = asQueryGateway(source);
   let dailyXp = 0;
   let streakXp = 0;
   let consistencyXp = 0;
@@ -290,7 +316,7 @@ export async function triggerDailyLoginWithEngagement(
 
   // 1. Award daily login XP (+1)
   try {
-    const res = await triggerDailyLogin(supabase, userId);
+    const res = await triggerDailyLogin(qb, userId);
     dailyXp = res.xpAwarded;
   } catch (err) {
     apiLogger.error("[XP] daily_login failed", err, { userId });
@@ -298,7 +324,7 @@ export async function triggerDailyLoginWithEngagement(
 
   // 2. Check and award 7-day streak bonus (+5 per 7 consecutive days)
   try {
-    const res = await checkAndAwardStreak(supabase, userId);
+    const res = await checkAndAwardStreak(qb, userId);
     streakXp = res.xpAwarded;
     consecutiveDays = res.consecutiveDays;
   } catch (err) {
@@ -307,7 +333,7 @@ export async function triggerDailyLoginWithEngagement(
 
   // 3. Check and award 30-day consistency bonus (+30 at 30 consecutive days)
   try {
-    const res = await checkAndAwardConsistency(supabase, userId);
+    const res = await checkAndAwardConsistency(qb, userId);
     consistencyXp = res.xpAwarded;
     if (res.consecutiveDays > consecutiveDays) consecutiveDays = res.consecutiveDays;
   } catch (err) {
@@ -316,7 +342,7 @@ export async function triggerDailyLoginWithEngagement(
 
   // 4. Check and award legacy re-engagement bonus (+20, once per year after >120 day gap)
   try {
-    const res = await checkAndAwardLegacyBonus(supabase, userId);
+    const res = await checkAndAwardLegacyBonus(qb, userId);
     legacyBonusXp = res.xpAwarded;
   } catch (err) {
     apiLogger.error("[XP] legacy bonus check failed", err, { userId });
@@ -346,21 +372,18 @@ export async function triggerDailyLoginWithEngagement(
  * Optionally filters to events created at or after `since`.
  */
 export async function getUserTotalXp(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   since?: Date,
 ): Promise<number> {
-  let query = supabase.from("xp_events").select("xp_amount").eq("user_id", userId);
-
+  const qb = asQueryGateway(source);
+  const filters: QueryGatewayFilter[] = [{ column: "user_id", op: "eq", value: userId }];
   if (since) {
-    query = query.gte("created_at", since.toISOString());
+    filters.push({ column: "created_at", op: "gte", value: since.toISOString() });
   }
-
-  const { data, error } = await query;
-
-  if (error) {
-    throw error;
-  }
+  const data = (await qb.read(userXpTotalReadPolicy, { filters })) as Array<{
+    xp_amount?: number | null;
+  }> | null;
 
   return (data ?? []).reduce((sum, item) => sum + (item.xp_amount ?? 0), 0);
 }

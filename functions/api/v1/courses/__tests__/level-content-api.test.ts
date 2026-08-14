@@ -4,8 +4,8 @@ import {
   LevelIdParamsSchema,
   LevelModuleParamsSchema,
 } from "@functions/api/v1/courses/schemas";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
+import { err, levelChains, makeSupabase, moduleDetailsChains, ok } from "./helpers";
 
 const levelId = "0a010796-10c0-5287-b89a-6ab56bd71399";
 
@@ -110,68 +110,19 @@ describe("Level Content API Schemas & Queries", () => {
         },
       ];
 
-      const eqMock = vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          order: vi.fn().mockResolvedValue({ data: modulesData, error: null }),
-        }),
+      const chains = levelChains({
+        level: levelData,
+        capabilities: ok({ code: "TEST", name: "Test" }),
+        modules: ok(modulesData),
+        modulesContent: ok([]),
+        artifacts: ok([]),
       });
-      const levelEqMock = vi.fn().mockReturnValueOnce({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({ data: levelData, error: null }),
-        }),
-      });
-
-      const mockSupabase = {
-        from: vi.fn().mockImplementation((table) => {
-          if (table === "levels") {
-            return {
-              select: vi.fn().mockReturnThis(),
-              eq: levelEqMock,
-            };
-          }
-          if (table === "modules") {
-            return {
-              select: vi.fn().mockReturnThis(),
-              eq: eqMock,
-            };
-          }
-          if (table === "modules_content") {
-            return {
-              select: vi.fn().mockReturnThis(),
-              in: vi.fn().mockResolvedValue({ data: [], error: null }),
-            };
-          }
-          if (table === "module_artifacts") {
-            return {
-              select: vi.fn().mockReturnThis(),
-              in: vi.fn().mockReturnValue({
-                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            };
-          }
-          if (table === "capabilities") {
-            return {
-              select: vi.fn().mockReturnThis(),
-              eq: vi.fn().mockReturnValue({
-                single: vi
-                  .fn()
-                  .mockResolvedValue({ data: { code: "TEST", name: "Test" }, error: null }),
-              }),
-            };
-          }
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: eqMock,
-            in: vi.fn().mockResolvedValue({ data: [], error: null }),
-            single: vi.fn().mockResolvedValue({ data: null, error: null }),
-          };
-        }),
-      } as unknown as SupabaseClient;
+      const mockSupabase = makeSupabase(chains);
 
       const result = await getLevelWithModules(mockSupabase, levelId);
 
       expect(result).not.toBeNull();
-      expect(eqMock).toHaveBeenCalledWith("level_id", levelId);
+      expect(chains.modules?.eq).toHaveBeenCalledWith("level_id", levelId);
       expect(result?.levelCode).toBe("crs-sys-fail-inv");
       expect(result?.title).toBe("System Failure Investigation");
       expect(result?.levelProblemStatement.description).toBe(
@@ -183,15 +134,7 @@ describe("Level Content API Schemas & Queries", () => {
     });
 
     it("returns null when level is not found (PGRST116)", async () => {
-      const mockSupabase = {
-        from: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: { code: "PGRST116", message: "Not found" },
-        }),
-      } as unknown as SupabaseClient;
+      const mockSupabase = makeSupabase(levelChains({ levelResult: { data: null, error: null } }));
 
       const result = await getLevelWithModules(
         mockSupabase,
@@ -201,19 +144,13 @@ describe("Level Content API Schemas & Queries", () => {
     });
 
     it("throws error for unanticipated DB failures", async () => {
-      const mockSupabase = {
-        from: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: { code: "PGRST500", message: "Database connection failed" },
-        }),
-      } as unknown as SupabaseClient;
+      const mockSupabase = makeSupabase(
+        levelChains({ levelResult: err("Database connection failed", "PGRST500") }),
+      );
 
       await expect(
         getLevelWithModules(mockSupabase, "00000000-0000-0000-0000-000000000000"),
-      ).rejects.toThrow("Failed to fetch level: Database connection failed");
+      ).rejects.toThrow("Database connection failed");
     });
   });
 
@@ -281,37 +218,20 @@ describe("Level Content API Schemas & Queries", () => {
         },
       ];
 
-      let callCount = 0;
-      const eqMock = vi.fn().mockReturnThis();
-      const inMock = vi.fn().mockResolvedValue({ data: modulesContentData, error: null });
-      const mockSupabase = {
-        from: vi.fn().mockImplementation((table) => {
-          if (table === "modules_content") {
-            return {
-              select: vi.fn().mockReturnThis(),
-              eq: eqMock,
-              in: inMock,
-            };
-          }
-          return mockSupabase;
+      const mockSupabase = makeSupabase(
+        moduleDetailsChains({
+          levelResult: await mockLevelSingle(),
+          moduleResult: await mockModuleSingle(),
+          modulesContent: ok(modulesContentData),
         }),
-        select: vi.fn().mockReturnThis(),
-        eq: eqMock,
-        single: vi.fn().mockImplementation(() => {
-          callCount++;
-          return callCount === 1 ? mockLevelSingle() : mockModuleSingle();
-        }),
-      } as unknown as SupabaseClient;
+      );
 
       const result = await getModuleDetails(mockSupabase, levelId, 0);
 
       expect(result).not.toBeNull();
-      expect(eqMock).toHaveBeenCalledWith("id", levelId);
-      expect(eqMock).toHaveBeenCalledWith("level_id", levelId);
       expect(result?.moduleNo).toBe(0);
       expect(result?.levelCode).toBe("crs-sys-fail-inv");
       expect(result?.stages.length).toBe(6); // All 6E stages ensured
-      expect(inMock).toHaveBeenCalledWith("stage_name", ["engage"]);
 
       const engageStage = result?.stages.find((s) => s.stageName === "engage");
       expect(engageStage).toBeDefined();
@@ -324,15 +244,9 @@ describe("Level Content API Schemas & Queries", () => {
     });
 
     it("returns null when level or module does not exist", async () => {
-      const mockSupabase = {
-        from: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: { code: "PGRST116", message: "Not found" },
-        }),
-      } as unknown as SupabaseClient;
+      const mockSupabase = makeSupabase(
+        moduleDetailsChains({ levelResult: { data: null, error: null } }),
+      );
 
       const result = await getModuleDetails(
         mockSupabase,

@@ -18,6 +18,9 @@ interface Chainable extends Record<string, unknown> {
   eq: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   in: ReturnType<typeof vi.fn>;
+  range: ReturnType<typeof vi.fn>;
+  limit: ReturnType<typeof vi.fn>;
+  gte: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
   then?: (resolve: (val: unknown) => unknown) => Promise<unknown>;
@@ -27,8 +30,11 @@ function chainable(resolveVal: unknown = null, errorVal: unknown = null) {
   const chain: Chainable = {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
-    order: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
-    in: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
+    order: vi.fn().mockImplementation(() => chain),
+    in: vi.fn().mockImplementation(() => chain),
+    range: vi.fn().mockImplementation(() => chain),
+    limit: vi.fn().mockImplementation(() => chain),
+    gte: vi.fn().mockImplementation(() => chain),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
@@ -157,6 +163,9 @@ describe("GET /api/v1/capabilities/:capabilityCode/levels", () => {
           single: vi.fn().mockResolvedValue({ data: null, error: null }),
           maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           in: vi.fn().mockResolvedValue({ data: null, error: null }),
+          range: vi.fn().mockImplementation(() => levelsChain),
+          limit: vi.fn().mockImplementation(() => levelsChain),
+          gte: vi.fn().mockImplementation(() => levelsChain),
         };
         return levelsChain;
       }),
@@ -175,9 +184,9 @@ describe("GET /api/v1/capabilities/:capabilityCode/levels", () => {
     expect(body.levels[0].deliverables).toEqual(["Worksheet"]);
     expect(body.levels[1].levelNumber).toBe(2);
     expect(eqArgs).toEqual([
-      ["capability_id", "cap-1"],
       ["is_active", true],
       ["status", "published"],
+      ["capability_id", "cap-1"],
     ]);
   });
 });

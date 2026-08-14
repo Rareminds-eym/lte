@@ -1,4 +1,8 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  asQueryGateway,
+  QueryGatewayDatabaseError,
+  type QueryGatewaySource,
+} from "@functions/lib/query-gateway";
 import { apiLogger } from "../shared/logger";
 
 // Event to XP amount mapping (TRD-DB-007 enum values)
@@ -52,6 +56,22 @@ export const XP_CATEGORIES: Record<string, "evidence" | "engagement"> = {
   legacy_consistency_bonus: "engagement",
   promotional_xp: "engagement",
 };
+
+const xpEventInsertPolicy = {
+  table: "xp_events",
+  operation: "insert",
+  insertColumns: [
+    "user_id",
+    "event_type",
+    "xp_category",
+    "xp_amount",
+    "source_type",
+    "source_id",
+    "idempotency_key",
+    "metadata",
+  ],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
 
 /**
  * Generate standard idempotency key for XP events (TRD §10)
@@ -138,7 +158,7 @@ export function generateIdempotencyKey(
  * and records database events securely.
  */
 export async function awardXp(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   eventType: string,
   sourceType: string,
@@ -146,32 +166,40 @@ export async function awardXp(
   metadata: Record<string, unknown> = {},
   customXpAmount?: number,
 ): Promise<{ success: boolean; xpAwarded: number; alreadyAwarded: boolean }> {
+  const qb = asQueryGateway(source);
   const xpAmount = customXpAmount !== undefined ? customXpAmount : (XP_AMOUNTS[eventType] ?? 0);
   const xpCategory = XP_CATEGORIES[eventType] ?? "engagement";
   const idempotencyKey = generateIdempotencyKey(userId, eventType, sourceId, metadata);
 
   try {
-    const { error } = await supabase.from("xp_events").insert({
-      user_id: userId,
-      event_type: eventType,
-      xp_category: xpCategory,
-      xp_amount: xpAmount,
-      source_type: sourceType,
-      source_id: sourceId,
-      idempotency_key: idempotencyKey,
-      metadata,
-    });
-
-    if (error) {
-      // Postgres unique constraint violation code is '23505'
-      if (error.code === "23505") {
-        return { success: true, xpAwarded: 0, alreadyAwarded: true };
-      }
-      throw error;
-    }
+    await qb.insert(
+      xpEventInsertPolicy,
+      {
+        event_type: eventType,
+        xp_category: xpCategory,
+        xp_amount: xpAmount,
+        source_type: sourceType,
+        source_id: sourceId,
+        idempotency_key: idempotencyKey,
+        metadata,
+      },
+      {
+        auth: { userId },
+      },
+    );
 
     return { success: true, xpAwarded: xpAmount, alreadyAwarded: false };
   } catch (error) {
+    if (
+      error instanceof QueryGatewayDatabaseError &&
+      error.cause &&
+      typeof error.cause === "object" &&
+      "code" in error.cause &&
+      error.cause.code === "23505"
+    ) {
+      return { success: true, xpAwarded: 0, alreadyAwarded: true };
+    }
+
     apiLogger.error("Error awarding XP", error);
     throw error;
   }

@@ -115,7 +115,14 @@ describe("GET /api/v1/artifacts/submissions/[id]/evaluation", () => {
       debug_telemetry: { provider: "openrouter" },
     });
     expect(getSubmissionEvaluationFlowMock).toHaveBeenCalledWith(
-      mockSupabase,
+      expect.objectContaining({
+        read: expect.any(Function),
+        insert: expect.any(Function),
+        update: expect.any(Function),
+        upsert: expect.any(Function),
+        delete: expect.any(Function),
+        rpc: expect.any(Function),
+      }),
       SUBMISSION_ID,
       "user-1",
     );

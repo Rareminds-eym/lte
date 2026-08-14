@@ -274,7 +274,16 @@ describe("POST /api/v1/artifacts/submit", () => {
     expect(submitArtifactSubmissionMock).toHaveBeenCalledTimes(1);
     const [supabase, , userId, payload, files, idempotencyKey] = submitArtifactSubmissionMock.mock
       .calls[0] as unknown[];
-    expect(supabase).toBe(mockSupabase);
+    expect(supabase).toEqual(
+      expect.objectContaining({
+        read: expect.any(Function),
+        insert: expect.any(Function),
+        update: expect.any(Function),
+        upsert: expect.any(Function),
+        delete: expect.any(Function),
+        rpc: expect.any(Function),
+      }),
+    );
     expect(userId).toBe(user.sub);
     expect(payload).toEqual(validPayload);
     expect(files).toBeInstanceOf(Map);

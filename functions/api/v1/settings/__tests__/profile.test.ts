@@ -28,6 +28,7 @@ interface UsersChain extends Record<string, unknown> {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
+  single: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
 }
 
@@ -36,6 +37,7 @@ function usersChain(readData: unknown, readError: unknown = null, writeError: un
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
     update: vi.fn().mockImplementation(() => chain),
+    single: vi.fn().mockImplementation(() => chain),
     maybeSingle: vi.fn().mockResolvedValue({ data: readData, error: readError }),
     // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
     then: (resolve: (val: unknown) => unknown) =>

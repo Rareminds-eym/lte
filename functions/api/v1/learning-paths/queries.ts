@@ -1,5 +1,9 @@
+import {
+  asQueryGateway,
+  QueryGatewayDatabaseError,
+  type QueryGatewaySource,
+} from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const PATH_STATUS = {
   IN_PROGRESS: "in_progress",
@@ -39,45 +43,257 @@ export interface ActiveTrackDetail {
   completionCount: number;
 }
 
+interface ActiveLearningTrackRow {
+  id: string;
+  track: string;
+  fit: string;
+  match_score: number;
+  why_it_fits: string | null;
+}
+
+interface ActiveTrackPathRow {
+  id: string;
+  role_id: string;
+  role_readiness_percentage: number | null;
+  status: "in_progress" | "completed" | "not_started" | null;
+  updated_at: string | null;
+  metadata: Record<string, unknown> | null;
+  roles:
+    | {
+        role_name: string | null;
+        domain_name: string | null;
+      }
+    | Array<{
+        role_name: string | null;
+        domain_name: string | null;
+      }>
+    | null;
+}
+
+interface UserLearningTrackRow {
+  id: string;
+  track: string;
+  fit: string | null;
+  match_score: number | null;
+  is_active: boolean | null;
+}
+
+const activeLearningTrackReadPolicy = {
+  table: "learning_tracks",
+  operation: "read",
+  columns: ["id", "track", "fit", "match_score", "why_it_fits"],
+  filters: ["user_id", "is_active"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const activeTrackPathsReadPolicy = {
+  table: "learning_paths",
+  operation: "read",
+  select: `
+    id,
+    role_id,
+    role_readiness_percentage,
+    status,
+    updated_at,
+    metadata,
+    roles (
+      role_name,
+      domain_name
+    )
+  `,
+  filters: ["user_id", "learning_track_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  maxPageSize: 100,
+} as const;
+
+const userLearningTracksReadPolicy = {
+  table: "learning_tracks",
+  operation: "read",
+  columns: ["id", "track", "fit", "match_score", "is_active"],
+  filters: ["user_id"],
+  sorts: ["match_score"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  maxPageSize: 100,
+} as const;
+
+const trackPathIdsReadPolicy = {
+  table: "learning_paths",
+  operation: "read",
+  columns: ["id"],
+  filters: ["learning_track_id"],
+  maxPageSize: 100,
+} as const;
+
+const progressUserCapabilitiesReadPolicy = {
+  table: "user_capabilities",
+  operation: "read",
+  columns: ["learning_path_id", "current_level", "required_level", "has_gap"],
+  filters: ["user_id", "learning_path_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  maxPageSize: 500,
+} as const;
+
+const roleExistsReadPolicy = {
+  table: "roles",
+  operation: "read",
+  columns: ["id"],
+  filters: ["id"],
+} as const;
+
+const deactivateLearningTracksPolicy = {
+  table: "learning_tracks",
+  operation: "update",
+  updateColumns: ["is_active"],
+  filters: ["user_id", "is_active"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  requireFilter: true,
+} as const;
+
+const activateLearningTrackPolicy = {
+  table: "learning_tracks",
+  operation: "update",
+  updateColumns: ["is_active"],
+  filters: ["user_id", "id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  requireFilter: true,
+} as const;
+
+const learningPathsForSyncReadPolicy = {
+  table: "learning_paths",
+  operation: "read",
+  columns: ["id", "role_id"],
+  filters: ["learning_track_id"],
+  maxPageSize: 100,
+} as const;
+
+const roleCapabilitySequencesReadPolicy = {
+  table: "role_capability_sequence",
+  operation: "read",
+  columns: ["id", "required_level"],
+  filters: ["role_id"],
+  maxPageSize: 500,
+} as const;
+
+const existingUserCapabilitiesReadPolicy = {
+  table: "user_capabilities",
+  operation: "read",
+  columns: ["role_sequence_id", "current_level"],
+  filters: ["user_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  maxPageSize: 500,
+} as const;
+
+const learningTrackInsertPolicy = {
+  table: "learning_tracks",
+  operation: "insert",
+  insertColumns: [
+    "user_id",
+    "assessment_id",
+    "fit",
+    "track",
+    "match_score",
+    "why_it_fits",
+    "duration",
+    "topics",
+    "is_active",
+  ],
+  returningColumns: ["id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const learningTrackUpdatePolicy = {
+  table: "learning_tracks",
+  operation: "update",
+  updateColumns: ["fit", "match_score", "why_it_fits", "duration", "is_active"],
+  filters: ["user_id", "assessment_id", "track"],
+  returningColumns: ["id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  requireFilter: true,
+} as const;
+
+const learningPathInsertPolicy = {
+  table: "learning_paths",
+  operation: "insert",
+  insertColumns: [
+    "user_id",
+    "learning_track_id",
+    "role_id",
+    "role_readiness_percentage",
+    "level",
+    "status",
+    "metadata",
+  ],
+  returningColumns: ["id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const learningPathUpdatePolicy = {
+  table: "learning_paths",
+  operation: "update",
+  updateColumns: ["metadata"],
+  filters: ["user_id", "learning_track_id", "role_id"],
+  returningColumns: ["id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  requireFilter: true,
+} as const;
+
+const userCapabilitiesUpsertPolicy = {
+  table: "user_capabilities",
+  operation: "upsert",
+  upsertColumns: [
+    "user_id",
+    "learning_path_id",
+    "role_sequence_id",
+    "current_level",
+    "required_level",
+    "gap",
+    "has_gap",
+    "gap_score",
+    "badge",
+    "updated_at",
+  ],
+  onConflict: "user_id,role_sequence_id",
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+function rethrowQueryError(error: unknown, message: string): never {
+  if (error instanceof QueryGatewayDatabaseError) {
+    throw new Error(`${message}: ${error.message}`);
+  }
+  throw error;
+}
+
 export async function getActiveLearningTrack(
-  supabase: SupabaseClient,
+  supabase: QueryGatewaySource,
   userId: string,
 ): Promise<ActiveTrackDetail | null> {
-  // 1. Fetch active track for this user
-  const { data: trackData, error: trackError } = await supabase
-    .from("learning_tracks")
-    .select("id, track, fit, match_score, why_it_fits")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .maybeSingle();
+  const qb = asQueryGateway(supabase);
 
-  if (trackError) {
-    apiLogger.error("Failed to fetch active learning track", trackError);
-    throw new Error(`Failed to fetch active learning track: ${trackError.message}`);
+  // 1. Fetch active track for this user
+  let trackData: ActiveLearningTrackRow | null;
+  try {
+    trackData = (await qb.read(activeLearningTrackReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "is_active", op: "eq", value: true }],
+      result: "maybeSingle",
+    })) as ActiveLearningTrackRow | null;
+  } catch (error) {
+    apiLogger.error("Failed to fetch active learning track", error);
+    rethrowQueryError(error, "Failed to fetch active learning track");
   }
 
   if (!trackData) return null;
 
   // 2. Fetch all learning paths (roles) under this track
-  const { data: pathsData, error: pathsError } = await supabase
-    .from("learning_paths")
-    .select(`
-      id,
-      role_id,
-      role_readiness_percentage,
-      status,
-      updated_at,
-      metadata,
-      roles (
-        role_name,
-        domain_name
-      )
-    `)
-    .eq("learning_track_id", trackData.id);
-
-  if (pathsError) {
-    apiLogger.error("Failed to fetch paths for active track", pathsError);
-    throw new Error(`Failed to fetch paths for active track: ${pathsError.message}`);
+  let pathsData: ActiveTrackPathRow[] | null;
+  try {
+    pathsData = (await qb.read(activeTrackPathsReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "learning_track_id", op: "eq", value: trackData.id }],
+    })) as ActiveTrackPathRow[] | null;
+  } catch (error) {
+    apiLogger.error("Failed to fetch paths for active track", error);
+    rethrowQueryError(error, "Failed to fetch paths for active track");
   }
 
   const roles: ActiveTrackRole[] = (pathsData ?? [])
@@ -93,7 +309,7 @@ export async function getActiveLearningTrack(
         status: p.status ?? PATH_STATUS.NOT_STARTED,
         updatedAt: p.updated_at ?? null,
         domain: roleData?.domain_name ?? "",
-        metadata: (p.metadata as Record<string, unknown>) ?? {},
+        metadata: p.metadata ?? {},
       };
     })
     .sort((a, b) => {
@@ -113,25 +329,25 @@ export async function getActiveLearningTrack(
     });
 
   // 3. Fetch all recommended tracks for the user
-  const { data: tracksData, error: tracksError } = await supabase
-    .from("learning_tracks")
-    .select("id, track, fit, match_score, is_active")
-    .eq("user_id", userId)
-    .order("match_score", { ascending: false });
-
-  if (tracksError) {
-    apiLogger.error("Failed to fetch all learning tracks for user", tracksError);
-    throw new Error(`Failed to fetch all learning tracks for user: ${tracksError.message}`);
+  let tracksData: UserLearningTrackRow[] | null;
+  try {
+    tracksData = (await qb.read(userLearningTracksReadPolicy, {
+      auth: { userId },
+      sort: [{ column: "match_score", ascending: false }],
+    })) as UserLearningTrackRow[] | null;
+  } catch (error) {
+    apiLogger.error("Failed to fetch all learning tracks for user", error);
+    rethrowQueryError(error, "Failed to fetch all learning tracks for user");
   }
 
   const tracks = (Array.isArray(tracksData) ? tracksData : tracksData ? [tracksData] : []).map(
     (t) => ({
       id: t.id,
       title: t.track,
-      matchPercentage: t.match_score,
+      matchPercentage: t.match_score ?? undefined,
       isExplore: t.fit === "Explore",
-      isSelected: t.is_active,
-      fit: t.fit,
+      isSelected: t.is_active ?? undefined,
+      fit: t.fit ?? undefined,
     }),
   );
 
@@ -151,21 +367,21 @@ export async function getActiveLearningTrack(
 }
 
 export async function getTrackProgressStats(
-  supabase: SupabaseClient,
+  supabase: QueryGatewaySource,
   userId: string,
   trackId: string,
 ): Promise<{ overallProgress: number; completionCount: number }> {
-  // 1. Fetch all learning paths (roles) under this track
-  const { data: paths, error: pathsError } = await supabase
-    .from("learning_paths")
-    .select("id")
-    .eq("learning_track_id", trackId);
+  const qb = asQueryGateway(supabase);
 
-  if (pathsError) {
-    apiLogger.error("Failed to fetch learning paths for progress calculations", pathsError);
-    throw new Error(
-      `Failed to fetch learning paths for progress calculations: ${pathsError.message}`,
-    );
+  // 1. Fetch all learning paths (roles) under this track
+  let paths: Array<{ id: string }> | null;
+  try {
+    paths = (await qb.read(trackPathIdsReadPolicy, {
+      filters: [{ column: "learning_track_id", op: "eq", value: trackId }],
+    })) as Array<{ id: string }> | null;
+  } catch (error) {
+    apiLogger.error("Failed to fetch learning paths for progress calculations", error);
+    rethrowQueryError(error, "Failed to fetch learning paths for progress calculations");
   }
 
   if (!paths || paths.length === 0) {
@@ -175,17 +391,20 @@ export async function getTrackProgressStats(
   const pathIds = paths.map((p) => p.id);
 
   // 2. Fetch all user capabilities for these paths
-  const { data: userCaps, error: capsError } = await supabase
-    .from("user_capabilities")
-    .select("learning_path_id, current_level, required_level, has_gap")
-    .eq("user_id", userId)
-    .in("learning_path_id", pathIds);
-
-  if (capsError) {
-    apiLogger.error("Failed to fetch user capabilities for progress calculations", capsError);
-    throw new Error(
-      `Failed to fetch user capabilities for progress calculations: ${capsError.message}`,
-    );
+  let userCaps: Array<{
+    learning_path_id: string;
+    current_level: number | null;
+    required_level: number | null;
+    has_gap: boolean;
+  }> | null;
+  try {
+    userCaps = (await qb.read(progressUserCapabilitiesReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "learning_path_id", op: "in", value: pathIds }],
+    })) as typeof userCaps;
+  } catch (error) {
+    apiLogger.error("Failed to fetch user capabilities for progress calculations", error);
+    rethrowQueryError(error, "Failed to fetch user capabilities for progress calculations");
   }
 
   if (!userCaps || userCaps.length === 0) {
@@ -234,12 +453,21 @@ export async function getTrackProgressStats(
   return { overallProgress, completionCount };
 }
 
-export async function checkRoleExists(supabase: SupabaseClient, roleId: string): Promise<boolean> {
-  const { data, error } = await supabase.from("roles").select("id").eq("id", roleId).maybeSingle();
+export async function checkRoleExists(
+  supabase: QueryGatewaySource,
+  roleId: string,
+): Promise<boolean> {
+  const qb = asQueryGateway(supabase);
 
-  if (error) {
+  let data: unknown;
+  try {
+    data = await qb.read(roleExistsReadPolicy, {
+      filters: [{ column: "id", op: "eq", value: roleId }],
+      result: "maybeSingle",
+    });
+  } catch (error) {
     apiLogger.error("Failed to check role existence", error);
-    throw new Error(`Failed to check role existence: ${error.message}`);
+    rethrowQueryError(error, "Failed to check role existence");
   }
 
   return !!data;
@@ -248,7 +476,7 @@ export async function checkRoleExists(supabase: SupabaseClient, roleId: string):
 const PG_UNIQUE_VIOLATION = "23505";
 
 export async function upsertLearningTrack(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   params: {
     userId: string;
     attemptId: string;
@@ -260,102 +488,135 @@ export async function upsertLearningTrack(
     isActive?: boolean;
   },
 ): Promise<string> {
+  const qb = asQueryGateway(source);
   const isActive = params.isActive ?? false;
-  const { data: inserted, error: insertError } = await supabase
-    .from("learning_tracks")
-    .insert({
-      user_id: params.userId,
-      assessment_id: params.attemptId,
-      fit: params.fit,
-      track: params.track,
-      match_score: params.matchScore,
-      why_it_fits: params.whyItFits,
-      duration: params.duration ?? "6 months",
-      topics: [],
-      is_active: isActive,
-    })
-    .select("id")
-    .single();
-
-  if (!insertError) return inserted.id;
-
-  // 23505 = unique_violation — row already exists, update it
-  if (insertError.code === PG_UNIQUE_VIOLATION) {
-    const { data: updated, error: updateError } = await supabase
-      .from("learning_tracks")
-      .update({
+  let inserted: { id: string } | null = null;
+  let insertError: unknown = null;
+  try {
+    inserted = (await qb.insert(
+      learningTrackInsertPolicy,
+      {
+        assessment_id: params.attemptId,
         fit: params.fit,
+        track: params.track,
         match_score: params.matchScore,
         why_it_fits: params.whyItFits,
         duration: params.duration ?? "6 months",
+        topics: [],
         is_active: isActive,
-      })
-      .eq("user_id", params.userId)
-      .eq("assessment_id", params.attemptId)
-      .eq("track", params.track)
-      .select("id")
-      .single();
+      },
+      {
+        auth: { userId: params.userId },
+        result: "single",
+      },
+    )) as { id: string };
+  } catch (error) {
+    insertError = error;
+  }
 
-    if (updateError) {
-      apiLogger.error("Failed to update learning track", updateError);
-      throw new Error(`Failed to update learning track: ${updateError.message}`);
+  if (!insertError && inserted) return inserted.id;
+
+  // 23505 = unique_violation — row already exists, update it
+  const insertErrorCode =
+    insertError instanceof QueryGatewayDatabaseError &&
+    insertError.cause &&
+    typeof insertError.cause === "object" &&
+    "code" in insertError.cause
+      ? String(insertError.cause.code)
+      : undefined;
+  if (insertErrorCode === PG_UNIQUE_VIOLATION) {
+    let updated: Array<{ id: string }> | null = null;
+    let updateError: unknown = null;
+    try {
+      updated = (await qb.update(learningTrackUpdatePolicy, {
+        auth: { userId: params.userId },
+        data: {
+          fit: params.fit,
+          match_score: params.matchScore,
+          why_it_fits: params.whyItFits,
+          duration: params.duration ?? "6 months",
+          is_active: isActive,
+        },
+        filters: [
+          { column: "assessment_id", op: "eq", value: params.attemptId },
+          { column: "track", op: "eq", value: params.track },
+        ],
+      })) as Array<{ id: string }> | null;
+    } catch (error) {
+      updateError = error;
     }
 
-    return updated.id;
+    if (updateError || !updated?.[0]) {
+      apiLogger.error("Failed to update learning track", updateError);
+      throw new Error(
+        `Failed to update learning track: ${
+          updateError instanceof Error ? updateError.message : "Not found"
+        }`,
+      );
+    }
+
+    return updated[0].id;
   }
 
   apiLogger.error("Failed to upsert learning track", insertError);
-  throw new Error(`Failed to upsert learning track: ${insertError.message}`);
+  throw new Error(
+    `Failed to upsert learning track: ${
+      insertError instanceof Error ? insertError.message : "Unknown error"
+    }`,
+  );
 }
 
 export async function deactivateOtherTracks(
-  supabase: SupabaseClient,
+  supabase: QueryGatewaySource,
   userId: string,
 ): Promise<void> {
-  const { error } = await supabase
-    .from("learning_tracks")
-    .update({ is_active: false })
-    .eq("user_id", userId)
-    .eq("is_active", true);
+  const qb = asQueryGateway(supabase);
 
-  if (error) {
+  try {
+    await qb.update(deactivateLearningTracksPolicy, {
+      auth: { userId },
+      data: { is_active: false },
+      filters: [{ column: "is_active", op: "eq", value: true }],
+    });
+  } catch (error) {
     apiLogger.error("Failed to deactivate other active tracks", error);
-    throw new Error(`Failed to deactivate other active tracks: ${error.message}`);
+    rethrowQueryError(error, "Failed to deactivate other active tracks");
   }
 }
 
 export async function activateLearningTrack(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   trackId: string,
 ): Promise<void> {
-  await deactivateOtherTracks(supabase, userId);
+  const qb = asQueryGateway(source);
+  await deactivateOtherTracks(qb, userId);
 
-  const { error } = await supabase
-    .from("learning_tracks")
-    .update({ is_active: true })
-    .eq("user_id", userId)
-    .eq("id", trackId);
-
-  if (error) {
+  try {
+    await qb.update(activateLearningTrackPolicy, {
+      auth: { userId },
+      data: { is_active: true },
+      filters: [{ column: "id", op: "eq", value: trackId }],
+    });
+  } catch (error) {
     apiLogger.error("Failed to activate learning track", error);
-    throw new Error(`Failed to activate learning track: ${error.message}`);
+    rethrowQueryError(error, "Failed to activate learning track");
   }
 
   // Fetch all learning paths for this newly activated track and sync capabilities
-  const { data: paths, error: pathsError } = await supabase
-    .from("learning_paths")
-    .select("id, role_id")
-    .eq("learning_track_id", trackId);
-
-  if (pathsError) {
-    apiLogger.error("Failed to fetch learning paths for capability sync", pathsError);
-    throw new Error(`Failed to fetch learning paths for capability sync: ${pathsError.message}`);
+  let paths: Array<{ id: string; role_id: string }> | null;
+  try {
+    paths = (await qb.read(learningPathsForSyncReadPolicy, {
+      filters: [{ column: "learning_track_id", op: "eq", value: trackId }],
+    })) as Array<{ id: string; role_id: string }> | null;
+  } catch (error) {
+    apiLogger.error("Failed to fetch learning paths for capability sync", error);
+    rethrowQueryError(error, "Failed to fetch learning paths for capability sync");
   }
 
   if (paths) {
     for (const path of paths) {
-      await syncUserCapabilities(supabase, {
+      await syncUserCapabilities(qb, {
         userId,
         learningPathId: path.id,
         roleId: path.role_id,
@@ -365,7 +626,7 @@ export async function activateLearningTrack(
 }
 
 export async function upsertLearningPath(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   params: {
     userId: string;
     trackId: string;
@@ -373,66 +634,96 @@ export async function upsertLearningPath(
     metadata?: Record<string, unknown>;
   },
 ): Promise<string> {
-  const { data: inserted, error: insertError } = await supabase
-    .from("learning_paths")
-    .insert({
-      user_id: params.userId,
-      learning_track_id: params.trackId,
-      role_id: params.roleId,
-      role_readiness_percentage: 0.0,
-      level: 1,
-      status: "not_started",
-      metadata: params.metadata ?? {},
-    })
-    .select("id")
-    .single();
+  const qb = asQueryGateway(source);
+  let inserted: { id: string } | null = null;
+  let insertError: unknown = null;
+  try {
+    inserted = (await qb.insert(
+      learningPathInsertPolicy,
+      {
+        learning_track_id: params.trackId,
+        role_id: params.roleId,
+        role_readiness_percentage: 0.0,
+        level: 1,
+        status: "not_started",
+        metadata: params.metadata ?? {},
+      },
+      {
+        auth: { userId: params.userId },
+        result: "single",
+      },
+    )) as { id: string };
+  } catch (error) {
+    insertError = error;
+  }
 
-  if (!insertError) return inserted.id;
+  if (!insertError && inserted) return inserted.id;
 
   // 23505 = unique_violation — row already exists, just update its metadata and retrieve the ID
-  if (insertError.code === PG_UNIQUE_VIOLATION) {
-    const { data: updated, error: updateError } = await supabase
-      .from("learning_paths")
-      .update({
-        metadata: params.metadata ?? {},
-      })
-      .eq("user_id", params.userId)
-      .eq("learning_track_id", params.trackId)
-      .eq("role_id", params.roleId)
-      .select("id")
-      .maybeSingle();
+  const insertErrorCode =
+    insertError instanceof QueryGatewayDatabaseError &&
+    insertError.cause &&
+    typeof insertError.cause === "object" &&
+    "code" in insertError.cause
+      ? String(insertError.cause.code)
+      : undefined;
+  if (insertErrorCode === PG_UNIQUE_VIOLATION) {
+    let updated: Array<{ id: string }> | null = null;
+    let updateError: unknown = null;
+    try {
+      updated = (await qb.update(learningPathUpdatePolicy, {
+        auth: { userId: params.userId },
+        data: {
+          metadata: params.metadata ?? {},
+        },
+        filters: [
+          { column: "learning_track_id", op: "eq", value: params.trackId },
+          { column: "role_id", op: "eq", value: params.roleId },
+        ],
+      })) as Array<{ id: string }> | null;
+    } catch (error) {
+      updateError = error;
+    }
 
-    if (updateError || !updated) {
+    if (updateError || !updated?.[0]) {
       apiLogger.error("Failed to retrieve or update existing learning path", updateError);
       throw new Error(
-        `Failed to retrieve or update existing learning path: ${updateError?.message ?? "Not found"}`,
+        `Failed to retrieve or update existing learning path: ${
+          updateError instanceof Error ? updateError.message : "Not found"
+        }`,
       );
     }
 
-    return updated.id;
+    return updated[0].id;
   }
 
   apiLogger.error("Failed to upsert learning path", insertError);
-  throw new Error(`Failed to upsert learning path: ${insertError.message}`);
+  throw new Error(
+    `Failed to upsert learning path: ${
+      insertError instanceof Error ? insertError.message : "Unknown error"
+    }`,
+  );
 }
 
 export async function syncUserCapabilities(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   params: {
     userId: string;
     learningPathId: string;
     roleId: string;
   },
 ): Promise<void> {
-  // 1. Fetch capability sequence details for the role
-  const { data: sequences, error: seqError } = await supabase
-    .from("role_capability_sequence")
-    .select("id, required_level")
-    .eq("role_id", params.roleId);
+  const qb = asQueryGateway(source);
 
-  if (seqError) {
-    apiLogger.error("Failed to query role capability sequences", seqError);
-    throw new Error(`Failed to query role capability sequences: ${seqError.message}`);
+  // 1. Fetch capability sequence details for the role
+  let sequences: Array<{ id: string; required_level: string | null }> | null;
+  try {
+    sequences = (await qb.read(roleCapabilitySequencesReadPolicy, {
+      filters: [{ column: "role_id", op: "eq", value: params.roleId }],
+    })) as Array<{ id: string; required_level: string | null }> | null;
+  } catch (error) {
+    apiLogger.error("Failed to query role capability sequences", error);
+    rethrowQueryError(error, "Failed to query role capability sequences");
   }
 
   if (!sequences || sequences.length === 0) {
@@ -440,14 +731,14 @@ export async function syncUserCapabilities(
   }
 
   // 2. Fetch existing user capabilities to preserve current progress levels
-  const { data: existingCaps, error: capError } = await supabase
-    .from("user_capabilities")
-    .select("role_sequence_id, current_level")
-    .eq("user_id", params.userId);
-
-  if (capError) {
-    apiLogger.error("Failed to query existing user capabilities", capError);
-    throw new Error(`Failed to query existing user capabilities: ${capError.message}`);
+  let existingCaps: Array<{ role_sequence_id: string; current_level: number }> | null;
+  try {
+    existingCaps = (await qb.read(existingUserCapabilitiesReadPolicy, {
+      auth: { userId: params.userId },
+    })) as Array<{ role_sequence_id: string; current_level: number }> | null;
+  } catch (error) {
+    apiLogger.error("Failed to query existing user capabilities", error);
+    rethrowQueryError(error, "Failed to query existing user capabilities");
   }
 
   const existingMap = new Map<string, number>(
@@ -471,7 +762,6 @@ export async function syncUserCapabilities(
       requiredLevelNum > 0 ? Math.round((currentLevelNum / requiredLevelNum) * 100) : 0;
 
     return {
-      user_id: params.userId,
       learning_path_id: params.learningPathId,
       role_sequence_id: seq.id,
       current_level: currentLevelNum,
@@ -484,13 +774,16 @@ export async function syncUserCapabilities(
     };
   });
 
-  // 4. Perform bulk upsert
-  const { error: upsertError } = await supabase
-    .from("user_capabilities")
-    .upsert(rows, { onConflict: "user_id,role_sequence_id" });
-
-  if (upsertError) {
+  try {
+    await qb.upsert(userCapabilitiesUpsertPolicy, rows, {
+      auth: { userId: params.userId },
+    });
+  } catch (upsertError) {
     apiLogger.error("Failed to upsert user capabilities", upsertError);
-    throw new Error(`Failed to upsert user capabilities: ${upsertError.message}`);
+    throw new Error(
+      `Failed to upsert user capabilities: ${
+        upsertError instanceof Error ? upsertError.message : "Unknown error"
+      }`,
+    );
   }
 }

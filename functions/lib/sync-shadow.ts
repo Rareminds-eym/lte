@@ -1,7 +1,63 @@
 import type { AuthUser } from "@rareminds-eym/auth-core";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { authLogger } from "../shared/logger";
+import { asQueryGateway, type QueryGatewaySource } from "./query-gateway";
 import type { SsoSubscriptionSnapshot } from "./types";
+
+const userReadPolicy = {
+  table: "users",
+  operation: "read",
+  columns: ["id"],
+  filters: ["id"],
+} as const;
+
+const userUpsertPolicy = {
+  table: "users",
+  operation: "upsert",
+  upsertColumns: [
+    "id",
+    "email",
+    "first_name",
+    "last_name",
+    "phone",
+    "status",
+    "last_activity_at",
+    "metadata",
+    "updated_at",
+  ],
+  onConflict: "id",
+} as const;
+
+const subscriptionCacheReadPolicy = {
+  table: "subscription_cache",
+  operation: "read",
+  columns: ["id"],
+  filters: ["id"],
+} as const;
+
+const subscriptionCacheUpsertPolicy = {
+  table: "subscription_cache",
+  operation: "upsert",
+  upsertColumns: [
+    "id",
+    "user_id",
+    "organization_id",
+    "plan_id",
+    "plan_code",
+    "plan_name",
+    "plan_type",
+    "plan_amount",
+    "billing_cycle",
+    "status",
+    "features",
+    "product_code",
+    "product_id",
+    "subscription_start_date",
+    "subscription_end_date",
+    "synced_at",
+    "auth_updated_at",
+  ],
+  onConflict: "id",
+} as const;
 
 interface UserRow {
   id: string;
@@ -40,7 +96,8 @@ function getTrimmedMetadataString(metadata: Record<string, unknown>, key: string
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-export async function syncUsers(supabase: SupabaseClient, user: AuthUser): Promise<void> {
+export async function syncUsers(source: QueryGatewaySource, user: AuthUser): Promise<void> {
+  const qb = asQueryGateway(source);
   const metadata = user.user_metadata ?? {};
   const email = user.email.trim().toLowerCase();
   const emailPrefix = email.split("@")[0] || "User";
@@ -86,10 +143,12 @@ export async function syncUsers(supabase: SupabaseClient, user: AuthUser): Promi
     updated_at: now,
   };
 
-  const { error } = await supabase.from("users").upsert(row, { onConflict: "id" });
-  if (error) {
+  try {
+    await qb.upsert(userUpsertPolicy, { ...row });
+  } catch (error) {
     authLogger.error("Failed to sync users table", error, { userId: user.sub, email });
-    throw new Error(`Failed to sync users: ${error.message}`);
+    const message = error instanceof Error ? error.message : "Unknown sync error";
+    throw new Error(`Failed to sync users: ${message}`);
   }
 
   authLogger.info("Successfully synced user to public.users", {
@@ -101,9 +160,10 @@ export async function syncUsers(supabase: SupabaseClient, user: AuthUser): Promi
 }
 
 export async function syncSubscriptionCache(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   subscription: SsoSubscriptionSnapshot | null,
 ): Promise<void> {
+  const qb = asQueryGateway(source);
   if (!subscription) {
     authLogger.debug("No subscription to sync");
     return;
@@ -137,15 +197,15 @@ export async function syncSubscriptionCache(
     auth_updated_at: subscription.updated_at ?? null,
   };
 
-  const { error } = await supabase.from("subscription_cache").upsert(row, { onConflict: "id" });
-  if (error) {
+  try {
+    await qb.upsert(subscriptionCacheUpsertPolicy, { ...row });
+  } catch (error) {
     authLogger.error("Failed to sync subscription_cache", error, {
       subscriptionId: subscription.id,
       userId: subscription.user_id,
-      errorCode: error.code,
-      errorDetails: error.details,
     });
-    throw new Error(`Failed to sync subscription_cache: ${error.message}`);
+    const message = error instanceof Error ? error.message : "Unknown sync error";
+    throw new Error(`Failed to sync subscription_cache: ${message}`);
   }
 
   authLogger.info("Successfully synced subscription cache", {
@@ -156,21 +216,21 @@ export async function syncSubscriptionCache(
 }
 
 export async function syncSsoShadowData(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   user: AuthUser,
   subscription: SsoSubscriptionSnapshot | null,
 ): Promise<void> {
+  const qb = asQueryGateway(source);
   // 1. Check if user record already exists in LTE DB
-  const { data: existingUser } = await supabase
-    .from("users")
-    .select("id")
-    .eq("id", user.sub)
-    .maybeSingle();
+  const existingUser = await qb.read(userReadPolicy, {
+    filters: [{ column: "id", op: "eq", value: user.sub }],
+    result: "maybeSingle",
+  });
   if (!existingUser) {
     authLogger.info("[Option 1 Applied] User data not found in LTE DB. Provisioning...", {
       userId: user.sub,
     });
-    await syncUsers(supabase, user);
+    await syncUsers(qb, user);
   } else {
     authLogger.info("[Option 2 Applied] User already exists in LTE DB. Skipping user sync.", {
       userId: user.sub,
@@ -179,17 +239,16 @@ export async function syncSsoShadowData(
 
   // 2. Check if subscription_cache record already exists in LTE DB
   if (subscription) {
-    const { data: existingSub } = await supabase
-      .from("subscription_cache")
-      .select("id")
-      .eq("id", subscription.id)
-      .maybeSingle();
+    const existingSub = await qb.read(subscriptionCacheReadPolicy, {
+      filters: [{ column: "id", op: "eq", value: subscription.id }],
+      result: "maybeSingle",
+    });
     if (!existingSub) {
       authLogger.info(
         "[Option 1 Applied] Subscription cache not found in LTE DB. Provisioning...",
         { subscriptionId: subscription.id },
       );
-      await syncSubscriptionCache(supabase, subscription);
+      await syncSubscriptionCache(qb, subscription);
     } else {
       authLogger.info(
         "[Option 2 Applied] Subscription cache already exists in LTE DB. Skipping subscription sync.",

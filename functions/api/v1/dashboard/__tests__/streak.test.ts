@@ -7,6 +7,7 @@ import { onRequestGet } from "../streak";
 type StreakQueryMock = {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  then: (resolve: (value: unknown) => unknown) => Promise<unknown>;
 };
 type StreakSupabaseMock = {
   from: ReturnType<typeof vi.fn>;
@@ -45,14 +46,14 @@ describe("GET /api/v1/dashboard/streak", () => {
     query: StreakQueryMock;
     supabase: StreakSupabaseMock;
   } {
+    const rows = loginDates.map((loginDate) => ({ metadata: { login_date: loginDate } }));
     const query: StreakQueryMock = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      // biome-ignore lint/suspicious/noThenProperty: Supabase query builders are thenable.
+      then: (resolve: (value: unknown) => unknown) =>
+        Promise.resolve({ data: rows, error: null }).then(resolve),
     };
-    query.eq.mockReturnValueOnce(query).mockResolvedValueOnce({
-      data: loginDates.map((loginDate) => ({ metadata: { login_date: loginDate } })),
-      error: null,
-    });
 
     const supabase: StreakSupabaseMock = {
       from: vi.fn().mockReturnValue(query),
@@ -104,8 +105,8 @@ describe("GET /api/v1/dashboard/streak", () => {
     expect(response.status).toBe(200);
     expect(supabase.from).toHaveBeenCalledWith("xp_events");
     expect(query.select).toHaveBeenCalledWith("metadata");
-    expect(query.eq).toHaveBeenNthCalledWith(1, "user_id", mockUser.sub);
-    expect(query.eq).toHaveBeenNthCalledWith(2, "event_type", "daily_login");
+    expect(query.eq).toHaveBeenNthCalledWith(1, "event_type", "daily_login");
+    expect(query.eq).toHaveBeenNthCalledWith(2, "user_id", mockUser.sub);
     await expect(response.json()).resolves.toMatchObject({ success: true, streakDays: 2 });
   });
 

@@ -1,7 +1,7 @@
 import { StageSequenceError } from "@functions/lib/stage-sequence";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { completeStage } from "@functions/lib/xp-engine";
+import { awardXp, completeStage } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost as onModuleProgressPost } from "../[levelId]/modules/[moduleNo]/progress";
@@ -29,6 +29,11 @@ vi.mock("@functions/api/v1/courses/queries", async (importOriginal) => {
 });
 
 vi.mock("@functions/lib/xp-engine", () => ({
+  awardXp: vi.fn().mockResolvedValue({
+    success: true,
+    xpAwarded: 0,
+    alreadyAwarded: false,
+  }),
   completeStage: vi.fn().mockResolvedValue({
     success: true,
     xpAwarded: 0,
@@ -45,6 +50,7 @@ interface MockQueryChain {
   eq: (col: string, val: unknown) => MockQueryChain;
   in: (col: string, val: unknown) => MockQueryChain;
   limit: (count: number) => MockQueryChain;
+  range: (from: number, to: number) => MockQueryChain;
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
   single: () => Promise<{ data: unknown; error: unknown }>;
   order: (col: string, options?: unknown) => MockQueryChain;
@@ -61,6 +67,7 @@ function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): Mo
     eq: vi.fn().mockImplementation(() => chain),
     in: vi.fn().mockImplementation(() => chain),
     limit: vi.fn().mockImplementation(() => chain),
+    range: vi.fn().mockImplementation(() => chain),
     maybeSingle: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     single: vi.fn().mockResolvedValue({ data: resolveVal, error: errorVal }),
     order: vi.fn().mockImplementation(() => chain),
@@ -85,6 +92,11 @@ describe("Progress API Endpoints", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(awardXp).mockResolvedValue({
+      success: true,
+      xpAwarded: 0,
+      alreadyAwarded: false,
+    });
   });
 
   describe("POST /api/v1/courses/:levelId/progress", () => {
@@ -488,14 +500,31 @@ describe("Progress API Endpoints", () => {
             return chain;
           }
           if (table === "modules") {
-            return createMockQueryChain({ id: "module-123" });
+            const chain = createMockQueryChain([{ id: "module-123" }]);
+            chain.single = vi.fn().mockResolvedValue({
+              data: { id: "module-123" },
+              error: null,
+            });
+            return chain;
           }
           if (table === "user_module_progress") {
-            return createMockQueryChain({
-              id: "mod-progress-123",
-              stages_completed: 2,
-              completion_percentage: 33,
+            const chain = createMockQueryChain([
+              {
+                id: "mod-progress-123",
+                stages_completed: 2,
+                completion_percentage: 33,
+                module_status: "in_progress",
+              },
+            ]);
+            chain.single = vi.fn().mockResolvedValue({
+              data: {
+                id: "mod-progress-123",
+                stages_completed: 2,
+                completion_percentage: 33,
+              },
+              error: null,
             });
+            return chain;
           }
           if (table === "user_stage_progress") {
             const chain = createMockQueryChain([

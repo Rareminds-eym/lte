@@ -26,7 +26,10 @@ interface QueryChain {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   in: ReturnType<typeof vi.fn>;
+  gte: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
+  range: ReturnType<typeof vi.fn>;
+  limit: ReturnType<typeof vi.fn>;
   insert: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
   upsert: ReturnType<typeof vi.fn>;
@@ -40,7 +43,10 @@ function chainFor(config: Resolver): QueryChain {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
     in: vi.fn().mockImplementation(() => chain),
+    gte: vi.fn().mockImplementation(() => chain),
     order: vi.fn().mockImplementation(() => chain),
+    range: vi.fn().mockImplementation(() => chain),
+    limit: vi.fn().mockImplementation(() => chain),
     insert: vi.fn().mockImplementation(() => chain),
     update: vi.fn().mockImplementation(() => chain),
     upsert: vi.fn().mockImplementation(() => chain),
@@ -231,8 +237,8 @@ describe("learning-paths queries", () => {
     it("updates the existing track on a unique violation", async () => {
       const supabase = supabaseWith({
         learning_tracks: {
-          query: { data: { id: "lt1" }, error: uniqueViolation },
-          update: { data: { id: "lt1-updated" } },
+          insert: { data: { id: "lt1" }, error: uniqueViolation },
+          update: { data: [{ id: "lt1-updated" }] },
         },
       });
 
@@ -317,7 +323,7 @@ describe("learning-paths queries", () => {
       const supabase = supabaseWith({
         learning_paths: {
           insert: { error: uniqueViolation },
-          update: { data: { id: "lp1" } },
+          update: { data: [{ id: "lp1" }] },
         },
       });
 

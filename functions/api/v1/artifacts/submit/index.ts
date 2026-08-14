@@ -5,7 +5,7 @@ import {
   metrics,
 } from "@functions/lib/artifact-evaluator";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getAuthUser, rateLimitErrorResponse, rateLimiter } from "@functions/middleware";
 import { completeSubmissionSchema } from "@functions/schemas";
@@ -208,9 +208,9 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       });
     }
 
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
     const result = await submitArtifactSubmission(
-      supabase,
+      qb,
       context.env,
       user.sub,
       parsed.data,

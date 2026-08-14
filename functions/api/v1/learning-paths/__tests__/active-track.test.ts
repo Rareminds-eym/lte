@@ -81,6 +81,10 @@ describe("PATCH /api/v1/learning-paths/active-track", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.success).toBe(true);
-    expect(activateLearningTrack).toHaveBeenCalledWith(mockSupabase, mockUser.sub, validTrackId);
+    expect(activateLearningTrack).toHaveBeenCalledWith(
+      expect.anything(),
+      mockUser.sub,
+      validTrackId,
+    );
   });
 });
