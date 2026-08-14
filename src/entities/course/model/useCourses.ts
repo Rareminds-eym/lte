@@ -10,8 +10,8 @@ export const useCourses = (userId?: string, options?: { enabled?: boolean }) => 
     queryKey: ["userCourses", userId, activeTrackId],
     queryFn: ({ signal }) => fetchUserCourses(signal),
     enabled: typeof userId === "string" && userId.trim() !== "" && options?.enabled !== false,
-    staleTime: 600_000, // 10 minutes cache
-    gcTime: 900_000, // 15 minutes inactive retention (must exceed staleTime)
+    staleTime: 1000 * 60 * 10, // 10 minutes cache
+    gcTime: 1000 * 60 * 15, // 15 minutes inactive retention (must exceed staleTime)
 
     retry: (failureCount, error) => {
       const status =
