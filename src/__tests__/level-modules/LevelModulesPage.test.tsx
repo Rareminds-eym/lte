@@ -57,6 +57,7 @@ const notStartedCourse = {
   id: "course-1",
   capabilityId: "cap-1",
   capabilityCode: "HTT-IND-CAP-01",
+  slug: "HTT-IND-CAP-01",
   title: "Guided Guest and Visitor Arrival Readiness",
   description: "Build guided L1 capability to verify guest and visitor arrival readiness.",
   category: "core",
@@ -82,7 +83,7 @@ const renderLevelModulesPage = () => {
         initialEntries={["/courses/HTT-IND-CAP-01/levels/0a010796-10c0-5287-b89a-6ab56bd71399"]}
       >
         <Routes>
-          <Route path="/courses/:capabilityCode/levels/:levelId" element={<LevelModulesPage />} />
+          <Route path="/courses/:capabilitySlug/levels/:levelId" element={<LevelModulesPage />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,

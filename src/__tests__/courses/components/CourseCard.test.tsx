@@ -22,6 +22,7 @@ const baseCourse: Course = {
   id: "test-1",
   capabilityId: "test-1",
   capabilityCode: "TEST-CAP-01",
+  slug: "TEST-CAP-01",
   title: "Test Course",
   description: "A test course description for verification purposes.",
   category: "Core",
@@ -133,6 +134,7 @@ describe("CourseCard", () => {
         course={{
           ...baseCourse,
           capabilityCode: "CAP/123&test",
+          slug: "CAP/123&test",
           status: "not_started",
           progress: 0,
         }}

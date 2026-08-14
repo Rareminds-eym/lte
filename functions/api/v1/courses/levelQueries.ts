@@ -101,7 +101,7 @@ const activeLevelDetailsReadPolicy = {
 const capabilitySummaryReadPolicy = {
   table: "capabilities",
   operation: "read",
-  columns: ["code", "name"],
+  columns: ["code", "name", "slug"],
   filters: ["id"],
 } as const;
 
@@ -141,7 +141,7 @@ export async function getLevelWithModules(
     ? ((await qb.read(capabilitySummaryReadPolicy, {
         filters: [{ column: "id", op: "eq", value: levelData.capability_id }],
         result: "maybeSingle",
-      })) as { code: string; name: string } | null)
+      })) as { code: string; name: string; slug: string | null } | null)
     : null;
 
   // Fetch modules for this level
@@ -269,6 +269,7 @@ export async function getLevelWithModules(
     levelCode: rawLevel.level_code,
     capabilityCode: capData?.code,
     capabilityName: capData?.name,
+    capabilitySlug: capData?.slug ?? undefined,
     levelNo: 1,
     levelLabel: rawLevel.difficulty_level,
     title: rawLevel.title,
