@@ -1,5 +1,5 @@
-import { METRIC, metrics } from "../../artifact-evaluator";
-import type { LteEnv } from "../../types";
+import { METRIC, metrics } from "@functions/lib/artifact-evaluator";
+import type { LteEnv } from "@functions/lib/types";
 import {
   DEFAULT_OPENROUTER_SITE_NAME,
   DEFAULT_OPENROUTER_SITE_URL,

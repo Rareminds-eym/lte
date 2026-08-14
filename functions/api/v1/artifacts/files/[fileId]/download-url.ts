@@ -1,10 +1,14 @@
+import {
+  ArtifactSubmissionError,
+  createDownloadUrl,
+  requireOwnedFile,
+} from "@functions/api/v1/artifacts/file-queries";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getAuthUser } from "@functions/middleware";
 import { uuidSchema } from "@functions/schemas";
 import { apiLogger } from "@functions/shared/logger";
-import { ArtifactSubmissionError, createDownloadUrl, requireOwnedFile } from "../../file-queries";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -19,8 +23,8 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       return jsonError("Invalid file id.", 400, { code: "VALIDATION_ERROR", requestId });
     }
 
-    const supabase = createServiceSupabase(context.env);
-    await requireOwnedFile(supabase, parsedFileId.data, user.sub);
+    const qb = createServiceQueryGateway(context.env);
+    await requireOwnedFile(qb, parsedFileId.data, user.sub);
 
     return jsonResponse({
       success: true,

@@ -1,3 +1,4 @@
+import { createQueryGateway } from "@functions/lib/query-gateway";
 import { describe, expect, it } from "vitest";
 import {
   type ArtifactSubmissionError,
@@ -22,6 +23,7 @@ describe("artifact file downloads", () => {
       }),
     });
     const supabase = createSupabase({ artifact_submission_files: files });
+    const qb = createQueryGateway(supabase);
     const env = createEnv({
       get: vi.fn().mockResolvedValue({
         body: "xlsx",
@@ -32,7 +34,7 @@ describe("artifact file downloads", () => {
       }),
     });
 
-    const response = await createArtifactFileDownloadResponse(supabase, env, "user-1", "file-1");
+    const response = await createArtifactFileDownloadResponse(qb, env, "user-1", "file-1");
 
     expect(files.eq).toHaveBeenCalledWith("artifact_submissions.user_id", "user-1");
     expect(env.STORAGE_BUCKET.get).toHaveBeenCalledWith(
@@ -46,9 +48,10 @@ describe("artifact file downloads", () => {
     const supabase = createSupabase({
       artifact_submission_files: mockChain({ single: err("not found") }),
     });
+    const qb = createQueryGateway(supabase);
 
     await expect(
-      createArtifactFileDownloadResponse(supabase, createEnv(), "user-2", "file-1"),
+      createArtifactFileDownloadResponse(qb, createEnv(), "user-2", "file-1"),
     ).rejects.toMatchObject({
       code: "FILE_NOT_FOUND",
       status: 404,
@@ -77,11 +80,12 @@ describe("artifact download and status edge cases", () => {
         }),
       }),
     });
+    const qb = createQueryGateway(supabase);
     const env = createEnv({
       get: vi.fn().mockResolvedValue({ body: "x", httpMetadata: {} }),
     });
 
-    const response = await createArtifactFileDownloadResponse(supabase, env, "user-1", "file-1");
+    const response = await createArtifactFileDownloadResponse(qb, env, "user-1", "file-1");
 
     expect(env.STORAGE_BUCKET.get).toHaveBeenCalledWith("submissions/answer.xlsx");
     expect(response.status).toBe(200);
@@ -93,11 +97,12 @@ describe("artifact download and status edge cases", () => {
         single: ok({ ...ownedFileRow, object_key: null, file_url: "not-a-url/answer.xlsx" }),
       }),
     });
+    const qb = createQueryGateway(supabase);
     const env = createEnv({
       get: vi.fn().mockResolvedValue({ body: "x", httpMetadata: {} }),
     });
 
-    const response = await createArtifactFileDownloadResponse(supabase, env, "user-1", "file-1");
+    const response = await createArtifactFileDownloadResponse(qb, env, "user-1", "file-1");
 
     expect(env.STORAGE_BUCKET.get).toHaveBeenCalledWith("not-a-url/answer.xlsx");
     expect(response.status).toBe(200);
@@ -109,9 +114,10 @@ describe("artifact download and status edge cases", () => {
         single: ok({ ...ownedFileRow, object_key: null, file_url: null }),
       }),
     });
+    const qb = createQueryGateway(supabase);
 
     await expect(
-      createArtifactFileDownloadResponse(supabase, createEnv(), "user-1", "file-1"),
+      createArtifactFileDownloadResponse(qb, createEnv(), "user-1", "file-1"),
     ).rejects.toMatchObject({
       code: "FILE_NOT_AVAILABLE",
       status: 404,
@@ -122,10 +128,11 @@ describe("artifact download and status edge cases", () => {
     const supabase = createSupabase({
       artifact_submission_files: mockChain({ single: ok(ownedFileRow) }),
     });
+    const qb = createQueryGateway(supabase);
     const env = createEnv({ get: vi.fn().mockResolvedValue(null) });
 
     await expect(
-      createArtifactFileDownloadResponse(supabase, env, "user-1", "file-1"),
+      createArtifactFileDownloadResponse(qb, env, "user-1", "file-1"),
     ).rejects.toMatchObject({
       code: "FILE_NOT_AVAILABLE",
       status: 404,

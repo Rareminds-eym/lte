@@ -1,5 +1,5 @@
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { calculateReadiness } from "@functions/lib/xp-engine.progress";
 import { AuthError, requireAuth } from "@functions/middleware";
@@ -9,6 +9,14 @@ import { apiLogger } from "@functions/shared/logger";
 // Key: userId, Value: timestamps of calls in the last 60 seconds
 const rateLimiterCache = new Map<string, number[]>();
 let lastPruneTime = Date.now();
+
+const latestLearningPathReadPolicy = {
+  table: "learning_paths",
+  operation: "read",
+  columns: ["id"],
+  filters: ["user_id", "is_latest"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
 
 function pruneRateLimiterCache(now: number) {
   if (now - lastPruneTime < 60000) return;
@@ -55,17 +63,14 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       );
     }
 
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
     // Fetch the user's latest active learning path
-    const { data: path, error: pathError } = await supabase
-      .from("learning_paths")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("is_latest", true)
-      .maybeSingle();
-
-    if (pathError) throw pathError;
+    const path = (await qb.read(latestLearningPathReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "is_latest", op: "eq", value: true }],
+      result: "maybeSingle",
+    })) as { id: string } | null;
 
     if (!path) {
       return jsonResponse({
@@ -75,7 +80,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
 
     // Trigger calculation
-    const result = await calculateReadiness(supabase, userId, path.id);
+    const result = await calculateReadiness(qb, userId, path.id);
 
     return jsonResponse({
       success: true,

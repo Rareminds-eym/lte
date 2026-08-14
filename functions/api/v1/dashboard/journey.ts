@@ -5,11 +5,10 @@ import {
 import { getLevelWithModules } from "@functions/api/v1/courses/queries";
 import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway, type QueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type JourneyState = "active" | "completed" | "no_track";
 
@@ -41,6 +40,38 @@ interface LevelProgressRow {
   updated_at: string;
 }
 
+const openLevelProgressReadPolicy = {
+  table: "user_capability_level_progress",
+  operation: "read",
+  columns: ["id", "level_id", "status", "updated_at"],
+  filters: ["user_id", "learning_path_id"],
+  sorts: ["sequence_no"],
+  ownership: {
+    column: "user_id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+} as const;
+
+const artifactOutputReadPolicy = {
+  table: "modules_content",
+  operation: "read",
+  select: "id, module_artifacts!inner(id, artifact_questions!inner(title, question_order))",
+  filters: [
+    "module_id",
+    "module_artifacts.is_active",
+    "module_artifacts.artifact_questions.is_active",
+  ],
+} as const;
+
+const recentModuleProgressReadPolicy = {
+  table: "user_module_progress",
+  operation: "read",
+  columns: ["module_id", "user_capability_level_progress_id"],
+  filters: ["user_capability_level_progress_id", "module_status"],
+  sorts: ["last_activity_at"],
+} as const;
+
 /**
  * Most recent open learning inside the track's paths, ordered by real
  * activity: last module touched (last_activity_at), else last level
@@ -48,16 +79,15 @@ interface LevelProgressRow {
  * false) or when every level row is completed ("started" true).
  */
 async function findOpenLevel(
-  supabase: SupabaseClient,
+  qb: QueryGateway,
   userId: string,
   pathIds: string[],
 ): Promise<{ levelId?: string; moduleId?: string; started: boolean }> {
-  const { data: rows } = await supabase
-    .from("user_capability_level_progress")
-    .select("id, level_id, status, updated_at")
-    .eq("user_id", userId)
-    .in("learning_path_id", pathIds)
-    .order("sequence_no", { ascending: true });
+  const rows = (await qb.read(openLevelProgressReadPolicy, {
+    auth: { userId },
+    filters: [{ column: "learning_path_id", op: "in", value: pathIds }],
+    sort: [{ column: "sequence_no", ascending: true }],
+  })) as LevelProgressRow[] | null;
 
   const allRows = (rows ?? []) as LevelProgressRow[];
   if (allRows.length === 0) return { started: false };
@@ -65,17 +95,19 @@ async function findOpenLevel(
   const open = allRows.filter((r) => r.status !== "completed");
   if (open.length === 0) return { started: true };
 
-  const { data: recentModule } = await supabase
-    .from("user_module_progress")
-    .select("module_id, user_capability_level_progress_id")
-    .in(
-      "user_capability_level_progress_id",
-      open.map((r) => r.id),
-    )
-    .not("module_status", "in", '("completed","mastered")')
-    .order("last_activity_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const recentModule = await qb.read(recentModuleProgressReadPolicy, {
+    filters: [
+      {
+        column: "user_capability_level_progress_id",
+        op: "in",
+        value: open.map((r) => r.id),
+      },
+    ],
+    not: [{ column: "module_status", op: "in", value: '("completed","mastered")' }],
+    sort: [{ column: "last_activity_at", ascending: false }],
+    limit: 1,
+    result: "maybeSingle",
+  });
 
   if (recentModule) {
     const row = open.find(
@@ -98,16 +130,14 @@ async function findOpenLevel(
 }
 
 /** Title of the module's first active artifact question, or null. */
-async function findArtifactOutput(
-  supabase: SupabaseClient,
-  moduleId: string,
-): Promise<string | null> {
-  const { data: content } = await supabase
-    .from("modules_content")
-    .select("id, module_artifacts!inner(id, artifact_questions!inner(title, question_order))")
-    .eq("module_id", moduleId)
-    .eq("module_artifacts.is_active", true)
-    .eq("artifact_questions.is_active", true);
+async function findArtifactOutput(qb: QueryGateway, moduleId: string): Promise<string | null> {
+  const content = await qb.read(artifactOutputReadPolicy, {
+    filters: [
+      { column: "module_id", op: "eq", value: moduleId },
+      { column: "module_artifacts.is_active", op: "eq", value: true },
+      { column: "module_artifacts.artifact_questions.is_active", op: "eq", value: true },
+    ],
+  });
 
   const questions = (
     (content ?? []) as Array<{
@@ -123,12 +153,12 @@ async function findArtifactOutput(
 }
 
 async function buildJourney(
-  supabase: SupabaseClient,
+  qb: QueryGateway,
   userId: string,
   levelId: string,
   preferredModuleId: string | undefined,
 ): Promise<Response> {
-  const details = await getLevelWithModules(supabase, levelId, userId, false);
+  const details = await getLevelWithModules(qb, levelId, userId, false);
   if (!details || details.modules.length === 0) {
     return jsonResponse<DashboardJourneyResponse>({ success: true, data: null, state: "active" });
   }
@@ -150,7 +180,7 @@ async function buildJourney(
     details.modules.reduce((sum, m) => sum + (m.progressPercentage ?? 0), 0) / total,
   );
 
-  const output = (await findArtifactOutput(supabase, current.id)) ?? current.description;
+  const output = (await findArtifactOutput(qb, current.id)) ?? current.description;
   const whyItMatters = current.industry_challenge ?? details.description;
 
   return jsonResponse<DashboardJourneyResponse>({
@@ -177,9 +207,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
   const requestId = crypto.randomUUID();
   try {
     const user = await requireAuth(context.request, context.env);
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
-    const track = await getActiveLearningTrack(supabase, user.sub);
+    const track = await getActiveLearningTrack(qb, user.sub);
     if (!track || track.roles.length === 0) {
       return jsonResponse<DashboardJourneyResponse>({
         success: true,
@@ -189,10 +219,10 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     const pathIds = track.roles.map((r) => r.learningPathId);
-    const { levelId, moduleId, started } = await findOpenLevel(supabase, user.sub, pathIds);
+    const { levelId, moduleId, started } = await findOpenLevel(qb, user.sub, pathIds);
 
     if (levelId) {
-      return buildJourney(supabase, user.sub, levelId, moduleId);
+      return buildJourney(qb, user.sub, levelId, moduleId);
     }
     if (started) {
       return jsonResponse<DashboardJourneyResponse>({
@@ -211,11 +241,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
         state: "no_track",
       });
     }
-    const capabilities = await getCapabilitiesByRoleId(supabase, firstRole.roleId);
+    const capabilities = await getCapabilitiesByRoleId(qb, firstRole.roleId);
     const firstCapability = capabilities[0];
-    const levels = firstCapability
-      ? await getLevelsForCapability(supabase, firstCapability.id)
-      : [];
+    const levels = firstCapability ? await getLevelsForCapability(qb, firstCapability.id) : [];
     const firstLevelId = levels[0]?.id;
     if (!firstLevelId) {
       return jsonResponse<DashboardJourneyResponse>({
@@ -225,7 +253,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       });
     }
 
-    return buildJourney(supabase, user.sub, firstLevelId, undefined);
+    return buildJourney(qb, user.sub, firstLevelId, undefined);
   } catch (error) {
     if (error instanceof AuthError) {
       return jsonError(error.message, error.code === "UNAUTHORIZED" ? 401 : 403, {

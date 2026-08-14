@@ -1,3 +1,4 @@
+import { createQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
@@ -7,6 +8,7 @@ import { onRequestGet } from "../streak";
 type StreakQueryMock = {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  then: (resolve: (value: unknown) => unknown) => Promise<unknown>;
 };
 type StreakSupabaseMock = {
   from: ReturnType<typeof vi.fn>;
@@ -21,9 +23,15 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({
-  createServiceSupabase: vi.fn(() => supabaseMockState.current),
-}));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return {
+    ...actual,
+    createServiceQueryGateway: vi.fn(() =>
+      supabaseMockState.current ? createQueryGateway(supabaseMockState.current as never) : null,
+    ),
+  };
+});
 
 describe("GET /api/v1/dashboard/streak", () => {
   const mockUser: AuthUser = {
@@ -45,14 +53,14 @@ describe("GET /api/v1/dashboard/streak", () => {
     query: StreakQueryMock;
     supabase: StreakSupabaseMock;
   } {
+    const rows = loginDates.map((loginDate) => ({ metadata: { login_date: loginDate } }));
     const query: StreakQueryMock = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      // biome-ignore lint/suspicious/noThenProperty: Supabase query builders are thenable.
+      then: (resolve: (value: unknown) => unknown) =>
+        Promise.resolve({ data: rows, error: null }).then(resolve),
     };
-    query.eq.mockReturnValueOnce(query).mockResolvedValueOnce({
-      data: loginDates.map((loginDate) => ({ metadata: { login_date: loginDate } })),
-      error: null,
-    });
 
     const supabase: StreakSupabaseMock = {
       from: vi.fn().mockReturnValue(query),
@@ -104,8 +112,8 @@ describe("GET /api/v1/dashboard/streak", () => {
     expect(response.status).toBe(200);
     expect(supabase.from).toHaveBeenCalledWith("xp_events");
     expect(query.select).toHaveBeenCalledWith("metadata");
-    expect(query.eq).toHaveBeenNthCalledWith(1, "user_id", mockUser.sub);
-    expect(query.eq).toHaveBeenNthCalledWith(2, "event_type", "daily_login");
+    expect(query.eq).toHaveBeenNthCalledWith(1, "event_type", "daily_login");
+    expect(query.eq).toHaveBeenNthCalledWith(2, "user_id", mockUser.sub);
     await expect(response.json()).resolves.toMatchObject({ success: true, streakDays: 2 });
   });
 

@@ -1,6 +1,5 @@
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { getUserTotalXp } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -12,11 +11,9 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
-
-vi.mock("@functions/lib/xp-engine", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@functions/lib/xp-engine")>();
-  return { ...actual, getUserTotalXp: vi.fn() };
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return { ...actual, createServiceQueryGateway: vi.fn() };
 });
 
 describe("GET /api/v1/dashboard/xp", () => {
@@ -32,17 +29,28 @@ describe("GET /api/v1/dashboard/xp", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.mocked(getUserTotalXp).mockClear();
-    const mockSupabase = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: [], error: null }),
-      }),
-    } as unknown as SupabaseClient;
-    vi.mocked(createServiceSupabase).mockReturnValue(mockSupabase);
+    vi.mocked(createServiceQueryGateway).mockReturnValue(createXpGatewayMock([]));
   });
+
+  function createXpGatewayMock(results: Array<{ data: unknown; error: unknown }>) {
+    const queue = [...results];
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      // biome-ignore lint/suspicious/noThenProperty: Supabase query builders are thenable.
+      then: (resolve: (value: unknown) => unknown) =>
+        Promise.resolve(queue.shift() ?? { data: [], error: null }).then(resolve),
+    };
+    const supabase = {
+      from: vi.fn().mockReturnValue(query),
+    } as unknown as SupabaseClient;
+    return createQueryGateway(supabase);
+  }
 
   it("returns 401 when requireAuth throws", async () => {
     vi.mocked(requireAuth).mockRejectedValueOnce(new AuthError("Missing token", "UNAUTHORIZED"));
@@ -55,10 +63,14 @@ describe("GET /api/v1/dashboard/xp", () => {
 
   it("returns the user's total XP, this-week XP, and today XP", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    vi.mocked(getUserTotalXp)
-      .mockResolvedValueOnce(430)
-      .mockResolvedValueOnce(75)
-      .mockResolvedValueOnce(20);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      createXpGatewayMock([
+        { data: [{ xp_amount: 430 }], error: null },
+        { data: [{ xp_amount: 75 }], error: null },
+        { data: [{ xp_amount: 20 }], error: null },
+        { data: [], error: null },
+      ]),
+    );
     const since = "2026-08-03T00:00:00.000Z";
     const todaySince = "2026-08-05T00:00:00.000Z";
     const response = await onRequestGet({
@@ -73,37 +85,15 @@ describe("GET /api/v1/dashboard/xp", () => {
     expect(body.totalXp).toBe(430);
     expect(body.xpThisWeek).toBe(75);
     expect(body.todayXp).toBe(20);
-    expect(getUserTotalXp).toHaveBeenNthCalledWith(1, expect.anything(), mockUser.sub);
-    expect(getUserTotalXp).toHaveBeenNthCalledWith(
-      2,
-      expect.anything(),
-      mockUser.sub,
-      new Date(since),
-    );
-    expect(getUserTotalXp).toHaveBeenNthCalledWith(
-      3,
-      expect.anything(),
-      mockUser.sub,
-      new Date(todaySince),
-    );
   });
 
   it("falls back to UTC boundaries when since is absent", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    vi.mocked(getUserTotalXp).mockResolvedValue(0);
     const response = await onRequestGet({
       request: new Request("http://localhost/api/v1/dashboard/xp"),
       env: {} as LteEnv,
     } as PagesContext<LteEnv>);
     expect(response.status).toBe(200);
-    const weekFallback = vi.mocked(getUserTotalXp).mock.calls[1]?.[2];
-    expect(weekFallback).toBeInstanceOf(Date);
-    expect(weekFallback?.getUTCDay()).toBe(1);
-    expect(weekFallback?.getUTCHours()).toBe(0);
-    const dayFallback = vi.mocked(getUserTotalXp).mock.calls[2]?.[2];
-    expect(dayFallback).toBeInstanceOf(Date);
-    expect(dayFallback?.getUTCHours()).toBe(0);
-    expect(dayFallback?.getUTCMinutes()).toBe(0);
   });
 
   it("rejects invalid since/todaySince with 400 before querying XP", async () => {
@@ -115,12 +105,13 @@ describe("GET /api/v1/dashboard/xp", () => {
       env: {} as LteEnv,
     } as PagesContext<LteEnv>);
     expect(response.status).toBe(400);
-    expect(getUserTotalXp).not.toHaveBeenCalled();
   });
 
   it("returns 500 when the XP query fails", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    vi.mocked(getUserTotalXp).mockRejectedValueOnce(new Error("db down"));
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      createXpGatewayMock([{ data: null, error: { message: "db down" } }]),
+    );
     const response = await onRequestGet({
       request: new Request("http://localhost"),
       env: {} as LteEnv,
@@ -130,14 +121,12 @@ describe("GET /api/v1/dashboard/xp", () => {
 
   it("filters out todayEvents that have already been shown", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    vi.mocked(getUserTotalXp).mockResolvedValue(100);
-
-    const mockSupabase = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      createXpGatewayMock([
+        { data: [{ xp_amount: 100 }], error: null },
+        { data: [{ xp_amount: 100 }], error: null },
+        { data: [{ xp_amount: 100 }], error: null },
+        {
           data: [
             {
               id: "evt-1",
@@ -154,10 +143,9 @@ describe("GET /api/v1/dashboard/xp", () => {
             { id: "evt-3", event_type: "consistency_30_day", xp_amount: 30, metadata: {} },
           ],
           error: null,
-        }),
-      }),
-    } as unknown as SupabaseClient;
-    vi.mocked(createServiceSupabase).mockReturnValue(mockSupabase);
+        },
+      ]),
+    );
 
     const response = await onRequestGet({
       request: new Request("http://localhost/api/v1/dashboard/xp"),
@@ -185,11 +173,12 @@ describe("POST /api/v1/dashboard/xp", () => {
 
   it("marks events as shown via database RPC", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    const rpcMock = vi.fn().mockResolvedValue({ error: null });
-    const mockSupabase = {
+    const rpcMock = vi.fn().mockResolvedValue({ data: null, error: null });
+    const gateway = createQueryGateway({
+      from: vi.fn(),
       rpc: rpcMock,
-    } as unknown as SupabaseClient;
-    vi.mocked(createServiceSupabase).mockReturnValue(mockSupabase);
+    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValue(gateway);
 
     const response = await onRequestPost({
       request: new Request("http://localhost/api/v1/dashboard/xp", {

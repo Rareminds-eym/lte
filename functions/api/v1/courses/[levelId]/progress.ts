@@ -1,5 +1,5 @@
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
@@ -32,8 +32,8 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       // Body is optional, default to in_progress
     }
 
-    const supabase = createServiceSupabase(context.env);
-    const progressId = await upsertLevelProgress(supabase, userId, levelId, status);
+    const qb = createServiceQueryGateway(context.env);
+    const progressId = await upsertLevelProgress(qb, userId, levelId, status);
 
     return jsonResponse({
       success: true,

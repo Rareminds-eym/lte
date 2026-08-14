@@ -1,5 +1,5 @@
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { countConsecutiveDaysFromToday } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
@@ -9,6 +9,18 @@ export interface DashboardStreakResponse {
   success: boolean;
   streakDays: number;
 }
+
+const dailyLoginStreakReadPolicy = {
+  table: "xp_events",
+  operation: "read",
+  columns: ["metadata"],
+  filters: ["user_id", "event_type"],
+  ownership: {
+    column: "user_id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+} as const;
 
 function getTodayDateString(): string {
   return new Date().toISOString().slice(0, 10);
@@ -24,13 +36,11 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const user = await requireAuth(context.request, context.env);
     const todayStr = getTodayDateString();
 
-    const { data, error } = await createServiceSupabase(context.env)
-      .from("xp_events")
-      .select("metadata")
-      .eq("user_id", user.sub)
-      .eq("event_type", "daily_login");
-
-    if (error) throw error;
+    const qb = createServiceQueryGateway(context.env);
+    const data = (await qb.read(dailyLoginStreakReadPolicy, {
+      auth: { userId: user.sub },
+      filters: [{ column: "event_type", op: "eq", value: "daily_login" }],
+    })) as Array<{ metadata: unknown }> | null;
 
     const loginDates = new Set<string>();
     for (const row of data ?? []) {

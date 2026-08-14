@@ -9,7 +9,7 @@
  */
 
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getCapabilitiesByRoleId } from "./queries";
 import { GetCapabilitiesRequestSchema } from "./schemas";
@@ -27,8 +27,8 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     const body: GetCapabilitiesRequest = parsedBody.data;
     const { roleId } = body;
 
-    const supabase = createServiceSupabase(context.env);
-    const capabilities = await getCapabilitiesByRoleId(supabase, roleId);
+    const qb = createServiceQueryGateway(context.env);
+    const capabilities = await getCapabilitiesByRoleId(qb, roleId);
 
     return jsonResponse<GetCapabilitiesResponse>({
       success: true,

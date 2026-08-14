@@ -1,3 +1,4 @@
+import { createQueryGateway, type QueryGateway } from "@functions/lib/query-gateway";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { callOpenRouterAI } from "../../ai-engine/openrouter";
@@ -28,6 +29,7 @@ interface MockChain {
   eq: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
   upsert: ReturnType<typeof vi.fn>;
+  then: (resolve: (value: QueryResult) => unknown) => Promise<unknown>;
 }
 
 function mockChain() {
@@ -36,6 +38,10 @@ function mockChain() {
   chain.eq = vi.fn(() => chain);
   chain.update = vi.fn(() => chain);
   chain.upsert = vi.fn(() => Promise.resolve(ok(null)));
+  // biome-ignore lint/suspicious/noThenProperty: this mocks awaited Supabase query builders.
+  chain.then = vi.fn((resolve: (value: QueryResult) => unknown) =>
+    Promise.resolve(ok(null)).then(resolve),
+  );
   return chain as MockChain;
 }
 
@@ -51,6 +57,10 @@ function createSupabase(chains: Record<string, MockChain>): SupabaseClient {
   return {
     from: vi.fn((table: string) => chains[table] ?? mockChain()),
   } as unknown as SupabaseClient;
+}
+
+function createGateway(chains: Record<string, MockChain>): QueryGateway {
+  return createQueryGateway(createSupabase(chains));
 }
 
 const TEXT_ANSWER =
@@ -110,14 +120,14 @@ describe("processAndSaveArtifactEvaluation", () => {
     const flows = mockChain();
     const submissions = mockChain();
     const progress = mockChain();
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_evaluation_flows: flows,
       artifact_submissions: submissions,
       user_module_progress: progress,
     });
 
     const result = await processAndSaveArtifactEvaluation(
-      supabase,
+      gateway,
       { OPENROUTER_API_KEY: "" },
       "submission-1",
       makeInput(),
@@ -156,14 +166,14 @@ describe("processAndSaveArtifactEvaluation", () => {
     const flows = mockChain();
     const submissions = mockChain();
     const progress = mockChain();
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_evaluation_flows: flows,
       artifact_submissions: submissions,
       user_module_progress: progress,
     });
 
     const result = await processAndSaveArtifactEvaluation(
-      supabase,
+      gateway,
       { OPENROUTER_API_KEY: "sk-test" },
       "submission-1",
       makeInput(),
@@ -205,10 +215,10 @@ describe("processAndSaveArtifactEvaluation", () => {
 
   it("selects the tiered XP event type by attempt for later passes", async () => {
     vi.mocked(callOpenRouterAI).mockResolvedValue(aiResponse("pass", 90));
-    const supabase = createSupabase({});
+    const gateway = createGateway({});
 
     await processAndSaveArtifactEvaluation(
-      supabase,
+      gateway,
       { OPENROUTER_API_KEY: "sk-test" },
       "submission-1",
       makeInput({ artifactType: "practice", attemptNo: 2 }),
@@ -227,7 +237,7 @@ describe("processAndSaveArtifactEvaluation", () => {
 
     vi.mocked(awardXp).mockClear();
     await processAndSaveArtifactEvaluation(
-      supabase,
+      gateway,
       { OPENROUTER_API_KEY: "sk-test" },
       "submission-2",
       makeInput({ attemptNo: 4 }),
@@ -251,14 +261,14 @@ describe("processAndSaveArtifactEvaluation", () => {
     const flows = mockChain();
     const submissions = mockChain();
     const progress = mockChain();
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_evaluation_flows: flows,
       artifact_submissions: submissions,
       user_module_progress: progress,
     });
 
     const result = await processAndSaveArtifactEvaluation(
-      supabase,
+      gateway,
       { OPENROUTER_API_KEY: "sk-test" },
       "submission-1",
       makeInput(),
@@ -279,11 +289,11 @@ describe("processAndSaveArtifactEvaluation", () => {
     vi.mocked(callOpenRouterAI).mockResolvedValue(aiResponse("pass", 90));
     const flows = mockChain();
     flows.upsert = vi.fn(() => Promise.resolve(err("flows table down")));
-    const supabase = createSupabase({ artifact_evaluation_flows: flows });
+    const gateway = createGateway({ artifact_evaluation_flows: flows });
 
     await expect(
       processAndSaveArtifactEvaluation(
-        supabase,
+        gateway,
         { OPENROUTER_API_KEY: "sk-test" },
         "submission-1",
         makeInput(),
@@ -297,11 +307,11 @@ describe("processAndSaveArtifactEvaluation", () => {
     vi.mocked(callOpenRouterAI).mockResolvedValue(aiResponse("pass", 90));
     const submissions = mockChain();
     submissions.update = failingUpdate("update failed");
-    const supabase = createSupabase({ artifact_submissions: submissions });
+    const gateway = createGateway({ artifact_submissions: submissions });
 
     await expect(
       processAndSaveArtifactEvaluation(
-        supabase,
+        gateway,
         { OPENROUTER_API_KEY: "sk-test" },
         "submission-1",
         makeInput(),
@@ -315,11 +325,11 @@ describe("processAndSaveArtifactEvaluation", () => {
     vi.mocked(callOpenRouterAI).mockResolvedValue(aiResponse("pass", 90));
     const progress = mockChain();
     progress.update = failingUpdate("progress down");
-    const supabase = createSupabase({ user_module_progress: progress });
+    const gateway = createGateway({ user_module_progress: progress });
 
     await expect(
       processAndSaveArtifactEvaluation(
-        supabase,
+        gateway,
         { OPENROUTER_API_KEY: "sk-test" },
         "submission-1",
         makeInput(),
@@ -335,14 +345,14 @@ describe("processAndSaveArtifactEvaluation", () => {
     const flows = mockChain();
     const submissions = mockChain();
     const progress = mockChain();
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_evaluation_flows: flows,
       artifact_submissions: submissions,
       user_module_progress: progress,
     });
 
     const result = await processAndSaveArtifactEvaluation(
-      supabase,
+      gateway,
       { OPENROUTER_API_KEY: "sk-test" },
       "submission-1",
       makeInput(),

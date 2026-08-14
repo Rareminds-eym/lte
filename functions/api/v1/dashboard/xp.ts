@@ -1,7 +1,6 @@
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { getUserTotalXp } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
 import { DashboardXpQuerySchema } from "./schemas";
@@ -21,6 +20,43 @@ export interface DashboardXpResponse {
   todayEvents?: TodayXpEvent[];
 }
 
+const todayXpEventsReadPolicy = {
+  table: "xp_events",
+  operation: "read",
+  columns: ["id", "event_type", "xp_amount", "metadata"],
+  filters: ["user_id", "created_at", "event_type"],
+  ownership: {
+    column: "user_id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+  maxPageSize: 100,
+} as const;
+
+const xpTotalReadPolicy = {
+  table: "xp_events",
+  operation: "read",
+  columns: ["xp_amount"],
+  filters: ["user_id", "created_at"],
+  ownership: {
+    column: "user_id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+  maxPageSize: 1000,
+} as const;
+
+const markXpEventsShownRpcPolicy = {
+  operation: "rpc",
+  functionName: "mark_xp_events_shown",
+  allowedArgs: ["p_event_ids"],
+  ownership: {
+    arg: "p_user_id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+} as const;
+
 function startOfDayUtc(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
@@ -28,6 +64,31 @@ function startOfDayUtc(now: Date): Date {
 function startOfWeekMondayUtc(now: Date): Date {
   const diff = (now.getUTCDay() + 6) % 7;
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diff));
+}
+
+async function getUserTotalXpFromGateway(
+  qb: ReturnType<typeof createServiceQueryGateway>,
+  userId: string,
+  since?: Date,
+): Promise<number> {
+  let page = 1;
+  let total = 0;
+
+  while (true) {
+    const rows = (await qb.read(xpTotalReadPolicy, {
+      auth: { userId },
+      filters: since ? [{ column: "created_at", op: "gte", value: since.toISOString() }] : [],
+      page,
+      pageSize: 1000,
+    })) as Array<{ xp_amount: number | null }> | null;
+
+    const batch = rows ?? [];
+    total += batch.reduce((sum, row) => sum + (row.xp_amount ?? 0), 0);
+    if (batch.length < 1000) {
+      return total;
+    }
+    page += 1;
+  }
 }
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
@@ -50,24 +111,32 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     // fall back to UTC boundaries when absent rather than silently equaling totals
     const { since, todaySince } = parsedQuery.data;
 
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
     const now = new Date();
-    const totalXp = await getUserTotalXp(supabase, user.sub);
-    const xpThisWeek = await getUserTotalXp(supabase, user.sub, since ?? startOfWeekMondayUtc(now));
-    const todayXp = await getUserTotalXp(supabase, user.sub, todaySince ?? startOfDayUtc(now));
+    const totalXp = await getUserTotalXpFromGateway(qb, user.sub);
+    const xpThisWeek = await getUserTotalXpFromGateway(
+      qb,
+      user.sub,
+      since ?? startOfWeekMondayUtc(now),
+    );
+    const todayXp = await getUserTotalXpFromGateway(qb, user.sub, todaySince ?? startOfDayUtc(now));
 
     // Query today's engagement XP events
-    const { data: eventsData } = await supabase
-      .from("xp_events")
-      .select("id, event_type, xp_amount, metadata")
-      .eq("user_id", user.sub)
-      .gte("created_at", (todaySince ?? startOfDayUtc(now)).toISOString())
-      .in("event_type", [
-        "daily_login",
-        "streak_7_day",
-        "consistency_30_day",
-        "legacy_consistency_bonus",
-      ]);
+    const eventsData = (await qb.read(todayXpEventsReadPolicy, {
+      auth: { userId: user.sub },
+      filters: [
+        {
+          column: "created_at",
+          op: "gte",
+          value: (todaySince ?? startOfDayUtc(now)).toISOString(),
+        },
+        {
+          column: "event_type",
+          op: "in",
+          value: ["daily_login", "streak_7_day", "consistency_30_day", "legacy_consistency_bonus"],
+        },
+      ],
+    })) as TodayXpEvent[] | null;
 
     const todayEvents = (eventsData ?? [])
       .filter((row) => {
@@ -119,16 +188,12 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       });
     }
 
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
-    const { error } = await supabase.rpc("mark_xp_events_shown", {
-      p_event_ids: body.eventIds,
-      p_user_id: user.sub,
+    await qb.rpc(markXpEventsShownRpcPolicy, {
+      auth: { userId: user.sub },
+      args: { p_event_ids: body.eventIds },
     });
-
-    if (error) {
-      throw error;
-    }
 
     return jsonResponse({ success: true });
   } catch (error) {

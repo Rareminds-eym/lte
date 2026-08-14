@@ -1,6 +1,6 @@
 import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
@@ -12,7 +12,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
   const requestId = crypto.randomUUID();
   try {
     const user = await requireAuth(context.request, context.env);
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
     const parsedParams = CapabilityCodeParamsSchema.safeParse(context.params);
     if (!parsedParams.success) {
@@ -23,14 +23,14 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
     const capabilityCode = parsedParams.data.capabilityCode;
 
-    const activeTrack = await getActiveLearningTrack(supabase, user.sub);
+    const activeTrack = await getActiveLearningTrack(qb, user.sub);
     if (!activeTrack || !capabilityCode) {
       return jsonError("Capability not found", 404, { code: "NOT_FOUND", requestId });
     }
 
     let capability = null;
     for (const role of activeTrack.roles) {
-      const capabilities = await getCapabilitiesByRoleId(supabase, role.roleId);
+      const capabilities = await getCapabilitiesByRoleId(qb, role.roleId);
       const found = capabilities.find(
         (c) => c.code?.toLowerCase() === capabilityCode.toLowerCase(),
       );
@@ -44,7 +44,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       return jsonError("Capability not found", 404, { code: "NOT_FOUND", requestId });
     }
 
-    const levels = await getLevelsForCapability(supabase, capability.id);
+    const levels = await getLevelsForCapability(qb, capability.id);
 
     return jsonResponse<CapabilityLevelsResponse>({
       success: true,

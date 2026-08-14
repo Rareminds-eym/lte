@@ -3,13 +3,13 @@
  * GET /api/v1/courses/:capabilityCode/levels/:levelId
  */
 
+import { getLevelWithModules } from "@functions/api/v1/courses/queries";
+import { CapabilityLevelParamsSchema } from "@functions/api/v1/courses/schemas";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
-import { getLevelWithModules } from "../../../queries";
-import { CapabilityLevelParamsSchema } from "../../../schemas";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -26,9 +26,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     const { levelId } = parsedParams.data;
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
-    const levelDetails = await getLevelWithModules(supabase, levelId, userId);
+    const levelDetails = await getLevelWithModules(qb, levelId, userId);
 
     if (!levelDetails) {
       return jsonError(`Level with id '${levelId}' not found`, 404, {

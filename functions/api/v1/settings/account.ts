@@ -1,9 +1,18 @@
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
 import { AccountActionSchema } from "./schemas";
+
+const deactivateUserAccountPolicy = {
+  table: "users",
+  operation: "update",
+  updateColumns: ["status", "updated_at"],
+  filters: ["id"],
+  ownership: { column: "id", source: "authenticatedUserId", required: true },
+  requireFilter: true,
+} as const;
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -21,21 +30,18 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       });
     }
 
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
     const now = new Date().toISOString();
 
-    const { error } = await supabase
-      .from("users")
-      .update({
+    await qb.update(deactivateUserAccountPolicy, {
+      auth: { userId },
+      data: {
         status: "inactive",
         updated_at: now,
-      })
-      .eq("id", userId);
-
-    if (error) {
-      throw error;
-    }
+      },
+      filters: [],
+    });
 
     apiLogger.info(`Account deactivated for user`, { userId, status: "inactive" });
 
