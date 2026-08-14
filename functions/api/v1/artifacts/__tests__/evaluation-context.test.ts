@@ -1,4 +1,5 @@
 import { extractArtifactContent } from "@functions/lib/artifact-evaluator";
+import { createQueryGateway, type QueryGateway } from "@functions/lib/query-gateway";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchArtifactTemplateContent, fetchEvaluationContext } from "../evaluation-context";
@@ -48,23 +49,27 @@ function createSupabase(chains: Record<string, MockChain>): SupabaseClient {
   } as unknown as SupabaseClient;
 }
 
+function createGateway(chains: Record<string, MockChain>): QueryGateway {
+  return createQueryGateway(createSupabase(chains));
+}
+
 describe("fetchEvaluationContext", () => {
   it("returns undefined when the artifact is not found", async () => {
-    const supabase = createSupabase({
+    const gateway = createGateway({
       module_artifacts: mockChain({ single: err("not found") }),
     });
-    await expect(fetchEvaluationContext(supabase, "artifact-1")).resolves.toBeUndefined();
+    await expect(fetchEvaluationContext(gateway, "artifact-1")).resolves.toBeUndefined();
   });
 
   it("returns undefined when the artifact has no modules_content_id", async () => {
-    const supabase = createSupabase({
+    const gateway = createGateway({
       module_artifacts: mockChain({ single: ok({ id: "artifact-1" }) }),
     });
-    await expect(fetchEvaluationContext(supabase, "artifact-1")).resolves.toBeUndefined();
+    await expect(fetchEvaluationContext(gateway, "artifact-1")).resolves.toBeUndefined();
   });
 
   it("assembles the full context chain when every lookup succeeds", async () => {
-    const supabase = createSupabase({
+    const gateway = createGateway({
       module_artifacts: mockChain({ single: ok({ id: "artifact-1", modules_content_id: "mc-1" }) }),
       modules_content: mockChain({
         single: ok({ id: "mc-1", module_id: "module-1", stage_name: "Analyze", stage_order: 2 }),
@@ -92,7 +97,7 @@ describe("fetchEvaluationContext", () => {
       capabilities: mockChain({ maybeSingle: ok({ code: "CAP-3", name: "Capability" }) }),
     });
 
-    const result = await fetchEvaluationContext(supabase, "artifact-1");
+    const result = await fetchEvaluationContext(gateway, "artifact-1");
 
     expect(result).toMatchObject({
       capabilityCode: "CAP-3",
@@ -108,7 +113,7 @@ describe("fetchEvaluationContext", () => {
   });
 
   it("parses a string problem_statement", async () => {
-    const supabase = createSupabase({
+    const gateway = createGateway({
       module_artifacts: mockChain({ single: ok({ id: "a", modules_content_id: "mc-1" }) }),
       modules_content: mockChain({ single: ok({ id: "mc-1", module_id: "m-1" }) }),
       modules: mockChain({ single: ok({ id: "m-1", level_id: "l-1", module_no: 1 }) }),
@@ -122,7 +127,7 @@ describe("fetchEvaluationContext", () => {
       }),
     });
 
-    const result = await fetchEvaluationContext(supabase, "artifact-1");
+    const result = await fetchEvaluationContext(gateway, "artifact-1");
     expect(result?.levelProblemStatement).toEqual({
       title: "Level",
       description: "Plain text problem",
@@ -130,33 +135,33 @@ describe("fetchEvaluationContext", () => {
   });
 
   it("logs and degrades gracefully when the level query errors", async () => {
-    const supabase = createSupabase({
+    const gateway = createGateway({
       module_artifacts: mockChain({ single: ok({ id: "a", modules_content_id: "mc-1" }) }),
       modules_content: mockChain({ single: ok({ id: "mc-1", module_id: "m-1" }) }),
       modules: mockChain({ single: ok({ id: "m-1", level_id: "l-1" }) }),
       levels: mockChain({ maybeSingle: err("levels down") }),
     });
 
-    const result = await fetchEvaluationContext(supabase, "artifact-1");
+    const result = await fetchEvaluationContext(gateway, "artifact-1");
     // The level is optional context: a query failure must not fail the call.
     expect(result).toBeDefined();
     expect(result?.levelTitle).toBeUndefined();
   });
 
   it("returns undefined when the modules_content query errors", async () => {
-    const supabase = createSupabase({
+    const gateway = createGateway({
       module_artifacts: mockChain({ single: ok({ id: "a", modules_content_id: "mc-1" }) }),
       modules_content: mockChain({ single: err("mc down") }),
     });
-    await expect(fetchEvaluationContext(supabase, "artifact-1")).resolves.toBeUndefined();
+    await expect(fetchEvaluationContext(gateway, "artifact-1")).resolves.toBeUndefined();
   });
 
   it("returns undefined when the modules_content has no module_id", async () => {
-    const supabase = createSupabase({
+    const gateway = createGateway({
       module_artifacts: mockChain({ single: ok({ id: "a", modules_content_id: "mc-1" }) }),
       modules_content: mockChain({ single: ok({ id: "mc-1" }) }),
     });
-    await expect(fetchEvaluationContext(supabase, "artifact-1")).resolves.toBeUndefined();
+    await expect(fetchEvaluationContext(gateway, "artifact-1")).resolves.toBeUndefined();
   });
 });
 
@@ -173,12 +178,12 @@ describe("fetchArtifactTemplateContent", () => {
   });
 
   it("returns an empty map when no templates exist", async () => {
-    const supabase = createSupabase({ artifact_templates: mockChain({ thenVal: ok([]) }) });
-    await expect(fetchArtifactTemplateContent(supabase, "artifact-1")).resolves.toEqual(new Map());
+    const gateway = createGateway({ artifact_templates: mockChain({ thenVal: ok([]) }) });
+    await expect(fetchArtifactTemplateContent(gateway, "artifact-1")).resolves.toEqual(new Map());
   });
 
   it("skips non-https URLs, images and videos", async () => {
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_templates: mockChain({
         thenVal: ok([
           { id: "t1", question_id: null, file_url: "http://insecure.example/x.docx" },
@@ -188,7 +193,7 @@ describe("fetchArtifactTemplateContent", () => {
       }),
     });
 
-    await expect(fetchArtifactTemplateContent(supabase, "artifact-1")).resolves.toEqual(new Map());
+    await expect(fetchArtifactTemplateContent(gateway, "artifact-1")).resolves.toEqual(new Map());
     expect(extractArtifactContent).not.toHaveBeenCalled();
   });
 
@@ -199,7 +204,7 @@ describe("fetchArtifactTemplateContent", () => {
       extractedText: "template body",
       format: "docx",
     } as Awaited<ReturnType<typeof extractArtifactContent>>);
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_templates: mockChain({
         thenVal: ok([
           {
@@ -227,7 +232,7 @@ describe("fetchArtifactTemplateContent", () => {
       }),
     });
 
-    const result = await fetchArtifactTemplateContent(supabase, "artifact-1");
+    const result = await fetchArtifactTemplateContent(gateway, "artifact-1");
 
     expect(result.get("q-1")).toBe("template body");
     expect(result.get("__artifact__")).toBe("template body");
@@ -241,7 +246,7 @@ describe("fetchArtifactTemplateContent", () => {
       extractedText: "",
       format: "corrupt",
     } as Awaited<ReturnType<typeof extractArtifactContent>>);
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_templates: mockChain({
         thenVal: ok([
           { id: "t1", question_id: null, file_url: "https://ok.example/x.docx", file_type: "docx" },
@@ -249,7 +254,7 @@ describe("fetchArtifactTemplateContent", () => {
       }),
     });
 
-    await expect(fetchArtifactTemplateContent(supabase, "artifact-1")).resolves.toEqual(new Map());
+    await expect(fetchArtifactTemplateContent(gateway, "artifact-1")).resolves.toEqual(new Map());
   });
 
   it("skips templates whose text extraction is empty", async () => {
@@ -259,7 +264,7 @@ describe("fetchArtifactTemplateContent", () => {
       extractedText: "   ",
       format: "docx",
     } as Awaited<ReturnType<typeof extractArtifactContent>>);
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_templates: mockChain({
         thenVal: ok([
           { id: "t1", question_id: null, file_url: "https://ok.example/x.docx", file_type: "docx" },
@@ -267,7 +272,7 @@ describe("fetchArtifactTemplateContent", () => {
       }),
     });
 
-    await expect(fetchArtifactTemplateContent(supabase, "artifact-1")).resolves.toEqual(new Map());
+    await expect(fetchArtifactTemplateContent(gateway, "artifact-1")).resolves.toEqual(new Map());
   });
 
   it("skips templates whose fetch fails and keeps extracting the rest", async () => {
@@ -284,7 +289,7 @@ describe("fetchArtifactTemplateContent", () => {
       extractedText: "template body",
       format: "docx",
     } as Awaited<ReturnType<typeof extractArtifactContent>>);
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_templates: mockChain({
         thenVal: ok([
           {
@@ -303,16 +308,16 @@ describe("fetchArtifactTemplateContent", () => {
       }),
     });
 
-    const result = await fetchArtifactTemplateContent(supabase, "artifact-1");
+    const result = await fetchArtifactTemplateContent(gateway, "artifact-1");
     expect(result.get("q-1")).toBeUndefined();
     expect(result.get("__artifact__")).toBe("template body");
   });
 
   it("returns an empty map when the template query errors", async () => {
-    const supabase = createSupabase({
+    const gateway = createGateway({
       artifact_templates: mockChain({ thenVal: err("templates down") }),
     });
-    await expect(fetchArtifactTemplateContent(supabase, "artifact-1")).resolves.toEqual(new Map());
+    await expect(fetchArtifactTemplateContent(gateway, "artifact-1")).resolves.toEqual(new Map());
     expect(extractArtifactContent).not.toHaveBeenCalled();
   });
 });

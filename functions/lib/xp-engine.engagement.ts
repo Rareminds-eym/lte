@@ -7,6 +7,7 @@ const loginXpEventsReadPolicy = {
   operation: "read",
   columns: ["metadata"],
   filters: ["user_id", "event_type"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
   maxPageSize: 1000,
 } as const;
 
@@ -22,6 +23,7 @@ const userXpTotalReadPolicy = {
   operation: "read",
   columns: ["xp_amount"],
   filters: ["user_id", "created_at"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
   maxPageSize: 1000,
 } as const;
 
@@ -117,10 +119,8 @@ export async function checkAndAwardStreak(
 
   // Fetch all distinct daily_login dates for this user, descending
   const loginRows = (await qb.read(loginXpEventsReadPolicy, {
-    filters: [
-      { column: "user_id", op: "eq", value: userId },
-      { column: "event_type", op: "eq", value: "daily_login" },
-    ],
+    auth: { userId },
+    filters: [{ column: "event_type", op: "eq", value: "daily_login" }],
   })) as Array<{ metadata: unknown }> | null;
 
   // Extract and deduplicate YYYY-MM-DD strings from metadata.login_date
@@ -172,10 +172,8 @@ export async function checkAndAwardConsistency(
   const todayStr = new Date().toISOString().split("T")[0] || "";
 
   const loginRows = (await qb.read(loginXpEventsReadPolicy, {
-    filters: [
-      { column: "user_id", op: "eq", value: userId },
-      { column: "event_type", op: "eq", value: "daily_login" },
-    ],
+    auth: { userId },
+    filters: [{ column: "event_type", op: "eq", value: "daily_login" }],
   })) as Array<{ metadata: unknown }> | null;
 
   const dateSet = new Set<string>();
@@ -377,11 +375,11 @@ export async function getUserTotalXp(
   since?: Date,
 ): Promise<number> {
   const qb = asQueryGateway(source);
-  const filters: QueryGatewayFilter[] = [{ column: "user_id", op: "eq", value: userId }];
+  const filters: QueryGatewayFilter[] = [];
   if (since) {
     filters.push({ column: "created_at", op: "gte", value: since.toISOString() });
   }
-  const data = (await qb.read(userXpTotalReadPolicy, { filters })) as Array<{
+  const data = (await qb.read(userXpTotalReadPolicy, { auth: { userId }, filters })) as Array<{
     xp_amount?: number | null;
   }> | null;
 

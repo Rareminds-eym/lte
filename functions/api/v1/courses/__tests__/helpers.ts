@@ -1,3 +1,4 @@
+import { createQueryGateway, type QueryGateway } from "@functions/lib/query-gateway";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
 
@@ -82,6 +83,10 @@ export function makeSupabase(chains: Record<string, MockChain | undefined>): Sup
   return {
     from: vi.fn().mockImplementation((table: string) => chains[table] ?? fallback),
   } as unknown as SupabaseClient;
+}
+
+export function makeGateway(chains: Record<string, MockChain | undefined>): QueryGateway {
+  return createQueryGateway(makeSupabase(chains));
 }
 
 export const ok = (data: unknown): QueryResult => ({ data, error: null });

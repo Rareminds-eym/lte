@@ -1,4 +1,4 @@
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
@@ -11,7 +11,10 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return { ...actual, createServiceQueryGateway: vi.fn() };
+});
 
 interface Chainable extends Record<string, unknown> {
   select: ReturnType<typeof vi.fn>;
@@ -62,6 +65,10 @@ describe("GET /api/v1/learning-paths/active", () => {
     vi.restoreAllMocks();
   });
 
+  function gatewayFromSupabase(mockSupabase: { from: ReturnType<typeof vi.fn> }) {
+    return createQueryGateway(mockSupabase as unknown as SupabaseClient);
+  }
+
   it("returns 401 when requireAuth throws", async () => {
     vi.mocked(requireAuth).mockRejectedValueOnce(new AuthError("Missing token", "UNAUTHORIZED"));
     const response = await onRequestGet({
@@ -78,7 +85,7 @@ describe("GET /api/v1/learning-paths/active", () => {
     const mockSupabase = {
       from: vi.fn().mockReturnValue(chainable(null)),
     };
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(mockSupabase as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromSupabase(mockSupabase));
     const response = await onRequestGet({
       request: new Request("http://localhost"),
       env: {} as LteEnv,
@@ -113,7 +120,7 @@ describe("GET /api/v1/learning-paths/active", () => {
         return chainable();
       }),
     };
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(mockSupabase as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromSupabase(mockSupabase));
     const response = await onRequestGet({
       request: new Request("http://localhost"),
       env: {} as LteEnv,

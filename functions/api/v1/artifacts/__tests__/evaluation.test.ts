@@ -1,6 +1,5 @@
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ArtifactSubmissionError } from "../queries";
 import { onRequestGet } from "../submissions/[id]/evaluation";
@@ -14,7 +13,7 @@ vi.mock("../queries", async (importOriginal) => {
   return { ...actual, getSubmissionEvaluationFlow: getSubmissionEvaluationFlowMock };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", () => ({ createServiceQueryGateway: vi.fn() }));
 
 const SUBMISSION_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -54,12 +53,19 @@ function createContext(
 }
 
 describe("GET /api/v1/artifacts/submissions/[id]/evaluation", () => {
-  const mockSupabase = { from: vi.fn() } as unknown as SupabaseClient;
+  const mockGateway = {
+    read: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    upsert: vi.fn(),
+    delete: vi.fn(),
+    rpc: vi.fn(),
+  };
 
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
-    vi.mocked(createServiceSupabase).mockReturnValue(mockSupabase);
+    vi.mocked(createServiceQueryGateway).mockReturnValue(mockGateway);
   });
 
   it("returns 400 when the submission id route param is missing", async () => {

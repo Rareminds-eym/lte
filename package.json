@@ -51,6 +51,7 @@
     "lint:binding": "node scripts/checks/validate-service-binding.js",
     "lint:zod": "node scripts/checks/validate-zod-boundaries.js",
     "lint:alias": "node scripts/checks/validate-import-aliases.js",
+    "lint:gateway": "node scripts/checks/validate-query-gateway.js",
     "lint:knip": "knip --no-config-hints",
     "lint:biome": "biome check --reporter=concise .",
     "format:biome": "biome check --write .",

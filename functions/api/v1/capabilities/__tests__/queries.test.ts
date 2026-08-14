@@ -1,3 +1,4 @@
+import { createQueryGateway, type QueryGateway } from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -43,6 +44,10 @@ function supabaseWith(tables: Record<string, { data?: unknown; error?: unknown }
   } as unknown as SupabaseClient;
 }
 
+function gatewayWith(tables: Record<string, { data?: unknown; error?: unknown }>): QueryGateway {
+  return createQueryGateway(supabaseWith(tables));
+}
+
 const arrayCapabilityRow = {
   id: "s1",
   sequence_step: 1,
@@ -66,11 +71,11 @@ describe("capabilities queries", () => {
 
   describe("getCapabilitiesByRoleId", () => {
     it("maps array and object capabilities, falling back for null fields", async () => {
-      const supabase = supabaseWith({
+      const gateway = gatewayWith({
         role_capability_sequence: { data: [arrayCapabilityRow, objectCapabilityRow] },
       });
 
-      await expect(getCapabilitiesByRoleId(supabase, "role-1")).resolves.toEqual([
+      await expect(getCapabilitiesByRoleId(gateway, "role-1")).resolves.toEqual([
         {
           id: "c1",
           name: "One",
@@ -93,7 +98,7 @@ describe("capabilities queries", () => {
     });
 
     it("falls back to empty values when the capability join is missing", async () => {
-      const supabase = supabaseWith({
+      const gateway = gatewayWith({
         role_capability_sequence: {
           data: [
             {
@@ -107,7 +112,7 @@ describe("capabilities queries", () => {
         },
       });
 
-      await expect(getCapabilitiesByRoleId(supabase, "role-1")).resolves.toEqual([
+      await expect(getCapabilitiesByRoleId(gateway, "role-1")).resolves.toEqual([
         {
           id: "",
           name: "",
@@ -122,16 +127,16 @@ describe("capabilities queries", () => {
 
     it("returns [] for null data and empty data", async () => {
       await expect(
-        getCapabilitiesByRoleId(supabaseWith({ role_capability_sequence: { data: null } }), "r"),
+        getCapabilitiesByRoleId(gatewayWith({ role_capability_sequence: { data: null } }), "r"),
       ).resolves.toEqual([]);
       await expect(
-        getCapabilitiesByRoleId(supabaseWith({ role_capability_sequence: { data: [] } }), "r"),
+        getCapabilitiesByRoleId(gatewayWith({ role_capability_sequence: { data: [] } }), "r"),
       ).resolves.toEqual([]);
     });
 
     it("throws when the query errors", async () => {
-      const supabase = supabaseWith({ role_capability_sequence: { error: new Error("boom") } });
-      await expect(getCapabilitiesByRoleId(supabase, "role-1")).rejects.toThrow(
+      const gateway = gatewayWith({ role_capability_sequence: { error: new Error("boom") } });
+      await expect(getCapabilitiesByRoleId(gateway, "role-1")).rejects.toThrow(
         "Failed to fetch role capabilities: boom",
       );
     });
@@ -139,7 +144,7 @@ describe("capabilities queries", () => {
 
   describe("getLevelStatsForCapabilities", () => {
     it("returns empty maps for an empty capability id list", async () => {
-      await expect(getLevelStatsForCapabilities(supabaseWith({}), [])).resolves.toEqual({
+      await expect(getLevelStatsForCapabilities(gatewayWith({}), [])).resolves.toEqual({
         counts: {},
         durationHours: {},
         xpSums: {},
@@ -147,7 +152,7 @@ describe("capabilities queries", () => {
     });
 
     it("counts levels and sums total_xp and duration per capability", async () => {
-      const supabase = supabaseWith({
+      const gateway = gatewayWith({
         levels: {
           data: [
             { capability_id: "c1", id: "l1", total_xp: 10, duration_minutes: 60 },
@@ -158,7 +163,7 @@ describe("capabilities queries", () => {
         },
       });
 
-      await expect(getLevelStatsForCapabilities(supabase, ["c1", "c2"])).resolves.toEqual({
+      await expect(getLevelStatsForCapabilities(gateway, ["c1", "c2"])).resolves.toEqual({
         counts: { c1: 2, c2: 2 },
         durationHours: { c1: 3, c2: 1 },
         xpSums: { c1: 30, c2: 5 },
@@ -166,8 +171,8 @@ describe("capabilities queries", () => {
     });
 
     it("throws when the query errors", async () => {
-      const supabase = supabaseWith({ levels: { error: new Error("boom") } });
-      await expect(getLevelStatsForCapabilities(supabase, ["c1"])).rejects.toThrow(
+      const gateway = gatewayWith({ levels: { error: new Error("boom") } });
+      await expect(getLevelStatsForCapabilities(gateway, ["c1"])).rejects.toThrow(
         "Failed to fetch level counts: boom",
       );
     });
@@ -175,13 +180,13 @@ describe("capabilities queries", () => {
 
   describe("getUserCapabilitiesForRoles", () => {
     it("returns [] when no role ids are provided", async () => {
-      await expect(
-        getUserCapabilitiesForRoles(supabaseWith({}), "user-1", [], []),
-      ).resolves.toEqual([]);
+      await expect(getUserCapabilitiesForRoles(gatewayWith({}), "user-1", [], [])).resolves.toEqual(
+        [],
+      );
     });
 
     it("maps capabilities with xp totals and role info", async () => {
-      const supabase = supabaseWith({
+      const gateway = gatewayWith({
         role_capability_sequence: {
           data: [
             {
@@ -199,7 +204,7 @@ describe("capabilities queries", () => {
       });
 
       const result = await getUserCapabilitiesForRoles(
-        supabase,
+        gateway,
         "user-1",
         ["role-1"],
         [{ roleId: "role-1", roleName: "Learner" }],
@@ -222,7 +227,7 @@ describe("capabilities queries", () => {
 
   describe("getUserCapabilityProgressSummaries", () => {
     it("reports completed level count when every module in level one is completed", async () => {
-      const supabase = supabaseWith({
+      const gateway = gatewayWith({
         levels: {
           data: [
             { id: "l1", capability_id: "c1", level_code: "CAP_L1" },
@@ -244,35 +249,33 @@ describe("capabilities queries", () => {
         },
       });
 
-      await expect(getUserCapabilityProgressSummaries(supabase, "user-1", ["c1"])).resolves.toEqual(
-        {
-          c1: {
-            currentLevel: 1,
-            status: "in_progress",
-            progress: 50,
-          },
+      await expect(getUserCapabilityProgressSummaries(gateway, "user-1", ["c1"])).resolves.toEqual({
+        c1: {
+          currentLevel: 1,
+          status: "in_progress",
+          progress: 50,
         },
-      );
+      });
     });
   });
 
   describe("getLevelsForCapability", () => {
     it("throws when the query errors", async () => {
-      const supabase = supabaseWith({ levels: { error: new Error("boom") } });
-      await expect(getLevelsForCapability(supabase, "cap-1")).rejects.toThrow(
+      const gateway = gatewayWith({ levels: { error: new Error("boom") } });
+      await expect(getLevelsForCapability(gateway, "cap-1")).rejects.toThrow(
         "Failed to fetch capability levels: boom",
       );
     });
 
     it("returns [] when data is null", async () => {
       await expect(
-        getLevelsForCapability(supabaseWith({ levels: { data: null } }), "cap-1"),
+        getLevelsForCapability(gatewayWith({ levels: { data: null } }), "cap-1"),
       ).resolves.toEqual([]);
     });
 
     it("normalizes deliverables, level numbers and defaults", async () => {
       const warnSpy = vi.spyOn(apiLogger, "warn");
-      const supabase = supabaseWith({
+      const gateway = gatewayWith({
         levels: {
           data: [
             {
@@ -319,7 +322,7 @@ describe("capabilities queries", () => {
         },
       });
 
-      const result = await getLevelsForCapability(supabase, "cap-1");
+      const result = await getLevelsForCapability(gateway, "cap-1");
       expect(result.map((l) => l.levelNumber)).toEqual([1, 1, 2, 5]);
       const [l1Row, bogusRow, l2Row, l5Row] = result;
       expect(l1Row?.deliverables).toEqual(["a", "b"]);
@@ -337,7 +340,7 @@ describe("capabilities queries", () => {
     });
 
     it("reads totalXp directly from the total_xp column (set by DB trigger)", async () => {
-      const supabase = supabaseWith({
+      const gateway = gatewayWith({
         levels: {
           data: [
             {
@@ -352,13 +355,13 @@ describe("capabilities queries", () => {
         },
       });
 
-      const result = await getLevelsForCapability(supabase, "cap-1");
+      const result = await getLevelsForCapability(gateway, "cap-1");
       expect(result).toHaveLength(1);
       expect(result[0]?.totalXp).toBe(42);
     });
 
     it("defaults totalXp to 0 when total_xp is missing", async () => {
-      const supabase = supabaseWith({
+      const gateway = gatewayWith({
         levels: {
           data: [
             {
@@ -372,7 +375,7 @@ describe("capabilities queries", () => {
         },
       });
 
-      const result = await getLevelsForCapability(supabase, "cap-1");
+      const result = await getLevelsForCapability(gateway, "cap-1");
       expect(result[0]?.totalXp).toBe(0);
     });
   });

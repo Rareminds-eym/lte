@@ -1,3 +1,4 @@
+import { createQueryGateway, type QueryGateway } from "@functions/lib/query-gateway";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -76,6 +77,14 @@ function supabaseWith(tables: Record<string, TableConfig>) {
   } as unknown as SupabaseClient;
 }
 
+function gatewayWith(tables: Record<string, TableConfig>): {
+  gateway: QueryGateway;
+  supabase: SupabaseClient;
+} {
+  const supabase = supabaseWith(tables);
+  return { gateway: createQueryGateway(supabase), supabase };
+}
+
 function fromChain(supabase: SupabaseClient, callIndex = 0) {
   const fromMock = supabase.from as unknown as ReturnType<typeof vi.fn>;
   return fromMock.mock.results[callIndex]?.value as QueryChain | undefined;
@@ -91,12 +100,15 @@ describe("learning-paths queries", () => {
   describe("getActiveLearningTrack", () => {
     it("returns null when no track exists", async () => {
       await expect(
-        getActiveLearningTrack(supabaseWith({ learning_tracks: { query: { data: null } } }), "u1"),
+        getActiveLearningTrack(
+          gatewayWith({ learning_tracks: { query: { data: null } } }).gateway,
+          "u1",
+        ),
       ).resolves.toBeNull();
     });
 
     it("maps active track and roles correctly", async () => {
-      const supabase = supabaseWith({
+      const { gateway } = gatewayWith({
         learning_tracks: {
           query: {
             data: {
@@ -132,7 +144,7 @@ describe("learning-paths queries", () => {
         },
       });
 
-      await expect(getActiveLearningTrack(supabase, "u1")).resolves.toEqual({
+      await expect(getActiveLearningTrack(gateway, "u1")).resolves.toEqual({
         learningTrackId: "track-1",
         track: "React",
         fit: "high",
@@ -176,8 +188,10 @@ describe("learning-paths queries", () => {
     });
 
     it("throws when the track query errors", async () => {
-      const supabase = supabaseWith({ learning_tracks: { query: { error: new Error("boom") } } });
-      await expect(getActiveLearningTrack(supabase, "u1")).rejects.toThrow(
+      const { gateway } = gatewayWith({
+        learning_tracks: { query: { error: new Error("boom") } },
+      });
+      await expect(getActiveLearningTrack(gateway, "u1")).rejects.toThrow(
         "Failed to fetch active learning track: boom",
       );
     });
@@ -186,19 +200,19 @@ describe("learning-paths queries", () => {
   describe("checkRoleExists", () => {
     it("returns true when the role exists", async () => {
       await expect(
-        checkRoleExists(supabaseWith({ roles: { query: { data: { id: "r1" } } } }), "r1"),
+        checkRoleExists(gatewayWith({ roles: { query: { data: { id: "r1" } } } }).gateway, "r1"),
       ).resolves.toBe(true);
     });
 
     it("returns false when the role is missing", async () => {
       await expect(
-        checkRoleExists(supabaseWith({ roles: { query: { data: null } } }), "r1"),
+        checkRoleExists(gatewayWith({ roles: { query: { data: null } } }).gateway, "r1"),
       ).resolves.toBe(false);
     });
 
     it("throws when the query errors", async () => {
-      const supabase = supabaseWith({ roles: { query: { error: new Error("boom") } } });
-      await expect(checkRoleExists(supabase, "r1")).rejects.toThrow(
+      const { gateway } = gatewayWith({ roles: { query: { error: new Error("boom") } } });
+      await expect(checkRoleExists(gateway, "r1")).rejects.toThrow(
         "Failed to check role existence: boom",
       );
     });
@@ -215,9 +229,11 @@ describe("learning-paths queries", () => {
     };
 
     it("inserts a new track with an explicit duration", async () => {
-      const supabase = supabaseWith({ learning_tracks: { query: { data: { id: "lt1" } } } });
+      const { gateway, supabase } = gatewayWith({
+        learning_tracks: { query: { data: { id: "lt1" } } },
+      });
 
-      const id = await upsertLearningTrack(supabase, { ...params, duration: "12 months" });
+      const id = await upsertLearningTrack(gateway, { ...params, duration: "12 months" });
       expect(id).toBe("lt1");
       expect(fromChain(supabase)?.insert).toHaveBeenCalledWith(
         expect.objectContaining({ duration: "12 months" }),
@@ -225,9 +241,11 @@ describe("learning-paths queries", () => {
     });
 
     it("defaults the duration to 6 months", async () => {
-      const supabase = supabaseWith({ learning_tracks: { query: { data: { id: "lt1" } } } });
+      const { gateway, supabase } = gatewayWith({
+        learning_tracks: { query: { data: { id: "lt1" } } },
+      });
 
-      const id = await upsertLearningTrack(supabase, params);
+      const id = await upsertLearningTrack(gateway, params);
       expect(id).toBe("lt1");
       expect(fromChain(supabase)?.insert).toHaveBeenCalledWith(
         expect.objectContaining({ duration: "6 months" }),
@@ -235,14 +253,14 @@ describe("learning-paths queries", () => {
     });
 
     it("updates the existing track on a unique violation", async () => {
-      const supabase = supabaseWith({
+      const { gateway, supabase } = gatewayWith({
         learning_tracks: {
           insert: { data: { id: "lt1" }, error: uniqueViolation },
           update: { data: [{ id: "lt1-updated" }] },
         },
       });
 
-      const id = await upsertLearningTrack(supabase, params);
+      const id = await upsertLearningTrack(gateway, params);
       expect(id).toBe("lt1-updated");
       expect(fromChain(supabase, 1)?.update).toHaveBeenCalledWith(
         expect.objectContaining({ duration: "6 months" }),
@@ -250,24 +268,24 @@ describe("learning-paths queries", () => {
     });
 
     it("throws when the update fails after a unique violation", async () => {
-      const supabase = supabaseWith({
+      const { gateway } = gatewayWith({
         learning_tracks: {
           query: { data: { id: "lt1" }, error: uniqueViolation },
           update: { error: new Error("boom") },
         },
       });
 
-      await expect(upsertLearningTrack(supabase, params)).rejects.toThrow(
+      await expect(upsertLearningTrack(gateway, params)).rejects.toThrow(
         "Failed to update learning track: boom",
       );
     });
 
     it("throws for other insert errors", async () => {
-      const supabase = supabaseWith({
+      const { gateway } = gatewayWith({
         learning_tracks: { query: { error: { code: "42P01", message: "relation missing" } } },
       });
 
-      await expect(upsertLearningTrack(supabase, params)).rejects.toThrow(
+      await expect(upsertLearningTrack(gateway, params)).rejects.toThrow(
         "Failed to upsert learning track: relation missing",
       );
     });
@@ -275,14 +293,16 @@ describe("learning-paths queries", () => {
 
   describe("deactivateOtherTracks", () => {
     it("deactivates active tracks", async () => {
-      const supabase = supabaseWith({ learning_tracks: { query: { data: null } } });
-      await expect(deactivateOtherTracks(supabase, "u1")).resolves.toBeUndefined();
+      const { gateway, supabase } = gatewayWith({ learning_tracks: { query: { data: null } } });
+      await expect(deactivateOtherTracks(gateway, "u1")).resolves.toBeUndefined();
       expect(fromChain(supabase)?.update).toHaveBeenCalledWith({ is_active: false });
     });
 
     it("throws when the update errors", async () => {
-      const supabase = supabaseWith({ learning_tracks: { query: { error: new Error("boom") } } });
-      await expect(deactivateOtherTracks(supabase, "u1")).rejects.toThrow(
+      const { gateway } = gatewayWith({
+        learning_tracks: { query: { error: new Error("boom") } },
+      });
+      await expect(deactivateOtherTracks(gateway, "u1")).rejects.toThrow(
         "Failed to deactivate other active tracks: boom",
       );
     });
@@ -290,13 +310,13 @@ describe("learning-paths queries", () => {
 
   describe("activateLearningTrack", () => {
     it("activates the specified track and deactivates others", async () => {
-      const supabase = supabaseWith({
+      const { gateway, supabase } = gatewayWith({
         learning_tracks: {
           query: { data: null },
           update: { data: null },
         },
       });
-      await expect(activateLearningTrack(supabase, "u1", "track-1")).resolves.toBeUndefined();
+      await expect(activateLearningTrack(gateway, "u1", "track-1")).resolves.toBeUndefined();
       expect(fromChain(supabase, 0)?.update).toHaveBeenCalledWith({ is_active: false });
       expect(fromChain(supabase, 1)?.update).toHaveBeenCalledWith({ is_active: true });
     });
@@ -306,9 +326,11 @@ describe("learning-paths queries", () => {
     const params = { userId: "u1", trackId: "lt1", roleId: "r1" };
 
     it("inserts a new learning path", async () => {
-      const supabase = supabaseWith({ learning_paths: { query: { data: { id: "lp1" } } } });
+      const { gateway, supabase } = gatewayWith({
+        learning_paths: { query: { data: { id: "lp1" } } },
+      });
 
-      const id = await upsertLearningPath(supabase, params);
+      const id = await upsertLearningPath(gateway, params);
       expect(id).toBe("lp1");
       expect(fromChain(supabase)?.insert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -320,36 +342,36 @@ describe("learning-paths queries", () => {
     });
 
     it("retrieves the existing path on a unique violation", async () => {
-      const supabase = supabaseWith({
+      const { gateway } = gatewayWith({
         learning_paths: {
           insert: { error: uniqueViolation },
           update: { data: [{ id: "lp1" }] },
         },
       });
 
-      const id = await upsertLearningPath(supabase, params);
+      const id = await upsertLearningPath(gateway, params);
       expect(id).toBe("lp1");
     });
 
     it("throws when the retrieval fails on a unique violation", async () => {
-      const supabase = supabaseWith({
+      const { gateway } = gatewayWith({
         learning_paths: {
           insert: { error: uniqueViolation },
           query: { error: new Error("boom") },
         },
       });
 
-      await expect(upsertLearningPath(supabase, params)).rejects.toThrow(
+      await expect(upsertLearningPath(gateway, params)).rejects.toThrow(
         "Failed to retrieve or update existing learning path: boom",
       );
     });
 
     it("throws for other insert errors", async () => {
-      const supabase = supabaseWith({
+      const { gateway } = gatewayWith({
         learning_paths: { query: { error: { code: "42P01", message: "relation missing" } } },
       });
 
-      await expect(upsertLearningPath(supabase, params)).rejects.toThrow(
+      await expect(upsertLearningPath(gateway, params)).rejects.toThrow(
         "Failed to upsert learning path: relation missing",
       );
     });
@@ -357,19 +379,19 @@ describe("learning-paths queries", () => {
 
   describe("syncUserCapabilities", () => {
     it("returns early when the role has no capability sequences", async () => {
-      const supabase = supabaseWith({
+      const { gateway, supabase } = gatewayWith({
         role_capability_sequence: { query: { data: [] } },
         user_capabilities: { query: { data: null }, upsert: { data: null } },
       });
 
       await expect(
-        syncUserCapabilities(supabase, { userId: "u1", learningPathId: "lp1", roleId: "r1" }),
+        syncUserCapabilities(gateway, { userId: "u1", learningPathId: "lp1", roleId: "r1" }),
       ).resolves.toBeUndefined();
       expect(supabase.from).not.toHaveBeenCalledWith("user_capabilities");
     });
 
     it("builds upsert rows with gaps and scores", async () => {
-      const supabase = supabaseWith({
+      const { gateway, supabase } = gatewayWith({
         role_capability_sequence: {
           query: {
             data: [
@@ -390,7 +412,7 @@ describe("learning-paths queries", () => {
         },
       });
 
-      await syncUserCapabilities(supabase, { userId: "u1", learningPathId: "lp1", roleId: "r1" });
+      await syncUserCapabilities(gateway, { userId: "u1", learningPathId: "lp1", roleId: "r1" });
 
       const upsert = fromChain(supabase, 2)?.upsert;
       expect(upsert).toHaveBeenCalledWith(
@@ -424,12 +446,12 @@ describe("learning-paths queries", () => {
     });
 
     it("defaults when existing capabilities data is missing", async () => {
-      const supabase = supabaseWith({
+      const { gateway, supabase } = gatewayWith({
         role_capability_sequence: { query: { data: [{ id: "s1", required_level: "L5" }] } },
         user_capabilities: { query: { data: null }, upsert: { data: null } },
       });
 
-      await syncUserCapabilities(supabase, { userId: "u1", learningPathId: "lp1", roleId: "r1" });
+      await syncUserCapabilities(gateway, { userId: "u1", learningPathId: "lp1", roleId: "r1" });
 
       const upsert = fromChain(supabase, 2)?.upsert;
       expect(upsert).toHaveBeenCalledWith(
@@ -447,31 +469,31 @@ describe("learning-paths queries", () => {
     });
 
     it("throws when the sequence query errors", async () => {
-      const supabase = supabaseWith({
+      const { gateway } = gatewayWith({
         role_capability_sequence: { query: { error: new Error("boom") } },
       });
       await expect(
-        syncUserCapabilities(supabase, { userId: "u1", learningPathId: "lp1", roleId: "r1" }),
+        syncUserCapabilities(gateway, { userId: "u1", learningPathId: "lp1", roleId: "r1" }),
       ).rejects.toThrow("Failed to query role capability sequences: boom");
     });
 
     it("throws when the existing capabilities query errors", async () => {
-      const supabase = supabaseWith({
+      const { gateway } = gatewayWith({
         role_capability_sequence: { query: { data: [{ id: "s1", required_level: "L1" }] } },
         user_capabilities: { query: { error: new Error("boom") } },
       });
       await expect(
-        syncUserCapabilities(supabase, { userId: "u1", learningPathId: "lp1", roleId: "r1" }),
+        syncUserCapabilities(gateway, { userId: "u1", learningPathId: "lp1", roleId: "r1" }),
       ).rejects.toThrow("Failed to query existing user capabilities: boom");
     });
 
     it("throws when the upsert errors", async () => {
-      const supabase = supabaseWith({
+      const { gateway } = gatewayWith({
         role_capability_sequence: { query: { data: [{ id: "s1", required_level: "L1" }] } },
         user_capabilities: { query: { data: null }, upsert: { error: new Error("boom") } },
       });
       await expect(
-        syncUserCapabilities(supabase, { userId: "u1", learningPathId: "lp1", roleId: "r1" }),
+        syncUserCapabilities(gateway, { userId: "u1", learningPathId: "lp1", roleId: "r1" }),
       ).rejects.toThrow("Failed to upsert user capabilities: boom");
     });
   });

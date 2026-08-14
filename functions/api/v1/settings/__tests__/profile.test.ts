@@ -1,4 +1,4 @@
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
@@ -11,7 +11,10 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return { ...actual, createServiceQueryGateway: vi.fn() };
+});
 
 const mockUser: AuthUser = {
   sub: "user-uuid-1234",
@@ -44,6 +47,12 @@ function usersChain(readData: unknown, readError: unknown = null, writeError: un
       Promise.resolve({ data: readData, error: writeError ?? readError }).then(resolve),
   };
   return chain;
+}
+
+function gatewayFromChain(chain: UsersChain) {
+  return createQueryGateway({
+    from: vi.fn().mockReturnValue(chain),
+  } as unknown as SupabaseClient);
 }
 
 function context(method: "GET" | "PUT", body?: Record<string, unknown>) {
@@ -96,9 +105,7 @@ describe("GET /api/v1/settings/profile", () => {
   it("returns the profile from the users table", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const chain = usersChain(dbUser);
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestGet(context("GET"));
     expect(response.status).toBe(200);
@@ -134,9 +141,7 @@ describe("GET /api/v1/settings/profile", () => {
       },
     });
     const chain = usersChain(null);
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestGet(context("GET"));
     expect(response.status).toBe(200);
@@ -152,9 +157,7 @@ describe("GET /api/v1/settings/profile", () => {
   it("returns empty fields when nothing is available", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const chain = usersChain(null);
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestGet(context("GET"));
     expect(response.status).toBe(200);
@@ -167,9 +170,7 @@ describe("GET /api/v1/settings/profile", () => {
   it("returns an empty email when neither source has one", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce({ ...mockUser, email: "" });
     const chain = usersChain(null);
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestGet(context("GET"));
     const body = await response.json();
@@ -179,9 +180,7 @@ describe("GET /api/v1/settings/profile", () => {
   it("falls back to the auth email when the db email is empty", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce({ ...mockUser, email: "auth@rareminds.com" });
     const chain = usersChain({ first_name: "A", last_name: "B", email: "", metadata: {} });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestGet(context("GET"));
     const body = await response.json();
@@ -194,9 +193,7 @@ describe("GET /api/v1/settings/profile", () => {
       user_metadata: { full_name: "Meta Full" },
     });
     const chain = usersChain(null);
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestGet(context("GET"));
     const body = await response.json();
@@ -206,9 +203,7 @@ describe("GET /api/v1/settings/profile", () => {
   it("returns 500 when the db read fails", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const chain = usersChain(null, new Error("db down"));
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestGet(context("GET"));
     expect(response.status).toBe(500);
@@ -220,9 +215,7 @@ describe("GET /api/v1/settings/profile", () => {
   it("does not leak internal error details on 500", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const chain = usersChain(null, "db down");
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestGet(context("GET"));
     expect(response.status).toBe(500);
@@ -276,9 +269,7 @@ describe("PUT /api/v1/settings/profile", () => {
       metadata: { program: "BCA" },
     };
     const chain = usersChain(existing);
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPut(context("PUT", { fullName: "Jane Doe" }));
     expect(response.status).toBe(200);
@@ -301,9 +292,7 @@ describe("PUT /api/v1/settings/profile", () => {
 
   it("accepts explicit first and last name fields", async () => {
     const chain = usersChain({ first_name: null, last_name: null, metadata: {} });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPut(context("PUT", { firstName: "Jane", lastName: "Doe" }));
     expect(response.status).toBe(200);
@@ -314,9 +303,7 @@ describe("PUT /api/v1/settings/profile", () => {
 
   it("keeps existing values when the body is empty", async () => {
     const chain = usersChain({ first_name: "Old", last_name: "Name", phone: "999", metadata: {} });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPut(context("PUT", {}));
     expect(response.status).toBe(200);
@@ -327,9 +314,7 @@ describe("PUT /api/v1/settings/profile", () => {
 
   it("handles an existing user without metadata", async () => {
     const chain = usersChain({ first_name: "Old", last_name: "Name", phone: "999" });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPut(context("PUT", {}));
     expect(response.status).toBe(200);
@@ -340,9 +325,7 @@ describe("PUT /api/v1/settings/profile", () => {
 
   it("persists all provided metadata fields", async () => {
     const chain = usersChain({ first_name: "Old", last_name: "Name", phone: "999", metadata: {} });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPut(
       context("PUT", {
@@ -375,9 +358,7 @@ describe("PUT /api/v1/settings/profile", () => {
 
   it("persists the 2FA and login alert toggles", async () => {
     const chain = usersChain({ first_name: "Old", last_name: "Name", metadata: {} });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPut(
       context("PUT", { twoFactorEnabled: true, loginAlertsEnabled: false }),
@@ -399,9 +380,7 @@ describe("PUT /api/v1/settings/profile", () => {
       null,
       new Error("db down"),
     );
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPut(context("PUT", { fullName: "Jane Doe" }));
     expect(response.status).toBe(500);
@@ -416,9 +395,7 @@ describe("PUT /api/v1/settings/profile", () => {
       null,
       "db down",
     );
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPut(context("PUT", { fullName: "Jane Doe" }));
     expect(response.status).toBe(500);

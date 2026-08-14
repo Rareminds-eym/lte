@@ -5,7 +5,7 @@ import {
   LevelModuleParamsSchema,
 } from "@functions/api/v1/courses/schemas";
 import { describe, expect, it, vi } from "vitest";
-import { err, levelChains, makeSupabase, moduleDetailsChains, ok } from "./helpers";
+import { err, levelChains, makeGateway, moduleDetailsChains, ok } from "./helpers";
 
 const levelId = "0a010796-10c0-5287-b89a-6ab56bd71399";
 
@@ -117,9 +117,9 @@ describe("Level Content API Schemas & Queries", () => {
         modulesContent: ok([]),
         artifacts: ok([]),
       });
-      const mockSupabase = makeSupabase(chains);
+      const gateway = makeGateway(chains);
 
-      const result = await getLevelWithModules(mockSupabase, levelId);
+      const result = await getLevelWithModules(gateway, levelId);
 
       expect(result).not.toBeNull();
       expect(chains.modules?.eq).toHaveBeenCalledWith("level_id", levelId);
@@ -134,22 +134,19 @@ describe("Level Content API Schemas & Queries", () => {
     });
 
     it("returns null when level is not found (PGRST116)", async () => {
-      const mockSupabase = makeSupabase(levelChains({ levelResult: { data: null, error: null } }));
+      const gateway = makeGateway(levelChains({ levelResult: { data: null, error: null } }));
 
-      const result = await getLevelWithModules(
-        mockSupabase,
-        "00000000-0000-0000-0000-000000000000",
-      );
+      const result = await getLevelWithModules(gateway, "00000000-0000-0000-0000-000000000000");
       expect(result).toBeNull();
     });
 
     it("throws error for unanticipated DB failures", async () => {
-      const mockSupabase = makeSupabase(
+      const gateway = makeGateway(
         levelChains({ levelResult: err("Database connection failed", "PGRST500") }),
       );
 
       await expect(
-        getLevelWithModules(mockSupabase, "00000000-0000-0000-0000-000000000000"),
+        getLevelWithModules(gateway, "00000000-0000-0000-0000-000000000000"),
       ).rejects.toThrow("Database connection failed");
     });
   });
@@ -218,7 +215,7 @@ describe("Level Content API Schemas & Queries", () => {
         },
       ];
 
-      const mockSupabase = makeSupabase(
+      const gateway = makeGateway(
         moduleDetailsChains({
           levelResult: await mockLevelSingle(),
           moduleResult: await mockModuleSingle(),
@@ -226,7 +223,7 @@ describe("Level Content API Schemas & Queries", () => {
         }),
       );
 
-      const result = await getModuleDetails(mockSupabase, levelId, 0);
+      const result = await getModuleDetails(gateway, levelId, 0);
 
       expect(result).not.toBeNull();
       expect(result?.moduleNo).toBe(0);
@@ -244,15 +241,11 @@ describe("Level Content API Schemas & Queries", () => {
     });
 
     it("returns null when level or module does not exist", async () => {
-      const mockSupabase = makeSupabase(
+      const gateway = makeGateway(
         moduleDetailsChains({ levelResult: { data: null, error: null } }),
       );
 
-      const result = await getModuleDetails(
-        mockSupabase,
-        "00000000-0000-0000-0000-000000000000",
-        99,
-      );
+      const result = await getModuleDetails(gateway, "00000000-0000-0000-0000-000000000000", 99);
       expect(result).toBeNull();
     });
   });

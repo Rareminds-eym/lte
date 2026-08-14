@@ -1,4 +1,4 @@
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
@@ -12,7 +12,10 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return { ...actual, createServiceQueryGateway: vi.fn() };
+});
 
 interface Chainable {
   select: (...args: unknown[]) => Chainable;
@@ -44,6 +47,10 @@ function chainable<T = unknown, E = unknown>(resolveVal: T = null as T, errorVal
       ),
   };
   return chain;
+}
+
+function gatewayFromSupabase(mockSupabase: { from: ReturnType<typeof vi.fn> }) {
+  return createQueryGateway(mockSupabase as unknown as SupabaseClient);
 }
 
 describe("Readiness API Endpoints", () => {
@@ -104,9 +111,7 @@ describe("Readiness API Endpoints", () => {
           return chainable();
         }),
       };
-      vi.mocked(createServiceSupabase).mockReturnValueOnce(
-        mockSupabase as unknown as SupabaseClient,
-      );
+      vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromSupabase(mockSupabase));
 
       const response = await calculatePost({
         request: new Request("http://localhost", { method: "POST" }),
@@ -168,9 +173,7 @@ describe("Readiness API Endpoints", () => {
           return chainable();
         }),
       };
-      vi.mocked(createServiceSupabase).mockReturnValueOnce(
-        mockSupabase as unknown as SupabaseClient,
-      );
+      vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromSupabase(mockSupabase));
 
       const response = await readinessGet({
         request: new Request("http://localhost"),

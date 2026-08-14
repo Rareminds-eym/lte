@@ -1,5 +1,5 @@
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import { StageSequenceError } from "@functions/lib/stage-sequence";
-import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { awardXp, completeStage } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
@@ -16,9 +16,13 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   };
 });
 
-vi.mock("@functions/lib/supabase", () => ({
-  createServiceSupabase: vi.fn(),
-}));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return {
+    ...actual,
+    createServiceQueryGateway: vi.fn(),
+  };
+});
 
 vi.mock("@functions/api/v1/courses/queries", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@functions/api/v1/courses/queries")>();
@@ -80,6 +84,12 @@ function createMockQueryChain(resolveVal: unknown, errorVal: unknown = null): Mo
     },
   };
   return chain as unknown as MockQueryChain;
+}
+
+function createMockGateway(mockSupabase: { from: ReturnType<typeof vi.fn> }) {
+  return createQueryGateway(
+    mockSupabase as unknown as Parameters<typeof createQueryGateway>[0],
+  ) as ReturnType<typeof createServiceQueryGateway>;
 }
 
 describe("Progress API Endpoints", () => {
@@ -146,9 +156,7 @@ describe("Progress API Endpoints", () => {
         }),
       };
 
-      vi.mocked(createServiceSupabase).mockReturnValueOnce(
-        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
-      );
+      vi.mocked(createServiceQueryGateway).mockReturnValueOnce(createMockGateway(mockSupabase));
 
       const request = new Request("http://localhost/api/v1/courses/level-123/progress", {
         method: "POST",
@@ -220,9 +228,7 @@ describe("Progress API Endpoints", () => {
         }),
       };
 
-      vi.mocked(createServiceSupabase).mockReturnValueOnce(
-        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
-      );
+      vi.mocked(createServiceQueryGateway).mockReturnValueOnce(createMockGateway(mockSupabase));
 
       const request = new Request("http://localhost/api/v1/courses/level-123/progress", {
         method: "POST",
@@ -299,9 +305,7 @@ describe("Progress API Endpoints", () => {
         }),
       };
 
-      vi.mocked(createServiceSupabase).mockReturnValueOnce(
-        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
-      );
+      vi.mocked(createServiceQueryGateway).mockReturnValueOnce(createMockGateway(mockSupabase));
 
       const request = new Request("http://localhost/api/v1/courses/level-123/progress", {
         method: "POST",
@@ -371,9 +375,7 @@ describe("Progress API Endpoints", () => {
         }),
       };
 
-      vi.mocked(createServiceSupabase).mockReturnValueOnce(
-        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
-      );
+      vi.mocked(createServiceQueryGateway).mockReturnValueOnce(createMockGateway(mockSupabase));
 
       const request = new Request("http://localhost/api/v1/courses/level-123/modules/1/progress", {
         method: "POST",
@@ -431,9 +433,7 @@ describe("Progress API Endpoints", () => {
         }),
       };
 
-      vi.mocked(createServiceSupabase).mockReturnValueOnce(
-        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
-      );
+      vi.mocked(createServiceQueryGateway).mockReturnValueOnce(createMockGateway(mockSupabase));
 
       const request = new Request("http://localhost/api/v1/courses/level-123/modules/1/progress", {
         method: "POST",
@@ -555,9 +555,7 @@ describe("Progress API Endpoints", () => {
         }),
       };
 
-      vi.mocked(createServiceSupabase).mockReturnValueOnce(
-        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
-      );
+      vi.mocked(createServiceQueryGateway).mockReturnValueOnce(createMockGateway(mockSupabase));
 
       const request = new Request(
         "http://localhost/api/v1/courses/level-123/modules/1/stages/progress",
@@ -682,9 +680,7 @@ describe("Progress API Endpoints", () => {
         }),
       };
 
-      vi.mocked(createServiceSupabase).mockReturnValueOnce(
-        mockSupabase as unknown as ReturnType<typeof createServiceSupabase>,
-      );
+      vi.mocked(createServiceQueryGateway).mockReturnValueOnce(createMockGateway(mockSupabase));
 
       const request = new Request(
         "http://localhost/api/v1/courses/level-123/modules/1/stages/progress",

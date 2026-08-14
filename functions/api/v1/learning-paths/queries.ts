@@ -264,10 +264,10 @@ function rethrowQueryError(error: unknown, message: string): never {
 }
 
 export async function getActiveLearningTrack(
-  supabase: QueryGatewaySource,
+  source: QueryGatewaySource,
   userId: string,
 ): Promise<ActiveTrackDetail | null> {
-  const qb = asQueryGateway(supabase);
+  const qb = asQueryGateway(source);
 
   // 1. Fetch active track for this user
   let trackData: ActiveLearningTrackRow | null;
@@ -351,7 +351,7 @@ export async function getActiveLearningTrack(
     }),
   );
 
-  const stats = await getTrackProgressStats(supabase, userId, trackData.id);
+  const stats = await getTrackProgressStats(source, userId, trackData.id);
 
   return {
     learningTrackId: trackData.id,
@@ -367,11 +367,11 @@ export async function getActiveLearningTrack(
 }
 
 export async function getTrackProgressStats(
-  supabase: QueryGatewaySource,
+  source: QueryGatewaySource,
   userId: string,
   trackId: string,
 ): Promise<{ overallProgress: number; completionCount: number }> {
-  const qb = asQueryGateway(supabase);
+  const qb = asQueryGateway(source);
 
   // 1. Fetch all learning paths (roles) under this track
   let paths: Array<{ id: string }> | null;
@@ -454,10 +454,10 @@ export async function getTrackProgressStats(
 }
 
 export async function checkRoleExists(
-  supabase: QueryGatewaySource,
+  source: QueryGatewaySource,
   roleId: string,
 ): Promise<boolean> {
-  const qb = asQueryGateway(supabase);
+  const qb = asQueryGateway(source);
 
   let data: unknown;
   try {
@@ -567,10 +567,10 @@ export async function upsertLearningTrack(
 }
 
 export async function deactivateOtherTracks(
-  supabase: QueryGatewaySource,
+  source: QueryGatewaySource,
   userId: string,
 ): Promise<void> {
-  const qb = asQueryGateway(supabase);
+  const qb = asQueryGateway(source);
 
   try {
     await qb.update(deactivateLearningTracksPolicy, {

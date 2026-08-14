@@ -1,3 +1,4 @@
+import { createQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
@@ -22,9 +23,15 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({
-  createServiceSupabase: vi.fn(() => supabaseMockState.current),
-}));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return {
+    ...actual,
+    createServiceQueryGateway: vi.fn(() =>
+      supabaseMockState.current ? createQueryGateway(supabaseMockState.current as never) : null,
+    ),
+  };
+});
 
 describe("GET /api/v1/dashboard/streak", () => {
   const mockUser: AuthUser = {

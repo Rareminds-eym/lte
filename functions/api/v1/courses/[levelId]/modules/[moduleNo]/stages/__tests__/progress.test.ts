@@ -1,5 +1,5 @@
 import { upsertStageProgress } from "@functions/api/v1/courses/queries";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { awardXp, completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
@@ -12,7 +12,10 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return { ...actual, createServiceQueryGateway: vi.fn() };
+});
 
 vi.mock("@functions/lib/xp-engine", () => ({
   completeStage: vi.fn(),
@@ -59,6 +62,10 @@ function supabaseWith(tables: Record<string, { data?: unknown; error?: unknown }
         chainFor(tables[table]?.data, tables[table]?.error ?? null),
       ),
   } as unknown as SupabaseClient;
+}
+
+function gatewayWith(tables: Record<string, { data?: unknown; error?: unknown }>) {
+  return createQueryGateway(supabaseWith(tables));
 }
 
 const mockUser = {
@@ -151,8 +158,8 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
   });
 
   it("returns 404 when the e_content lookup errors", async () => {
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(
-      supabaseWith({ e_content: { error: new Error("db down") } }),
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      gatewayWith({ e_content: { error: new Error("db down") } }),
     );
     const response = await onRequestPost(context(completedBody));
     expect(response.status).toBe(404);
@@ -161,8 +168,8 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
   });
 
   it("returns 404 when the e_content is missing", async () => {
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(
-      supabaseWith({ e_content: { data: null } }),
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      gatewayWith({ e_content: { data: null } }),
     );
     const response = await onRequestPost(context(completedBody));
     expect(response.status).toBe(404);
@@ -175,8 +182,8 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
       alreadyAwarded: false,
     });
     vi.mocked(getUserTotalXp).mockResolvedValueOnce(430);
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(
-      supabaseWith({
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      gatewayWith({
         e_content: { data: { modules_content_id: "mc-1" } },
         xp_events: { data: [{ xp_amount: 430 }] },
         user_stage_progress: { data: { user_module_progress_id: "ump-1" } },
@@ -209,8 +216,8 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
   });
 
   it("returns 500 when the stage progress lookup errors after completion", async () => {
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(
-      supabaseWith({
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      gatewayWith({
         e_content: { data: { modules_content_id: "mc-1" } },
         user_stage_progress: { error: new Error("boom") },
       }),
@@ -223,8 +230,8 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
   });
 
   it("returns 500 when the stage progress is missing after completion", async () => {
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(
-      supabaseWith({
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      gatewayWith({
         e_content: { data: { modules_content_id: "mc-1" } },
         user_stage_progress: { data: null },
       }),
@@ -234,8 +241,8 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
   });
 
   it("returns 500 when the module progress lookup errors after completion", async () => {
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(
-      supabaseWith({
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      gatewayWith({
         e_content: { data: { modules_content_id: "mc-1" } },
         user_stage_progress: { data: { user_module_progress_id: "ump-1" } },
         user_module_progress: { error: new Error("boom") },
@@ -248,8 +255,8 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
   });
 
   it("returns 500 when the module progress is missing after completion", async () => {
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(
-      supabaseWith({
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      gatewayWith({
         e_content: { data: { modules_content_id: "mc-1" } },
         user_stage_progress: { data: { user_module_progress_id: "ump-1" } },
         user_module_progress: { data: null },
@@ -265,8 +272,8 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
       stagesCompleted: 1,
       completionPercentage: 17,
     });
-    const supabase = supabaseWith({});
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(supabase);
+    const gateway = gatewayWith({});
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gateway);
 
     const response = await onRequestPost(
       context({ eContentId, stageName: "engage", status: "in_progress" }),
@@ -316,8 +323,8 @@ describe("POST /api/v1/courses/:levelId/modules/:moduleNo/stages/progress", () =
 
   it("returns 500 with a generic message for non-Error throws", async () => {
     vi.mocked(awardXp).mockRejectedValueOnce("boom-string");
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(
-      supabaseWith({ e_content: { data: { modules_content_id: "mc-1" } } }),
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+      gatewayWith({ e_content: { data: { modules_content_id: "mc-1" } } }),
     );
     const response = await onRequestPost(context(completedBody));
     expect(response.status).toBe(500);

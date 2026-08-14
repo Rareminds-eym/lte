@@ -1,10 +1,13 @@
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestGet } from "../files/[fileId]/download-url";
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return { ...actual, createServiceQueryGateway: vi.fn() };
+});
 
 const FILE_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -21,6 +24,12 @@ function fileChain(result: { data: unknown; error: unknown }): MockChain {
     single: vi.fn().mockResolvedValue(result),
   };
   return chain as MockChain;
+}
+
+function gatewayFromChain(chain: MockChain) {
+  return createQueryGateway({
+    from: vi.fn(() => chain),
+  } as unknown as SupabaseClient);
 }
 
 function createContext(
@@ -48,9 +57,7 @@ describe("GET /api/v1/artifacts/files/[fileId]/download-url", () => {
   });
 
   it("returns 401 when the user is not on the context", async () => {
-    vi.mocked(createServiceSupabase).mockReturnValue({
-      from: vi.fn(),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValue(gatewayFromChain(fileChain(ok(null))));
 
     const response = await onRequestGet(createContext(FILE_ID, null));
     expect(response.status).toBe(401);
@@ -59,19 +66,18 @@ describe("GET /api/v1/artifacts/files/[fileId]/download-url", () => {
   });
 
   it("returns 400 for an invalid file id", async () => {
-    const createSupabase = vi.mocked(createServiceSupabase);
+    const createGateway = vi.mocked(createServiceQueryGateway);
 
     const response = await onRequestGet(createContext("not-a-uuid"));
     expect(response.status).toBe(400);
     const body = (await response.json()) as { error: { code: string } };
     expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(createSupabase).not.toHaveBeenCalled();
+    expect(createGateway).not.toHaveBeenCalled();
   });
 
   it("returns the download url after verifying ownership", async () => {
     const chain = fileChain(ok({ id: "file-1" }));
-    const mockSupabase = { from: vi.fn(() => chain) } as unknown as SupabaseClient;
-    vi.mocked(createServiceSupabase).mockReturnValue(mockSupabase);
+    vi.mocked(createServiceQueryGateway).mockReturnValue(gatewayFromChain(chain));
 
     const response = await onRequestGet(createContext(FILE_ID));
 
@@ -83,10 +89,7 @@ describe("GET /api/v1/artifacts/files/[fileId]/download-url", () => {
   });
 
   it("returns 404 when the learner does not own the file", async () => {
-    const mockSupabase = {
-      from: vi.fn(() => fileChain(notFound)),
-    } as unknown as SupabaseClient;
-    vi.mocked(createServiceSupabase).mockReturnValue(mockSupabase);
+    vi.mocked(createServiceQueryGateway).mockReturnValue(gatewayFromChain(fileChain(notFound)));
 
     const response = await onRequestGet(createContext(FILE_ID));
     expect(response.status).toBe(404);
@@ -100,8 +103,7 @@ describe("GET /api/v1/artifacts/files/[fileId]/download-url", () => {
       eq: vi.fn(() => chain),
       single: vi.fn().mockRejectedValue(new Error("db down")),
     };
-    const mockSupabase = { from: vi.fn(() => chain) } as unknown as SupabaseClient;
-    vi.mocked(createServiceSupabase).mockReturnValue(mockSupabase);
+    vi.mocked(createServiceQueryGateway).mockReturnValue(gatewayFromChain(chain));
 
     const response = await onRequestGet(createContext(FILE_ID));
     expect(response.status).toBe(500);
