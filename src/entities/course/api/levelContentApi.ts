@@ -14,11 +14,12 @@ const LEVEL_API_BASE = "/api/v1/courses";
 export async function fetchLevelDetails(
   levelId: string,
   capabilityCode?: string,
+  signal?: AbortSignal,
 ): Promise<LevelDetailsResponse> {
   const url = capabilityCode
     ? `${LEVEL_API_BASE}/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`
     : `${LEVEL_API_BASE}/${encodeURIComponent(levelId)}`;
-  const payload = await apiGet<LevelDetailsPayload>(url);
+  const payload = await apiGet<LevelDetailsPayload>(url, { signal });
   try {
     const parsedPayload = LevelDetailsPayloadSchema.parse(payload);
     return parsedPayload.level;
@@ -33,9 +34,11 @@ export async function fetchLevelDetails(
 export async function fetchLevelModuleDetails(
   levelId: string,
   moduleNo: number,
+  signal?: AbortSignal,
 ): Promise<ModuleDetailsResponse> {
   const payload = await apiGet<ModuleDetailsPayload>(
     `${LEVEL_API_BASE}/${encodeURIComponent(levelId)}/modules/${moduleNo}`,
+    { signal },
   );
   const parsedPayload = ModuleDetailsPayloadSchema.parse(payload);
   return parsedPayload.module;

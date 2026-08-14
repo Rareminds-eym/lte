@@ -29,7 +29,7 @@ export const useCapabilityLevels = (capabilityCode: string) => {
 
   return useQuery({
     queryKey: ["capabilityLevels", capabilityCode],
-    queryFn: () => fetchCapabilityLevels(capabilityCode),
+    queryFn: ({ signal }) => fetchCapabilityLevels(capabilityCode, signal),
     enabled: Boolean(capabilityCode) && hasAuth && learningPathReady,
     staleTime: 1000 * 60 * 5,
     retry: (failureCount, error) => {

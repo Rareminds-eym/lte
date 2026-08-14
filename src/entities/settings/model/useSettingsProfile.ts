@@ -23,7 +23,7 @@ export const useSettingsProfile = () => {
   const userId = useAuthStore((s) => s.user?.id);
   return useQuery<SettingsProfile>({
     queryKey: settingsProfileQueryKey(userId),
-    queryFn: fetchSettingsProfile,
+    queryFn: ({ signal }) => fetchSettingsProfile(signal),
     staleTime: 1000 * 60 * 5, // 5 min cache
   });
 };
