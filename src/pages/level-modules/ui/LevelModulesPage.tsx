@@ -26,14 +26,26 @@ const getResumeStage = (completedStages: string[] | undefined, progressPercentag
 
 export const LevelModulesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { capabilityCode, levelId } = useParams<{
-    capabilityCode?: string;
+  const { capabilitySlug, levelId } = useParams<{
+    capabilitySlug?: string;
     levelId?: string;
   }>();
 
   const userId = useAuthStore((s) => s.user?.id);
   const { data: courses } = useCourses(userId);
-  const { data: levelData, isLoading, error } = useLevelDetails(levelId, capabilityCode);
+
+  // Find active course from user's course list to get totalLevels & targetLevel
+  const activeCourse = courses?.find(
+    (c) =>
+      c.slug?.toLowerCase() === capabilitySlug?.toLowerCase() ||
+      c.capabilityCode.toLowerCase() === capabilitySlug?.toLowerCase() ||
+      c.capabilityId === capabilitySlug ||
+      c.id === capabilitySlug,
+  );
+
+  const resolvedCode = activeCourse?.capabilityCode ?? capabilitySlug;
+
+  const { data: levelData, isLoading, error } = useLevelDetails(levelId, resolvedCode);
   const { mutate: startLevel } = useStartLevelProgress();
 
   useEffect(() => {
@@ -41,6 +53,12 @@ export const LevelModulesPage: React.FC = () => {
       startLevel(levelId);
     }
   }, [levelId, startLevel]);
+
+  useEffect(() => {
+    if (activeCourse?.slug && capabilitySlug !== activeCourse.slug && levelId) {
+      navigate(`/courses/${activeCourse.slug}/levels/${levelId}`, { replace: true });
+    }
+  }, [activeCourse, capabilitySlug, levelId, navigate]);
 
   if (isLoading) {
     return <LevelModulesSkeleton />;
@@ -133,14 +151,7 @@ export const LevelModulesPage: React.FC = () => {
     ? `${Math.round(levelData.durationMinutes / 60)} hrs`
     : undefined;
 
-  // Find active course from user's course list to get totalLevels & targetLevel
-  const activeCourse = courses?.find(
-    (c) =>
-      c.capabilityCode.toLowerCase() ===
-        (levelData.capabilityCode || capabilityCode || "").toLowerCase() ||
-      c.capabilityId === (levelData.capabilityCode || capabilityCode) ||
-      c.id === (levelData.capabilityCode || capabilityCode),
-  );
+  // Reuse the resolved activeCourse from top to get totalLevels & targetLevel
 
   const dynamicTotalLevels = activeCourse?.totalLevels ?? 5;
   const dynamicTargetLevel = activeCourse?.targetLevel ?? "L3";
@@ -150,7 +161,7 @@ export const LevelModulesPage: React.FC = () => {
     <div className="-mx-4 md:-mx-6 -mt-4 md:-mt-6 pb-12">
       {/* Level Hero Banner */}
       <LevelHeroBanner
-        capabilityCode={levelData.capabilityCode || capabilityCode || ""}
+        capabilitySlug={levelData.capabilitySlug || capabilitySlug || ""}
         capabilityName={undefined}
         levelBadge={levelBadge}
         title={title}

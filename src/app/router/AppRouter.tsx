@@ -71,7 +71,7 @@ export const AppRouter: React.FC = () => {
             }
           />
           <Route
-            path="/my-courses/:capabilityCode"
+            path="/my-courses/:capabilitySlug"
             element={
               <RouteLoadingBoundary fallback={<CourseDetailSkeleton />}>
                 <CourseDetail />
@@ -79,7 +79,7 @@ export const AppRouter: React.FC = () => {
             }
           />
           <Route
-            path="/courses/:capabilityCode/levels/:levelId"
+            path="/courses/:capabilitySlug/levels/:levelId"
             element={
               <RouteLoadingBoundary fallback={<LevelModulesSkeleton />}>
                 <LevelModules />

@@ -39,7 +39,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
             : "outline"
       }
       size="sm"
-      onClick={() => navigate(`/my-courses/${encodeURIComponent(course.capabilityCode)}`)}
+      onClick={() => navigate(`/my-courses/${encodeURIComponent(course.slug)}`)}
       className={cn(
         "rounded-full shrink-0 font-medium text-xs px-3.5 py-1.5",
         course.status === "not_started" &&

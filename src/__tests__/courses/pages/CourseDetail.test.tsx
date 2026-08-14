@@ -7,7 +7,7 @@ vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return {
     ...actual,
-    useParams: () => ({ capabilityCode: "TEST-CAP-101" }),
+    useParams: () => ({ capabilitySlug: "TEST-CAP-101" }),
     useLocation: () => ({
       pathname: "/my-courses/TEST-CAP-101",
       search: "",
@@ -97,6 +97,7 @@ vi.mock("@/entities/course", async () => {
           id: "cap-1",
           capabilityId: "cap-1",
           capabilityCode: "TEST-CAP-101",
+          slug: "TEST-CAP-101",
           title: "Observability: Logging, Monitoring & Debugging",
           description:
             "Build guided capability to verify system health through logs, metrics, and traces.",

@@ -23,7 +23,8 @@ const roleCapabilitiesReadPolicy = {
         id,
         code,
         name,
-        description
+        description,
+        slug
       )
     `,
   filters: ["role_id"],
@@ -131,6 +132,7 @@ export async function getCapabilitiesByRoleId(
       name: cap?.name ?? "",
       description: cap?.description ?? "",
       code: cap?.code ?? undefined,
+      slug: cap?.slug ?? undefined,
       level: item.required_level ?? undefined,
       priority: item.capability_priority ?? undefined,
       step: item.sequence_step ?? undefined,
@@ -363,6 +365,7 @@ export async function getUserCapabilitiesForRoles(
         name: cap.name,
         description: cap.description,
         code: cap.code,
+        slug: cap.slug,
         level: cap.level,
         priority: cap.priority ?? "",
         step: cap.step,

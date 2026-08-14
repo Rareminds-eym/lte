@@ -7,6 +7,7 @@ export interface Capability {
   name: string;
   description: string;
   code?: string;
+  slug?: string;
   level?: string;
   priority?: string;
   step?: number;
@@ -18,6 +19,7 @@ export interface CapabilityRow {
   code: string;
   name: string;
   description: string;
+  slug?: string;
 }
 
 export interface RoleCapabilitySequenceRow {
@@ -47,6 +49,7 @@ export interface UserCapability {
   name: string;
   description: string;
   code?: string;
+  slug?: string;
   level?: string;
   priority?: string;
   step?: number;
