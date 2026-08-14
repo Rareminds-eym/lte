@@ -1,6 +1,16 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
+// Provide an inert dev-only HMAC key for the SkillPassport gateway auth tests
+// (see functions/lib/__tests__/test-secrets.ts). The value is derived at
+// runtime — never committed to version control — so no secret-shaped literal
+// lives in source. Both the sign and verify sides of a test read the same
+// `TEST_GATEWAY_SECRET` env var within the process, so a fresh random key per
+// run stays internally consistent. CI may override it via the env var.
+if (!process.env["TEST_GATEWAY_SECRET"]) {
+  process.env["TEST_GATEWAY_SECRET"] = globalThis.crypto.randomUUID();
+}
+
 vi.mock("@file-viewer/pptx", () => ({
   PptxViewer: () => null,
 }));

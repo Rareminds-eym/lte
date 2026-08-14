@@ -2,11 +2,28 @@
  * Centralized test-only HMAC signing key for the gateway auth tests.
  *
  * This key is ONLY used to mint the signed service-token/user-claim JWTs that
- * the SkillPassport gateway auth tests verify. It is a FAKE, inert fixture —
- * it must NEVER be used as a real gateway secret (production always reads the
- * `SKILLPASSPORT_INTERNAL_SECRET` binding). It is defined here once instead of
- * being copy-pasted across test files, and callers may override it via the
- * `TEST_GATEWAY_SECRET` env var when a CI/secret-vault setup requires it.
+ * the SkillPassport gateway auth tests verify. It MUST be a FAKE, inert
+ * fixture — it can never be a real gateway secret (production always reads the
+ * `SKILLPASSPORT_INTERNAL_SECRET` binding). It is defined once here instead of
+ * being copy-pasted across test files.
+ *
+ * The value comes from the `TEST_GATEWAY_SECRET` env var, which is provided
+ * locally/CI by the shared vitest setup file (`src/setupTests.ts`). No secret
+ * literal lives in this source file, and it fails loudly (instead of silently
+ * defaulting) if the var is missing so a misconfigured test run can't mint
+ * tokens with an unexpected key.
  */
-export const TEST_GATEWAY_SECRET =
-  process.env["TEST_GATEWAY_SECRET"] ?? "test-gateway-secret-that-is-at-least-32-chars";
+const TEST_GATEWAY_SECRET: string = resolveTestGatewaySecret();
+
+function resolveTestGatewaySecret(): string {
+  const secret = process.env["TEST_GATEWAY_SECRET"];
+  if (!secret) {
+    throw new Error(
+      "TEST_GATEWAY_SECRET env var is required for gateway tests. " +
+        "It is set automatically by the vitest setup file (src/setupTests.ts).",
+    );
+  }
+  return secret;
+}
+
+export { TEST_GATEWAY_SECRET };

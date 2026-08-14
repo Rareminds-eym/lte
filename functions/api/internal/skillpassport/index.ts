@@ -132,13 +132,17 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       payload,
     );
     if (!result.ok) {
-      const status =
-        {
-          VALIDATION_ERROR: 400,
-          FORBIDDEN: 403,
-          UNKNOWN_ACTION: 404,
-          INTERNAL_ERROR: 500,
-        }[result.error?.code ?? ""] ?? 500;
+      // Map an error envelope code to an HTTP status. Codes not present here
+      // (or a missing code) deliberately fall back to 500 so an unregistered
+      // error code cannot masquerade as a success.
+      const errorCode = result.error?.code ?? "";
+      const statusMap: Record<string, number> = {
+        VALIDATION_ERROR: 400,
+        FORBIDDEN: 403,
+        UNKNOWN_ACTION: 404,
+        INTERNAL_ERROR: 500,
+      };
+      const status = statusMap[errorCode] ?? 500;
       return gatewayResponse(result, requestId, status);
     }
     return gatewayResponse(result, requestId);

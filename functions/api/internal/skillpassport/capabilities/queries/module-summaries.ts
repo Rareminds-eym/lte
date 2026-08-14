@@ -71,7 +71,17 @@ export async function getCapabilityModuleSummaries(
       .select("level_id, status, completion_percentage")
       .eq("user_id", userId)
       .in("level_id", levelIds),
-  ]);
+  ]).catch((error) => {
+    // A hard network/transport failure rejects here (supabase only returns an
+    // `.error` object for in-band failures). Surface WHICH query batch broke so
+    // the failure is attributable instead of silently degrading.
+    apiLogger.error("Failed to fetch module and level progress data", error);
+    throw new Error(
+      `Failed to fetch module and level progress data: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  });
 
   if (modulesResult.error) {
     apiLogger.error("Failed to fetch capability modules", modulesResult.error);
