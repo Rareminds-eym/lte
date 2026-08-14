@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   LTE_STAGE_SEQUENCE,
   normalizeLteStageName,
+  useActiveCourse,
   useCourses,
   useLevelDetails,
   useStartLevelProgress,
@@ -35,13 +36,7 @@ export const LevelModulesPage: React.FC = () => {
   const { data: courses } = useCourses(userId);
 
   // Find active course from user's course list to get totalLevels & targetLevel
-  const activeCourse = courses?.find(
-    (c) =>
-      c.slug?.toLowerCase() === capabilitySlug?.toLowerCase() ||
-      c.capabilityCode.toLowerCase() === capabilitySlug?.toLowerCase() ||
-      c.capabilityId === capabilitySlug ||
-      c.id === capabilitySlug,
-  );
+  const activeCourse = useActiveCourse(courses, capabilitySlug);
 
   const resolvedCode = activeCourse?.capabilityCode ?? capabilitySlug;
 
@@ -55,7 +50,12 @@ export const LevelModulesPage: React.FC = () => {
   }, [levelId, startLevel]);
 
   useEffect(() => {
-    if (activeCourse?.slug && capabilitySlug !== activeCourse.slug && levelId) {
+    if (
+      activeCourse?.slug &&
+      activeCourse.slug.length > 0 &&
+      capabilitySlug !== activeCourse.slug &&
+      levelId
+    ) {
       navigate(`/courses/${activeCourse.slug}/levels/${levelId}`, { replace: true });
     }
   }, [activeCourse, capabilitySlug, levelId, navigate]);

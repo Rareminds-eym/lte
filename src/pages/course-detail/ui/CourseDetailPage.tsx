@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useLearningPathStore } from "@/entities/active-learning-path";
-import { CourseCardGridSkeleton, useCapabilityLevels, useCourses } from "@/entities/course";
+import {
+  CourseCardGridSkeleton,
+  useActiveCourse,
+  useCapabilityLevels,
+  useCourses,
+} from "@/entities/course";
 import { useAuthStore } from "@/entities/session";
 import { LearningPathInitializer } from "@/features/initialize-learning-path";
 import { getLogger } from "@/shared";
@@ -44,19 +49,16 @@ export const CourseDetailPage: React.FC = () => {
   // Fetch remote user courses & capabilities state via TanStack Query
   const { data: courses, isPending, error } = useCourses(userId ?? undefined);
   // Find active course dynamically from API response
-  const activeCourse =
-    courses?.find(
-      (c) =>
-        c.slug?.toLowerCase() === capabilitySlug?.toLowerCase() ||
-        c.capabilityCode.toLowerCase() === capabilitySlug?.toLowerCase() ||
-        c.capabilityId === capabilitySlug ||
-        c.id === capabilitySlug,
-    ) ?? null;
+  const activeCourse = useActiveCourse(courses, capabilitySlug);
 
   const resolvedCode = activeCourse?.capabilityCode ?? capabilitySlug ?? "";
 
   useEffect(() => {
-    if (activeCourse?.slug && capabilitySlug !== activeCourse.slug) {
+    if (
+      activeCourse?.slug &&
+      activeCourse.slug.length > 0 &&
+      capabilitySlug !== activeCourse.slug
+    ) {
       navigate(`/my-courses/${activeCourse.slug}`, { replace: true });
     }
   }, [activeCourse, capabilitySlug, navigate]);
