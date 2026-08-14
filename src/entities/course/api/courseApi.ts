@@ -120,9 +120,10 @@ const CapabilityLevelsResponseSchema = z.object({
   count: z.number().optional(),
 });
 
-async function fetchUserCapabilities(): Promise<UserCapabilityResponse[]> {
+async function fetchUserCapabilities(signal?: AbortSignal): Promise<UserCapabilityResponse[]> {
   const raw = await apiFetch("/api/v1/capabilities/user", {
     method: "GET",
+    signal,
   });
 
   const parsed = UserCapabilitiesResponseSchema.safeParse(raw);
@@ -161,15 +162,19 @@ function mapCapabilityToCourse(cap: UserCapabilityResponse, index: number): Cour
   };
 }
 
-export async function fetchUserCourses(): Promise<Course[]> {
+export async function fetchUserCourses(signal?: AbortSignal): Promise<Course[]> {
   apiLogger.info("fetching user courses");
-  const capabilities = await fetchUserCapabilities();
+  const capabilities = await fetchUserCapabilities(signal);
   return capabilities.map((cap, i) => mapCapabilityToCourse(cap, i));
 }
 
-export async function fetchCapabilityLevels(capabilityCode: string): Promise<CapabilityLevel[]> {
+export async function fetchCapabilityLevels(
+  capabilityCode: string,
+  signal?: AbortSignal,
+): Promise<CapabilityLevel[]> {
   const raw = await apiFetch(`/api/v1/capabilities/${encodeURIComponent(capabilityCode)}/levels`, {
     method: "GET",
+    signal,
   });
 
   const parsed = CapabilityLevelsResponseSchema.safeParse(raw);

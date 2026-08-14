@@ -11,8 +11,8 @@ export const useDashboardData = () => {
   const userId = useAuthStore((s) => s.user?.id);
   return useQuery<DashboardData>({
     queryKey: [...DASHBOARD_QUERY_KEY, userId],
-    queryFn: fetchDashboardData,
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
-    refetchOnWindowFocus: "always", // journey recency depends on last activity, not wall-clock staleness
+    queryFn: ({ signal }) => fetchDashboardData(signal),
+    staleTime: 120_000, // 2 minutes cache policy
+    refetchOnWindowFocus: false, // matches global policy, avoiding focus-refetching
   });
 };

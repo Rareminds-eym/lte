@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getLogger } from "@/shared";
 import { exchangeSsoCode, fetchMe, logoutSession, refreshSession } from "@/shared/api/authApi";
+import { queryClient } from "@/shared/lib";
 import type { AuthUser } from "@/shared/types/auth";
 
 const logger = getLogger("authStore");
@@ -115,6 +116,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     await logoutSession().catch(() => ({ success: false }));
+    queryClient.clear();
     set({
       ...buildSignedOutState(null),
       loading: false,

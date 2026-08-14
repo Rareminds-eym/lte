@@ -1,3 +1,4 @@
+import { getLogger } from "@/shared";
 import { apiFetch } from "@/shared/api";
 import {
   DashboardJourneyResponseSchema,
@@ -5,6 +6,8 @@ import {
   DashboardXpResponseSchema,
 } from "../model/dashboardSchemas";
 import type { DashboardData } from "../model/types";
+
+const logger = getLogger("dashboardApi");
 
 // Static base payload for dashboard sections that have no backend endpoint
 // yet; also doubles as the widget-test fixture (not barrel-exported).
@@ -185,7 +188,7 @@ const localMidnight = (date: Date): Date => {
   return d;
 };
 
-export const fetchDashboardData = async (): Promise<DashboardData> => {
+export const fetchDashboardData = async (signal?: AbortSignal): Promise<DashboardData> => {
   const now = new Date();
   const localMonday = new Date(now);
   localMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
@@ -193,10 +196,24 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
   const [xpResult, streakResult, journeyResult] = await Promise.allSettled([
     apiFetch(
       `/api/v1/dashboard/xp?since=${encodeURIComponent(localMidnight(localMonday).toISOString())}&todaySince=${encodeURIComponent(localMidnight(now).toISOString())}`,
+      { signal },
     ),
-    apiFetch("/api/v1/dashboard/streak"),
-    apiFetch("/api/v1/dashboard/journey"),
+    apiFetch("/api/v1/dashboard/streak", { signal }),
+    apiFetch("/api/v1/dashboard/journey", { signal }),
   ]);
+
+  // Throw AbortError immediately to escape fallback logic
+  const abortError = [xpResult, streakResult, journeyResult].find(
+    (res) =>
+      res.status === "rejected" &&
+      res.reason instanceof Error &&
+      (res.reason.name === "AbortError" ||
+        (res.reason instanceof DOMException && res.reason.code === 20)),
+  );
+  if (abortError && abortError.status === "rejected") {
+    logger.info("fetchDashboardData aborted by query cancellation");
+    throw abortError.reason;
+  }
 
   const base = { ...MOCK_DASHBOARD_DATA };
 

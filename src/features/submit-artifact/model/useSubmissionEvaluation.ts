@@ -12,7 +12,7 @@ export const useSubmissionEvaluation = (submissionId: string | undefined) => {
 
   return useQuery({
     queryKey: ["submission-evaluation", userId, submissionId],
-    queryFn: () => getSubmissionEvaluation(submissionId as string),
+    queryFn: ({ signal }) => getSubmissionEvaluation(submissionId as string, signal),
     enabled: Boolean(userId && submissionId),
     staleTime: 30_000,
     retry: 1,

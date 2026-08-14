@@ -17,14 +17,14 @@ export const useLevelContentData = (
 ) => {
   return useQuery({
     queryKey: getLevelContentQueryKey(levelId, moduleNo, capabilityCode),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!levelId || moduleNo === undefined || !Number.isInteger(moduleNo)) {
         throw new Error("Level id and module number are required.");
       }
 
       const [level, module] = await Promise.all([
-        fetchLevelDetails(levelId, capabilityCode),
-        fetchLevelModuleDetails(levelId, moduleNo),
+        fetchLevelDetails(levelId, capabilityCode, signal),
+        fetchLevelModuleDetails(levelId, moduleNo, signal),
       ]);
 
       return { level, module };
@@ -40,12 +40,12 @@ export const getLevelModuleDetailsQueryKey = (levelId?: string, moduleNo?: numbe
 export const useLevelModuleDetails = (levelId?: string, moduleNo?: number) => {
   return useQuery({
     queryKey: getLevelModuleDetailsQueryKey(levelId, moduleNo),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!levelId || moduleNo === undefined || !Number.isInteger(moduleNo)) {
         throw new Error("Level id and module number are required.");
       }
 
-      return fetchLevelModuleDetails(levelId, moduleNo);
+      return fetchLevelModuleDetails(levelId, moduleNo, signal);
     },
     enabled: Boolean(levelId) && Number.isInteger(moduleNo),
     staleTime: 1000 * 60 * 5,
@@ -60,11 +60,11 @@ export const getLevelDetailsQueryKey = (levelId?: string, capabilityCode?: strin
 export const useLevelDetails = (levelId?: string, capabilityCode?: string) => {
   return useQuery({
     queryKey: getLevelDetailsQueryKey(levelId, capabilityCode),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!levelId) {
         throw new Error("Level id is required.");
       }
-      return fetchLevelDetails(levelId, capabilityCode);
+      return fetchLevelDetails(levelId, capabilityCode, signal);
     },
     enabled: Boolean(levelId),
     staleTime: 1000 * 60 * 5,
