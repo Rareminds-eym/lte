@@ -57,7 +57,11 @@ const artifactOutputReadPolicy = {
   table: "modules_content",
   operation: "read",
   select: "id, module_artifacts!inner(id, artifact_questions!inner(title, question_order))",
-  filters: ["module_id", "module_artifacts.is_active", "artifact_questions.is_active"],
+  filters: [
+    "module_id",
+    "module_artifacts.is_active",
+    "module_artifacts.artifact_questions.is_active",
+  ],
 } as const;
 
 const recentModuleProgressReadPolicy = {
@@ -131,7 +135,7 @@ async function findArtifactOutput(qb: QueryGateway, moduleId: string): Promise<s
     filters: [
       { column: "module_id", op: "eq", value: moduleId },
       { column: "module_artifacts.is_active", op: "eq", value: true },
-      { column: "artifact_questions.is_active", op: "eq", value: true },
+      { column: "module_artifacts.artifact_questions.is_active", op: "eq", value: true },
     ],
   });
 
