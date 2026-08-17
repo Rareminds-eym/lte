@@ -22,7 +22,7 @@ export const LevelPlayerLayout: React.FC = () => {
   if (loading || !initialized) {
     return (
       <div className="flex h-screen bg-surface-secondary">
-        <aside className="hidden md:block w-64 bg-white border-r border-line-subtle p-3.5 shrink-0">
+        <aside className="hidden lg:block w-64 bg-white border-r border-line-subtle p-3.5 shrink-0">
           <div className="h-14 w-full bg-surface-muted rounded-lg animate-pulse mb-6" />
           <div className="space-y-2">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -99,12 +99,12 @@ export const LevelPlayerLayout: React.FC = () => {
         isCollapsed={isCollapsed}
         onToggleCollapse={toggleSidebar}
         onNavigate={handleNavigate}
-        className="hidden md:flex"
+        className="hidden lg:flex"
       />
 
       {/* Mobile Drawer Overlay */}
       {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
+        <div className="fixed inset-0 z-50 flex lg:hidden">
           <button
             type="button"
             aria-label="Close navigation drawer"

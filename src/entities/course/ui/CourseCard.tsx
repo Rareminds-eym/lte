@@ -131,7 +131,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
                 {course.targetLevel}
               </span>
             </div>
-            <div className="self-start sm:self-auto">{actionButton}</div>
           </div>
 
           <h3 className="text-base font-bold text-content-primary line-clamp-1 group-hover:text-brand-600 transition-colors">
@@ -170,6 +169,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
             <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
               {metaFooter}
             </div>
+            <div className="flex justify-end">{actionButton}</div>
           </div>
         </div>
       </article>

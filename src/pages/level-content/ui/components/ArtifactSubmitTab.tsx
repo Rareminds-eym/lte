@@ -189,14 +189,14 @@ export const ArtifactSubmitTab: React.FC<ArtifactSubmitTabProps> = ({
 
             {isExpanded ? (
               <div className="space-y-3 bg-surface-primary p-3.5">
-                <p className="text-[13px] leading-relaxed text-content-primary">
+                <p className="break-words text-[13px] leading-relaxed text-content-primary">
                   {question.description}
                 </p>
 
                 {requiredFields || instructions ? (
-                  <div className="flex items-start gap-2 rounded-md bg-surface-muted px-3 py-2 text-[12px] leading-relaxed text-content-secondary">
+                  <div className="flex min-w-0 items-start gap-2 rounded-md bg-surface-muted px-3 py-2 text-[12px] leading-relaxed text-content-secondary">
                     <LightbulbIcon size={13} className="mt-0.5 shrink-0 text-brand-600" />
-                    <span>{requiredFields ?? instructions}</span>
+                    <span className="min-w-0 break-words">{requiredFields ?? instructions}</span>
                   </div>
                 ) : null}
 
@@ -216,7 +216,7 @@ export const ArtifactSubmitTab: React.FC<ArtifactSubmitTabProps> = ({
                             window.open(template.fileUrl, "_blank", "noopener,noreferrer")
                           }
                         >
-                          <span className="truncate">{template.fileName}</span>
+                          <span className="min-w-0 truncate">{template.fileName}</span>
                         </Button>
                       ))}
                     </div>

@@ -80,14 +80,14 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
         />
       </div>
 
-      <div className="relative z-10 space-y-6 max-w-[640px]">
+      <div className="relative z-10 space-y-6 max-w-[640px] min-w-0">
         {/* Top Header */}
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wider text-content-on-dark-muted mb-2">
             CONTINUE YOUR JOURNEY
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-content-inverse">
+          <div className="flex min-w-0 flex-wrap items-center gap-4">
+            <h1 className="min-w-0 text-2xl lg:text-3xl font-extrabold tracking-tight text-content-inverse break-words">
               {data.title}
             </h1>
             <span className="px-3 py-1 text-xs font-semibold bg-surface-hero-elevated text-content-on-dark rounded-full">
@@ -97,7 +97,7 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
         </div>
 
         {/* Specs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+        <div className="grid grid-cols-1 gap-4 pt-2 lg:grid-cols-3 lg:gap-6">
           {[
             {
               label: "Capability",
@@ -120,14 +120,14 @@ export const JourneyHero: React.FC<JourneyHeroProps> = ({ data, state }) => {
               ),
             },
           ].map((item) => (
-            <div key={item.label} className="flex items-start gap-2.5">
+            <div key={item.label} className="flex min-w-0 items-start gap-2.5">
               {item.icon}
-              <div>
+              <div className="min-w-0">
                 <div className="text-[10px] text-content-on-dark-muted font-medium">
                   {item.label}
                 </div>
                 <div
-                  className={`text-sm font-semibold text-content-inverse mt-0.5 leading-snug ${item.clampClass ?? ""}`}
+                  className={`text-sm font-semibold text-content-inverse mt-0.5 leading-snug break-words ${item.clampClass ?? ""}`}
                 >
                   {item.value}
                 </div>
