@@ -167,10 +167,10 @@ const moduleProgressUpdateStatusPolicy = {
   requireFilter: true,
 } as const;
 
-const moduleProgressInsertPolicy = {
+const moduleProgressUpsertPolicy = {
   table: "user_module_progress",
-  operation: "insert",
-  insertColumns: [
+  operation: "upsert",
+  upsertColumns: [
     "user_id",
     "user_capability_level_progress_id",
     "module_id",
@@ -183,6 +183,7 @@ const moduleProgressInsertPolicy = {
     "last_activity_at",
     "updated_at",
   ],
+  onConflict: "user_id,user_capability_level_progress_id,module_id",
   returningColumns: ["id"],
   ownership: { column: "user_id", source: "authenticatedUserId", required: true },
 } as const;
@@ -543,10 +544,10 @@ export async function upsertModuleProgress(
     return existingProgress.id;
   }
 
-  // Insert new module progress
+  // Insert new module progress, or return the existing row if a concurrent request created it.
   try {
-    const inserted = (await qb.insert(
-      moduleProgressInsertPolicy,
+    const inserted = (await qb.upsert(
+      moduleProgressUpsertPolicy,
       {
         user_capability_level_progress_id: levelProgressId,
         module_id: moduleId,
@@ -566,7 +567,7 @@ export async function upsertModuleProgress(
     )) as { id: string };
     return inserted.id;
   } catch (error) {
-    throw new Error(`Failed to insert module progress: ${databaseErrorMessage(error)}`);
+    throw new Error(`Failed to upsert module progress: ${databaseErrorMessage(error)}`);
   }
 }
 

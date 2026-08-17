@@ -30,7 +30,7 @@ describe("upsertStageProgress", () => {
     });
     const ump = mockChain({
       maybeSingle: { data: null, error: null },
-      insert: ok({ id: "mod-prog-1" }),
+      upsert: ok({ id: "mod-prog-1" }),
       thenQueue: [{ data: null, error: null }],
     });
     const supabase = makeSupabase({
@@ -66,7 +66,7 @@ describe("upsertStageProgress", () => {
     });
     const ump = mockChain({
       maybeSingle: { data: null, error: null },
-      insert: ok({ id: "mod-prog-1" }),
+      upsert: ok({ id: "mod-prog-1" }),
       thenQueue: [{ data: null, error: null }],
     });
     const supabase = makeSupabase({
@@ -101,7 +101,7 @@ describe("upsertStageProgress", () => {
     });
     const ump = mockChain({
       maybeSingle: { data: null, error: null },
-      insert: ok({ id: "mod-prog-1" }),
+      upsert: ok({ id: "mod-prog-1" }),
       thenQueue: [{ data: null, error: null }],
     });
     const supabase = makeSupabase({
@@ -141,7 +141,7 @@ describe("upsertStageProgress", () => {
     });
     const ump = mockChain({
       maybeSingle: { data: null, error: null },
-      insert: ok({ id: "mod-prog-1" }),
+      upsert: ok({ id: "mod-prog-1" }),
       thenQueue: [{ data: null, error: null }],
     });
     const supabase = makeSupabase({
@@ -208,7 +208,7 @@ describe("upsertStageProgress", () => {
     });
     const ump = mockChain({
       maybeSingle: { data: null, error: null },
-      insert: ok({ id: "mod-prog-1" }),
+      upsert: ok({ id: "mod-prog-1" }),
       thenQueue: [
         { data: null, error: null },
         { data: null, error: null },
