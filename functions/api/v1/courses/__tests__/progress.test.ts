@@ -366,7 +366,7 @@ describe("Progress API Endpoints", () => {
           }
           if (table === "user_module_progress") {
             const chain = createMockQueryChain(null);
-            chain.insert = vi
+            chain.upsert = vi
               .fn()
               .mockImplementation(() => createMockQueryChain({ id: "mod-progress-123" }));
             return chain;

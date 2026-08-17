@@ -36,6 +36,7 @@ export interface ChainOptions {
   thenQueue?: QueryResult[];
   thenVal?: QueryResult;
   insert?: QueryResult;
+  upsert?: QueryResult;
 }
 
 export function mockChain(options: ChainOptions = {}): MockChain {
@@ -62,8 +63,8 @@ export function mockChain(options: ChainOptions = {}): MockChain {
     ),
     upsert: vi.fn().mockImplementation(() =>
       mockChain({
-        single: options.insert ?? { data: null, error: null },
-        thenVal: options.insert ?? { data: null, error: null },
+        single: options.upsert ?? { data: null, error: null },
+        thenVal: options.upsert ?? { data: null, error: null },
       }),
     ),
     delete: vi.fn().mockImplementation(() => chain),
@@ -390,6 +391,7 @@ export function moduleProgressChains(
     modules?: QueryResult;
     existing?: QueryResult;
     insert?: QueryResult;
+    upsert?: QueryResult;
     thenQueue?: QueryResult[];
   } = {},
 ): MockChains {
@@ -399,6 +401,7 @@ export function moduleProgressChains(
     user_module_progress: mockChain({
       maybeSingle: overrides.existing ?? { data: null, error: null },
       insert: overrides.insert ?? ok({ id: "mp-new" }),
+      upsert: overrides.upsert ?? ok({ id: "mp-new" }),
       thenQueue: overrides.thenQueue,
     }),
   };
@@ -421,7 +424,7 @@ export function stageProgressChains(
     modules: mockChain({ single: ok({ id: "mod-1" }) }),
     user_module_progress: mockChain({
       maybeSingle: { data: null, error: null },
-      insert: ok({ id: "mod-prog-1" }),
+      upsert: ok({ id: "mod-prog-1" }),
       thenQueue: overrides.modThenQueue,
     }),
     user_stage_progress: mockChain({
