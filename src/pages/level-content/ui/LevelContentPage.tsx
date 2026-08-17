@@ -70,6 +70,7 @@ export const LevelContentPage: React.FC = () => {
 
   const [totalXpAmount, setTotalXpAmount] = useState(0);
   const [optimisticCompletedStages, setOptimisticCompletedStages] = useState<LteStage[]>([]);
+  const [submittedArtifactIds, setSubmittedArtifactIds] = useState<string[]>([]);
 
   const moduleNumber = Number(moduleNo);
   const hasValidRouteParams = Boolean(levelId) && Number.isInteger(moduleNumber);
@@ -91,6 +92,7 @@ export const LevelContentPage: React.FC = () => {
   if (levelModule?.id !== prevModuleId) {
     setPrevModuleId(levelModule?.id);
     setOptimisticCompletedStages([]);
+    setSubmittedArtifactIds([]);
     setIsScenarioExpanded(false);
   }
   const nextModuleNoForPrefetch = Number.isInteger(moduleNumber) ? moduleNumber + 1 : undefined;
@@ -348,7 +350,28 @@ export const LevelContentPage: React.FC = () => {
   const nextStageAfterCurrentCompletion = isModuleCompleteAfterCurrentStage
     ? nextStage
     : (nextIncompleteStageAfterCurrent ?? firstIncompleteStage);
+  const isArtifactSubmitted = (artifactId: string, submittedFiles?: unknown[]) =>
+    (submittedFiles?.length ?? 0) > 0 || submittedArtifactIds.includes(artifactId);
+  const finalArtifactStageIndex = navigableStages.findIndex((stageName) => {
+    const stage = levelModule.stages.find((moduleStage) => moduleStage.stageName === stageName);
+    return stage?.artifacts.some(
+      (artifact) =>
+        artifact.artifactType === "final" &&
+        artifact.isActive &&
+        !isArtifactSubmitted(artifact.id, artifact.submittedFiles),
+    );
+  });
+  const activeStageHasUnsubmittedFinalArtifact = activeStageContent.artifacts.some(
+    (artifact) =>
+      artifact.artifactType === "final" &&
+      artifact.isActive &&
+      !isArtifactSubmitted(artifact.id, artifact.submittedFiles),
+  );
+  const isStageAfterUnsubmittedFinalArtifact = (stage: LteStage) =>
+    finalArtifactStageIndex >= 0 && navigableStages.indexOf(stage) > finalArtifactStageIndex;
   const isStageLockedForCompletedSet = (stage: LteStage, stageSet: Set<LteStage>) => {
+    if (isStageAfterUnsubmittedFinalArtifact(stage)) return true;
+
     const firstAvailableStage = getFirstIncompleteStage(navigableStages, stageSet);
     return Boolean(firstAvailableStage && !stageSet.has(stage) && stage !== firstAvailableStage);
   };
@@ -431,10 +454,13 @@ export const LevelContentPage: React.FC = () => {
     }
 
     if (pendingStage) {
+      if (isStageAfterUnsubmittedFinalArtifact(pendingStage)) return;
       handleStageSelect(pendingStage);
     } else if (pendingModule && levelId) {
+      if (finalArtifactStageIndex >= 0) return;
       navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${pendingModule}?stage=engage`);
     } else {
+      if (finalArtifactStageIndex >= 0) return;
       toast.success("Course completed successfully!");
       if (level?.capabilityCode) {
         navigate(getCourseOverviewPath(level.capabilityCode));
@@ -452,10 +478,12 @@ export const LevelContentPage: React.FC = () => {
 
   const handleNextModule = () => {
     if (!levelId || !nextModuleExists) return;
+    if (finalArtifactStageIndex >= 0) return;
     navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${nextModuleNo}?stage=engage`);
   };
 
   const handleCompleteCourse = () => {
+    if (finalArtifactStageIndex >= 0) return;
     toast.success("Course completed successfully!");
     navigate(getCourseOverviewPath(level.capabilityCode));
   };
@@ -571,14 +599,16 @@ export const LevelContentPage: React.FC = () => {
       : nextModuleExists
         ? "Mark Done & Next Module"
         : "Finish Course";
+  const isPrimaryNextBlockedByFinalArtifact =
+    activeStageHasUnsubmittedFinalArtifact && !nextContent;
 
   const renderStageNavigationBar = () => (
-    <div className="sticky bottom-0 z-20 grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-line-default bg-surface-primary px-4 shadow-[0_-4px_12px_rgba(15,23,42,0.05)]">
+    <div className="sticky bottom-0 z-20 grid min-h-[76px] shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 border-t border-line-default bg-surface-primary px-6 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.05)] sm:h-14 sm:min-h-14 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-4 sm:py-0">
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="justify-self-start text-content-muted"
+        className="h-12 w-full justify-center justify-self-stretch px-3 text-sm text-content-muted sm:h-auto sm:w-auto sm:justify-self-start sm:text-xs"
         disabled={!previousStage || isStageLocked(previousStage)}
         icon={<ChevronLeftIcon size={16} />}
         onClick={() => handleStageNavigation(previousStage)}
@@ -586,7 +616,7 @@ export const LevelContentPage: React.FC = () => {
         Previous
       </Button>
 
-      <div className="flex items-center gap-1.5">
+      <div className="hidden items-center justify-self-center gap-1.5 sm:flex">
         {navigableStages.map((stage) => {
           const isCompleted = completedStageSet.has(stage);
           const isLocked = isStageLocked(stage);
@@ -614,11 +644,11 @@ export const LevelContentPage: React.FC = () => {
       <Button
         type="button"
         size="sm"
-        className="justify-self-end"
+        className="h-12 w-full justify-center justify-self-stretch px-3 text-sm sm:h-auto sm:w-auto sm:justify-self-end sm:text-xs"
         onClick={handlePrimaryNext}
-        disabled={isUpdateStagePending}
+        disabled={isUpdateStagePending || isPrimaryNextBlockedByFinalArtifact}
       >
-        <span className="inline-flex items-center gap-2">
+        <span className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap text-center leading-tight sm:gap-2">
           {primaryNextLabel}
           {primaryNextLabel === "Complete Course" || primaryNextLabel === "Finish Course" ? (
             <CheckIcon size={16} />
@@ -661,6 +691,11 @@ export const LevelContentPage: React.FC = () => {
               xpCategory: "evidence",
               onClose: () => triggerNavigationTransition("artifact_submit", null, null),
             });
+          }}
+          onArtifactSubmitted={(artifactId) => {
+            setSubmittedArtifactIds((currentIds) =>
+              currentIds.includes(artifactId) ? currentIds : [...currentIds, artifactId],
+            );
           }}
         />
       )}

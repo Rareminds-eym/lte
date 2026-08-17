@@ -65,6 +65,17 @@ const DECISION_META = {
 } as const;
 
 type DecisionMeta = (typeof DECISION_META)[keyof typeof DECISION_META];
+type RubricRow = NonNullable<SubmittedArtifactAttempt["evaluation"]>["rubric_rows"][number];
+
+const getRubricToneClasses = (row: RubricRow) => {
+  if (row.tone === "error" || row.score <= 0) {
+    return { text: "text-danger-600", bar: "bg-danger-500" };
+  }
+  if (row.tone === "success" || row.score >= 2) {
+    return { text: "text-success-600", bar: "bg-success-500" };
+  }
+  return { text: "text-warning-600", bar: "bg-warning-500" };
+};
 
 export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
   submittedAttempts,
@@ -250,13 +261,13 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
               <div key={row.label} className="space-y-1">
                 <div className="flex items-center justify-between gap-2 text-[11px]">
                   <span className="font-bold text-content-primary">{row.label}</span>
-                  <span className="font-bold text-brand-600">
+                  <span className={`font-bold ${getRubricToneClasses(row).text}`}>
                     {row.score}/3 {row.level ? `(${row.level})` : ""}
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-line-subtle">
                   <div
-                    className={`h-full rounded-full ${row.score >= 2 ? "bg-success-500" : "bg-warning-500"}`}
+                    className={`h-full rounded-full ${getRubricToneClasses(row).bar}`}
                     style={{ width: `${(row.score / (row.maxScore || 3)) * 100}%` }}
                   />
                 </div>
