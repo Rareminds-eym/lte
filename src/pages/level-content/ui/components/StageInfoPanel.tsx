@@ -24,6 +24,8 @@ interface StageInfoPanelProps {
   activeStage: LteStage;
   activeArtifactType: "practice" | "final" | null;
   stageDescription: string;
+  stageModuleContext?: string | null;
+  stageCurriculumReference?: Record<string, unknown> | null;
   stageSummary: string;
   previewItems: EContentItem[];
   isScenarioExpanded: boolean;
@@ -33,13 +35,15 @@ interface StageInfoPanelProps {
   renderArtifactPanel: () => React.ReactNode;
 }
 
-const getRecordSummary = (value: Record<string, unknown> | undefined | null) => {
-  if (!value) return [];
-  const strings = Object.values(value)
-    .flatMap((entry) => (Array.isArray(entry) ? entry : [entry]))
-    .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+const getCurriculumText = (value: unknown) => {
+  if (Array.isArray(value)) {
+    const joined = value
+      .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+      .join(", ");
+    return joined || null;
+  }
 
-  return strings.slice(0, 2);
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 };
 
 export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
@@ -48,6 +52,8 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
   activeStage,
   activeArtifactType,
   stageDescription,
+  stageModuleContext,
+  stageCurriculumReference,
   stageSummary,
   previewItems,
   isScenarioExpanded,
@@ -152,102 +158,88 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
       ) : null}
 
       {/* Curriculum Reference Card */}
-      {!activeArtifactType &&
-        (levelModule.prerequisites?.length ||
-          levelModule.whatYoullLearn?.length ||
-          levelModule.whenToApply ||
-          getRecordSummary(levelModule.knowledge).length ||
-          getRecordSummary(levelModule.tools).length) && (
-          <div className="rounded-xl border border-success-200 bg-success-50/60 p-4 shadow-2xs">
-            <div className="mb-3.5 flex items-center gap-2 border-b border-success-200 pb-2.5 text-success-700">
-              <BookOpenIcon size={15} className="shrink-0" />
-              <h5 className="text-[13px] font-bold">Curriculum Reference</h5>
-            </div>
-
-            <div className="space-y-3">
-              {levelModule.prerequisites?.length ? (
-                <div>
-                  <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
-                    <GraduationCapIcon size={12} className="shrink-0" />
-                    <span>Prerequisites</span>
-                  </div>
-                  <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                    {levelModule.prerequisites.join(", ")}
-                  </p>
-                </div>
-              ) : null}
-
-              {levelModule.whatYoullLearn?.length ? (
-                <div>
-                  <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
-                    <CodeXmlIcon size={12} className="shrink-0" />
-                    <span>Technical Concepts</span>
-                  </div>
-                  <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                    {levelModule.whatYoullLearn.slice(0, 4).join(", ")}
-                  </p>
-                </div>
-              ) : null}
-
-              {getRecordSummary(levelModule.knowledge).length ? (
-                <div>
-                  <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
-                    <LayersIcon size={12} className="shrink-0" />
-                    <span>Engineering Context</span>
-                  </div>
-                  <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                    {getRecordSummary(levelModule.knowledge).join(", ")}
-                  </p>
-                </div>
-              ) : null}
-
-              {levelModule.whenToApply ? (
-                <div>
-                  <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
-                    <LightbulbIcon size={12} className="shrink-0" />
-                    <span>When to Use</span>
-                  </div>
-                  <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                    {levelModule.whenToApply}
-                  </p>
-                </div>
-              ) : null}
-
-              {getRecordSummary(levelModule.tools).length ? (
-                <div>
-                  <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
-                    <ChevronRightIcon size={12} className="shrink-0" />
-                    <span>Module Continuity</span>
-                  </div>
-                  <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                    {getRecordSummary(levelModule.tools).join(", ")}
-                  </p>
-                </div>
-              ) : null}
-            </div>
+      {!activeArtifactType && stageCurriculumReference && (
+        <div className="rounded-xl border border-success-200 bg-success-50/60 p-4 shadow-2xs">
+          <div className="mb-3.5 flex items-center gap-2 border-b border-success-200 pb-2.5 text-success-700">
+            <BookOpenIcon size={15} className="shrink-0" />
+            <h5 className="text-[13px] font-bold">Curriculum Reference</h5>
           </div>
-        )}
 
-      {/* Module Context Card */}
-      {!activeArtifactType &&
-        (levelModule.industryChallenge || levelModule.pressurePoints?.length) && (
-          <div className="rounded-xl border border-border-default bg-surface-subtle p-3.5 shadow-2xs">
-            <h5 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-content-muted">
-              Module Context
-            </h5>
-            {levelModule.industryChallenge && (
-              <p className="mb-1.5 text-[13px] font-semibold leading-relaxed text-content-heading">
-                {levelModule.industryChallenge}
-              </p>
-            )}
-            {levelModule.pressurePoints?.length ? (
-              <p className="text-xs leading-relaxed text-content-default">
-                <span className="font-semibold text-content-body">Concepts: </span>
-                {levelModule.pressurePoints.join(", ")}
-              </p>
+          <div className="space-y-3">
+            {getCurriculumText(stageCurriculumReference["prerequisites"]) ? (
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
+                  <GraduationCapIcon size={12} className="shrink-0" />
+                  <span>Prerequisites</span>
+                </div>
+                <p className="pl-5 text-[13px] leading-relaxed text-success-900">
+                  {getCurriculumText(stageCurriculumReference["prerequisites"])}
+                </p>
+              </div>
+            ) : null}
+
+            {getCurriculumText(stageCurriculumReference["technical_concepts"]) ? (
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
+                  <CodeXmlIcon size={12} className="shrink-0" />
+                  <span>Technical Concepts</span>
+                </div>
+                <p className="pl-5 text-[13px] leading-relaxed text-success-900">
+                  {getCurriculumText(stageCurriculumReference["technical_concepts"])}
+                </p>
+              </div>
+            ) : null}
+
+            {getCurriculumText(stageCurriculumReference["credit_context"]) ? (
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
+                  <LayersIcon size={12} className="shrink-0" />
+                  <span>Credit Context</span>
+                </div>
+                <p className="pl-5 text-[13px] leading-relaxed text-success-900">
+                  {getCurriculumText(stageCurriculumReference["credit_context"])}
+                </p>
+              </div>
+            ) : null}
+
+            {getCurriculumText(stageCurriculumReference["when_to_use"]) ? (
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
+                  <LightbulbIcon size={12} className="shrink-0" />
+                  <span>When to Use</span>
+                </div>
+                <p className="pl-5 text-[13px] leading-relaxed text-success-900">
+                  {getCurriculumText(stageCurriculumReference["when_to_use"])}
+                </p>
+              </div>
+            ) : null}
+
+            {getCurriculumText(stageCurriculumReference["module_continuity"]) ? (
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
+                  <ChevronRightIcon size={12} className="shrink-0" />
+                  <span>Module Continuity</span>
+                </div>
+                <p className="pl-5 text-[13px] leading-relaxed text-success-900">
+                  {getCurriculumText(stageCurriculumReference["module_continuity"])}
+                </p>
+              </div>
             ) : null}
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Module Context Card */}
+      {!activeArtifactType && stageModuleContext && (
+        <div className="rounded-xl border border-border-default bg-surface-subtle p-3.5 shadow-2xs">
+          <h5 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-content-muted">
+            Module Context
+          </h5>
+          <p className="mb-1.5 text-[13px] font-semibold leading-relaxed text-content-heading">
+            {stageModuleContext}
+          </p>
+        </div>
+      )}
 
       {/* Ask AI Card */}
       {!activeArtifactType ? (

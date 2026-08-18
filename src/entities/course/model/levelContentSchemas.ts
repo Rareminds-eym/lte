@@ -86,6 +86,8 @@ export const ModuleStageContentSchema = z.object({
   stageName: Lte6eStageSchema,
   stageOrder: z.number(),
   stageDescription: z.string(),
+  moduleContext: z.string().nullable().optional().default(null),
+  curriculumReference: JsonRecordSchema.nullable().optional().default(null),
   items: z.array(EContentItemSchema),
   artifacts: z.array(ModuleArtifactSchema),
   artifactType: z.enum(["practice", "final"]).nullable(),
