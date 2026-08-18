@@ -6,7 +6,7 @@ import {
   upsertLearningPath,
   upsertLearningTrack,
 } from "@functions/api/v1/learning-paths/queries";
-import { callSkill } from "@functions/lib/skill-gateway";
+import { callSkill } from "@functions/lib/gateway/skill-gateway";
 import type { LteEnv } from "@functions/lib/types";
 import { createLogger } from "@functions/shared/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";

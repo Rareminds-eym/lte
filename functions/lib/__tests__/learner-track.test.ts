@@ -7,11 +7,11 @@ import {
   upsertLearningPath,
   upsertLearningTrack,
 } from "../../api/v1/learning-paths/queries";
-import { callSkill } from "../../lib/skill-gateway";
 import type { LteEnv } from "../../lib/types";
+import { callSkill } from "../gateway/skill-gateway";
 import { resolveActiveTrack } from "../learner-track";
 
-vi.mock("@functions/lib/skill-gateway", () => ({
+vi.mock("../gateway/skill-gateway", () => ({
   callSkill: vi.fn(),
 }));
 
@@ -115,6 +115,83 @@ describe("Learner Track Resolution (3-layer logic)", () => {
       expect(mockSupabase.from).toHaveBeenCalledWith("learning_tracks");
       expect(mockUpdate).toHaveBeenCalledWith({ is_active: true });
       expect(mockEq).toHaveBeenCalledWith("id", "lt-inactive");
+    });
+
+    it("should fall through to the gateway when reactivating the inactive track fails", async () => {
+      (getActiveLearningTrack as Mock).mockResolvedValue(null);
+
+      const mockEq = vi.fn().mockImplementation((col) => {
+        if (col === "user_id") {
+          return {
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                maybeSingle: async () => ({
+                  data: { id: "lt-inactive", track: "Backend Engineering" },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return Promise.resolve({ error: { message: "reactivate failed" } });
+      });
+
+      const mockSupabase = {
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === "learning_tracks") {
+            return {
+              select: () => ({ eq: mockEq }),
+              update: vi.fn().mockReturnValue({ eq: mockEq }),
+            };
+          }
+          return {};
+        }),
+      } as unknown as SupabaseClient;
+
+      (callSkill as Mock).mockResolvedValue({ found: false });
+
+      const result = await resolveActiveTrack(mockSupabase, env, userId);
+
+      expect(result).toEqual({ data: null, needsAssessment: true });
+    });
+
+    it("should fall through to the gateway when the refresh after reactivation returns null", async () => {
+      // Layer 1 active check -> null, post-reactivation refresh -> null
+      (getActiveLearningTrack as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+
+      const mockEq = vi.fn().mockImplementation((col) => {
+        if (col === "user_id") {
+          return {
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                maybeSingle: async () => ({
+                  data: { id: "lt-inactive", track: "Backend Engineering" },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return Promise.resolve({ error: null }); // update succeeds, but refresh is null
+      });
+
+      const mockSupabase = {
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === "learning_tracks") {
+            return {
+              select: () => ({ eq: mockEq }),
+              update: vi.fn().mockReturnValue({ eq: mockEq }),
+            };
+          }
+          return {};
+        }),
+      } as unknown as SupabaseClient;
+
+      (callSkill as Mock).mockResolvedValue({ found: false });
+
+      const result = await resolveActiveTrack(mockSupabase, env, userId);
+
+      expect(result).toEqual({ data: null, needsAssessment: true });
     });
   });
 
@@ -305,6 +382,134 @@ describe("Learner Track Resolution (3-layer logic)", () => {
       expect(upsertLearningPath).toHaveBeenCalledTimes(3);
       expect(syncUserCapabilities).toHaveBeenCalledTimes(1); // Only synced for primary track
     });
+
+    it("should resolve the role via an exact catalog match and pass the industry metadata through", async () => {
+      (getActiveLearningTrack as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(mockPath);
+      (upsertLearningTrack as Mock).mockResolvedValue("lt-1");
+      (upsertLearningPath as Mock).mockResolvedValue("lp-1");
+
+      const mockGatewayResult = {
+        found: true,
+        track: {
+          attemptId: "att-123",
+          // no roleId -> resolveRoleId runs and hits the EXACT ilike match
+          roleName: "Backend Engineer",
+          trackName: "Backend Engineering",
+          fit: "High",
+          matchScore: 95,
+          whyItFits: "Matches experience.",
+          industry: "Technology",
+        },
+      };
+      (callSkill as Mock).mockResolvedValue(mockGatewayResult);
+
+      const mockSupabase = {
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === "learning_tracks") {
+            return {
+              select: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      maybeSingle: async () => ({ data: null, error: null }),
+                    }),
+                  }),
+                }),
+              }),
+            };
+          }
+          if (table === "roles") {
+            return {
+              select: () => ({
+                ilike: () => ({
+                  maybeSingle: async () => ({ data: { id: "exact-role-id" }, error: null }),
+                }),
+              }),
+            };
+          }
+          return {};
+        }),
+      } as unknown as SupabaseClient;
+
+      const result = await resolveActiveTrack(mockSupabase, env, userId);
+
+      expect(result.data).not.toBeNull();
+      expect(upsertLearningPath).toHaveBeenCalledWith(mockSupabase, {
+        userId,
+        trackId: "lt-1",
+        roleId: "exact-role-id",
+        metadata: { industry: "Technology" },
+      });
+    });
+
+    it("should upsert a shared track name only once across a tracks array", async () => {
+      (getActiveLearningTrack as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(mockPath);
+      (upsertLearningTrack as Mock).mockResolvedValue("lt-shared");
+      (upsertLearningPath as Mock).mockResolvedValueOnce("lp-1").mockResolvedValueOnce("lp-2");
+
+      const mockGatewayResult = {
+        found: true,
+        tracks: [
+          {
+            attemptId: "att-1",
+            roleId: "role-1",
+            roleName: "Role One",
+            trackName: "Shared Cluster",
+            fit: "High",
+            matchScore: 90,
+            whyItFits: "Fits.",
+          },
+          {
+            attemptId: "att-2",
+            roleId: "role-2",
+            roleName: "Role Two",
+            trackName: "Shared Cluster",
+            fit: "High",
+            matchScore: 90,
+            whyItFits: "Fits.",
+          },
+        ],
+      };
+      (callSkill as Mock).mockResolvedValue(mockGatewayResult);
+
+      const mockSupabase = {
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === "learning_tracks") {
+            return {
+              select: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      maybeSingle: async () => ({ data: null, error: null }),
+                    }),
+                  }),
+                }),
+              }),
+            };
+          }
+          if (table === "roles") {
+            return {
+              select: () => ({
+                ilike: () => ({
+                  maybeSingle: async () => ({ data: { id: "role-fallback" }, error: null }),
+                }),
+              }),
+            };
+          }
+          return {};
+        }),
+      } as unknown as SupabaseClient;
+
+      const result = await resolveActiveTrack(mockSupabase, env, userId);
+
+      expect(result.data).not.toBeNull();
+      expect(upsertLearningTrack).toHaveBeenCalledTimes(1); // shared track name deduped
+      expect(upsertLearningTrack).toHaveBeenCalledWith(
+        mockSupabase,
+        expect.objectContaining({ track: "Shared Cluster" }),
+      );
+      expect(upsertLearningPath).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("Layer 3: Graceful Degraded Mode (Gateway Error Fallback)", () => {
@@ -326,6 +531,79 @@ describe("Learner Track Resolution (3-layer logic)", () => {
       } as unknown as SupabaseClient;
 
       (callSkill as Mock).mockRejectedValue(new Error("Timeout calling gateway."));
+
+      const result = await resolveActiveTrack(mockSupabase, env, userId);
+
+      expect(result).toEqual({ data: null, needsAssessment: true });
+    });
+
+    it("should fallback to needsAssessment: true when the gateway reports the track as not found", async () => {
+      (getActiveLearningTrack as Mock).mockResolvedValueOnce(null);
+
+      const mockSupabase = {
+        from: vi.fn().mockReturnValue({
+          select: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: () => ({
+                  maybeSingle: async () => ({ data: null, error: null }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      } as unknown as SupabaseClient;
+
+      (callSkill as Mock).mockResolvedValue({ found: false });
+
+      const result = await resolveActiveTrack(mockSupabase, env, userId);
+
+      expect(result).toEqual({ data: null, needsAssessment: true });
+    });
+
+    it("should fallback to needsAssessment: true when the gateway returns no track or tracks", async () => {
+      (getActiveLearningTrack as Mock).mockResolvedValueOnce(null);
+
+      const mockSupabase = {
+        from: vi.fn().mockReturnValue({
+          select: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: () => ({
+                  maybeSingle: async () => ({ data: null, error: null }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      } as unknown as SupabaseClient;
+
+      (callSkill as Mock).mockResolvedValue({ found: true });
+
+      const result = await resolveActiveTrack(mockSupabase, env, userId);
+
+      expect(result).toEqual({ data: null, needsAssessment: true });
+      expect(deactivateOtherTracks).not.toHaveBeenCalled();
+    });
+
+    it("should survive gateway rejections that are not Error instances", async () => {
+      (getActiveLearningTrack as Mock).mockResolvedValueOnce(null);
+
+      const mockSupabase = {
+        from: vi.fn().mockReturnValue({
+          select: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: () => ({
+                  maybeSingle: async () => ({ data: null, error: null }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      } as unknown as SupabaseClient;
+
+      (callSkill as Mock).mockRejectedValue("network reset");
 
       const result = await resolveActiveTrack(mockSupabase, env, userId);
 
