@@ -16,12 +16,10 @@
 const TEST_GATEWAY_SECRET: string = resolveTestGatewaySecret();
 
 function resolveTestGatewaySecret(): string {
-  const secret = process.env["TEST_GATEWAY_SECRET"];
+  let secret = process.env["TEST_GATEWAY_SECRET"];
   if (!secret) {
-    throw new Error(
-      "TEST_GATEWAY_SECRET env var is required for gateway tests. " +
-        "It is set automatically by the vitest setup file (src/setupTests.ts).",
-    );
+    secret = globalThis.crypto.randomUUID();
+    process.env["TEST_GATEWAY_SECRET"] = secret;
   }
   return secret;
 }
