@@ -434,10 +434,10 @@ describe("Learner Track Resolution (3-layer logic)", () => {
         }),
       } as unknown as SupabaseClient;
 
-      const result = await resolveActiveTrack(mockSupabase, env, userId);
+      const result = await resolveActiveTrack(gatewayFromSupabase(mockSupabase), env, userId);
 
       expect(result.data).not.toBeNull();
-      expect(upsertLearningPath).toHaveBeenCalledWith(mockSupabase, {
+      expect(upsertLearningPath).toHaveBeenCalledWith(expect.anything(), {
         userId,
         trackId: "lt-1",
         roleId: "exact-role-id",
@@ -503,12 +503,12 @@ describe("Learner Track Resolution (3-layer logic)", () => {
         }),
       } as unknown as SupabaseClient;
 
-      const result = await resolveActiveTrack(mockSupabase, env, userId);
+      const result = await resolveActiveTrack(gatewayFromSupabase(mockSupabase), env, userId);
 
       expect(result.data).not.toBeNull();
       expect(upsertLearningTrack).toHaveBeenCalledTimes(1); // shared track name deduped
       expect(upsertLearningTrack).toHaveBeenCalledWith(
-        mockSupabase,
+        expect.anything(),
         expect.objectContaining({ track: "Shared Cluster" }),
       );
       expect(upsertLearningPath).toHaveBeenCalledTimes(2);
