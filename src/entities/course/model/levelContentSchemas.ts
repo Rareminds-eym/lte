@@ -2,9 +2,7 @@ import { z } from "zod";
 import { LTE_STAGE_SEQUENCE } from "./stages";
 
 const JsonRecordSchema = z.record(z.string(), z.unknown());
-const CurriculumReferenceSchema = z
-  .union([JsonRecordSchema, z.array(z.string()), z.string()])
-  .nullable();
+const CurriculumReferenceSchema = z.union([JsonRecordSchema, z.array(z.string())]).nullable();
 const NullableStringListSchema = z.array(z.string()).nullable();
 
 export const Lte6eStageSchema = z.enum(LTE_STAGE_SEQUENCE);

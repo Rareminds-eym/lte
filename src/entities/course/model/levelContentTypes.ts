@@ -73,7 +73,7 @@ export interface ModuleStageContent {
   stageOrder: number;
   stageDescription: string;
   moduleContext: string | null;
-  curriculumReference: Record<string, unknown> | string[] | string | null;
+  curriculumReference: Record<string, unknown> | string[] | null;
   items: EContentItem[];
   artifacts: ModuleArtifact[];
   artifactType: "practice" | "final" | null;

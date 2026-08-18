@@ -25,7 +25,7 @@ interface StageInfoPanelProps {
   activeArtifactType: "practice" | "final" | null;
   stageDescription: string;
   stageModuleContext?: string | null;
-  stageCurriculumReference?: Record<string, unknown> | string[] | string | null;
+  stageCurriculumReference?: Record<string, unknown> | string[] | null;
   stageSummary: string;
   previewItems: EContentItem[];
   isScenarioExpanded: boolean;
@@ -35,7 +35,7 @@ interface StageInfoPanelProps {
   renderArtifactPanel: () => React.ReactNode;
 }
 
-const getCurriculumText = (value: unknown) => {
+const getCurriculumText = (value: unknown): string | null => {
   if (Array.isArray(value)) {
     const joined = value
       .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
@@ -46,7 +46,9 @@ const getCurriculumText = (value: unknown) => {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 };
 
-const getCurriculumRecord = (value: Record<string, unknown> | string[] | string | null | undefined) => {
+const getCurriculumRecord = (
+  value: Record<string, unknown> | string[] | null | undefined,
+): Record<string, unknown> | null => {
   if (Array.isArray(value)) {
     return value.reduce<Record<string, string>>((record, entry) => {
       const separatorIndex = entry.indexOf(":");
@@ -85,18 +87,19 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
   renderArtifactPanel,
 }) => {
   const curriculumRecord = getCurriculumRecord(stageCurriculumReference);
-  const curriculumReference =
-    curriculumRecord
-      ? {
-          prerequisites: getCurriculumText(curriculumRecord["prerequisites"]),
-          technicalConcepts: getCurriculumText(curriculumRecord["technical_concepts"]),
-          creditContext: getCurriculumText(curriculumRecord["credit_context"]),
-          whenToUse: getCurriculumText(curriculumRecord["when_to_use"]),
-          moduleContinuity: getCurriculumText(curriculumRecord["module_continuity"]),
-        }
-      : null;
+  const curriculumReference = curriculumRecord
+    ? {
+        prerequisites: getCurriculumText(curriculumRecord["prerequisites"]),
+        technicalConcepts: getCurriculumText(curriculumRecord["technical_concepts"]),
+        creditContext: getCurriculumText(curriculumRecord["credit_context"]),
+        whenToUse: getCurriculumText(curriculumRecord["when_to_use"]),
+        moduleContinuity: getCurriculumText(curriculumRecord["module_continuity"]),
+      }
+    : null;
   const shouldShowCurriculumReference =
-    !activeArtifactType && curriculumReference && Object.values(curriculumReference).some(Boolean);
+    !activeArtifactType &&
+    curriculumReference !== null &&
+    Object.values(curriculumReference).some(Boolean);
 
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-white p-3.5 text-content-body">
