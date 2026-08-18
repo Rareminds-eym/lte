@@ -1,8 +1,8 @@
 import { clearRefreshCookies, createRefreshCookie, getRefreshCookie } from "@functions/lib/cookies";
 import { validateBackendEnv } from "@functions/lib/env";
 import { getClientIp, getUserAgent, jsonError, jsonResponse } from "@functions/lib/http";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import { refreshLteSession, SsoAuthError } from "@functions/lib/sso-client";
-import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { triggerDailyLoginWithEngagement } from "@functions/lib/xp-engine";
 import { authLogger } from "@functions/shared/logger";
@@ -45,10 +45,10 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
         const payload = JSON.parse(payloadJson) as Record<string, unknown>;
         const userId = typeof payload["sub"] === "string" ? payload["sub"] : null;
         if (userId) {
-          const supabase = createServiceSupabase(context.env);
+          const qb = createServiceQueryGateway(context.env);
           // Fire-and-forget: award daily login + streak/consistency/legacy XP.
           // Never fails the auth response.
-          triggerDailyLoginWithEngagement(supabase, userId).catch((err) => {
+          triggerDailyLoginWithEngagement(qb, userId).catch((err) => {
             authLogger.error("[XP] daily login engagement failed (refresh)", err, { userId });
           });
         }

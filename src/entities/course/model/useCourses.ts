@@ -8,9 +8,11 @@ export const useCourses = (userId?: string, options?: { enabled?: boolean }) => 
 
   return useQuery({
     queryKey: ["userCourses", userId, activeTrackId],
-    queryFn: () => fetchUserCourses(),
+    queryFn: ({ signal }) => fetchUserCourses(signal),
     enabled: typeof userId === "string" && userId.trim() !== "" && options?.enabled !== false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 10, // 10 minutes cache
+    gcTime: 1000 * 60 * 15, // 15 minutes inactive retention (must exceed staleTime)
+
     retry: (failureCount, error) => {
       const status =
         error instanceof ApiError

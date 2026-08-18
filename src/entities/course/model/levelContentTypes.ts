@@ -106,6 +106,7 @@ export interface LevelDetailsResponse {
   levelCode: string;
   capabilityName?: string;
   capabilityCode?: string;
+  capabilitySlug?: string;
   title: string;
   description: string;
   levelProblemStatement: LevelProblemStatement;

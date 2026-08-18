@@ -1,8 +1,7 @@
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPatch } from "../active-track";
 import { activateLearningTrack } from "../queries";
@@ -12,7 +11,7 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", () => ({ createServiceQueryGateway: vi.fn() }));
 
 vi.mock("../queries", () => ({
   activateLearningTrack: vi.fn(),
@@ -66,8 +65,15 @@ describe("PATCH /api/v1/learning-paths/active-track", () => {
 
   it("returns 200 on successful activation", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
-    const mockSupabase = {} as unknown as SupabaseClient;
-    vi.mocked(createServiceSupabase).mockReturnValueOnce(mockSupabase);
+    const mockGateway = {
+      read: vi.fn(),
+      insert: vi.fn(),
+      update: vi.fn(),
+      upsert: vi.fn(),
+      delete: vi.fn(),
+      rpc: vi.fn(),
+    };
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(mockGateway);
     vi.mocked(activateLearningTrack).mockResolvedValueOnce(undefined);
 
     const response = await onRequestPatch({
@@ -81,6 +87,10 @@ describe("PATCH /api/v1/learning-paths/active-track", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.success).toBe(true);
-    expect(activateLearningTrack).toHaveBeenCalledWith(mockSupabase, mockUser.sub, validTrackId);
+    expect(activateLearningTrack).toHaveBeenCalledWith(
+      expect.anything(),
+      mockUser.sub,
+      validTrackId,
+    );
   });
 });

@@ -1,8 +1,25 @@
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth, toAuthApiUser } from "@functions/middleware";
 import { authLogger } from "@functions/shared/logger";
+
+const authUserReadPolicy = {
+  table: "users",
+  operation: "read",
+  columns: ["id", "status"],
+  filters: ["id"],
+  ownership: { column: "id", source: "authenticatedUserId", required: true },
+} as const;
+
+const reactivateUserPolicy = {
+  table: "users",
+  operation: "update",
+  updateColumns: ["status", "updated_at"],
+  filters: ["id"],
+  ownership: { column: "id", source: "authenticatedUserId", required: true },
+  requireFilter: true,
+} as const;
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   try {
@@ -10,15 +27,13 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     // Verify user exists in LTE local database (public.users)
     if (context.env.SUPABASE_URL && context.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const supabase = createServiceSupabase(context.env);
-      const { data: existingUser, error } = await supabase
-        .from("users")
-        .select("id, status")
-        .eq("id", user.sub)
-        .maybeSingle();
-      if (error) {
-        throw error;
-      }
+      const qb = createServiceQueryGateway(context.env);
+      const existingUser = (await qb.read(authUserReadPolicy, {
+        auth: { userId: user.sub },
+        filters: [],
+        result: "maybeSingle",
+      })) as { id: string; status: string } | null;
+
       if (!existingUser) {
         authLogger.warn("User data not found in LTE database during /me check", {
           userId: user.sub,
@@ -36,10 +51,11 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
       // Auto-reactivate deactivated accounts on sign-in
       if (existingUser.status === "inactive") {
-        await supabase
-          .from("users")
-          .update({ status: "active", updated_at: new Date().toISOString() })
-          .eq("id", user.sub);
+        await qb.update(reactivateUserPolicy, {
+          auth: { userId: user.sub },
+          data: { status: "active", updated_at: new Date().toISOString() },
+          filters: [],
+        });
         authLogger.info("Reactivated inactive user upon sign-in", { userId: user.sub });
       }
     }

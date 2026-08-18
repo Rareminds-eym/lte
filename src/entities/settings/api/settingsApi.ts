@@ -7,8 +7,10 @@ import type {
   UpdateProfilePayload,
 } from "../model/types";
 
-export const fetchSettingsProfile = async (): Promise<SettingsProfile> => {
-  const res = await apiGet<SettingsProfileResponse>("/api/v1/settings/profile");
+export const fetchSettingsProfile = async (signal?: AbortSignal): Promise<SettingsProfile> => {
+  const res = await (signal
+    ? apiGet<SettingsProfileResponse>("/api/v1/settings/profile", { signal })
+    : apiGet<SettingsProfileResponse>("/api/v1/settings/profile"));
   return res.profile;
 };
 

@@ -22,4 +22,5 @@ export interface Course {
   qualified?: boolean;
   roleId?: string;
   roleName?: string;
+  slug: string;
 }

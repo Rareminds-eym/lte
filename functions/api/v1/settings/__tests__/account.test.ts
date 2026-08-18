@@ -1,4 +1,4 @@
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
@@ -11,7 +11,10 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return { ...actual, createServiceQueryGateway: vi.fn() };
+});
 
 const mockUser: AuthUser = {
   sub: "user-uuid-1234",
@@ -36,6 +39,12 @@ function updateChain(resolveVal: unknown) {
     then: (resolve: (val: unknown) => unknown) => Promise.resolve(resolveVal).then(resolve),
   };
   return chain;
+}
+
+function gatewayFromChain(chain: UpdateChain) {
+  return createQueryGateway({
+    from: vi.fn().mockReturnValue(chain),
+  } as unknown as SupabaseClient);
 }
 
 function postContext(body: Record<string, unknown>) {
@@ -82,9 +91,7 @@ describe("POST /api/v1/settings/account", () => {
   it("deactivates the account", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const chain = updateChain({ data: null, error: null });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPost(postContext({ action: "deactivate" }));
     expect(response.status).toBe(200);
@@ -99,9 +106,7 @@ describe("POST /api/v1/settings/account", () => {
   it("returns 500 when the update fails", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const chain = updateChain({ data: null, error: new Error("db down") });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPost(postContext({ action: "deactivate" }));
     expect(response.status).toBe(500);
@@ -113,9 +118,7 @@ describe("POST /api/v1/settings/account", () => {
   it("does not leak internal error details on 500", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     const chain = updateChain({ data: null, error: "db down" });
-    vi.mocked(createServiceSupabase).mockReturnValueOnce({
-      from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromChain(chain));
 
     const response = await onRequestPost(postContext({ action: "deactivate" }));
     expect(response.status).toBe(500);

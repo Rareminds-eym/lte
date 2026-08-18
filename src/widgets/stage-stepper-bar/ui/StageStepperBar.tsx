@@ -23,6 +23,13 @@ export const StageStepperBar: React.FC<StageStepperBarProps> = ({
           const stepOverride = stageOverrides?.[step.id];
           const StepIcon = isDisabled ? LockIcon : (stepOverride?.icon ?? step.icon);
           const subtitle = stepOverride?.subtitle ?? step.subtitle;
+          const iconClassName = isCompleted
+            ? "text-success-600"
+            : isActive
+              ? "text-brand-600"
+              : isDisabled
+                ? "text-content-muted"
+                : "text-content-muted group-hover:text-content-primary";
 
           return (
             <Fragment key={step.id}>
@@ -34,26 +41,30 @@ export const StageStepperBar: React.FC<StageStepperBarProps> = ({
                 disabled={isDisabled}
                 onClick={() => onStageSelect?.(step.id)}
                 className={`group h-14 rounded-none border-b-2 px-3.5 py-0 font-sans text-xs transition-colors hover:bg-surface-muted disabled:hover:bg-transparent ${
-                  isActive
-                    ? "border-brand-600 text-brand-600 font-bold"
-                    : isCompleted
-                      ? "border-transparent text-success-600 font-semibold"
+                  isCompleted
+                    ? `text-success-600 ${isActive ? "border-success-500 font-bold" : "border-transparent font-semibold"}`
+                    : isActive
+                      ? "border-brand-600 text-brand-600 font-bold"
                       : isDisabled
                         ? "border-transparent text-content-muted font-medium"
                         : "border-transparent text-content-muted font-medium hover:text-content-primary"
                 }`}
               >
                 <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                  {isCompleted ? <CheckIcon size={13} /> : <StepIcon size={14} />}
+                  {isCompleted ? (
+                    <CheckIcon size={13} className={iconClassName} />
+                  ) : (
+                    <StepIcon size={14} className={iconClassName} />
+                  )}
                 </span>
 
                 <div className="flex items-baseline gap-1.5 whitespace-nowrap">
                   <span
                     className={
-                      isActive
-                        ? "text-brand-600 font-bold"
-                        : isCompleted
-                          ? "text-success-600 font-semibold"
+                      isCompleted
+                        ? `text-success-600 ${isActive ? "font-bold" : "font-semibold"}`
+                        : isActive
+                          ? "text-brand-600 font-bold"
                           : isDisabled
                             ? "text-content-muted"
                             : "text-content-secondary group-hover:text-content-primary"

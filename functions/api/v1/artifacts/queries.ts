@@ -6,56 +6,51 @@ import {
   processAndSaveArtifactEvaluation,
   sanitizeContentDispositionFilename,
 } from "@functions/lib/artifact-evaluator";
+import {
+  asQueryGateway,
+  QueryGatewayDatabaseError,
+  type QueryGatewaySource,
+} from "@functions/lib/query-gateway";
 import { createObjectKey } from "@functions/lib/r2-client";
 import type { LteEnv } from "@functions/lib/types";
 import type { CompleteSubmissionInput } from "@functions/schemas";
 import { apiLogger } from "@functions/shared/logger";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchArtifactTemplateContent, fetchEvaluationContext } from "./evaluation-context";
 import {
   ArtifactSubmissionError,
   validateArtifactFileContent,
   validateFileForQuestion,
 } from "./file-validation";
-
-interface ArtifactQuestionRow {
-  id: string;
-  artifact_id: string;
-  response_type: "text" | "file" | "url";
-  allowed_file_types: string[] | null;
-  max_file_size_mb: number | null;
-  response_required: boolean;
-}
-
-interface ArtifactSubmissionRow {
-  id: string;
-  artifact_id: string;
-  user_id: string;
-  user_module_progress_id: string;
-  attempt_no: number;
-  version_label: string | null;
-  is_latest: boolean;
-  status: string;
-  previous_submission_id: string | null;
-  submitted_at: string | null;
-  sealed_at: string | null;
-}
-
-interface ArtifactMetaRow {
-  artifact_type: string | null;
-  passing_score: number | null;
-  total_score: number | null;
-}
-
-interface ArtifactQuestionDetailRow {
-  id: string;
-  title: string;
-  description: string | null;
-  response_type: string;
-  instructions: Record<string, unknown> | string | null;
-}
+import {
+  type ArtifactMetaRow,
+  type ArtifactQuestionDetailRow,
+  type ArtifactQuestionRow,
+  type ArtifactSubmissionAnswerRow,
+  type ArtifactSubmissionFileRow,
+  type ArtifactSubmissionRow,
+  artifactEvaluationFlowReadPolicy,
+  artifactMetaReadPolicy,
+  artifactQuestionDetailsReadPolicy,
+  artifactQuestionsReadPolicy,
+  artifactSubmissionAnswersReadPolicy,
+  artifactSubmissionAnswersUpsertPolicy,
+  artifactSubmissionDeletePolicy,
+  artifactSubmissionDemotePolicy,
+  artifactSubmissionFileInsertPolicy,
+  artifactSubmissionInsertPolicy,
+  artifactSubmissionReadPolicy,
+  type EvaluationFlowRow,
+  moduleArtifactAccessPolicy,
+  moduleContentAccessPolicy,
+  submissionFilesReadPolicy,
+  userModuleProgressAccessPolicy,
+} from "./query-policies";
 
 export { ArtifactSubmissionError } from "./file-validation";
+
+function dbMessage(error: unknown): string {
+  return error instanceof QueryGatewayDatabaseError ? error.message : "unknown error";
+}
 
 function createPublicFileUrl(publicDomain: string | undefined, objectKey: string): string | null {
   const baseUrl = publicDomain?.trim().replace(/\/+$/, "");
@@ -63,29 +58,42 @@ function createPublicFileUrl(publicDomain: string | undefined, objectKey: string
 }
 
 async function requireModuleProgress(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   artifactId: string,
   userId: string,
 ): Promise<string> {
-  const { data: artifact, error: artifactError } = await supabase
-    .from("module_artifacts")
-    .select("id, modules_content_id")
-    .eq("id", artifactId)
-    .eq("is_active", true)
-    .single();
+  const qb = asQueryGateway(source);
+  let artifact: { id: string; modules_content_id: string } | null = null;
+  try {
+    artifact = (await qb.read(moduleArtifactAccessPolicy, {
+      filters: [
+        { column: "id", op: "eq", value: artifactId },
+        { column: "is_active", op: "eq", value: true },
+      ],
+      result: "single",
+    })) as { id: string; modules_content_id: string } | null;
+  } catch {
+    artifact = null;
+  }
 
-  if (artifactError || !artifact) {
+  if (!artifact) {
     throw new ArtifactSubmissionError("Artifact was not found.", 404, "ARTIFACT_NOT_FOUND");
   }
 
-  const { data: moduleContent, error: moduleContentError } = await supabase
-    .from("modules_content")
-    .select("id, module_id")
-    .eq("id", artifact.modules_content_id)
-    .eq("is_active", true)
-    .single();
+  let moduleContent: { id: string; module_id: string } | null = null;
+  try {
+    moduleContent = (await qb.read(moduleContentAccessPolicy, {
+      filters: [
+        { column: "id", op: "eq", value: artifact.modules_content_id },
+        { column: "is_active", op: "eq", value: true },
+      ],
+      result: "single",
+    })) as { id: string; module_id: string } | null;
+  } catch {
+    moduleContent = null;
+  }
 
-  if (moduleContentError || !moduleContent) {
+  if (!moduleContent) {
     throw new ArtifactSubmissionError(
       "Artifact module content was not found.",
       404,
@@ -93,16 +101,16 @@ async function requireModuleProgress(
     );
   }
 
-  const { data: progress, error: progressError } = await supabase
-    .from("user_module_progress")
-    .select("id")
-    .eq("module_id", moduleContent.module_id)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (progressError) {
+  let progress: { id: string } | null = null;
+  try {
+    progress = (await qb.read(userModuleProgressAccessPolicy, {
+      auth: { userId },
+      filters: [{ column: "module_id", op: "eq", value: moduleContent.module_id }],
+      result: "maybeSingle",
+    })) as { id: string } | null;
+  } catch (progressError) {
     throw new Error(
-      `Failed to validate artifact access (artifact ${artifactId}, user ${userId}): ${progressError.message}`,
+      `Failed to validate artifact access (artifact ${artifactId}, user ${userId}): ${dbMessage(progressError)}`,
     );
   }
   if (!progress) {
@@ -117,71 +125,70 @@ async function requireModuleProgress(
 }
 
 async function getLatestSubmission(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   artifactId: string,
   userId: string,
 ): Promise<ArtifactSubmissionRow | null> {
-  const { data, error } = await supabase
-    .from("artifact_submissions")
-    .select(
-      "id, artifact_id, user_id, user_module_progress_id, attempt_no, version_label, is_latest, status, previous_submission_id, submitted_at, sealed_at",
-    )
-    .eq("artifact_id", artifactId)
-    .eq("user_id", userId)
-    .eq("is_latest", true)
-    .maybeSingle();
-
-  if (error) {
+  const qb = asQueryGateway(source);
+  try {
+    return (
+      ((await qb.read(artifactSubmissionReadPolicy, {
+        auth: { userId },
+        filters: [
+          { column: "artifact_id", op: "eq", value: artifactId },
+          { column: "is_latest", op: "eq", value: true },
+        ],
+        result: "maybeSingle",
+      })) as ArtifactSubmissionRow | null) ?? null
+    );
+  } catch (error) {
     throw new Error(
-      `Failed to fetch latest artifact submission (artifact ${artifactId}, user ${userId}): ${error.message}`,
+      `Failed to fetch latest artifact submission (artifact ${artifactId}, user ${userId}): ${dbMessage(error)}`,
     );
   }
-
-  return (data as ArtifactSubmissionRow | null) ?? null;
 }
 
 async function findSubmissionByIdempotencyKey(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   artifactId: string,
   idempotencyKey: string,
 ): Promise<ArtifactSubmissionRow | null> {
-  const { data, error } = await supabase
-    .from("artifact_submissions")
-    .select(
-      "id, artifact_id, user_id, user_module_progress_id, attempt_no, version_label, is_latest, status, previous_submission_id, submitted_at, sealed_at",
-    )
-    .eq("user_id", userId)
-    .eq("artifact_id", artifactId)
-    .eq("idempotency_key", idempotencyKey)
-    .maybeSingle();
-
-  if (error) {
+  const qb = asQueryGateway(source);
+  try {
+    return (
+      ((await qb.read(artifactSubmissionReadPolicy, {
+        auth: { userId },
+        filters: [
+          { column: "artifact_id", op: "eq", value: artifactId },
+          { column: "idempotency_key", op: "eq", value: idempotencyKey },
+        ],
+        result: "maybeSingle",
+      })) as ArtifactSubmissionRow | null) ?? null
+    );
+  } catch (error) {
     throw new Error(
-      `Failed to fetch duplicate artifact submission (user ${userId}, artifact ${artifactId}): ${error.message}`,
+      `Failed to fetch duplicate artifact submission (user ${userId}, artifact ${artifactId}): ${dbMessage(error)}`,
     );
   }
-
-  return (data as ArtifactSubmissionRow | null) ?? null;
 }
 
-const SUBMISSION_ROW_SELECT =
-  "id, artifact_id, user_id, user_module_progress_id, attempt_no, version_label, is_latest, status, previous_submission_id, submitted_at, sealed_at";
-
 async function createSubmissionAttempt(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   artifactId: string,
   userId: string,
   moduleProgressId: string,
   idempotencyKey?: string,
 ): Promise<{ submission: ArtifactSubmissionRow; duplicate: boolean }> {
+  const qb = asQueryGateway(source);
+
   // P0-2: a retried request with the same idempotency key returns the original
   // row BEFORE any state changes. Checking first is required: demoting
   // is_latest on the retry path would corrupt the exactly-one-latest invariant
   // (the demoted row would be returned as the "duplicate", leaving no latest).
   if (idempotencyKey) {
     const existing = await findSubmissionByIdempotencyKey(
-      supabase,
+      source,
       userId,
       artifactId,
       idempotencyKey,
@@ -195,7 +202,7 @@ async function createSubmissionAttempt(
   // insert converges instead of failing. The uq_artifact_submissions_latest
   // partial unique index guarantees exactly one latest row either way.
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const latest = await getLatestSubmission(supabase, artifactId, userId);
+    const latest = await getLatestSubmission(source, artifactId, userId);
 
     // P0-3: accepted/sealed submissions are final; resubmission is rejected.
     if (latest && (latest.status === "accepted" || latest.sealed_at !== null)) {
@@ -207,14 +214,14 @@ async function createSubmissionAttempt(
     }
 
     if (latest) {
-      const { error } = await supabase
-        .from("artifact_submissions")
-        .update({ is_latest: false, updated_at: new Date().toISOString() })
-        .eq("id", latest.id);
-
-      if (error) {
+      try {
+        await qb.update(artifactSubmissionDemotePolicy, {
+          data: { is_latest: false, updated_at: new Date().toISOString() },
+          filters: [{ column: "id", op: "eq", value: latest.id }],
+        });
+      } catch (error) {
         throw new Error(
-          `Failed to update previous artifact submission (submission ${latest.id}, artifact ${artifactId}): ${error.message}`,
+          `Failed to update previous artifact submission (submission ${latest.id}, artifact ${artifactId}): ${dbMessage(error)}`,
         );
       }
     }
@@ -222,7 +229,6 @@ async function createSubmissionAttempt(
     const attemptNo = (latest?.attempt_no ?? 0) + 1;
     const insertPayload: Record<string, unknown> = {
       artifact_id: artifactId,
-      user_id: userId,
       user_module_progress_id: moduleProgressId,
       attempt_no: attemptNo,
       version_label: `v${attemptNo}`,
@@ -235,14 +241,23 @@ async function createSubmissionAttempt(
       insertPayload["idempotency_key"] = idempotencyKey;
     }
 
-    const { data, error } = await supabase
-      .from("artifact_submissions")
-      .insert(insertPayload)
-      .select(SUBMISSION_ROW_SELECT)
-      .single();
+    let data: ArtifactSubmissionRow | null = null;
+    let error: { code?: string; message?: string } | null = null;
+    try {
+      data = (await qb.insert(artifactSubmissionInsertPolicy, insertPayload, {
+        auth: { userId },
+        result: "single",
+      })) as ArtifactSubmissionRow | null;
+    } catch (insertError) {
+      if (insertError instanceof QueryGatewayDatabaseError) {
+        error = insertError.cause as { code?: string; message?: string };
+      } else {
+        throw insertError;
+      }
+    }
 
     if (!error && data) {
-      return { submission: data as ArtifactSubmissionRow, duplicate: false };
+      return { submission: data, duplicate: false };
     }
 
     if (error?.code === "23505") {
@@ -250,7 +265,7 @@ async function createSubmissionAttempt(
       // insert between the early lookup and this insert - return its row.
       if (idempotencyKey) {
         const existing = await findSubmissionByIdempotencyKey(
-          supabase,
+          source,
           userId,
           artifactId,
           idempotencyKey,
@@ -279,25 +294,25 @@ async function createSubmissionAttempt(
 }
 
 async function listArtifactQuestions(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   artifactId: string,
 ): Promise<ArtifactQuestionRow[]> {
-  const { data, error } = await supabase
-    .from("artifact_questions")
-    .select(
-      "id, artifact_id, response_type, allowed_file_types, max_file_size_mb, response_required",
-    )
-    .eq("artifact_id", artifactId)
-    .eq("is_active", true)
-    .order("question_order", { ascending: true });
-
-  if (error) {
+  const qb = asQueryGateway(source);
+  try {
+    return (
+      ((await qb.read(artifactQuestionsReadPolicy, {
+        filters: [
+          { column: "artifact_id", op: "eq", value: artifactId },
+          { column: "is_active", op: "eq", value: true },
+        ],
+        sort: [{ column: "question_order", ascending: true }],
+      })) as ArtifactQuestionRow[] | null) ?? []
+    );
+  } catch (error) {
     throw new Error(
-      `Failed to fetch artifact questions (artifact ${artifactId}): ${error.message}`,
+      `Failed to fetch artifact questions (artifact ${artifactId}): ${dbMessage(error)}`,
     );
   }
-
-  return (data as ArtifactQuestionRow[] | null) ?? [];
 }
 
 export interface ArtifactSubmissionResult {
@@ -317,20 +332,22 @@ export interface ArtifactSubmissionResult {
     feedback: string;
     improvements: string;
     calculated_xp: number;
+    event_type?: string;
   };
   files: Array<{ file_id: string; question_id: string; file_name: string }>;
 }
 
 export async function submitArtifactSubmission(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   env: Pick<LteEnv, "STORAGE_BUCKET" | "R2_PUBLIC_DOMAIN" | "OPENROUTER_API_KEY">,
   userId: string,
   input: CompleteSubmissionInput,
   filesByQuestionId: Map<string, File>,
   idempotencyKey?: string,
 ): Promise<ArtifactSubmissionResult> {
-  const moduleProgressId = await requireModuleProgress(supabase, input.artifact_id, userId);
-  const questions = await listArtifactQuestions(supabase, input.artifact_id);
+  const qb = asQueryGateway(source);
+  const moduleProgressId = await requireModuleProgress(source, input.artifact_id, userId);
+  const questions = await listArtifactQuestions(source, input.artifact_id);
   const questionById = new Map(questions.map((question) => [question.id, question]));
   const answerByQuestionId = new Map(input.answers.map((answer) => [answer.question_id, answer]));
 
@@ -400,7 +417,7 @@ export async function submitArtifactSubmission(
   }
 
   const created = await createSubmissionAttempt(
-    supabase,
+    source,
     input.artifact_id,
     userId,
     moduleProgressId,
@@ -409,7 +426,7 @@ export async function submitArtifactSubmission(
   if (created.duplicate) {
     // P0-2: the same request was already processed - return the original
     // submission instead of creating a new attempt.
-    return buildDuplicateSubmissionResponse(supabase, env, userId, created.submission);
+    return buildDuplicateSubmissionResponse(source, env, userId, created.submission);
   }
   const submission = created.submission;
   const now = new Date().toISOString();
@@ -437,12 +454,13 @@ export async function submitArtifactSubmission(
       }));
 
     if (answerRows.length > 0) {
-      const { error } = await supabase
-        .from("artifact_submission_answers")
-        .upsert(answerRows, { onConflict: "submission_id,question_id" });
-      if (error) {
+      try {
+        await qb.upsert(artifactSubmissionAnswersUpsertPolicy, answerRows);
+      } catch (error) {
         throw new Error(
-          `Failed to save artifact answers (submission ${submission.id}, artifact ${input.artifact_id}): ${error.message}`,
+          `Failed to save artifact answers (submission ${submission.id}, artifact ${input.artifact_id}): ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
         );
       }
     }
@@ -466,20 +484,20 @@ export async function submitArtifactSubmission(
       });
       uploadedObjectKeys.push(objectKey);
 
-      const { error } = await supabase.from("artifact_submission_files").insert({
-        id: fileId,
-        submission_id: submission.id,
-        question_id: questionId,
-        file_name: file.name,
-        file_url: createPublicFileUrl(env.R2_PUBLIC_DOMAIN, objectKey),
-        object_key: objectKey,
-        file_type: extension,
-        file_size_bytes: file.size,
-      });
-
-      if (error) {
+      try {
+        await qb.insert(artifactSubmissionFileInsertPolicy, {
+          id: fileId,
+          submission_id: submission.id,
+          question_id: questionId,
+          file_name: file.name,
+          file_url: createPublicFileUrl(env.R2_PUBLIC_DOMAIN, objectKey),
+          object_key: objectKey,
+          file_type: extension,
+          file_size_bytes: file.size,
+        });
+      } catch (error) {
         throw new Error(
-          `Failed to save uploaded artifact file (question ${questionId}, submission ${submission.id}): ${error.message}`,
+          `Failed to save uploaded artifact file (question ${questionId}, submission ${submission.id}): ${dbMessage(error)}`,
         );
       }
 
@@ -491,34 +509,36 @@ export async function submitArtifactSubmission(
     }
 
     // Fetch full artifact details for AI Evaluation
-    const { data: artifactMeta, error: artifactMetaError } = await supabase
-      .from("module_artifacts")
-      .select("artifact_type, passing_score, total_score")
-      .eq("id", input.artifact_id)
-      .single();
-
-    if (artifactMetaError) {
+    let artifactMeta: ArtifactMetaRow | null = null;
+    try {
+      artifactMeta = (await qb.read(artifactMetaReadPolicy, {
+        filters: [{ column: "id", op: "eq", value: input.artifact_id }],
+        result: "single",
+      })) as ArtifactMetaRow | null;
+    } catch (error) {
       throw new Error(
-        `Failed to fetch artifact meta (artifact ${input.artifact_id}): ${artifactMetaError.message}`,
+        `Failed to fetch artifact meta (artifact ${input.artifact_id}): ${dbMessage(error)}`,
       );
     }
 
-    const { data: questionDetails, error: questionDetailsError } = await supabase
-      .from("artifact_questions")
-      .select("id, title, description, response_type, instructions")
-      .eq("artifact_id", input.artifact_id)
-      .eq("is_active", true);
-
-    if (questionDetailsError) {
+    let questionDetails: ArtifactQuestionDetailRow[] | null = null;
+    try {
+      questionDetails = (await qb.read(artifactQuestionDetailsReadPolicy, {
+        filters: [
+          { column: "artifact_id", op: "eq", value: input.artifact_id },
+          { column: "is_active", op: "eq", value: true },
+        ],
+      })) as ArtifactQuestionDetailRow[] | null;
+    } catch (error) {
       throw new Error(
-        `Failed to fetch artifact questions (artifact ${input.artifact_id}): ${questionDetailsError.message}`,
+        `Failed to fetch artifact questions (artifact ${input.artifact_id}): ${dbMessage(error)}`,
       );
     }
 
     const evalInput = await buildArtifactEvaluationInput({
-      supabase,
-      artifactMeta: (artifactMeta as ArtifactMetaRow | null) ?? null,
-      questionDetails: (questionDetails as ArtifactQuestionDetailRow[] | null) ?? [],
+      querySource: source,
+      artifactMeta: artifactMeta ?? null,
+      questionDetails: questionDetails ?? [],
       input,
       filesByQuestionId,
       // Phase 3: reuse the bytes already read for signature validation instead
@@ -530,7 +550,7 @@ export async function submitArtifactSubmission(
     });
 
     evalResult = await processAndSaveArtifactEvaluation(
-      supabase,
+      source,
       env,
       submission.id,
       evalInput,
@@ -542,7 +562,7 @@ export async function submitArtifactSubmission(
     // answers, files and evaluation flows) so a retried idempotency key
     // re-runs the whole flow instead of returning a half-built "duplicate"
     // submission. Best-effort: the original error always wins.
-    await rollbackArtifactSubmission(supabase, env, submission.id, uploadedObjectKeys);
+    await rollbackArtifactSubmission(source, env, submission.id, uploadedObjectKeys);
     throw error;
   }
 
@@ -567,6 +587,7 @@ export async function submitArtifactSubmission(
       feedback: evalResult.feedback,
       improvements: evalResult.singleImprovementPoint,
       calculated_xp: evalResult.calculatedXp,
+      event_type: evalResult.eventType,
     },
     files: uploadedFiles,
   };
@@ -578,18 +599,16 @@ export async function submitArtifactSubmission(
  * uploaded R2 objects are deleted too. Never silent: every failure is logged.
  */
 async function rollbackArtifactSubmission(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   env: Pick<LteEnv, "STORAGE_BUCKET">,
   submissionId: string,
   uploadedObjectKeys: string[],
 ): Promise<void> {
   try {
-    const { error } = await supabase.from("artifact_submissions").delete().eq("id", submissionId);
-    if (error) {
-      throw new Error(
-        `Failed to delete partial artifact submission (${submissionId}): ${error.message}`,
-      );
-    }
+    const qb = asQueryGateway(source);
+    await qb.delete(artifactSubmissionDeletePolicy, {
+      filters: [{ column: "id", op: "eq", value: submissionId }],
+    });
   } catch (rollbackError) {
     apiLogger.error("Failed to roll back partial artifact submission.", rollbackError, {
       submissionId,
@@ -627,15 +646,12 @@ async function cleanupUploadedObjects(
  * submission, its files, and its current evaluation flow (if completed).
  */
 async function buildDuplicateSubmissionResponse(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   env: Pick<LteEnv, "STORAGE_BUCKET" | "R2_PUBLIC_DOMAIN" | "OPENROUTER_API_KEY">,
   userId: string,
   submission: ArtifactSubmissionRow,
 ): Promise<ArtifactSubmissionResult> {
-  const { data: flow, error: flowError } = await fetchCurrentEvaluationFlow(
-    supabase,
-    submission.id,
-  );
+  const { data: flow, error: flowError } = await fetchCurrentEvaluationFlow(source, submission.id);
 
   if (flowError) {
     throw new Error(
@@ -643,14 +659,15 @@ async function buildDuplicateSubmissionResponse(
     );
   }
 
-  const { data: fileRows, error: fileRowsError } = await supabase
-    .from("artifact_submission_files")
-    .select("id, question_id, file_name")
-    .eq("submission_id", submission.id);
-
-  if (fileRowsError) {
+  const qb = asQueryGateway(source);
+  let fileRows: Array<{ id: string; question_id: string; file_name: string }> | null = null;
+  try {
+    fileRows = (await qb.read(submissionFilesReadPolicy, {
+      filters: [{ column: "submission_id", op: "eq", value: submission.id }],
+    })) as Array<{ id: string; question_id: string; file_name: string }> | null;
+  } catch (error) {
     throw new Error(
-      `Failed to fetch submission files (submission ${submission.id}): ${fileRowsError.message}`,
+      `Failed to fetch submission files (submission ${submission.id}): ${dbMessage(error)}`,
     );
   }
 
@@ -661,7 +678,7 @@ async function buildDuplicateSubmissionResponse(
   // rows and R2 objects, then return the completed result.
   let currentFlow = flow;
   if (!currentFlow) {
-    currentFlow = await rerunEvaluationForDuplicateSubmission(supabase, env, userId, submission);
+    currentFlow = await rerunEvaluationForDuplicateSubmission(source, env, userId, submission);
     if (!currentFlow) {
       throw new Error(
         `Evaluation re-run completed without a flow row (submission ${submission.id}).`,
@@ -688,6 +705,7 @@ async function buildDuplicateSubmissionResponse(
       feedback: currentFlow.feedback ?? "",
       improvements: currentFlow.improvements ?? "",
       calculated_xp: (meta?.["calculated_xp"] as number) ?? 0,
+      event_type: (meta?.["event_type"] as string) ?? undefined,
     },
     files: (fileRows ?? []).map((fileRow) => ({
       file_id: fileRow.id,
@@ -702,28 +720,29 @@ async function buildDuplicateSubmissionResponse(
  * submission. Used by the duplicate-response path (before and after a
  * re-run) and by the status endpoint.
  */
-async function fetchCurrentEvaluationFlow(supabase: SupabaseClient, submissionId: string) {
-  return supabase
-    .from("artifact_evaluation_flows")
-    .select(
-      "id, submission_id, stage, status, score, decision, feedback, improvements, completed_at, metadata",
-    )
-    .eq("submission_id", submissionId)
-    .eq("is_current_stage", true)
-    .maybeSingle();
-}
-
-interface EvaluationFlowRow {
-  id: string;
-  submission_id: string;
-  stage: string;
-  status: string;
-  score: number | null;
-  decision: string | null;
-  feedback: string | null;
-  improvements: string | null;
-  completed_at: string | null;
-  metadata: unknown;
+async function fetchCurrentEvaluationFlow(
+  source: QueryGatewaySource,
+  submissionId: string,
+): Promise<{ data: EvaluationFlowRow | null; error: { message: string } | null }> {
+  const qb = asQueryGateway(source);
+  try {
+    const data = await qb.read(artifactEvaluationFlowReadPolicy, {
+      filters: [
+        { column: "submission_id", op: "eq", value: submissionId },
+        { column: "is_current_stage", op: "eq", value: true },
+      ],
+      result: "maybeSingle",
+    });
+    return { data: data as EvaluationFlowRow | null, error: null };
+  } catch (error) {
+    return {
+      data: null,
+      error:
+        error instanceof QueryGatewayDatabaseError
+          ? { message: error.message }
+          : { message: error instanceof Error ? error.message : "unknown error" },
+    };
+  }
 }
 
 /**
@@ -736,7 +755,7 @@ interface EvaluationFlowRow {
  * (submission_id, stage), so concurrent retries converge on one flow row.
  */
 async function rerunEvaluationForDuplicateSubmission(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   env: Pick<LteEnv, "STORAGE_BUCKET" | "R2_PUBLIC_DOMAIN" | "OPENROUTER_API_KEY">,
   userId: string,
   submission: ArtifactSubmissionRow,
@@ -746,45 +765,52 @@ async function rerunEvaluationForDuplicateSubmission(
     artifactId: submission.artifact_id,
   });
 
-  const { data: artifactMeta, error: artifactMetaError } = await supabase
-    .from("module_artifacts")
-    .select("artifact_type, passing_score, total_score")
-    .eq("id", submission.artifact_id)
-    .single();
-  if (artifactMetaError) {
+  const qb = asQueryGateway(source);
+  let artifactMeta: ArtifactMetaRow | null = null;
+  try {
+    artifactMeta = (await qb.read(artifactMetaReadPolicy, {
+      filters: [{ column: "id", op: "eq", value: submission.artifact_id }],
+      result: "single",
+    })) as ArtifactMetaRow | null;
+  } catch (error) {
     throw new Error(
-      `Failed to fetch artifact meta for re-run (artifact ${submission.artifact_id}): ${artifactMetaError.message}`,
+      `Failed to fetch artifact meta for re-run (artifact ${submission.artifact_id}): ${dbMessage(error)}`,
     );
   }
 
-  const { data: questionDetails, error: questionDetailsError } = await supabase
-    .from("artifact_questions")
-    .select("id, title, description, response_type, instructions")
-    .eq("artifact_id", submission.artifact_id)
-    .eq("is_active", true);
-  if (questionDetailsError) {
+  let questionDetails: ArtifactQuestionDetailRow[] | null = null;
+  try {
+    questionDetails = (await qb.read(artifactQuestionDetailsReadPolicy, {
+      filters: [
+        { column: "artifact_id", op: "eq", value: submission.artifact_id },
+        { column: "is_active", op: "eq", value: true },
+      ],
+    })) as ArtifactQuestionDetailRow[] | null;
+  } catch (error) {
     throw new Error(
-      `Failed to fetch artifact questions for re-run (artifact ${submission.artifact_id}): ${questionDetailsError.message}`,
+      `Failed to fetch artifact questions for re-run (artifact ${submission.artifact_id}): ${dbMessage(error)}`,
     );
   }
 
-  const { data: answerRows, error: answerError } = await supabase
-    .from("artifact_submission_answers")
-    .select("question_id, text_response, url_response")
-    .eq("submission_id", submission.id);
-  if (answerError) {
+  let answerRows: ArtifactSubmissionAnswerRow[] | null = null;
+  try {
+    answerRows = (await qb.read(artifactSubmissionAnswersReadPolicy, {
+      filters: [{ column: "submission_id", op: "eq", value: submission.id }],
+    })) as ArtifactSubmissionAnswerRow[] | null;
+  } catch (error) {
     throw new Error(
-      `Failed to fetch artifact answers for re-run (submission ${submission.id}): ${answerError.message}`,
+      `Failed to fetch artifact answers for re-run (submission ${submission.id}): ${dbMessage(error)}`,
     );
   }
 
-  const { data: fileRows, error: fileRowsError } = await supabase
-    .from("artifact_submission_files")
-    .select("question_id, file_name, object_key, file_type")
-    .eq("submission_id", submission.id);
-  if (fileRowsError) {
+  let fileRows: ArtifactSubmissionFileRow[] | null = null;
+  try {
+    fileRows = (await qb.read(submissionFilesReadPolicy, {
+      filters: [{ column: "submission_id", op: "eq", value: submission.id }],
+    })) as ArtifactSubmissionFileRow[] | null;
+  } catch (error) {
     throw new Error(
-      `Failed to fetch artifact files for re-run (submission ${submission.id}): ${fileRowsError.message}`,
+      `Failed to fetch artifact files for re-run (submission ${submission.id}): ${dbMessage(error)}`,
     );
   }
 
@@ -803,9 +829,9 @@ async function rerunEvaluationForDuplicateSubmission(
   }
 
   const evalInput = await buildArtifactEvaluationInput({
-    supabase,
-    artifactMeta: (artifactMeta as ArtifactMetaRow | null) ?? null,
-    questionDetails: (questionDetails as ArtifactQuestionDetailRow[] | null) ?? [],
+    querySource: source,
+    artifactMeta: artifactMeta ?? null,
+    questionDetails: questionDetails ?? [],
     input: {
       artifact_id: submission.artifact_id,
       answers: (answerRows ?? []).map((answer) => ({
@@ -819,7 +845,7 @@ async function rerunEvaluationForDuplicateSubmission(
   });
 
   await processAndSaveArtifactEvaluation(
-    supabase,
+    source,
     env,
     submission.id,
     evalInput,
@@ -827,10 +853,7 @@ async function rerunEvaluationForDuplicateSubmission(
     submission.user_module_progress_id,
   );
 
-  const { data: flow, error: flowError } = await fetchCurrentEvaluationFlow(
-    supabase,
-    submission.id,
-  );
+  const { data: flow, error: flowError } = await fetchCurrentEvaluationFlow(source, submission.id);
   if (flowError) {
     throw new Error(
       `Failed to fetch evaluation flow after re-run (submission ${submission.id}): ${flowError.message}`,
@@ -840,7 +863,7 @@ async function rerunEvaluationForDuplicateSubmission(
 }
 
 export async function buildArtifactEvaluationInput(params: {
-  supabase?: SupabaseClient;
+  querySource?: QueryGatewaySource;
   artifactMeta: ArtifactMetaRow | null;
   questionDetails: ArtifactQuestionDetailRow[];
   input: CompleteSubmissionInput;
@@ -867,14 +890,14 @@ export async function buildArtifactEvaluationInput(params: {
   }
 
   let evaluationContext = params.evaluationContext;
-  if (!evaluationContext && params.supabase) {
-    evaluationContext = await fetchEvaluationContext(params.supabase, params.input.artifact_id);
+  if (!evaluationContext && params.querySource) {
+    evaluationContext = await fetchEvaluationContext(params.querySource, params.input.artifact_id);
   }
 
   let templateContentMap = params.templateContentByQuestionId;
-  if (!templateContentMap && params.supabase) {
+  if (!templateContentMap && params.querySource) {
     templateContentMap = await fetchArtifactTemplateContent(
-      params.supabase,
+      params.querySource,
       params.input.artifact_id,
     );
   }
@@ -913,20 +936,21 @@ export async function buildArtifactEvaluationInput(params: {
 }
 
 export async function getSubmissionEvaluationFlow(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   submissionId: string,
   userId: string,
 ) {
-  const { data: submission, error: submissionError } = await supabase
-    .from("artifact_submissions")
-    .select("id")
-    .eq("id", submissionId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (submissionError) {
+  const qb = asQueryGateway(source);
+  let submission: { id: string } | null = null;
+  try {
+    submission = (await qb.read(artifactSubmissionReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "id", op: "eq", value: submissionId }],
+      result: "maybeSingle",
+    })) as { id: string } | null;
+  } catch (error) {
     throw new Error(
-      `Failed to fetch submission evaluation flow (submission ${submissionId}): ${submissionError.message}`,
+      `Failed to fetch submission evaluation flow (submission ${submissionId}): ${dbMessage(error)}`,
     );
   }
 
@@ -934,14 +958,7 @@ export async function getSubmissionEvaluationFlow(
     throw new ArtifactSubmissionError("Submission not found.", 404, "SUBMISSION_NOT_FOUND");
   }
 
-  const { data: flow, error } = await supabase
-    .from("artifact_evaluation_flows")
-    .select(
-      "id, submission_id, stage, status, score, decision, feedback, improvements, completed_at, metadata",
-    )
-    .eq("submission_id", submissionId)
-    .eq("is_current_stage", true)
-    .maybeSingle();
+  const { data: flow, error } = await fetchCurrentEvaluationFlow(qb, submissionId);
 
   if (error) throw new Error(`Failed to fetch evaluation flow: ${error.message}`);
   return flow;

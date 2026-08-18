@@ -128,11 +128,53 @@ export const XpRewardModal: React.FC<XpRewardModalProps> = ({
                   excited to support your continued learning journey!
                 </>
               )}
+              {stageName === "profile_completed" && (
+                <>
+                  Fantastic job! You completed your profile and earned a profile completion bonus.
+                  Let's keep building your skill identity!
+                </>
+              )}
+              {stageName === "readiness_milestone_25" && (
+                <>
+                  Amazing! You crossed the 25% readiness milestone for this capability level. Keep
+                  learning to level up further!
+                </>
+              )}
+              {stageName === "readiness_milestone_50" && (
+                <>
+                  Halfway there! You achieved the 50% readiness milestone. Excellent work in
+                  demonstrating your capability progress!
+                </>
+              )}
+              {stageName === "readiness_milestone_75" && (
+                <>
+                  Outstanding! You reached the 75% readiness milestone. You are well on your way to
+                  mastering this capability!
+                </>
+              )}
+              {stageName === "readiness_milestone_100" && (
+                <>
+                  Incredible! You completed the 100% readiness milestone. You have fully
+                  demonstrated all required capability metrics!
+                </>
+              )}
+              {stageName === "promotional_xp" && (
+                <>
+                  Congratulations! You received a promotional XP reward. Keep up the active learning
+                  and participation!
+                </>
+              )}
               {![
                 "daily_login",
                 "streak_7_day",
                 "consistency_30_day",
                 "legacy_consistency_bonus",
+                "profile_completed",
+                "readiness_milestone_25",
+                "readiness_milestone_50",
+                "readiness_milestone_75",
+                "readiness_milestone_100",
+                "promotional_xp",
               ].includes(stageName) && (
                 <>
                   Awesome job! You earned engagement XP for your login consistency, streak
@@ -154,6 +196,50 @@ export const XpRewardModal: React.FC<XpRewardModalProps> = ({
                 great work to unlock your next levels!
               </>
             )
+          ) : stageName === "practice_artifact_accepted" ? (
+            <>
+              Excellent work! Your practice artifact submission has been evaluated and accepted.
+              Your evidence has been logged to your capability profile.
+            </>
+          ) : stageName === "practice_artifact_failed" ? (
+            <>
+              Thank you for submitting your practice artifact! Your attempt has been evaluated and
+              logged. Review the feedback and try again to improve your score.
+            </>
+          ) : [
+              "final_artifact_accepted_1",
+              "final_artifact_accepted_2",
+              "final_artifact_accepted_3",
+            ].includes(stageName) ? (
+            <>
+              Outstanding! Your final artifact submission was accepted. This readiness proof has
+              been successfully logged to your capability profile.
+            </>
+          ) : stageName === "final_artifact_failed" ? (
+            <>
+              Thank you for submitting your final artifact. Your attempt has been evaluated. Review
+              the feedback, iterate, and submit again to prove your mastery.
+            </>
+          ) : stageName === "manual_eval_accepted" ? (
+            <>
+              Great news! Your manual evaluation has been completed and accepted. Your readiness
+              proof has been updated.
+            </>
+          ) : stageName === "fallback_eval_failed" ? (
+            <>
+              Your fallback evaluation is complete. Review the evaluator's feedback to adjust and
+              resubmit your final artifact.
+            </>
+          ) : stageName === "fast_track_capability" ? (
+            <>
+              Incredible! You fast-tracked this capability by successfully passing the initial
+              assessment. Your readiness points have been awarded!
+            </>
+          ) : stageName === "capstone_completed" ? (
+            <>
+              Congratulations on completing your Capstone project! Your evaluation has been
+              accepted, marking major progress towards role mastery.
+            </>
           ) : (
             <>
               Excellent work! You completed the{" "}

@@ -17,7 +17,22 @@ describe("StageStepperBar Widget", () => {
     render(<StageStepperBar activeStage="explore" />);
 
     const exploreLabel = screen.getByText("Explore");
+    const exploreButton = screen.getByRole("button", { name: /explore/i });
+    const exploreIcon = exploreButton.querySelector("svg");
+
     expect(exploreLabel).toHaveClass("text-brand-600");
+    expect(exploreIcon).toHaveClass("text-brand-600");
+  });
+
+  it("keeps a completed active stage green", () => {
+    render(<StageStepperBar activeStage="engage" completedStages={["engage"]} />);
+
+    const engageButton = screen.getByRole("button", { name: /engage/i });
+    const engageLabel = screen.getByText("Engage");
+
+    expect(engageButton).toHaveClass("border-success-500");
+    expect(engageLabel).toHaveClass("text-success-600");
+    expect(engageLabel).not.toHaveClass("text-brand-600");
   });
 
   it("triggers onStageSelect when a stage step is clicked", () => {

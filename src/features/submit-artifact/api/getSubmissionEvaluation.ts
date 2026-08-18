@@ -27,8 +27,14 @@ export interface SubmissionEvaluationResponse {
 
 export async function getSubmissionEvaluation(
   submissionId: string,
+  signal?: AbortSignal,
 ): Promise<SubmissionEvaluationResponse> {
-  return apiFetch<SubmissionEvaluationResponse>(
-    `/api/v1/artifacts/submissions/${encodeURIComponent(submissionId)}/evaluation`,
-  );
+  return signal
+    ? apiFetch<SubmissionEvaluationResponse>(
+        `/api/v1/artifacts/submissions/${encodeURIComponent(submissionId)}/evaluation`,
+        { signal },
+      )
+    : apiFetch<SubmissionEvaluationResponse>(
+        `/api/v1/artifacts/submissions/${encodeURIComponent(submissionId)}/evaluation`,
+      );
 }

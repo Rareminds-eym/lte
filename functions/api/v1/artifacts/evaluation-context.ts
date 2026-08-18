@@ -1,71 +1,143 @@
 import type { ArtifactEvaluationInput } from "@functions/lib/artifact-evaluator";
 import { extractArtifactContent } from "@functions/lib/artifact-evaluator";
+import {
+  asQueryGateway,
+  QueryGatewayDatabaseError,
+  type QueryGatewaySource,
+} from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
-import type { SupabaseClient } from "@supabase/supabase-js";
+
+const evaluationArtifactReadPolicy = {
+  table: "module_artifacts",
+  operation: "read",
+  columns: ["id", "modules_content_id"],
+  filters: ["id"],
+} as const;
+
+const evaluationModuleContentReadPolicy = {
+  table: "modules_content",
+  operation: "read",
+  columns: ["id", "module_id", "stage_name", "stage_order", "stage_description"],
+  filters: ["id"],
+} as const;
+
+const evaluationModuleReadPolicy = {
+  table: "modules",
+  operation: "read",
+  columns: [
+    "id",
+    "level_id",
+    "module_no",
+    "title",
+    "module_problem_statement",
+    "industry_challenge",
+    "pressure_points",
+    "what_youll_learn",
+  ],
+  filters: ["id"],
+} as const;
+
+const evaluationLevelReadPolicy = {
+  table: "levels",
+  operation: "read",
+  columns: ["id", "capability_id", "title", "problem_statement", "observable_behavior"],
+  filters: ["id"],
+} as const;
+
+const evaluationCapabilityReadPolicy = {
+  table: "capabilities",
+  operation: "read",
+  columns: ["code", "name"],
+  filters: ["id"],
+} as const;
+
+const artifactTemplatesReadPolicy = {
+  table: "artifact_templates",
+  operation: "read",
+  columns: ["id", "question_id", "file_name", "file_url", "file_type", "version"],
+  filters: ["artifact_id"],
+  sorts: ["version"],
+  maxPageSize: 100,
+} as const;
+
+interface EvaluationLevelRow {
+  id: string;
+  capability_id?: string | null;
+  title?: string | null;
+  problem_statement?: unknown;
+  observable_behavior?: unknown;
+}
+
+interface EvaluationCapabilityRow {
+  code?: string | null;
+  name?: string | null;
+}
+
+interface ArtifactTemplateRow {
+  id: string;
+  question_id?: string | null;
+  file_name: string;
+  file_url?: string | null;
+  file_type?: string | null;
+  version?: number | null;
+}
 
 export async function fetchEvaluationContext(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   artifactId: string,
 ): Promise<ArtifactEvaluationInput["evaluationContext"] | undefined> {
   try {
-    const { data: art, error: artError } = await supabase
-      .from("module_artifacts")
-      .select("id, modules_content_id")
-      .eq("id", artifactId)
-      .single();
+    const qb = asQueryGateway(source);
+    const art = (await qb.read(evaluationArtifactReadPolicy, {
+      filters: [{ column: "id", op: "eq", value: artifactId }],
+      result: "single",
+    })) as { id: string; modules_content_id?: string | null } | null;
 
-    if (artError || !art?.modules_content_id) {
-      if (artError) {
-        apiLogger.warn("Failed to fetch module_artifacts for evaluation context", {
-          artifactId,
-          error: artError,
-        });
-      }
+    if (!art?.modules_content_id) {
       return undefined;
     }
 
-    const { data: mc, error: mcError } = await supabase
-      .from("modules_content")
-      .select("id, module_id, stage_name, stage_order, stage_description")
-      .eq("id", art.modules_content_id)
-      .single();
+    const mc = (await qb.read(evaluationModuleContentReadPolicy, {
+      filters: [{ column: "id", op: "eq", value: art.modules_content_id }],
+      result: "single",
+    })) as {
+      id: string;
+      module_id?: string | null;
+      stage_name?: string | null;
+      stage_order?: number | null;
+      stage_description?: string | null;
+    } | null;
 
-    if (mcError || !mc?.module_id) {
-      if (mcError) {
-        apiLogger.warn("Failed to fetch modules_content for evaluation context", {
-          artifactId,
-          modulesContentId: art.modules_content_id,
-          error: mcError,
-        });
-      }
+    if (!mc?.module_id) {
       return undefined;
     }
 
-    const { data: mod, error: modError } = await supabase
-      .from("modules")
-      .select(
-        "id, level_id, module_no, title, module_problem_statement, industry_challenge, pressure_points, what_youll_learn",
-      )
-      .eq("id", mc.module_id)
-      .single();
+    const mod = (await qb.read(evaluationModuleReadPolicy, {
+      filters: [{ column: "id", op: "eq", value: mc.module_id }],
+      result: "single",
+    })) as {
+      id: string;
+      level_id?: string | null;
+      module_no?: number | null;
+      title?: string | null;
+      module_problem_statement?: string | null;
+      industry_challenge?: string | null;
+      pressure_points?: unknown;
+      what_youll_learn?: unknown;
+    } | null;
 
-    if (modError || !mod?.level_id) {
-      if (modError) {
-        apiLogger.warn("Failed to fetch module for evaluation context", {
-          artifactId,
-          moduleId: mc.module_id,
-          error: modError,
-        });
-      }
+    if (!mod?.level_id) {
       return undefined;
     }
 
-    const { data: lvl, error: lvlError } = await supabase
-      .from("levels")
-      .select("id, capability_id, title, problem_statement, observable_behavior")
-      .eq("id", mod.level_id)
-      .maybeSingle();
-    if (lvlError) {
+    let lvl: EvaluationLevelRow | null = null;
+    try {
+      const levelRow = await qb.read(evaluationLevelReadPolicy, {
+        filters: [{ column: "id", op: "eq", value: mod.level_id }],
+        result: "maybeSingle",
+      });
+      lvl = levelRow as EvaluationLevelRow | null;
+    } catch (lvlError) {
       apiLogger.warn("Failed to fetch level for evaluation context", {
         artifactId,
         levelId: mod.level_id,
@@ -73,13 +145,12 @@ export async function fetchEvaluationContext(
       });
     }
 
-    const { data: cap } = lvl?.capability_id
-      ? await supabase
-          .from("capabilities")
-          .select("code, name")
-          .eq("id", lvl.capability_id)
-          .maybeSingle()
-      : { data: null };
+    const cap = lvl?.capability_id
+      ? ((await qb.read(evaluationCapabilityReadPolicy, {
+          filters: [{ column: "id", op: "eq", value: lvl.capability_id }],
+          result: "maybeSingle",
+        })) as EvaluationCapabilityRow | null)
+      : null;
 
     let levelProblemStatement: { title: string; description: string } | undefined;
     if (lvl?.problem_statement) {
@@ -122,24 +193,28 @@ export async function fetchEvaluationContext(
       stageDescription: mc.stage_description ?? undefined,
     };
   } catch (error) {
+    if (error instanceof QueryGatewayDatabaseError) {
+      apiLogger.warn("Failed to fetch evaluation context chain", { artifactId, error });
+      return undefined;
+    }
     apiLogger.warn("Failed to fetch evaluation context chain", { artifactId, error });
     return undefined;
   }
 }
 
 export async function fetchArtifactTemplateContent(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   artifactId: string,
 ): Promise<Map<string, string>> {
   const templateMap = new Map<string, string>();
   try {
-    const { data: templates, error } = await supabase
-      .from("artifact_templates")
-      .select("id, question_id, file_name, file_url, file_type, version")
-      .eq("artifact_id", artifactId)
-      .order("version", { ascending: false });
+    const qb = asQueryGateway(source);
+    const templates = (await qb.read(artifactTemplatesReadPolicy, {
+      filters: [{ column: "artifact_id", op: "eq", value: artifactId }],
+      sort: [{ column: "version", ascending: false }],
+    })) as ArtifactTemplateRow[] | null;
 
-    if (error || !templates || templates.length === 0) return templateMap;
+    if (!templates || templates.length === 0) return templateMap;
 
     for (const template of templates) {
       if (!template.file_url?.startsWith("https")) continue;

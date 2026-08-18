@@ -42,12 +42,12 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`w-full bg-white border-b border-line-subtle px-3 sm:px-4 md:px-6 py-2.5 md:py-0 md:h-16 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 md:gap-4 font-sans select-none shrink-0 ${className}`}
+      className={`w-full bg-white border-b border-line-subtle px-3 sm:px-4 lg:px-6 py-2.5 lg:py-0 lg:h-16 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 lg:gap-4 font-sans select-none shrink-0 ${className}`}
     >
       {/* Top Row on Mobile / Left & Center on Desktop */}
       <div className="flex items-center justify-between gap-2 sm:gap-3 flex-1 min-w-0">
         {/* Mobile Hamburger & Page Brand */}
-        <div className="flex items-center gap-2 shrink-0 md:hidden">
+        <div className="flex items-center gap-2 shrink-0 lg:hidden">
           <button
             type="button"
             onClick={onToggleMobileDrawer}
@@ -60,7 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Desktop Search Bar */}
-        <div className="hidden md:flex flex-1 justify-center max-w-xl mx-auto">
+        <div className="hidden lg:flex flex-1 justify-center max-w-xl mx-auto">
           <div className="relative flex items-center w-full bg-white/80 rounded-full px-4 py-2.5 border border-line-default shadow-2xs focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition-all">
             <div className="pointer-events-none text-content-secondary mr-2.5 shrink-0">
               <SearchIcon size={16} />
@@ -102,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Row 2 on Mobile: Full-Width Search Input */}
-      <div className="flex md:hidden w-full pt-1 pb-0.5">
+      <div className="flex lg:hidden w-full pt-1 pb-0.5">
         <div className="relative flex items-center w-full bg-surface-secondary rounded-full px-3.5 py-2.5 border border-line-default focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition-all shadow-2xs">
           <div className="pointer-events-none text-content-secondary mr-2.5 shrink-0">
             <SearchIcon size={16} />

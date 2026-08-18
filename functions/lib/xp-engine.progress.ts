@@ -1,19 +1,133 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { asQueryGateway, type QueryGatewaySource } from "@functions/lib/query-gateway";
 import { apiLogger } from "../shared/logger";
 import { awardXp } from "./xp-engine.core";
 import { evaluateMilestones } from "./xp-engine.engagement";
+
+const readinessLevelProgressReadPolicy = {
+  table: "user_capability_level_progress",
+  operation: "read",
+  columns: ["id", "level_id", "completion_percentage", "status", "started_at"],
+  filters: ["user_id", "learning_path_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const readinessModuleProgressReadPolicy = {
+  table: "user_module_progress",
+  operation: "read",
+  columns: ["id"],
+  filters: ["user_id", "user_capability_level_progress_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const readinessStageProgressReadPolicy = {
+  table: "user_stage_progress",
+  operation: "read",
+  columns: ["id"],
+  filters: ["user_id", "user_module_progress_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const modulesByLevelReadPolicy = {
+  table: "modules",
+  operation: "read",
+  columns: ["id"],
+  filters: ["level_id", "is_active"],
+} as const;
+
+const levelsXpReadPolicy = {
+  table: "levels",
+  operation: "read",
+  columns: ["total_xp"],
+  filters: ["id"],
+} as const;
+
+const moduleContentByModuleReadPolicy = {
+  table: "modules_content",
+  operation: "read",
+  columns: ["id"],
+  filters: ["module_id", "is_active"],
+} as const;
+
+const finalArtifactsByContentReadPolicy = {
+  table: "module_artifacts",
+  operation: "read",
+  columns: ["id"],
+  filters: ["modules_content_id", "artifact_type", "is_active"],
+} as const;
+
+const readinessArtifactSubmissionsReadPolicy = {
+  table: "artifact_submissions",
+  operation: "read",
+  select: "id, status, artifact_id, module_artifacts ( id, artifact_type )",
+  filters: ["user_id", "user_module_progress_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const readinessEvaluationFlowsReadPolicy = {
+  table: "artifact_evaluation_flows",
+  operation: "read",
+  columns: ["score"],
+  filters: ["submission_id", "is_current_stage"],
+} as const;
+
+const readinessEvidenceXpReadPolicy = {
+  table: "xp_events",
+  operation: "read",
+  columns: ["xp_amount", "source_type", "source_id"],
+  filters: ["user_id", "xp_category"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const readinessProfileReadPolicy = {
+  table: "user_profiles",
+  operation: "read",
+  columns: ["bio", "job_title", "skills"],
+  filters: ["user_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const readinessLearningPathReadPolicy = {
+  table: "learning_paths",
+  operation: "read",
+  columns: ["role_id", "role_readiness_percentage", "status", "started_at", "completed_at"],
+  filters: ["user_id", "id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const readinessLearningPathUpdatePolicy = {
+  table: "learning_paths",
+  operation: "update",
+  updateColumns: [
+    "role_readiness_percentage",
+    "status",
+    "started_at",
+    "completed_at",
+    "updated_at",
+  ],
+  filters: ["user_id", "id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  requireFilter: true,
+} as const;
+
+const latestLearningPathsReadPolicy = {
+  table: "learning_paths",
+  operation: "read",
+  columns: ["id"],
+  filters: ["user_id", "is_latest"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
 
 /**
  * Completes a course sequence. Maps source_id to capability_level_progress.id
  */
 export async function completeCourseOnTime(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   levelProgressId: string,
   courseId: string,
 ): Promise<{ success: boolean; xpAwarded: number }> {
   const xpRes = await awardXp(
-    supabase,
+    source,
     userId,
     "course_completed_on_time",
     "user_capability_level_progress",
@@ -21,7 +135,7 @@ export async function completeCourseOnTime(
     { course_id: courseId },
   );
   // Trigger readiness recalculation on event
-  await triggerReadinessRecalculation(supabase, userId);
+  await triggerReadinessRecalculation(source, userId);
   return { success: true, xpAwarded: xpRes.xpAwarded };
 }
 
@@ -29,7 +143,7 @@ export async function completeCourseOnTime(
  * Completes capability milestones. Maps source_id to user_capabilities.id
  */
 export async function completeCapability(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   userCapabilityId: string,
   capabilityId: string,
@@ -39,7 +153,7 @@ export async function completeCapability(
   const eventType = isCapstone ? "capstone_completed" : "fast_track_capability";
 
   const xpRes = await awardXp(
-    supabase,
+    source,
     userId,
     eventType,
     "user_capabilities",
@@ -48,7 +162,7 @@ export async function completeCapability(
     configuredXpAmount,
   );
   // Trigger readiness recalculation on event
-  await triggerReadinessRecalculation(supabase, userId);
+  await triggerReadinessRecalculation(source, userId);
   return { success: true, xpAwarded: xpRes.xpAwarded };
 }
 
@@ -59,7 +173,7 @@ const activeCalculations = new Map<string, Promise<{ readinessScore: number; ban
  * Coalescing wrapper for calculateReadinessInternal to enforce transactional event coalescing.
  */
 export function calculateReadiness(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   learningPathId: string,
 ): Promise<{ readinessScore: number; band: string }> {
@@ -71,7 +185,7 @@ export function calculateReadiness(
 
   const promise = (async () => {
     try {
-      return await calculateReadinessInternal(supabase, userId, learningPathId);
+      return await calculateReadinessInternal(source, userId, learningPathId);
     } finally {
       activeCalculations.delete(cacheKey);
     }
@@ -86,17 +200,22 @@ export function calculateReadiness(
  * After computing the score, automatically evaluates and awards readiness milestones.
  */
 async function calculateReadinessInternal(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   learningPathId: string,
 ): Promise<{ readinessScore: number; band: string }> {
+  const qb = asQueryGateway(source);
   // Query level progress to identify levels associated with this learning path
-  const { data: levelProgressRows, error: levelProgressErr } = await supabase
-    .from("user_capability_level_progress")
-    .select("id, level_id, completion_percentage, status, started_at")
-    .eq("learning_path_id", learningPathId);
-
-  if (levelProgressErr) throw levelProgressErr;
+  const levelProgressRows = (await qb.read(readinessLevelProgressReadPolicy, {
+    auth: { userId },
+    filters: [{ column: "learning_path_id", op: "eq", value: learningPathId }],
+  })) as Array<{
+    id: string;
+    level_id: string;
+    completion_percentage: number | null;
+    status: string | null;
+    started_at: string | null;
+  }> | null;
 
   const levelProgressIds = levelProgressRows?.map((r) => r.id) || [];
   const levelIds = levelProgressRows?.map((r) => r.level_id) || [];
@@ -106,11 +225,10 @@ async function calculateReadinessInternal(
 
   let userModuleProgressIds: string[] = [];
   if (levelProgressIds.length > 0) {
-    const { data: moduleProgressList, error: modulesErr } = await supabase
-      .from("user_module_progress")
-      .select("id")
-      .in("user_capability_level_progress_id", levelProgressIds);
-    if (modulesErr) throw modulesErr;
+    const moduleProgressList = (await qb.read(readinessModuleProgressReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "user_capability_level_progress_id", op: "in", value: levelProgressIds }],
+    })) as Array<{ id: string }> | null;
     if (moduleProgressList) {
       userModuleProgressIds = moduleProgressList.map((m) => m.id);
     }
@@ -118,11 +236,10 @@ async function calculateReadinessInternal(
 
   let userStageProgressIds: string[] = [];
   if (userModuleProgressIds.length > 0) {
-    const { data: stageProgressList, error: stageProgressErr } = await supabase
-      .from("user_stage_progress")
-      .select("id")
-      .in("user_module_progress_id", userModuleProgressIds);
-    if (stageProgressErr) throw stageProgressErr;
+    const stageProgressList = (await qb.read(readinessStageProgressReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "user_module_progress_id", op: "in", value: userModuleProgressIds }],
+    })) as Array<{ id: string }> | null;
     if (stageProgressList) {
       userStageProgressIds = stageProgressList.map((s) => s.id);
     }
@@ -130,47 +247,41 @@ async function calculateReadinessInternal(
 
   if (levelIds.length > 0) {
     // 1. Fetch required modules for these levels
-    const { data: modules, error: modulesLookupErr } = await supabase
-      .from("modules")
-      .select("id")
-      .in("level_id", levelIds)
-      .eq("is_active", true);
-
-    if (modulesLookupErr) throw modulesLookupErr;
+    const modules = (await qb.read(modulesByLevelReadPolicy, {
+      filters: [
+        { column: "level_id", op: "in", value: levelIds },
+        { column: "is_active", op: "eq", value: true },
+      ],
+    })) as Array<{ id: string }> | null;
     if (modules) {
       requiredModuleIds = modules.map((m) => m.id);
     }
 
     // 2. Fetch expected evidence XP from the levels
-    const { data: levelsData, error: levelsErr } = await supabase
-      .from("levels")
-      .select("total_xp")
-      .in("id", levelIds);
-
-    if (levelsErr) throw levelsErr;
+    const levelsData = (await qb.read(levelsXpReadPolicy, {
+      filters: [{ column: "id", op: "in", value: levelIds }],
+    })) as Array<{ total_xp: number | null }> | null;
     if (levelsData) {
       expectedEvidenceXp = levelsData.reduce((sum, lvl) => sum + (lvl.total_xp || 0), 0);
     }
 
     // 3. Fetch required mandatory artifacts for these levels
     if (requiredModuleIds.length > 0) {
-      const { data: stages, error: stagesErr } = await supabase
-        .from("modules_content")
-        .select("id")
-        .in("module_id", requiredModuleIds)
-        .eq("is_active", true);
-
-      if (stagesErr) throw stagesErr;
+      const stages = (await qb.read(moduleContentByModuleReadPolicy, {
+        filters: [
+          { column: "module_id", op: "in", value: requiredModuleIds },
+          { column: "is_active", op: "eq", value: true },
+        ],
+      })) as Array<{ id: string }> | null;
       const stageIds = stages?.map((s) => s.id) || [];
       if (stageIds.length > 0) {
-        const { data: artifacts, error: artifactsErr } = await supabase
-          .from("module_artifacts")
-          .select("id")
-          .in("modules_content_id", stageIds)
-          .eq("artifact_type", "final")
-          .eq("is_active", true);
-
-        if (artifactsErr) throw artifactsErr;
+        const artifacts = (await qb.read(finalArtifactsByContentReadPolicy, {
+          filters: [
+            { column: "modules_content_id", op: "in", value: stageIds },
+            { column: "artifact_type", op: "eq", value: "final" },
+            { column: "is_active", op: "eq", value: true },
+          ],
+        })) as Array<{ id: string }> | null;
         if (artifacts) {
           requiredArtifactIds = artifacts.map((a) => a.id);
         }
@@ -204,14 +315,10 @@ async function calculateReadinessInternal(
 
   let artifactSubmissions: ArtifactSubmissionWithArtifact[] = [];
   if (userModuleProgressIds.length > 0) {
-    const { data, error: subErr } = await supabase
-      .from("artifact_submissions")
-      .select("id, status, artifact_id, module_artifacts ( id, artifact_type )")
-      .eq("user_id", userId)
-      .in("user_module_progress_id", userModuleProgressIds);
-
-    if (subErr) throw subErr;
-    artifactSubmissions = (data || []) as ArtifactSubmissionWithArtifact[];
+    artifactSubmissions = ((await qb.read(readinessArtifactSubmissionsReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "user_module_progress_id", op: "in", value: userModuleProgressIds }],
+    })) || []) as ArtifactSubmissionWithArtifact[];
   }
 
   const finalSubmissions = (artifactSubmissions || []).filter((s) => {
@@ -245,13 +352,12 @@ async function calculateReadinessInternal(
   const submissionIds = acceptedFinalSubmissions.map((s) => s.id);
   let aiAverageScore = 0;
   if (submissionIds.length > 0) {
-    const { data: flows, error: flowsErr } = await supabase
-      .from("artifact_evaluation_flows")
-      .select("score")
-      .in("submission_id", submissionIds)
-      .eq("is_current_stage", true);
-
-    if (flowsErr) throw flowsErr;
+    const flows = ((await qb.read(readinessEvaluationFlowsReadPolicy, {
+      filters: [
+        { column: "submission_id", op: "in", value: submissionIds },
+        { column: "is_current_stage", op: "eq", value: true },
+      ],
+    })) || []) as Array<{ score: number | null }>;
     const scores = flows.map((f) => f.score).filter((s) => s !== null) as number[];
     if (scores.length > 0) {
       aiAverageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
@@ -259,13 +365,10 @@ async function calculateReadinessInternal(
   }
 
   // 4. XP Achievement (10%)
-  const { data: xpData, error: xpErr } = await supabase
-    .from("xp_events")
-    .select("xp_amount, source_type, source_id")
-    .eq("user_id", userId)
-    .eq("xp_category", "evidence");
-
-  if (xpErr) throw xpErr;
+  const xpData = ((await qb.read(readinessEvidenceXpReadPolicy, {
+    auth: { userId },
+    filters: [{ column: "xp_category", op: "eq", value: "evidence" }],
+  })) || []) as Array<{ xp_amount: number; source_type: string; source_id: string }>;
 
   const evidenceXpEarned = (xpData || [])
     .filter((item) => {
@@ -282,11 +385,10 @@ async function calculateReadinessInternal(
     expectedEvidenceXp > 0 ? Math.min((evidenceXpEarned / expectedEvidenceXp) * 100, 100) : 0;
 
   // 5. Profile Completion (10%)
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("bio, job_title, skills")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const profile = (await qb.read(readinessProfileReadPolicy, {
+    auth: { userId },
+    result: "maybeSingle",
+  })) as { bio?: string | null; job_title?: string | null; skills?: unknown[] | null } | null;
 
   let completedFields = 0;
   const totalFields = 3;
@@ -318,11 +420,17 @@ async function calculateReadinessInternal(
   else if (readinessScore >= 40) band = "Learning in Progress";
 
   // Update learning path role readiness percentage, status, started_at, completed_at, and updated_at
-  const { data: learningPath } = await supabase
-    .from("learning_paths")
-    .select("role_id, role_readiness_percentage, status, started_at, completed_at")
-    .eq("id", learningPathId)
-    .maybeSingle();
+  const learningPath = (await qb.read(readinessLearningPathReadPolicy, {
+    auth: { userId },
+    filters: [{ column: "id", op: "eq", value: learningPathId }],
+    result: "maybeSingle",
+  })) as {
+    role_id?: string | null;
+    role_readiness_percentage?: number | null;
+    status?: string | null;
+    started_at?: string | null;
+    completed_at?: string | null;
+  } | null;
 
   const currentPercentage = learningPath?.role_readiness_percentage || 0;
 
@@ -375,21 +483,22 @@ async function calculateReadinessInternal(
     completedAt = learningPath?.completed_at ?? now;
   }
 
-  await supabase
-    .from("learning_paths")
-    .update({
+  await qb.update(readinessLearningPathUpdatePolicy, {
+    auth: { userId },
+    data: {
       role_readiness_percentage: readinessScore,
       status: newStatus,
       started_at: startedAt,
       completed_at: completedAt,
       updated_at: now,
-    })
-    .eq("id", learningPathId);
+    },
+    filters: [{ column: "id", op: "eq", value: learningPathId }],
+  });
 
   // Auto-evaluate and award readiness milestones after score update
   if (readinessScore > currentPercentage && learningPath?.role_id) {
     try {
-      await evaluateMilestones(supabase, userId, learningPath.role_id, readinessScore);
+      await evaluateMilestones(qb, userId, learningPath.role_id, readinessScore);
     } catch (err) {
       // Non-fatal: milestone evaluation failure should not break readiness calculation
       apiLogger.error("[XP] evaluateMilestones failed", err, {
@@ -406,20 +515,20 @@ async function calculateReadinessInternal(
  * Triggers readiness recalculation for all active learning paths of the user.
  */
 export async function triggerReadinessRecalculation(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
 ): Promise<void> {
+  const qb = asQueryGateway(source);
   try {
-    const { data: paths } = await supabase
-      .from("learning_paths")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("is_latest", true);
+    const paths = (await qb.read(latestLearningPathsReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "is_latest", op: "eq", value: true }],
+    })) as Array<{ id: string }> | null;
 
     if (paths && paths.length > 0) {
       await Promise.all(
         paths.map((path) =>
-          calculateReadiness(supabase, userId, path.id).catch((err) => {
+          calculateReadiness(qb, userId, path.id).catch((err) => {
             apiLogger.error(
               "[XP] calculateReadiness failed in triggerReadinessRecalculation",
               err,

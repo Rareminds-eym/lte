@@ -1,56 +1,83 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect } from "react";
 import { useLearningPathStore } from "@/entities/active-learning-path";
-import { useDashboardData } from "@/entities/dashboard";
-import { XpRewardModal } from "@/features/xp-reward";
+import { DASHBOARD_QUERY_KEY, useDashboardData } from "@/entities/dashboard";
+import { useAuthStore } from "@/entities/session";
+import { getLogger } from "@/shared";
+import { apiFetch } from "@/shared/api";
+import { useXpModalStore } from "@/shared/store";
 import { DashboardContent } from "@/widgets/dashboard";
 import { LearningPathEmptyState } from "@/widgets/learning-path";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 
+const logger = getLogger("DashboardPage");
+
 export const DashboardPage: React.FC = () => {
   const { data, isPending, isError } = useDashboardData();
+  const queryClient = useQueryClient();
+  const userId = useAuthStore((s) => s.user?.id);
   const activeTrack = useLearningPathStore((s) => s.activeTrack);
   const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
   const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
 
-  const [dismissedEventIds, setDismissedEventIds] = useState<string[]>([]);
+  const addEvent = useXpModalStore((s) => s.addEvent);
+  const shownEventIds = useXpModalStore((s) => s.shownEventIds);
 
-  const currentShowEvent = useMemo(() => {
-    if (!data?.todayEvents || data.todayEvents.length === 0) return null;
-    try {
-      const shownIdsRaw = localStorage.getItem("lte-shown-xp-event-ids");
-      const parsed = shownIdsRaw ? JSON.parse(shownIdsRaw) : [];
-      const shownIds: string[] = Array.isArray(parsed)
-        ? parsed.filter((id): id is string => typeof id === "string")
-        : [];
-      return (
-        data.todayEvents.find(
-          (event) => !shownIds.includes(event.id) && !dismissedEventIds.includes(event.id),
-        ) || null
-      );
-    } catch {
-      return null;
-    }
-  }, [data?.todayEvents, dismissedEventIds]);
+  useEffect(() => {
+    const getXpCategory = (eventType: string): "evidence" | "engagement" => {
+      const evidenceEvents = [
+        "stage_completed",
+        "practice_artifact_accepted",
+        "practice_artifact_failed",
+        "final_artifact_accepted_1",
+        "final_artifact_accepted_2",
+        "final_artifact_accepted_3",
+        "final_artifact_failed",
+        "manual_eval_accepted",
+        "fallback_eval_failed",
+        "course_completed_on_time",
+        "fast_track_capability",
+        "capstone_completed",
+      ];
+      return evidenceEvents.includes(eventType) ? "evidence" : "engagement";
+    };
 
-  const handleCloseXpModal = () => {
-    if (currentShowEvent) {
-      try {
-        const shownIdsRaw = localStorage.getItem("lte-shown-xp-event-ids");
-        const parsed = shownIdsRaw ? JSON.parse(shownIdsRaw) : [];
-        const shownIds: string[] = Array.isArray(parsed)
-          ? parsed.filter((id): id is string => typeof id === "string")
-          : [];
-        if (!shownIds.includes(currentShowEvent.id)) {
-          shownIds.push(currentShowEvent.id);
-          localStorage.setItem("lte-shown-xp-event-ids", JSON.stringify(shownIds));
+    if (data?.todayEvents && data.todayEvents.length > 0) {
+      data.todayEvents.forEach((event) => {
+        if (!shownEventIds.has(event.id)) {
+          addEvent({
+            id: event.id,
+            xpAmount: event.xp_amount,
+            totalXp: data.careerTarget.xp ?? 0,
+            eventType: event.event_type,
+            xpCategory: getXpCategory(event.event_type),
+            onClose: async () => {
+              try {
+                // Mark as shown in database
+                await apiFetch("/api/v1/dashboard/xp", {
+                  method: "POST",
+                  body: JSON.stringify({ eventIds: [event.id] }),
+                });
+
+                // Then invalidate query cache
+                if (userId) {
+                  queryClient.invalidateQueries({
+                    queryKey: [...DASHBOARD_QUERY_KEY, userId],
+                  });
+                }
+              } catch (error) {
+                logger.error(
+                  "Failed to mark event as shown:",
+                  error instanceof Error ? error : new Error(String(error)),
+                );
+              }
+            },
+          });
         }
-      } catch {
-        // Ignore error
-      }
-      setDismissedEventIds((prev) => [...prev, currentShowEvent.id]);
+      });
     }
-  };
+  }, [data?.todayEvents, data?.careerTarget.xp, addEvent, shownEventIds, queryClient, userId]);
 
   // Loading state: use the structured DashboardSkeleton to prevent layout shift on initial load only
   if ((isPending && !data) || (activeLearningPathLoading && !data)) {
@@ -122,19 +149,5 @@ export const DashboardPage: React.FC = () => {
         }
       : data;
 
-  return (
-    <>
-      <DashboardContent data={mergedData || data} />
-      {currentShowEvent && (
-        <XpRewardModal
-          isOpen={true}
-          xpAmount={currentShowEvent.xp_amount}
-          totalXp={data?.careerTarget.xp ?? 0}
-          stageName={currentShowEvent.event_type}
-          onClose={handleCloseXpModal}
-          xpCategory="engagement"
-        />
-      )}
-    </>
-  );
+  return <DashboardContent data={mergedData || data} />;
 };

@@ -26,5 +26,3 @@ export const MenuIcon: React.FC<IconProps> = ({
     <line x1="3" y1="18" x2="21" y2="18" />
   </svg>
 );
-
-export default MenuIcon;

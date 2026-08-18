@@ -1,5 +1,5 @@
+import { asQueryGateway, type QueryGatewaySource } from "@functions/lib/query-gateway";
 import { normalizeStageName } from "@functions/lib/stage-sequence";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   ArtifactRow,
   ArtifactSubmissionRow,
@@ -11,36 +11,66 @@ import type {
 
 const getDownloadUrl = (fileId: string) => `/api/v1/artifacts/files/${fileId}/download`;
 
+const artifactTypeByStageReadPolicy = {
+  table: "module_artifacts",
+  operation: "read",
+  select: `
+    artifact_type,
+    modules_content!inner (
+      stage_name
+    )
+  `,
+  filters: ["is_active", "modules_content.module_id"],
+  maxPageSize: 100,
+} as const;
+
+const submittedFilesByArtifactReadPolicy = {
+  table: "artifact_submissions",
+  operation: "read",
+  select: `
+    id,
+    artifact_id,
+    attempt_no,
+    version_label,
+    is_latest,
+    submitted_at,
+    artifact_submission_files (
+      id,
+      question_id,
+      file_name,
+      file_type,
+      file_size_bytes
+    )
+  `,
+  filters: ["user_id", "status", "artifact_id"],
+  sorts: ["attempt_no"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  maxPageSize: 500,
+} as const;
+
 export const pickArtifactType = (
   current: "practice" | "final" | null | undefined,
   next: "practice" | "final",
 ) => (current === "final" || next === "final" ? "final" : "practice");
 
 export async function getArtifactTypeByStage(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   moduleId: string,
   allStages: readonly Lte6eStage[],
 ): Promise<Map<Lte6eStage, "practice" | "final">> {
   const artifactTypeByStage = new Map<Lte6eStage, "practice" | "final">();
-  const { data, error } = await supabase
-    .from("module_artifacts")
-    .select(`
-      artifact_type,
-      modules_content!inner (
-        stage_name
-      )
-    `)
-    .eq("is_active", true)
-    .eq("modules_content.module_id", moduleId);
-
-  if (error) {
-    throw new Error(`Failed to fetch artifact stage metadata: ${error.message}`);
-  }
-
-  for (const row of (data as Array<{
+  const qb = asQueryGateway(source);
+  const data = (await qb.read(artifactTypeByStageReadPolicy, {
+    filters: [
+      { column: "is_active", op: "eq", value: true },
+      { column: "modules_content.module_id", op: "eq", value: moduleId },
+    ],
+  })) as Array<{
     artifact_type: "practice" | "final";
     modules_content?: { stage_name?: string | null } | Array<{ stage_name?: string | null }>;
-  }> | null) ?? []) {
+  }> | null;
+
+  for (const row of data ?? []) {
     const moduleContent = Array.isArray(row.modules_content)
       ? row.modules_content[0]
       : row.modules_content;
@@ -59,7 +89,7 @@ export async function getArtifactTypeByStage(
 }
 
 export async function getSubmittedFilesByArtifactId(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string | undefined,
   artifactIds: string[],
 ): Promise<Map<string, ModuleArtifactSubmittedFile[]>> {
@@ -69,33 +99,17 @@ export async function getSubmittedFilesByArtifactId(
     return submittedFilesByArtifactId;
   }
 
-  const { data, error } = await supabase
-    .from("artifact_submissions")
-    .select(`
-      id,
-      artifact_id,
-      attempt_no,
-      version_label,
-      is_latest,
-      submitted_at,
-      artifact_submission_files (
-        id,
-        question_id,
-        file_name,
-        file_type,
-        file_size_bytes
-      )
-    `)
-    .eq("user_id", userId)
-    .in("status", ["submitted", "resubmission_required", "human_review"])
-    .in("artifact_id", artifactIds)
-    .order("attempt_no", { ascending: false });
+  const qb = asQueryGateway(source);
+  const data = (await qb.read(submittedFilesByArtifactReadPolicy, {
+    auth: { userId },
+    filters: [
+      { column: "status", op: "in", value: ["submitted", "resubmission_required", "human_review"] },
+      { column: "artifact_id", op: "in", value: artifactIds },
+    ],
+    sort: [{ column: "attempt_no", ascending: false }],
+  })) as ArtifactSubmissionRow[] | null;
 
-  if (error) {
-    throw new Error(`Failed to fetch artifact submissions: ${error.message}`);
-  }
-
-  for (const submission of (data as ArtifactSubmissionRow[] | null) ?? []) {
+  for (const submission of data ?? []) {
     const files = (submission.artifact_submission_files || []).map((file) => ({
       id: file.id,
       submissionId: submission.id,

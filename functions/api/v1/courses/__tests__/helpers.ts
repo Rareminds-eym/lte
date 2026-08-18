@@ -1,3 +1,4 @@
+import { createQueryGateway, type QueryGateway } from "@functions/lib/query-gateway";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
 
@@ -10,9 +11,20 @@ export interface MockChain {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   in: ReturnType<typeof vi.fn>;
+  gte: ReturnType<typeof vi.fn>;
+  lte: ReturnType<typeof vi.fn>;
+  lt: ReturnType<typeof vi.fn>;
+  gt: ReturnType<typeof vi.fn>;
+  neq: ReturnType<typeof vi.fn>;
+  ilike: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
+  range: ReturnType<typeof vi.fn>;
+  limit: ReturnType<typeof vi.fn>;
+  not: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
   insert: ReturnType<typeof vi.fn>;
+  upsert: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   then: (resolve: (value: unknown) => unknown) => Promise<unknown>;
@@ -24,6 +36,7 @@ export interface ChainOptions {
   thenQueue?: QueryResult[];
   thenVal?: QueryResult;
   insert?: QueryResult;
+  upsert?: QueryResult;
 }
 
 export function mockChain(options: ChainOptions = {}): MockChain {
@@ -31,13 +44,30 @@ export function mockChain(options: ChainOptions = {}): MockChain {
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
     in: vi.fn().mockImplementation(() => chain),
+    gte: vi.fn().mockImplementation(() => chain),
+    lte: vi.fn().mockImplementation(() => chain),
+    lt: vi.fn().mockImplementation(() => chain),
+    gt: vi.fn().mockImplementation(() => chain),
+    neq: vi.fn().mockImplementation(() => chain),
+    ilike: vi.fn().mockImplementation(() => chain),
     order: vi.fn().mockImplementation(() => chain),
+    range: vi.fn().mockImplementation(() => chain),
+    limit: vi.fn().mockImplementation(() => chain),
+    not: vi.fn().mockImplementation(() => chain),
     update: vi.fn().mockImplementation(() => chain),
-    insert: vi
-      .fn()
-      .mockImplementation(() =>
-        mockChain({ single: options.insert ?? { data: null, error: null } }),
-      ),
+    insert: vi.fn().mockImplementation(() =>
+      mockChain({
+        single: options.insert ?? { data: null, error: null },
+        thenVal: options.insert ?? { data: null, error: null },
+      }),
+    ),
+    upsert: vi.fn().mockImplementation(() =>
+      mockChain({
+        single: options.upsert ?? { data: null, error: null },
+        thenVal: options.upsert ?? { data: null, error: null },
+      }),
+    ),
+    delete: vi.fn().mockImplementation(() => chain),
     maybeSingle: vi.fn().mockResolvedValue(options.maybeSingle ?? { data: null, error: null }),
     single: vi.fn().mockResolvedValue(options.single ?? { data: null, error: null }),
     // biome-ignore lint/suspicious/noThenProperty: mock promise resolution
@@ -54,6 +84,10 @@ export function makeSupabase(chains: Record<string, MockChain | undefined>): Sup
   return {
     from: vi.fn().mockImplementation((table: string) => chains[table] ?? fallback),
   } as unknown as SupabaseClient;
+}
+
+export function makeGateway(chains: Record<string, MockChain | undefined>): QueryGateway {
+  return createQueryGateway(makeSupabase(chains));
 }
 
 export const ok = (data: unknown): QueryResult => ({ data, error: null });
@@ -108,12 +142,14 @@ export function levelChains(
   const chains: MockChains = {
     levels: mockChain({
       single: overrides.levelResult ?? ok({ ...levelRow, ...overrides.level }),
+      maybeSingle: overrides.levelResult ?? ok({ ...levelRow, ...overrides.level }),
     }),
     modules: mockChain({ thenQueue: [overrides.modules ?? ok([])] }),
   };
   if (overrides.levelResult === undefined) {
     chains.capabilities = mockChain({
       single: overrides.capabilities ?? ok({ code: "CAP", name: "Capability" }),
+      maybeSingle: overrides.capabilities ?? ok({ code: "CAP", name: "Capability" }),
     });
   }
   chains.user_capability_level_progress = mockChain({
@@ -304,9 +340,12 @@ export function moduleDetailsChains(
     levels: mockChain({
       single:
         overrides.levelResult ?? ok({ id: "level-1", level_code: "RCP-L1", title: "Level One" }),
+      maybeSingle:
+        overrides.levelResult ?? ok({ id: "level-1", level_code: "RCP-L1", title: "Level One" }),
     }),
     modules: mockChain({
       single: overrides.moduleResult ?? ok(moduleRow),
+      maybeSingle: overrides.moduleResult ?? ok(moduleRow),
     }),
     user_module_progress: mockChain({
       maybeSingle: overrides.moduleProgress ?? { data: null, error: null },
@@ -352,6 +391,7 @@ export function moduleProgressChains(
     modules?: QueryResult;
     existing?: QueryResult;
     insert?: QueryResult;
+    upsert?: QueryResult;
     thenQueue?: QueryResult[];
   } = {},
 ): MockChains {
@@ -361,6 +401,7 @@ export function moduleProgressChains(
     user_module_progress: mockChain({
       maybeSingle: overrides.existing ?? { data: null, error: null },
       insert: overrides.insert ?? ok({ id: "mp-new" }),
+      upsert: overrides.upsert ?? ok({ id: "mp-new" }),
       thenQueue: overrides.thenQueue,
     }),
   };
@@ -383,7 +424,7 @@ export function stageProgressChains(
     modules: mockChain({ single: ok({ id: "mod-1" }) }),
     user_module_progress: mockChain({
       maybeSingle: { data: null, error: null },
-      insert: ok({ id: "mod-prog-1" }),
+      upsert: ok({ id: "mod-prog-1" }),
       thenQueue: overrides.modThenQueue,
     }),
     user_stage_progress: mockChain({

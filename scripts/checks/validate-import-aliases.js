@@ -48,12 +48,12 @@ async function main() {
         };
       }
 
-      // Flag relative traversals crossing to backend lib or shared (e.g. "../../lib" or "../../shared")
-      const usesDeepBackendRelative = /from\s+["']\.\.\/\.\.\/(lib|shared|middleware)\//.test(line);
+      // Flag relative traversals crossing slice or boundary limits (e.g. "../../some-lib")
+      const usesDeepBackendRelative = /from\s+["']\.\.\/\.\.\//.test(line);
       if (usesDeepBackendRelative) {
         return {
           rule: "Imports: Crossing relative backend imports",
-          message: "Do not use relative traversals (../../) to reference backend lib/shared folders. Use the '@functions/' path alias instead.",
+          message: "Do not use relative traversals (../../) to reference other backend folders. Use the '@functions/' path alias instead.",
         };
       }
     }

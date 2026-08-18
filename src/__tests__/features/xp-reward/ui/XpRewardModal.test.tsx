@@ -126,4 +126,72 @@ describe("XpRewardModal", () => {
     expect(screen.getByText("+30")).toBeInTheDocument();
     expect(screen.getByText(/30 consecutive days/)).toBeInTheDocument();
   });
+
+  it("renders practice artifact accepted variant correctly", () => {
+    const handleClose = vi.fn();
+    render(
+      <XpRewardModal
+        isOpen={true}
+        xpAmount={2}
+        totalXp={45}
+        stageName="practice_artifact_accepted"
+        onClose={handleClose}
+        xpCategory="evidence"
+      />,
+    );
+
+    expect(screen.getByText("+2")).toBeInTheDocument();
+    expect(screen.getByText(/practice artifact submission has been evaluated/)).toBeInTheDocument();
+  });
+
+  it("renders final artifact accepted variant correctly", () => {
+    const handleClose = vi.fn();
+    render(
+      <XpRewardModal
+        isOpen={true}
+        xpAmount={20}
+        totalXp={100}
+        stageName="final_artifact_accepted_1"
+        onClose={handleClose}
+        xpCategory="evidence"
+      />,
+    );
+
+    expect(screen.getByText("+20")).toBeInTheDocument();
+    expect(screen.getByText(/final artifact submission was accepted/)).toBeInTheDocument();
+  });
+
+  it("renders readiness milestone engagement variant correctly", () => {
+    const handleClose = vi.fn();
+    render(
+      <XpRewardModal
+        isOpen={true}
+        xpAmount={10}
+        totalXp={250}
+        stageName="readiness_milestone_50"
+        onClose={handleClose}
+        xpCategory="engagement"
+      />,
+    );
+
+    expect(screen.getByText("+10")).toBeInTheDocument();
+    expect(screen.getByText(/achieved the 50% readiness milestone/)).toBeInTheDocument();
+  });
+
+  it("renders capstone completed variant correctly", () => {
+    const handleClose = vi.fn();
+    render(
+      <XpRewardModal
+        isOpen={true}
+        xpAmount={50}
+        totalXp={500}
+        stageName="capstone_completed"
+        onClose={handleClose}
+        xpCategory="evidence"
+      />,
+    );
+
+    expect(screen.getByText("+50")).toBeInTheDocument();
+    expect(screen.getByText(/completing your Capstone project/)).toBeInTheDocument();
+  });
 });

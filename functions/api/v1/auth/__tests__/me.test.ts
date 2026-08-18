@@ -1,4 +1,4 @@
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
@@ -11,7 +11,10 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return { ...actual, createServiceQueryGateway: vi.fn() };
+});
 
 const mockUser: AuthUser = {
   sub: "u-1",
@@ -31,9 +34,11 @@ function stubDb(data: unknown, error: unknown = null) {
     update: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({ data, error }),
   };
-  vi.mocked(createServiceSupabase).mockReturnValueOnce({
-    from: vi.fn().mockReturnValue(chain),
-  } as unknown as SupabaseClient);
+  vi.mocked(createServiceQueryGateway).mockReturnValueOnce(
+    createQueryGateway({
+      from: vi.fn().mockReturnValue(chain),
+    } as unknown as SupabaseClient),
+  );
   return chain;
 }
 

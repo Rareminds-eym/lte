@@ -1,5 +1,5 @@
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
@@ -36,9 +36,9 @@ export async function onRequestPatch(context: PagesContext<LteEnv>): Promise<Res
     }
 
     const { trackId } = parsedBody.data;
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
-    await activateLearningTrack(supabase, userId, trackId);
+    await activateLearningTrack(qb, userId, trackId);
 
     return jsonResponse(
       {

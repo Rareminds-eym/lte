@@ -120,6 +120,7 @@ export const LevelDetailsResponseSchema = z.object({
   levelCode: z.string(),
   capabilityName: z.string().optional(),
   capabilityCode: z.string().optional(),
+  capabilitySlug: z.string().optional(),
   title: z.string(),
   description: z.string(),
   levelProblemStatement: LevelProblemStatementSchema,

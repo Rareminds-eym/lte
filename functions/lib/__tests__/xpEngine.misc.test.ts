@@ -666,7 +666,8 @@ describe("XP Engine Core logic", () => {
 
       await expect(getUserTotalXp(mockSupabase, "user-1", since)).resolves.toBe(20);
 
-      const chain = (mockSupabase.from as ReturnType<typeof vi.fn>).mock.results[0]?.value as {
+      const chain = (mockSupabase as unknown as { from: ReturnType<typeof vi.fn> }).from.mock
+        .results[0]?.value as {
         gte: ReturnType<typeof vi.fn>;
       };
       expect(chain.gte).toHaveBeenCalledWith("created_at", since.toISOString());
@@ -677,7 +678,8 @@ describe("XP Engine Core logic", () => {
 
       await expect(getUserTotalXp(mockSupabase, "user-1")).resolves.toBe(5);
 
-      const chain = (mockSupabase.from as ReturnType<typeof vi.fn>).mock.results[0]?.value as {
+      const chain = (mockSupabase as unknown as { from: ReturnType<typeof vi.fn> }).from.mock
+        .results[0]?.value as {
         gte: ReturnType<typeof vi.fn>;
       };
       expect(chain.gte).not.toHaveBeenCalled();

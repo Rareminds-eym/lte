@@ -6,7 +6,7 @@
 import { getModuleDetails } from "@functions/api/v1/courses/queries";
 import { LevelModuleParamsSchema } from "@functions/api/v1/courses/schemas";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 
@@ -26,9 +26,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     const { levelId, moduleNo } = parsedParams.data;
     const moduleNumber = parseInt(moduleNo, 10);
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
-    const moduleDetails = await getModuleDetails(supabase, levelId, moduleNumber, userId);
+    const moduleDetails = await getModuleDetails(qb, levelId, moduleNumber, userId);
 
     if (!moduleDetails) {
       return jsonError(`Module ${moduleNumber} for level '${levelId}' not found`, 404, {

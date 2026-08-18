@@ -33,5 +33,3 @@ export const GraduationCapIcon: React.FC<IconProps> = ({
     />
   </svg>
 );
-
-export default GraduationCapIcon;

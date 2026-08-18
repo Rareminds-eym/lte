@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { awardXp, completeStage } from "../xp-engine";
 import { createMockQueryChain, mockInsert, mockSupabase, resetMocks } from "./xpEngine.helpers";
@@ -99,7 +100,10 @@ describe("XP Engine Core logic", () => {
 
       await expect(
         awardXp(mockSupabase, "user-1", "stage_completed", "user_stage_progress", "progress-1"),
-      ).rejects.toMatchObject({ code: "PGRST301" });
+      ).rejects.toMatchObject({
+        code: "QUERY_GATEWAY_DATABASE_ERROR",
+        cause: expect.objectContaining({ code: "PGRST301" }),
+      });
     });
   });
 
@@ -131,7 +135,7 @@ describe("XP Engine Core logic", () => {
           }
           return createMockQueryChain(null);
         }),
-      } as unknown as Parameters<typeof awardXp>[0];
+      } as unknown as SupabaseClient;
 
       const result = await completeStage(mockSupabase, "user-1", "content-stage-1");
 

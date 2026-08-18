@@ -5,7 +5,7 @@ import {
 import { getLevelWithModules } from "@functions/api/v1/courses/queries";
 import type { ActiveTrackDetail } from "@functions/api/v1/learning-paths/queries";
 import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
@@ -18,7 +18,10 @@ vi.mock("@functions/middleware", async (importOriginal) => {
   return { ...actual, requireAuth: vi.fn() };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/query-gateway")>();
+  return { ...actual, createServiceQueryGateway: vi.fn() };
+});
 
 vi.mock("@functions/api/v1/learning-paths/queries", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@functions/api/v1/learning-paths/queries")>();
@@ -126,6 +129,10 @@ function queuedSupabase(results: unknown[]) {
   return { from: vi.fn().mockImplementation(() => chain) };
 }
 
+function queuedGateway(results: unknown[]) {
+  return createQueryGateway(queuedSupabase(results) as unknown as SupabaseClient);
+}
+
 describe("GET /api/v1/dashboard/journey", () => {
   const mockUser: AuthUser = {
     sub: "user-uuid-1234",
@@ -146,7 +153,7 @@ describe("GET /api/v1/dashboard/journey", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.mocked(createServiceSupabase).mockReturnValue({} as SupabaseClient);
+    vi.mocked(createServiceQueryGateway).mockReturnValue(queuedGateway([]));
   });
 
   it("returns 401 when requireAuth throws", async () => {
@@ -172,8 +179,8 @@ describe("GET /api/v1/dashboard/journey", () => {
   it("returns the most recently active module of the most recent level", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     vi.mocked(getActiveLearningTrack).mockResolvedValueOnce(MOCK_TRACK);
-    vi.mocked(createServiceSupabase).mockReturnValue(
-      queuedSupabase([
+    vi.mocked(createServiceQueryGateway).mockReturnValue(
+      queuedGateway([
         {
           data: [
             {
@@ -205,7 +212,7 @@ describe("GET /api/v1/dashboard/journey", () => {
             },
           ],
         },
-      ]) as unknown as SupabaseClient,
+      ]),
     );
     vi.mocked(getLevelWithModules).mockResolvedValueOnce(MOCK_DETAILS);
 
@@ -259,8 +266,8 @@ describe("GET /api/v1/dashboard/journey", () => {
   it("ignores module activity outside the track's levels", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     vi.mocked(getActiveLearningTrack).mockResolvedValueOnce(MOCK_TRACK);
-    vi.mocked(createServiceSupabase).mockReturnValue(
-      queuedSupabase([
+    vi.mocked(createServiceQueryGateway).mockReturnValue(
+      queuedGateway([
         {
           data: [
             {
@@ -274,7 +281,7 @@ describe("GET /api/v1/dashboard/journey", () => {
         // module row references a progress id that is NOT among the open levels
         { data: { module_id: "mod-x", user_capability_level_progress_id: "other-path-lvlp" } },
         { data: null },
-      ]) as unknown as SupabaseClient,
+      ]),
     );
     vi.mocked(getLevelWithModules).mockResolvedValueOnce(MOCK_DETAILS);
 
@@ -286,8 +293,8 @@ describe("GET /api/v1/dashboard/journey", () => {
   it("falls back to the most recently updated level when no module is in progress", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     vi.mocked(getActiveLearningTrack).mockResolvedValueOnce(MOCK_TRACK);
-    vi.mocked(createServiceSupabase).mockReturnValue(
-      queuedSupabase([
+    vi.mocked(createServiceQueryGateway).mockReturnValue(
+      queuedGateway([
         {
           data: [
             {
@@ -306,7 +313,7 @@ describe("GET /api/v1/dashboard/journey", () => {
         },
         { data: null },
         { data: null },
-      ]) as unknown as SupabaseClient,
+      ]),
     );
     vi.mocked(getLevelWithModules).mockResolvedValueOnce({
       ...MOCK_DETAILS,
@@ -322,8 +329,8 @@ describe("GET /api/v1/dashboard/journey", () => {
   it("points at the first level of the track's first capability when nothing is started", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     vi.mocked(getActiveLearningTrack).mockResolvedValueOnce(MOCK_TRACK);
-    vi.mocked(createServiceSupabase).mockReturnValue(
-      queuedSupabase([{ data: [] }, { data: null }]) as unknown as SupabaseClient,
+    vi.mocked(createServiceQueryGateway).mockReturnValue(
+      queuedGateway([{ data: [] }, { data: null }]),
     );
     vi.mocked(getCapabilitiesByRoleId).mockResolvedValueOnce([
       { id: "cap-1", name: "Cap", code: "CAP037", description: "Capability description" },
@@ -342,8 +349,8 @@ describe("GET /api/v1/dashboard/journey", () => {
   it("returns completed when every level row in the track is completed", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     vi.mocked(getActiveLearningTrack).mockResolvedValueOnce(MOCK_TRACK);
-    vi.mocked(createServiceSupabase).mockReturnValue(
-      queuedSupabase([
+    vi.mocked(createServiceQueryGateway).mockReturnValue(
+      queuedGateway([
         {
           data: [
             {
@@ -354,7 +361,7 @@ describe("GET /api/v1/dashboard/journey", () => {
             },
           ],
         },
-      ]) as unknown as SupabaseClient,
+      ]),
     );
 
     const response = await onRequestGet(makeContext());
@@ -365,8 +372,8 @@ describe("GET /api/v1/dashboard/journey", () => {
   it("falls back to module description and level description when no artifact question exists", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
     vi.mocked(getActiveLearningTrack).mockResolvedValueOnce(MOCK_TRACK);
-    vi.mocked(createServiceSupabase).mockReturnValue(
-      queuedSupabase([
+    vi.mocked(createServiceQueryGateway).mockReturnValue(
+      queuedGateway([
         {
           data: [
             {
@@ -379,7 +386,7 @@ describe("GET /api/v1/dashboard/journey", () => {
         },
         { data: null },
         { data: null },
-      ]) as unknown as SupabaseClient,
+      ]),
     );
     vi.mocked(getLevelWithModules).mockResolvedValueOnce({
       ...MOCK_DETAILS,

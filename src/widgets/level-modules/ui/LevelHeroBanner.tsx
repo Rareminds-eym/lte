@@ -5,7 +5,7 @@ import { Button } from "@/shared/ui/Button";
 import { ArrowLeftIcon, BookmarkIcon, ChevronRightIcon, ShareLinkIcon } from "@/shared/ui/icons";
 
 interface LevelHeroBannerProps {
-  capabilityCode: string;
+  capabilitySlug: string;
   capabilityName?: string;
   levelBadge?: string;
   title: string;
@@ -22,7 +22,7 @@ interface LevelHeroBannerProps {
 }
 
 export const LevelHeroBanner: React.FC<LevelHeroBannerProps> = ({
-  capabilityCode,
+  capabilitySlug,
   levelBadge,
   title,
   description,
@@ -52,7 +52,7 @@ export const LevelHeroBanner: React.FC<LevelHeroBannerProps> = ({
       {/* Top Header / Breadcrumbs */}
       <div className="relative z-10 mb-6 sm:mb-8">
         <Link
-          to={`/my-courses/${capabilityCode}`}
+          to={`/my-courses/${encodeURIComponent(capabilitySlug)}`}
           className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-slate-300 hover:text-white transition-colors"
         >
           <ArrowLeftIcon className="w-4 h-4" />
