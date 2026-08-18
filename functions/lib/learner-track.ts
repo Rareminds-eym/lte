@@ -7,6 +7,11 @@ import {
   upsertLearningTrack,
 } from "@functions/api/v1/learning-paths/queries";
 import { callSkill } from "@functions/lib/gateway/skill-gateway";
+import {
+  asQueryGateway,
+  type QueryGateway,
+  type QueryGatewaySource,
+} from "@functions/lib/query-gateway";
 import type { LteEnv } from "@functions/lib/types";
 import { createLogger } from "@functions/shared/logger";
 import { z } from "zod";
