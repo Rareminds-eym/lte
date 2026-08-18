@@ -25,7 +25,7 @@ interface StageInfoPanelProps {
   activeArtifactType: "practice" | "final" | null;
   stageDescription: string;
   stageModuleContext?: string | null;
-  stageCurriculumReference?: Record<string, unknown> | null;
+  stageCurriculumReference?: Record<string, unknown> | string[] | string | null;
   stageSummary: string;
   previewItems: EContentItem[];
   isScenarioExpanded: boolean;
@@ -46,6 +46,28 @@ const getCurriculumText = (value: unknown) => {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 };
 
+const getCurriculumRecord = (value: Record<string, unknown> | string[] | string | null | undefined) => {
+  if (Array.isArray(value)) {
+    return value.reduce<Record<string, string>>((record, entry) => {
+      const separatorIndex = entry.indexOf(":");
+      if (separatorIndex <= 0) return record;
+
+      const key = entry.slice(0, separatorIndex).trim();
+      const text = entry.slice(separatorIndex + 1).trim();
+      if (key && text) {
+        record[key] = text;
+      }
+      return record;
+    }, {});
+  }
+
+  if (value && typeof value === "object") {
+    return value;
+  }
+
+  return null;
+};
+
 export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
   level,
   levelModule,
@@ -62,6 +84,20 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
   formatStageLabel,
   renderArtifactPanel,
 }) => {
+  const curriculumRecord = getCurriculumRecord(stageCurriculumReference);
+  const curriculumReference =
+    curriculumRecord
+      ? {
+          prerequisites: getCurriculumText(curriculumRecord["prerequisites"]),
+          technicalConcepts: getCurriculumText(curriculumRecord["technical_concepts"]),
+          creditContext: getCurriculumText(curriculumRecord["credit_context"]),
+          whenToUse: getCurriculumText(curriculumRecord["when_to_use"]),
+          moduleContinuity: getCurriculumText(curriculumRecord["module_continuity"]),
+        }
+      : null;
+  const shouldShowCurriculumReference =
+    !activeArtifactType && curriculumReference && Object.values(curriculumReference).some(Boolean);
+
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-white p-3.5 text-content-body">
       {/* Level problem card */}
@@ -158,7 +194,7 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
       ) : null}
 
       {/* Curriculum Reference Card */}
-      {!activeArtifactType && stageCurriculumReference && (
+      {shouldShowCurriculumReference ? (
         <div className="rounded-xl border border-success-200 bg-success-50/60 p-4 shadow-2xs">
           <div className="mb-3.5 flex items-center gap-2 border-b border-success-200 pb-2.5 text-success-700">
             <BookOpenIcon size={15} className="shrink-0" />
@@ -166,68 +202,68 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
           </div>
 
           <div className="space-y-3">
-            {getCurriculumText(stageCurriculumReference["prerequisites"]) ? (
+            {curriculumReference.prerequisites ? (
               <div>
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
                   <GraduationCapIcon size={12} className="shrink-0" />
                   <span>Prerequisites</span>
                 </div>
                 <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                  {getCurriculumText(stageCurriculumReference["prerequisites"])}
+                  {curriculumReference.prerequisites}
                 </p>
               </div>
             ) : null}
 
-            {getCurriculumText(stageCurriculumReference["technical_concepts"]) ? (
+            {curriculumReference.technicalConcepts ? (
               <div>
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
                   <CodeXmlIcon size={12} className="shrink-0" />
                   <span>Technical Concepts</span>
                 </div>
                 <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                  {getCurriculumText(stageCurriculumReference["technical_concepts"])}
+                  {curriculumReference.technicalConcepts}
                 </p>
               </div>
             ) : null}
 
-            {getCurriculumText(stageCurriculumReference["credit_context"]) ? (
+            {curriculumReference.creditContext ? (
               <div>
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
                   <LayersIcon size={12} className="shrink-0" />
                   <span>Credit Context</span>
                 </div>
                 <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                  {getCurriculumText(stageCurriculumReference["credit_context"])}
+                  {curriculumReference.creditContext}
                 </p>
               </div>
             ) : null}
 
-            {getCurriculumText(stageCurriculumReference["when_to_use"]) ? (
+            {curriculumReference.whenToUse ? (
               <div>
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
                   <LightbulbIcon size={12} className="shrink-0" />
                   <span>When to Use</span>
                 </div>
                 <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                  {getCurriculumText(stageCurriculumReference["when_to_use"])}
+                  {curriculumReference.whenToUse}
                 </p>
               </div>
             ) : null}
 
-            {getCurriculumText(stageCurriculumReference["module_continuity"]) ? (
+            {curriculumReference.moduleContinuity ? (
               <div>
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
                   <ChevronRightIcon size={12} className="shrink-0" />
                   <span>Module Continuity</span>
                 </div>
                 <p className="pl-5 text-[13px] leading-relaxed text-success-900">
-                  {getCurriculumText(stageCurriculumReference["module_continuity"])}
+                  {curriculumReference.moduleContinuity}
                 </p>
               </div>
             ) : null}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Module Context Card */}
       {!activeArtifactType && stageModuleContext && (

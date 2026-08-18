@@ -137,4 +137,22 @@ describe("StageInfoPanel", () => {
     expect(screen.queryByText("Curriculum Reference")).not.toBeInTheDocument();
     expect(screen.queryByText("Module Context")).not.toBeInTheDocument();
   });
+
+  it("renders supported legacy curriculum reference array values", () => {
+    renderPanel({
+      stageCurriculumReference: [
+        "prerequisites: Course entry and source case pack",
+        "technical_concepts: Evidence IDs: E-M0-01, E-M0-02, E-M0-03",
+        "key_data: HN-24A, A-314",
+        "when_to_use: Use before handing off to Case Intake Note.",
+      ],
+    });
+
+    expect(screen.getByText("Engage Stage")).toBeInTheDocument();
+    expect(screen.getByText("Curriculum Reference")).toBeInTheDocument();
+    expect(screen.getByText("Course entry and source case pack")).toBeInTheDocument();
+    expect(screen.getByText("Evidence IDs: E-M0-01, E-M0-02, E-M0-03")).toBeInTheDocument();
+    expect(screen.getByText("Use before handing off to Case Intake Note.")).toBeInTheDocument();
+    expect(screen.queryByText("HN-24A, A-314")).not.toBeInTheDocument();
+  });
 });

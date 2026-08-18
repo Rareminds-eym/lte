@@ -2,6 +2,9 @@ import { z } from "zod";
 import { LTE_STAGE_SEQUENCE } from "./stages";
 
 const JsonRecordSchema = z.record(z.string(), z.unknown());
+const CurriculumReferenceSchema = z
+  .union([JsonRecordSchema, z.array(z.string()), z.string()])
+  .nullable();
 const NullableStringListSchema = z.array(z.string()).nullable();
 
 export const Lte6eStageSchema = z.enum(LTE_STAGE_SEQUENCE);
@@ -87,7 +90,7 @@ export const ModuleStageContentSchema = z.object({
   stageOrder: z.number(),
   stageDescription: z.string(),
   moduleContext: z.string().nullable().optional().default(null),
-  curriculumReference: JsonRecordSchema.nullable().optional().default(null),
+  curriculumReference: CurriculumReferenceSchema.optional().default(null),
   items: z.array(EContentItemSchema),
   artifacts: z.array(ModuleArtifactSchema),
   artifactType: z.enum(["practice", "final"]).nullable(),

@@ -91,6 +91,10 @@ const mockLevelContentData = {
         stageName: "engage",
         stageOrder: 1,
         stageDescription: "Understand the incident context before taking action.",
+        moduleContext: "Engage stage context from modules_content.",
+        curriculumReference: {
+          technical_concepts: "How to isolate useful signals.",
+        },
         isActive: true,
         items: [
           {
