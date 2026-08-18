@@ -2,7 +2,7 @@
  * Shared HS256 service-token + per-user claim crypto for the LTE ↔ SkillPassport
  * internal gateway. Used by BOTH directions inside LTE:
  *   - the caller client  (functions/lib/gateway/skill-gateway.ts — signs)
- *   - the server verifier (functions/api/v1/internal/skillpassport/core/auth.ts — verifies)
+ *   - the server verifier (functions/api/v1/internal/core/auth.ts — verifies)
  * Keep this in lockstep with the SkillPassport-side gateway auth (same scheme,
  * same shared secret) — the gateway-contract tests guard cross-repo drift.
  */

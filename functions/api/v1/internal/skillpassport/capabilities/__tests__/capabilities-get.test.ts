@@ -4,7 +4,7 @@ import type { ActiveTrackDetail } from "@functions/api/v1/learning-paths/queries
 import { getActiveLearningTrack } from "@functions/api/v1/learning-paths/queries";
 import type { LteEnv } from "@functions/lib/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GatewayContext } from "../../core/types";
+import type { GatewayContext } from "../../../core/types";
 import { handleCapabilitiesGet } from "../actions/capabilities-get";
 import { getCapabilityModuleSummaries } from "../queries/module-summaries";
 import { computeFingerprint } from "../sync/fingerprint";

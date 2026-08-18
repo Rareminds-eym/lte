@@ -3,8 +3,7 @@ import { signServiceToken, signUserClaim } from "@functions/lib/gateway/gateway-
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handleCapabilitiesGet } from "../capabilities/actions/capabilities-get";
-import { CALLER_APP } from "../core/contract";
-import { getPublicOrigin, onRequestPost, REGISTRY, SUPPORTED_ACTIONS } from "../index";
+import { CALLER_APP, getPublicOrigin, onRequestPost, REGISTRY, SUPPORTED_ACTIONS } from "../index";
 import { handleSkillsGet } from "../skills/actions/skills-get";
 
 // Unit-test the gateway SHELL (index.ts) in isolation: the handlers are mocked

@@ -1,7 +1,7 @@
 import { getUserCapabilitiesForRoles } from "@functions/api/v1/capabilities/queries";
-import { defineAction } from "../../core/action";
+import { defineAction } from "../../../core/action";
+import { UserPayloadSchema } from "../../../core/schemas";
 import { getActiveTrackRolesOrEmpty } from "../../utils/active-track";
-import { UserPayloadSchema } from "../../utils/schemas";
 import { getCapabilityModuleSummaries } from "../queries/module-summaries";
 import { pickRepresentativeCapability } from "../sync/dedup";
 import { mapCapabilitiesToSyncPayload } from "../sync/payload";

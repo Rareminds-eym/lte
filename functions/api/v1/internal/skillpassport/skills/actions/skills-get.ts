@@ -1,6 +1,6 @@
-import { defineAction } from "../../core/action";
+import { defineAction } from "../../../core/action";
+import { UserPayloadSchema } from "../../../core/schemas";
 import { getActiveTrackCapabilityIds } from "../../utils/active-track";
-import { UserPayloadSchema } from "../../utils/schemas";
 import { getSkillsForUser } from "../queries/get-skills";
 import { mapSkillsToSyncPayload } from "../sync/payload";
 
