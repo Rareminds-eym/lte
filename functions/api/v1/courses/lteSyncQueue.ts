@@ -1,11 +1,8 @@
 import type { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
+import type { LteEnv } from "@functions/shared/types";
 
 type QueryGateway = ReturnType<typeof createServiceQueryGateway>;
-
-interface QueueSender {
-  send(msg: unknown, opts?: { contentType?: string }): Promise<void>;
-}
 
 interface LevelInfoRow {
   capability_id: string | null;
@@ -36,6 +33,7 @@ interface LevelRow {
 
 interface ModuleRow {
   id: string;
+  level_id: string;
   module_no: number;
   title: string;
 }
@@ -101,7 +99,7 @@ const capabilityLevelsReadPolicy = {
   filters: ["capability_id"],
 } as const;
 
-const levelModulesReadPolicy = {
+const modulesByLevelsReadPolicy = {
   table: "modules",
   operation: "read",
   columns: ["id", "level_id", "module_no", "title"],
@@ -121,6 +119,9 @@ const allUserModulesProgressReadPolicy = {
   columns: ["module_id", "module_status", "completion_percentage"],
   filters: ["user_id"],
 } as const;
+
+const HOURS_PER_LEVEL = 7;
+const FALLBACK_TOTAL_DURATION_HOURS = HOURS_PER_LEVEL * 5;
 
 export async function compressQueueMessage(message: unknown): Promise<Uint8Array> {
   const jsonBytes = new TextEncoder().encode(JSON.stringify(message));
@@ -179,11 +180,20 @@ async function buildCourseSnapshot(
       );
 
       levelsPayload = [];
+      const rawAllModules = (await qb.read(modulesByLevelsReadPolicy, {
+        filters: [{ column: "level_id", op: "in", value: sortedLevels.map((l) => l.id) }],
+      })) as ModuleRow[] | null;
+
+      const modulesByLevel = new Map<string, ModuleRow[]>();
+      for (const mod of rawAllModules ?? []) {
+        const levelModules = modulesByLevel.get(mod.level_id);
+        if (levelModules) levelModules.push(mod);
+        else modulesByLevel.set(mod.level_id, [mod]);
+      }
+
       let i = 0;
       for (const lvl of sortedLevels) {
-        const rawMods = (await qb.read(levelModulesReadPolicy, {
-          filters: [{ column: "level_id", op: "eq", value: lvl.id }],
-        })) as ModuleRow[] | null;
+        const rawMods = modulesByLevel.get(lvl.id) ?? null;
 
         const isCurrent = lvl.id === input.levelId;
         const totalCount = rawMods?.length ?? 0;
@@ -267,7 +277,9 @@ async function buildCourseSnapshot(
     ? levels.reduce((sum, l) => sum + l.totalModules, 0)
     : resolvedTotalModules;
 
-  const totalDurationHours = levels ? Math.round((levels.length * 420) / 60) : 35;
+  const totalDurationHours = levels
+    ? Math.round(levels.length * HOURS_PER_LEVEL)
+    : FALLBACK_TOTAL_DURATION_HOURS;
 
   return {
     lteCourseId,
@@ -283,10 +295,10 @@ async function buildCourseSnapshot(
 
 export async function emitStageCompletedEvent(
   qb: QueryGateway,
-  env: unknown,
+  env: Pick<LteEnv, "LTE_SYNC_QUEUE">,
   input: EmitStageCompletedEventInput,
 ): Promise<void> {
-  const lteQueue = (env as { LTE_SYNC_QUEUE?: QueueSender }).LTE_SYNC_QUEUE;
+  const lteQueue = env.LTE_SYNC_QUEUE;
   if (!lteQueue) return;
 
   try {
@@ -315,7 +327,10 @@ export async function emitStageCompletedEvent(
     try {
       const compressedBytes = await compressQueueMessage(eventMessage);
       await lteQueue.send(compressedBytes, { contentType: "bytes" });
-    } catch {
+    } catch (compressErr) {
+      apiLogger.warn("Compressed queue send failed, falling back to JSON", {
+        error: compressErr instanceof Error ? compressErr.message : String(compressErr),
+      });
       await lteQueue.send(eventMessage, { contentType: "json" });
     }
   } catch (queueErr) {

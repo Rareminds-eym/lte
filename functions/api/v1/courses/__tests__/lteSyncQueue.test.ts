@@ -1,8 +1,10 @@
 import { emitStageCompletedEvent } from "@functions/api/v1/courses/lteSyncQueue";
 import type { QueryGateway } from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { makeGateway, mockChain, ok } from "./helpers";
+
+type QueueSend = (msg: unknown, opts?: { contentType?: string }) => Promise<void>;
 
 const input = {
   userId: "user-1",
@@ -19,11 +21,12 @@ const rawLevels = [
   { id: "lvl-1", level_code: "01", title: "Level One" },
   { id: "lvl-2", level_code: "02", title: "Level Two" },
 ];
-const levelOneModules = [{ id: "m1", module_no: 1, title: "M1" }];
+const levelOneModules = [{ id: "m1", level_id: "lvl-1", module_no: 1, title: "M1" }];
 const levelTwoModules = [
-  { id: "m2", module_no: 1, title: "M2" },
-  { id: "m3", module_no: 2, title: "M3" },
+  { id: "m2", level_id: "lvl-2", module_no: 1, title: "M2" },
+  { id: "m3", level_id: "lvl-2", module_no: 2, title: "M3" },
 ];
+const allModules = [...levelOneModules, ...levelTwoModules];
 
 async function decompress(bytes: Uint8Array): Promise<unknown> {
   const stream = new Blob([bytes as BlobPart])
@@ -52,10 +55,10 @@ interface DecompressedEvent {
 }
 
 describe("emitStageCompletedEvent", () => {
-  let send: ReturnType<typeof vi.fn>;
+  let send: Mock<QueueSend>;
 
   beforeEach(() => {
-    send = vi.fn().mockResolvedValue(undefined);
+    send = vi.fn<QueueSend>().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -113,7 +116,7 @@ describe("emitStageCompletedEvent", () => {
         thenVal: ok([{ module_id: "m1", module_status: "completed", completion_percentage: 100 }]),
       }),
       modules: mockChain({
-        thenQueue: [ok(levelOneModules), ok(levelTwoModules)],
+        thenVal: ok(allModules),
       }),
     });
     const env = { LTE_SYNC_QUEUE: { send } };
@@ -177,7 +180,7 @@ describe("emitStageCompletedEvent", () => {
       }),
       user_module_progress: mockChain({ thenVal: ok(null) }),
       modules: mockChain({
-        thenQueue: [ok(levelOneModules), ok(levelTwoModules)],
+        thenVal: ok(allModules),
       }),
     });
     const env = { LTE_SYNC_QUEUE: { send } };
@@ -199,7 +202,8 @@ describe("emitStageCompletedEvent", () => {
     await emitStageCompletedEvent(qb, env, input);
 
     expect(send).toHaveBeenCalledTimes(2);
-    const [firstCall, secondCall] = send.mock.calls as [unknown[], unknown[]];
+    const firstCall = send.mock.calls[0] as [unknown, { contentType?: string }];
+    const secondCall = send.mock.calls[1] as [unknown, { contentType?: string }];
     expect(firstCall[0]).toBeInstanceOf(Uint8Array);
     expect(firstCall[1]).toEqual({ contentType: "bytes" });
     expect(secondCall[0]).toEqual(expect.objectContaining({ type: "lte.module_completed" }));
