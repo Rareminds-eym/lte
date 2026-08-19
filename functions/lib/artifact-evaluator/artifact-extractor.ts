@@ -124,7 +124,7 @@ async function parseSpreadsheet(
   format: string,
 ): Promise<ExtractedArtifactContent> {
   // Dynamic import so SheetJS's heavy module body does not execute at worker startup.
-  const XLSX = await import("xlsx/xlsx.mjs");
+  const XLSX = await import("xlsx");
 
   // P1-3 (defense in depth; upload validation already guards): refuse to
   // parse archives with abnormal expansion before SheetJS buffers everything.

@@ -45,7 +45,6 @@ describe("DashboardLayout", () => {
   beforeEach(() => {
     useAuthStore.setState({
       user: null,
-      accessToken: null,
       isAuthenticated: false,
       initialized: true,
       loading: false,

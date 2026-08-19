@@ -7,7 +7,6 @@ import { useInitializeLearningPath } from "@/features/initialize-learning-path/m
 import { LearningPathInitializer } from "@/features/initialize-learning-path/ui/LearningPathInitializer";
 
 type StoreState = {
-  accessToken: string | null;
   loading: boolean;
   initialized: boolean;
   isAuthenticated: boolean;
@@ -16,7 +15,6 @@ type StoreState = {
   initialize: () => void;
   exchangeCode: () => void;
   logout: () => void;
-  setAccessToken: () => void;
 };
 
 type AuthStoreMock = Mock<(selector?: (s: StoreState) => unknown) => unknown> & {
@@ -61,7 +59,6 @@ describe("LearningPathInitializer Feature", () => {
     vi.clearAllMocks();
 
     const mockState: StoreState = {
-      accessToken: "mock-token",
       loading: false,
       initialized: true,
       isAuthenticated: true,
@@ -70,7 +67,6 @@ describe("LearningPathInitializer Feature", () => {
       initialize: vi.fn(),
       exchangeCode: vi.fn(),
       logout: vi.fn(),
-      setAccessToken: vi.fn(),
     };
 
     mockUseAuthStore.mockImplementation((selector?: (s: StoreState) => unknown) => {

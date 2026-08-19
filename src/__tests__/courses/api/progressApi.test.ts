@@ -4,7 +4,6 @@ import {
   startModuleProgress,
   updateStageProgress,
 } from "@/entities/course/api/progressApi";
-import { registerTokenGetter } from "@/shared/api";
 
 function mockFetch(status: number, body: unknown): void {
   globalThis.fetch = vi.fn().mockResolvedValue({
@@ -17,11 +16,10 @@ function mockFetch(status: number, body: unknown): void {
 
 describe("progressApi", () => {
   beforeEach(() => {
-    registerTokenGetter(() => "token");
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
-    registerTokenGetter(() => null);
     vi.restoreAllMocks();
   });
 

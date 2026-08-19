@@ -2,7 +2,11 @@
 	"compilerOptions": {
 		"target": "ES2022",
 		"useDefineForClassFields": true,
-		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"lib": [
+			"ES2022",
+			"DOM",
+			"DOM.Iterable"
+		],
 		"module": "ESNext",
 		"skipLibCheck": true,
 		/* Bundler mode */
@@ -16,8 +20,15 @@
 		/* Path Aliases */
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["src/*"],
-			"@functions/*": ["functions/*"]
+			"@/*": [
+				"src/*"
+			],
+			"@functions/*": [
+				"functions/*"
+			],
+			"xlsx": [
+				"vendor/sheetjs/xlsx-0.20.3/types/index.d.ts"
+			]
 		},
 		/* Linting */
 		"strict": true,
@@ -38,10 +49,26 @@
 		"noPropertyAccessFromIndexSignature": true,
 		"noImplicitOverride": true,
 		/* Testing */
-		"types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+		"types": [
+			"vite/client",
+			"vitest/globals",
+			"@testing-library/jest-dom"
+		]
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "functions/**/*.ts", "functions/**/*.tsx", "scripts/**/*.ts"],
-	"exclude": ["node_modules", "dist", "build", "**/*.js", "**/*.jsx"],
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"functions/**/*.ts",
+		"functions/**/*.tsx",
+		"scripts/**/*.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"build",
+		"**/*.js",
+		"**/*.jsx"
+	],
 	"references": [
 		{
 			"path": "./tsconfig.node.json"

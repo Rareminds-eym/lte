@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Course } from "@/entities/course";
 import { fetchCapabilityLevels, fetchUserCourses } from "@/entities/course/api/courseApi";
-import { registerTokenGetter } from "@/shared/api";
 
 function mockFetch(status: number, body: unknown): void {
   globalThis.fetch = vi.fn().mockResolvedValue({
@@ -14,11 +13,10 @@ function mockFetch(status: number, body: unknown): void {
 
 describe("courseApi", () => {
   beforeEach(() => {
-    registerTokenGetter(() => "token");
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
-    registerTokenGetter(() => null);
     vi.restoreAllMocks();
   });
 

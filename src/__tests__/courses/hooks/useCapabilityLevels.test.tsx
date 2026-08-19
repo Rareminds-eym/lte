@@ -22,7 +22,7 @@ function createWrapper() {
 
 describe("useCapabilityLevels", () => {
   it("should be disabled when not authenticated or learning path not ready", () => {
-    useAuthStore.setState({ isAuthenticated: false, accessToken: null });
+    useAuthStore.setState({ isAuthenticated: false });
     useLearningPathStore.setState({ activeTrack: null, activeLearningPathLoading: false });
 
     const { result } = renderHook(() => useCapabilityLevels("TS-101"), {
@@ -32,7 +32,7 @@ describe("useCapabilityLevels", () => {
   });
 
   it("should fetch capability levels on success when authenticated and track is ready", async () => {
-    useAuthStore.setState({ isAuthenticated: true, accessToken: "token" });
+    useAuthStore.setState({ isAuthenticated: true });
     useLearningPathStore.setState({
       activeTrack: {
         learningTrackId: "lt-1",

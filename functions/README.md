@@ -27,25 +27,18 @@ This follows a **modular serverless architecture** where:
 functions/
 ├── README.md                      # This file
 │
-├── api/                           # Cloudflare Pages API Endpoints (/api/*)
-│   └── auth/                      # Authentication API Endpoints (/api/auth/*)
-│       ├── me.ts                  # GET /api/auth/me (Get current authenticated user)
-│       ├── refresh.ts             # POST /api/auth/refresh (Refresh access token)
-│       ├── logout.ts              # POST /api/auth/logout (Clear auth session)
-│       └── sso/
-│           └── exchange.ts        # POST /api/auth/sso/exchange (SSO auth code exchange)
+├── api/                           # Cloudflare Pages API Endpoints (/api/v1/*)
+│   └── (All /api/auth/* and /api/v1/auth/* browser routes delegated to Auth Core handleBrowserRequest)
 │
 ├── lib/                           # Serverless helper functions & clients
-│   ├── auth.ts                    # User claim formatting & authentication helpers
-│   ├── cookies.ts                 # Refresh token cookie utilities
+│   ├── env.ts                     # Environment validation helpers
 │   ├── http.ts                    # HTTP request parsing & error helpers
 │   ├── logger.ts                  # Serverless function logger utility
-│   ├── sso-client.ts              # SSO Worker RPC integration client
 │   ├── supabase.ts                # Service Supabase client
 │   └── sync-shadow.ts             # SSO user shadow profile syncing
 │
 ├── middleware/                    # Reusable middleware
-│   ├── auth.ts                    # Authentication middleware
+│   ├── auth.ts                    # Authentication middleware (createAuth + requireProduct)
 │   ├── errorHandler.ts            # Error handling
 │   └── cors.ts                    # CORS configuration
 │

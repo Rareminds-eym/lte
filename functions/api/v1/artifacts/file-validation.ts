@@ -172,7 +172,7 @@ export async function validateArtifactFileContent(
   // 4. Pre-parse validation for XLSX sheet limits (max 20 sheets)
   if (extension === "xlsx" || extension === "xls") {
     try {
-      const XLSX = await import("xlsx/xlsx.mjs");
+      const XLSX = await import("xlsx");
       const workbook = XLSX.read(buffer, { type: "buffer", bookSheets: true });
       if (workbook.SheetNames && workbook.SheetNames.length > 20) {
         throw new ArtifactSubmissionError(

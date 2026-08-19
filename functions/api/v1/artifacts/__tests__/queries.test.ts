@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as XLSX from "xlsx/xlsx.mjs";
+import * as XLSX from "xlsx";
 import {
   type ArtifactSubmissionError,
   buildArtifactEvaluationInput,

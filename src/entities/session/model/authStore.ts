@@ -1,12 +1,11 @@
 import { create } from "zustand";
 import { getLogger } from "@/shared";
-import { exchangeSsoCode, fetchMe, logoutSession, refreshSession } from "@/shared/api/authApi";
+import { authClient } from "@/shared/api/authClient";
 import type { AuthUser } from "@/shared/types/auth";
 
 const logger = getLogger("authStore");
 
 interface AuthState {
-  accessToken: string | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
   loading: boolean;
@@ -20,37 +19,20 @@ interface AuthState {
     targetNext?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
-  setAccessToken: (accessToken: string | null) => void;
-}
-
-function buildAuthenticatedState(accessToken: string, user: AuthUser): Partial<AuthState> {
-  return { accessToken, user, isAuthenticated: true, error: null };
-}
-
-function buildSignedOutState(error: string | null = null): Partial<AuthState> {
-  return { accessToken: null, user: null, isAuthenticated: false, error };
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  accessToken: null,
   user: null,
   isAuthenticated: false,
   loading: true,
   initialized: false,
   error: null,
 
-  setAccessToken: (accessToken) => {
-    logger.info("setAccessToken", { accessToken: accessToken ? "SET" : "NULL" });
-    set({ accessToken });
-  },
-
   initialize: async () => {
     const currentState = get();
     logger.info("initialize starting", {
       initialized: currentState.initialized,
       isAuthenticated: currentState.isAuthenticated,
-      hasAccessToken: !!currentState.accessToken,
-      hasUser: !!currentState.user,
     });
 
     if (currentState.isAuthenticated && currentState.initialized) {
@@ -60,18 +42,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      const refreshed = await refreshSession();
-      const me = await fetchMe(refreshed.access_token);
-      set({
-        ...buildAuthenticatedState(refreshed.access_token, me.user),
-        loading: false,
-        initialized: true,
-      });
-      logger.info("initialize succeeded");
+      const outcome = await authClient.initialize();
+      if (outcome.status === "authenticated") {
+        const identityResult = await authClient.getMe();
+        let user: AuthUser | null = null;
+        if (identityResult.status === "succeeded") {
+          const d = identityResult.data;
+          user = {
+            id: d.subject,
+            email: d.email,
+            org_id: d.organizationId,
+            roles: [...d.roles],
+            products: [...d.products],
+            membership_status: d.membershipStatus,
+            is_email_verified: d.emailVerified,
+            user_metadata: (d.userMetadata as Record<string, unknown>) ?? {},
+          };
+        }
+        set({
+          user,
+          isAuthenticated: true,
+          loading: false,
+          initialized: true,
+          error: null,
+        });
+        logger.info("initialize succeeded");
+      } else {
+        set({
+          user: null,
+          isAuthenticated: false,
+          loading: false,
+          initialized: true,
+          error: null,
+        });
+        logger.info("initialize resolved unauthenticated");
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Session initialization failed";
       logger.info("initialize failed", { message });
-      set({ ...buildSignedOutState(null), loading: false, initialized: true });
+      set({ user: null, isAuthenticated: false, loading: false, initialized: true, error: null });
     }
   },
 
@@ -85,43 +94,73 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         targetNext: params.targetNext,
       });
 
-      const exchanged = await exchangeSsoCode(params);
+      const outcome = await authClient.initialize();
+      const identityResult = await authClient.getMe();
 
-      logger.info("Exchange successful", {
-        hasAccessToken: !!exchanged.access_token,
-        hasUser: !!exchanged.user,
-        userEmail: exchanged.user?.email,
-        userId: exchanged.user?.id,
-      });
+      let user: AuthUser | null = null;
+      if (identityResult.status === "succeeded") {
+        const d = identityResult.data;
+        user = {
+          id: d.subject,
+          email: d.email,
+          org_id: d.organizationId,
+          roles: [...d.roles],
+          products: [...d.products],
+          membership_status: d.membershipStatus,
+          is_email_verified: d.emailVerified,
+          user_metadata: (d.userMetadata as Record<string, unknown>) ?? {},
+        };
+      }
 
       set({
-        ...buildAuthenticatedState(exchanged.access_token, exchanged.user),
+        user,
+        isAuthenticated: outcome.status === "authenticated",
         loading: false,
         initialized: true,
-      });
-
-      logger.info("Auth state updated", {
-        isAuthenticated: true,
-        initialized: true,
-        userEmail: exchanged.user?.email,
+        error: null,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "SSO exchange failed";
       logger.error("Exchange failed", error instanceof Error ? error : new Error(message));
-      set({ ...buildSignedOutState(message), loading: false, initialized: true });
+      set({
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        initialized: true,
+        error: message,
+      });
       throw error;
     }
   },
 
   logout: async () => {
-    await logoutSession().catch(() => ({ success: false }));
+    try {
+      await authClient.logout();
+    } catch {
+      // Ignore logout errors
+    }
     set({
-      ...buildSignedOutState(null),
+      user: null,
+      isAuthenticated: false,
       loading: false,
       initialized: true,
+      error: null,
     });
   },
 }));
+
+// Subscribe to AuthClient state transitions
+authClient.subscribe((event) => {
+  const phase = event.state.phase;
+  if (phase === "unauthenticated" || phase === "destroyed") {
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      loading: false,
+      initialized: true,
+    });
+  }
+});
 
 if (import.meta.env.DEV) {
   useAuthStore.subscribe((state) => {
@@ -129,7 +168,6 @@ if (import.meta.env.DEV) {
       isAuthenticated: state.isAuthenticated,
       initialized: state.initialized,
       hasUser: !!state.user,
-      hasAccessToken: !!state.accessToken,
       loading: state.loading,
       error: state.error,
     });

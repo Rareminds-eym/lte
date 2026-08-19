@@ -1,6 +1,28 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
+if (typeof window !== "undefined") {
+  Object.defineProperty(globalThis, "isSecureContext", {
+    value: true,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(window, "isSecureContext", {
+    value: true,
+    writable: true,
+    configurable: true,
+  });
+  try {
+    Object.defineProperty(window, "location", {
+      value: new URL("https://localhost:8080"),
+      writable: true,
+      configurable: true,
+    });
+  } catch {
+    // Ignore location redefine errors
+  }
+}
+
 vi.mock("@file-viewer/pptx", () => ({
   PptxViewer: () => null,
 }));

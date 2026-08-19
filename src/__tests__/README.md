@@ -95,8 +95,8 @@ Choose the folder by asking two questions:
 
 Examples:
 
-- Auth API behavior: `auth/api/authApi.test.ts`
 - Auth store behavior: `auth/store/authStore.test.ts`
+- Auth initialization & guards: `auth/guards/GuestGuard.test.tsx`
 - Login page behavior: `auth/pages/LoginPage.test.tsx`
 - Course card rendering: `courses/components/CourseCard.test.tsx`
 - Dashboard data hook: `dashboard/hooks/useDashboardData.test.tsx`

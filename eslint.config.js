@@ -6,7 +6,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default [
-	{ ignores: ["dist", "build", "node_modules", "coverage", ".wrangler", "*.config.js", "**/*.js", "**/*.jsx", "graphify-out"] },
+	{ ignores: ["dist", "build", "node_modules", "coverage", ".wrangler", "*.config.js", "**/*.js", "**/*.jsx", "graphify-out", "vendor"] },
 	js.configs.recommended,
 	...tseslint.configs.recommended,
 	{

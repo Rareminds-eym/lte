@@ -1,5 +1,5 @@
-import path from "node:path";
 import react from "@vitejs/plugin-react";
+import path from "node:path";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
 
@@ -16,34 +16,40 @@ export default defineConfig({
 	],
 	resolve: {
 		tsconfigPaths: true,
-		...(process.env.VITEST
-			? {
-					// Mock bare specifiers only, so functions/** subpath imports
-					// (e.g. pdfjs-dist/legacy/build/pdf.mjs) resolve to the real libs.
-					alias: [
-						{
-							find: /^@file-viewer\/pptx$/,
-							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						},
-						{
-							find: /^docx-preview$/,
-							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						},
-						{
-							find: /^pdfjs-dist$/,
-							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						},
-						{
-							find: /^xlsx$/,
-							replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-						},
-					],
-				}
-			: {}),
+		alias: process.env.VITEST
+			? [
+				// Mock bare specifiers only, so functions/** subpath imports
+				// (e.g. pdfjs-dist/legacy/build/pdf.mjs) resolve to the real libs.
+				{
+					find: /^@file-viewer\/pptx$/,
+					replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+				},
+				{
+					find: /^docx-preview$/,
+					replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+				},
+				{
+					find: /^pdfjs-dist$/,
+					replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+				},
+				{
+					find: /^xlsx$/,
+					replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+				},
+			]
+			: [
+				{
+					find: /^xlsx$/,
+					replacement: path.resolve(
+						__dirname,
+						"./vendor/sheetjs/xlsx-0.20.3/xlsx.mjs",
+					),
+				},
+			],
 	},
-  optimizeDeps: {
-    exclude: ["@file-viewer/pptx"],
-  },
+	optimizeDeps: {
+		exclude: ["@file-viewer/pptx"],
+	},
 	server: {
 		host: '0.0.0.0',
 		port: 8080,
@@ -77,7 +83,7 @@ export default defineConfig({
 						return "pdf-vendor";
 					}
 					if (
-						normalized.includes("node_modules/xlsx/")
+						normalized.includes("vendor/sheetjs/xlsx-0.20.3/")
 					) {
 						return "spreadsheet-vendor";
 					}
@@ -105,6 +111,16 @@ export default defineConfig({
 		environment: "jsdom",
 		setupFiles: "./src/setupTests.ts",
 		css: true,
+		watch: false,
+		passWithNoTests: false,
+		isolate: true,
+		fileParallelism: false,
+		maxWorkers: 1,
+		minWorkers: 1,
+		retry: 0,
+		allowOnly: false,
+		sequence: { shuffle: false },
+		fakeTimers: { shouldAdvanceTime: false },
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "lcov", "html", "json-summary"],
