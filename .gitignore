@@ -54,5 +54,6 @@ graphify-out/GRAPH_REPORT.md
 graphify-out/wiki/
 graphify-out/manifest.json
 graphify-out/.graphify_labels*
+graphify-out/.rebuild.lock
 .kiro/skills/graphify/references/
 
