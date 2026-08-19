@@ -66,7 +66,6 @@ interface CourseSnapshot {
   isCourseCompleted: boolean;
   completedModules: number;
   totalModules: number;
-  totalDurationHours: number;
 }
 
 interface EmitStageCompletedEventInput {
@@ -120,9 +119,6 @@ const allUserModulesProgressReadPolicy = {
   filters: ["user_id"],
 } as const;
 
-const HOURS_PER_LEVEL = 7;
-const FALLBACK_TOTAL_DURATION_HOURS = HOURS_PER_LEVEL * 5;
-
 export async function compressQueueMessage(message: unknown): Promise<Uint8Array> {
   const jsonBytes = new TextEncoder().encode(JSON.stringify(message));
   const stream = new Blob([jsonBytes]).stream().pipeThrough(new CompressionStream("gzip"));
@@ -157,20 +153,24 @@ async function buildCourseSnapshot(
       lteCourseCode = capInfo.code;
     }
 
-    const userLevelsProgress = (await qb.read(allUserLevelsProgressReadPolicy, {
-      filters: [{ column: "user_id", op: "eq", value: input.userId }],
-    })) as LevelProgressRow[] | null;
+    const [userLevelsProgressRes, userModulesProgressRes, rawLevelsRes] = await Promise.all([
+      qb.read(allUserLevelsProgressReadPolicy, {
+        filters: [{ column: "user_id", op: "eq", value: input.userId }],
+      }),
+      qb.read(allUserModulesProgressReadPolicy, {
+        filters: [{ column: "user_id", op: "eq", value: input.userId }],
+      }),
+      qb.read(capabilityLevelsReadPolicy, {
+        filters: [{ column: "capability_id", op: "eq", value: levelInfo.capability_id }],
+      }),
+    ]);
 
-    const userModulesProgress = (await qb.read(allUserModulesProgressReadPolicy, {
-      filters: [{ column: "user_id", op: "eq", value: input.userId }],
-    })) as ModuleProgressRow[] | null;
+    const userLevelsProgress = userLevelsProgressRes as LevelProgressRow[] | null;
+    const userModulesProgress = userModulesProgressRes as ModuleProgressRow[] | null;
+    const rawLevels = rawLevelsRes as LevelRow[] | null;
 
     const levelDbMap = new Map((userLevelsProgress ?? []).map((p) => [p.level_id, p.status]));
     const modDbMap = new Map((userModulesProgress ?? []).map((m) => [m.module_id, m]));
-
-    const rawLevels = (await qb.read(capabilityLevelsReadPolicy, {
-      filters: [{ column: "capability_id", op: "eq", value: levelInfo.capability_id }],
-    })) as LevelRow[] | null;
 
     if (rawLevels && rawLevels.length > 0) {
       const sortedLevels = [...rawLevels].sort((a, b) => a.level_code.localeCompare(b.level_code));
@@ -277,10 +277,6 @@ async function buildCourseSnapshot(
     ? levels.reduce((sum, l) => sum + l.totalModules, 0)
     : resolvedTotalModules;
 
-  const totalDurationHours = levels
-    ? Math.round(levels.length * HOURS_PER_LEVEL)
-    : FALLBACK_TOTAL_DURATION_HOURS;
-
   return {
     lteCourseId,
     courseTitle,
@@ -289,7 +285,6 @@ async function buildCourseSnapshot(
     isCourseCompleted,
     completedModules,
     totalModules,
-    totalDurationHours,
   };
 }
 
@@ -317,7 +312,6 @@ export async function emitStageCompletedEvent(
         completedModules: snapshot.completedModules,
         totalModules: snapshot.totalModules,
         durationHours: Math.round((input.durationSeconds ?? 0) / 3600),
-        totalDurationHours: snapshot.totalDurationHours,
         resumeUrl,
         earnedSkills: [snapshot.courseTitle],
         completedAt: new Date().toISOString(),
@@ -335,6 +329,9 @@ export async function emitStageCompletedEvent(
     }
   } catch (queueErr) {
     // Fail-soft: Queue errors never crash the user's HTTP response
-    apiLogger.error("Failed to emit to LTE_SYNC_QUEUE", queueErr, {});
+    apiLogger.error("Failed to emit to LTE_SYNC_QUEUE", queueErr, {
+      userId: input.userId,
+      levelId: input.levelId,
+    });
   }
 }

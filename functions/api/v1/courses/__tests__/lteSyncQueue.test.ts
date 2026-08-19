@@ -47,7 +47,6 @@ interface DecompressedEvent {
     completedModules: number;
     totalModules: number;
     durationHours: number;
-    totalDurationHours: number;
     resumeUrl: string;
     earnedSkills: string[];
     completedAt: string;
@@ -93,7 +92,6 @@ describe("emitStageCompletedEvent", () => {
       completedModules: 3,
       totalModules: 0,
       durationHours: 2,
-      totalDurationHours: 35,
       resumeUrl: "/my-courses/lvl-2",
       earnedSkills: ["LTE Course lvl-2"],
     });
@@ -134,7 +132,6 @@ describe("emitStageCompletedEvent", () => {
       completedModules: 3,
       totalModules: 3,
       durationHours: 2,
-      totalDurationHours: 14,
       resumeUrl: "/my-courses/LTE-PRO",
       earnedSkills: ["LTE Pro"],
     });
@@ -217,10 +214,9 @@ describe("emitStageCompletedEvent", () => {
 
     await expect(emitStageCompletedEvent(qb, env, input)).resolves.toBeUndefined();
     expect(send).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(
-      "Failed to emit to LTE_SYNC_QUEUE",
-      expect.any(Error),
-      {},
-    );
+    expect(errorSpy).toHaveBeenCalledWith("Failed to emit to LTE_SYNC_QUEUE", expect.any(Error), {
+      userId: "user-1",
+      levelId: "lvl-2",
+    });
   });
 });
