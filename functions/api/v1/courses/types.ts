@@ -77,6 +77,8 @@ export interface ModuleStageContent {
   stageName: Lte6eStage;
   stageOrder: number;
   stageDescription: string;
+  moduleContext: string | null;
+  curriculumReference: Record<string, unknown> | string[] | null;
   items: EContentItem[];
   artifacts: ModuleArtifact[];
   artifactType: "practice" | "final" | null;
@@ -263,6 +265,8 @@ export interface ModuleContentRow {
   stage_name: Lte6eStage;
   stage_order: number;
   stage_description: string | null;
+  module_context: string | null;
+  curriculum_reference: Record<string, unknown> | string[] | null;
   is_active: boolean;
   e_content?: EContentRow[];
   module_artifacts?: ArtifactRow[];

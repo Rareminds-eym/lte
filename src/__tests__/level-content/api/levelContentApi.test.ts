@@ -60,6 +60,8 @@ const modulePayload = {
         stageName: "engage",
         stageOrder: 1,
         stageDescription: "Understand the incident context before taking action.",
+        moduleContext: null,
+        curriculumReference: null,
         items: [],
         artifacts: [],
         artifactType: null,

@@ -667,6 +667,8 @@ export const LevelContentPage: React.FC = () => {
       activeStage={activeStage}
       activeArtifactType={activeArtifactType}
       stageDescription={stageDescription}
+      stageModuleContext={activeStageContent.moduleContext}
+      stageCurriculumReference={activeStageContent.curriculumReference}
       stageSummary={stageSummary}
       previewItems={previewItems}
       isScenarioExpanded={isScenarioExpanded && isScenarioOverflowing}

@@ -155,9 +155,8 @@ export const LevelModulesPage: React.FC = () => {
     : undefined;
 
   // Reuse the resolved activeCourse from top to get totalLevels & targetLevel
-
-  const dynamicTotalLevels = activeCourse?.totalLevels ?? 5;
-  const dynamicTargetLevel = activeCourse?.targetLevel ?? "L3";
+  const dynamicTotalLevels = activeCourse?.totalLevels ?? 0;
+  const dynamicTargetLevel = activeCourse?.targetLevel;
   const currentUserLevel = activeCourse?.currentLevel ?? 0;
 
   return (
