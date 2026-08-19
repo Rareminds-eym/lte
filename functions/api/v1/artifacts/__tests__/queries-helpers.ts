@@ -1,7 +1,7 @@
 import type { LteEnv } from "@functions/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
-import * as XLSX from "xlsx";
+import * as XLSX from "../../../../../vendor/sheetjs/xlsx-0.20.3/xlsx.mjs";
 
 export interface QueryResult {
   data: unknown;
