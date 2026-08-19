@@ -1,6 +1,6 @@
 import { jsonError } from "@functions/lib/http";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { createAuth, type SsoServiceBinding } from "@rareminds-eym/auth-core";
+import { createAuth } from "@rareminds-eym/auth-core";
 
 const ASSET_PATH_PATTERN = /\.[a-z0-9]{2,5}$/i;
 
@@ -13,12 +13,13 @@ export const onRequest = async ({ request, env }: PagesContext<LteEnv>) => {
   // Delegate browser auth routes to Auth Core
   if (
     env.SSO_SERVICE &&
-    (pathname.startsWith("/api/auth/") || pathname.startsWith("/api/v1/auth/"))
+    (pathname.startsWith("/api/auth/") || pathname.startsWith("/api/v1/auth/")) &&
+    pathname !== "/api/v1/auth/sso/exchange"
   ) {
     try {
       if (!_authInstance) {
         _authInstance = createAuth({
-          sso: env.SSO_SERVICE as SsoServiceBinding,
+          sso: env.SSO_SERVICE as unknown as Parameters<typeof createAuth>[0]["sso"],
           issuer: "sso-api",
           audience: "sso-client",
           approvedOrigins: [
@@ -27,7 +28,20 @@ export const onRequest = async ({ request, env }: PagesContext<LteEnv>) => {
             "http://localhost:8789",
             "http://127.0.0.1:8080",
             "http://127.0.0.1:8789",
+            "http://localhost",
+            "http://127.0.0.1",
           ],
+          credentialedCors: {
+            origins: [
+              "https://lte.rareminds.in",
+              "http://localhost:8080",
+              "http://localhost:8789",
+              "http://127.0.0.1:8080",
+              "http://127.0.0.1:8789",
+              "http://localhost",
+              "http://127.0.0.1",
+            ],
+          },
           csrf: { name: "X-RM-CSRF", value: "1" },
           cookieMaxAgeSeconds: 604800,
           ssoRequestTimeoutMs: 5000,

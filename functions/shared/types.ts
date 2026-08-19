@@ -80,3 +80,33 @@ export interface ErrorResponse {
   error_string?: string;
   requestId?: string;
 }
+
+export interface SsoExchangeResponse {
+  access_token: string;
+  refresh_token: string;
+  user: {
+    sub: string;
+    email: string;
+    org_id: string;
+    roles: string[];
+    products: string[];
+    membership_status: MembershipStatus;
+    is_email_verified: boolean;
+    user_metadata: Record<string, unknown>;
+  };
+  subscription: SsoSubscriptionSnapshot | null;
+  expires_in?: number;
+}
+
+export interface SsoServiceBinding {
+  getJwks(input: { correlationId: string }): Promise<unknown>;
+  exchangeAuthorizationCode(params: {
+    code: string;
+    state: string;
+    redirectUri: string;
+    targetApp: string;
+    ip?: string;
+    ua?: string;
+  }): Promise<SsoExchangeResponse>;
+  [key: string]: unknown;
+}

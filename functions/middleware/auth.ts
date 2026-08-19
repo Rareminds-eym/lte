@@ -1,4 +1,4 @@
-import type { AuthUser, SsoServiceBinding, VerifiedAuthContext } from "@rareminds-eym/auth-core";
+import type { AuthUser, VerifiedAuthContext } from "@rareminds-eym/auth-core";
 import { createAuth } from "@rareminds-eym/auth-core";
 import { validateBackendEnv } from "../lib/env";
 import type { LteEnv } from "../lib/types";
@@ -23,14 +23,29 @@ function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
 
   try {
     _authInstance = createAuth({
-      sso: ssoRpcRaw as SsoServiceBinding,
+      sso: ssoRpcRaw as unknown as Parameters<typeof createAuth>[0]["sso"],
       issuer: "sso-api",
       audience: "sso-client",
       approvedOrigins: [
         "https://lte.rareminds.in",
         "http://localhost:8080",
         "http://localhost:8789",
+        "http://127.0.0.1:8080",
+        "http://127.0.0.1:8789",
+        "http://localhost",
+        "http://127.0.0.1",
       ],
+      credentialedCors: {
+        origins: [
+          "https://lte.rareminds.in",
+          "http://localhost:8080",
+          "http://localhost:8789",
+          "http://127.0.0.1:8080",
+          "http://127.0.0.1:8789",
+          "http://localhost",
+          "http://127.0.0.1",
+        ],
+      },
       csrf: { name: "X-RM-CSRF", value: "1" },
       cookieMaxAgeSeconds: 604800,
       ssoRequestTimeoutMs: 5000,
@@ -99,11 +114,11 @@ export function toAuthApiUser(user: AuthUser) {
     id: user.sub,
     email: user.email,
     org_id: user.org_id,
-    roles: user.roles,
-    products: user.products,
+    roles: [...user.roles],
+    products: [...user.products],
     membership_status: user.membership_status,
     is_email_verified: user.is_email_verified,
-    user_metadata: user.user_metadata ?? {},
+    user_metadata: user.user_metadata ? { ...user.user_metadata } : {},
   };
 }
 

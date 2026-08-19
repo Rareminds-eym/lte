@@ -1,8 +1,7 @@
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
-import type { LteEnv, PagesContext } from "@functions/lib/types";
+import type { LteEnv, PagesContext, SsoServiceBinding } from "@functions/lib/types";
 import { AuthError, extractBearerToken, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
-import type { SsoServiceBinding } from "@rareminds-eym/auth-core";
 import { PasswordChangeSchema } from "./schemas";
 
 type PasswordSsoService = SsoServiceBinding & {
