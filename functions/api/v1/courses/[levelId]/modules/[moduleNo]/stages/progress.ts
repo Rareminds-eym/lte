@@ -1,3 +1,4 @@
+import { emitStageCompletedEvent } from "@functions/api/v1/courses/lteSyncQueue";
 import { upsertStageProgress } from "@functions/api/v1/courses/queries";
 import { LevelModuleParamsSchema } from "@functions/api/v1/courses/schemas";
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
@@ -279,6 +280,18 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
         status,
         durationSeconds,
       );
+    }
+
+    // Emit self-contained sync event to Cloudflare Queue ONLY AFTER DB writes succeeded!
+    if (status === "completed") {
+      await emitStageCompletedEvent(qb, context.env, {
+        userId,
+        levelId,
+        moduleNumber,
+        durationSeconds,
+        levelCompleted,
+        status,
+      });
     }
 
     return jsonResponse({
