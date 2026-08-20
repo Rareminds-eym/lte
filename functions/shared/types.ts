@@ -108,5 +108,9 @@ export interface SsoServiceBinding {
     ip?: string;
     ua?: string;
   }): Promise<SsoExchangeResponse>;
+  provisionLteAccess(params: {
+    userId: string;
+    orgId: string;
+  }): Promise<{ success: boolean; alreadyProvisioned?: boolean }>;
   [key: string]: unknown;
 }

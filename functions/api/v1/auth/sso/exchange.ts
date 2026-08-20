@@ -56,6 +56,37 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       return jsonError("LTE access is required", 403);
     }
 
+    // BLOCKING: must complete before response is returned.
+    // authClient.initialize() fires immediately after this response, rotating the
+    // session and running get_jwt_claims(). The rows must exist before that happens.
+    try {
+      const provision = await (context.env.SSO_SERVICE as SsoServiceBinding).provisionLteAccess({
+        userId: exchange.user.sub,
+        orgId: exchange.user.org_id,
+      });
+      if (!provision.success) {
+        ssoLogger.error(
+          "LTE provisioning failed",
+          new Error("provisionLteAccess returned success:false"),
+          {
+            userId: exchange.user.sub,
+          },
+        );
+      } else if (!provision.alreadyProvisioned) {
+        ssoLogger.info("LTE product provisioned for new user", { userId: exchange.user.sub });
+      }
+    } catch (err) {
+      // Non-fatal: log and continue. The exchange token itself already has "lte"
+      // so the current request succeeds; next rotation may still fail until fixed.
+      ssoLogger.error(
+        "LTE provisioning threw unexpectedly",
+        err instanceof Error ? err : new Error(String(err)),
+        {
+          userId: exchange.user.sub,
+        },
+      );
+    }
+
     const headers = new Headers();
     const cookieName = "__Host-rm-refresh";
     const attributes = "Secure; HttpOnly; Path=/; SameSite=Strict";
