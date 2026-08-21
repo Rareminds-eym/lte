@@ -331,4 +331,26 @@ describe("SettingsPage", () => {
     expect(screen.getByDisplayValue("R Amrutha")).toBeInTheDocument();
     expect(mockUpdateMutate).not.toHaveBeenCalled();
   });
+
+  it("renders correct dynamic color tiers according to profile strength (Course Learnings style)", () => {
+    // 1. In-progress tier (< 100%) uses Brand Blue
+    (useSettingsProfile as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { ...mockProfile, profileStrength: 72 },
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetch,
+    });
+    const { rerender } = render(<SettingsPage />);
+    expect(screen.getByText("72%")).toHaveClass("text-brand-600");
+
+    // 2. 100% Completed tier uses Success Green
+    (useSettingsProfile as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { ...mockProfile, profileStrength: 100 },
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetch,
+    });
+    rerender(<SettingsPage />);
+    expect(screen.getByText("100%")).toHaveClass("text-success-600");
+  });
 });
