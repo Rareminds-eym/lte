@@ -38,9 +38,9 @@ bucket_name = "lte"
 
 [vars]
 ENVIRONMENT = "production"
-SSO_WORKER_LOCAL_URL = "http://127.0.0.1:8787"
+SSO_WORKER_LOCAL_URL = "http://localhost:8787"
 COOKIE_DOMAIN = ".rareminds.in"
-SKILLPASSPORT_INTERNAL_URL = "http://127.0.0.1:8788"
+SKILLPASSPORT_INTERNAL_URL = "http://localhost:8788"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 
 # ============================================================================

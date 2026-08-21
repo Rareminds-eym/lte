@@ -60,11 +60,14 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
 
   // Detect SSO authorization-code callback parameters
   const callbackParams = useMemo(() => {
+    if (isAuthenticated) {
+      return null;
+    }
     const code = searchParams.get("code");
     const state = searchParams.get("state");
     const redirectUri = `${window.location.origin}/auth/callback`;
     return code && state ? { code, state, redirectUri, targetNext } : null;
-  }, [searchParams, targetNext]);
+  }, [searchParams, targetNext, isAuthenticated]);
 
   // 1. Initial silent session refresh (skip on callback flows)
   useEffect(() => {
@@ -83,7 +86,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
 
   // 2. Authorization-code exchange when callback params are present
   useEffect(() => {
-    if (!callbackParams) return;
+    if (!callbackParams || isAuthenticated) return;
 
     let cancelled = false;
     const exchangeKey = getExchangeKey(callbackParams);
@@ -102,13 +105,27 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
       .then(() => {
         if (!cancelled) {
           logger.info(`Exchange succeeded, navigating to ${targetNext}`);
-          window.history.replaceState({}, "", targetNext);
+          // Strip code and state completely from the browser URL address bar
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete("code");
+          cleanUrl.searchParams.delete("state");
+          window.history.replaceState(
+            {},
+            "",
+            cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ""),
+          );
           navigate(targetNext, { replace: true });
         }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
           const message = error instanceof Error ? error.message : "SSO callback failed";
+          // If code was already consumed (e.g. page refreshed) but session is active, don't show fatal error
+          if (useAuthStore.getState().isAuthenticated) {
+            logger.info("Code already exchanged; user is authenticated.");
+            navigate(targetNext, { replace: true });
+            return;
+          }
           logger.error("Exchange failed", error instanceof Error ? error : new Error(message));
           setCallbackError(message);
         }
@@ -117,7 +134,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
     return () => {
       cancelled = true;
     };
-  }, [callbackParams, exchangeCode, navigate, targetNext]);
+  }, [callbackParams, exchangeCode, isAuthenticated, navigate, targetNext]);
 
   // 3. Orchestrate active learning path fetching once authenticated
   useEffect(() => {

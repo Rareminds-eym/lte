@@ -30,6 +30,10 @@ const mockAuthUser: AuthUser = {
 };
 
 beforeEach(() => {
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ ok: true }),
+  }) as unknown as typeof global.fetch;
   useAuthStore.setState({
     user: null,
     isAuthenticated: false,

@@ -16,36 +16,44 @@ export default defineConfig({
 	],
 	resolve: {
 		tsconfigPaths: true,
-		alias: process.env.VITEST
-			? [
-				// Mock bare specifiers only, so functions/** subpath imports
-				// (e.g. pdfjs-dist/legacy/build/pdf.mjs) resolve to the real libs.
-				{
-					find: /^@file-viewer\/pptx$/,
-					replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-				},
-				{
-					find: /^docx-preview$/,
-					replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-				},
-				{
-					find: /^pdfjs-dist$/,
-					replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-				},
-				{
-					find: /^xlsx$/,
-					replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
-				},
-			]
-			: [
-				{
-					find: /^xlsx$/,
-					replacement: path.resolve(
-						__dirname,
-						"./vendor/sheetjs/xlsx-0.20.3/xlsx.mjs",
-					),
-				},
-			],
+		alias: [
+			{ find: /^@rareminds-eym\/auth-core\/internal$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/auth-core/dist/internal.js") },
+			{ find: /^@rareminds-eym\/auth-core$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/auth-core/dist/index.js") },
+			{ find: /^@rareminds-eym\/auth-client$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/auth-client/dist/index.js") },
+			{ find: /^@rareminds-eym\/sso-gateway$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/sso-gateway/dist/index.js") },
+			{ find: /^@rareminds-eym\/identity-client$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/identity-client/dist/index.js") },
+			{ find: /^@rareminds-eym\/entitlements$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/entitlements/dist/index.js") },
+			...(process.env.VITEST
+				? [
+					// Mock bare specifiers only, so functions/** subpath imports
+					// (e.g. pdfjs-dist/legacy/build/pdf.mjs) resolve to the real libs.
+					{
+						find: /^@file-viewer\/pptx$/,
+						replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+					{
+						find: /^docx-preview$/,
+						replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+					{
+						find: /^pdfjs-dist$/,
+						replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+					{
+						find: /^xlsx$/,
+						replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+				]
+				: [
+					{
+						find: /^xlsx$/,
+						replacement: path.resolve(
+							__dirname,
+							"./vendor/sheetjs/xlsx-0.20.3/xlsx.mjs",
+						),
+					},
+				]),
+		],
 	},
 	optimizeDeps: {
 		exclude: ["@file-viewer/pptx"],

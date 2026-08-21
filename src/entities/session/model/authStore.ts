@@ -97,6 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await fetch("/api/v1/auth/sso/exchange", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           code: params.code,
           state: params.state,
@@ -105,8 +106,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       if (!response.ok) {
-        const errorData = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(errorData?.error || "SSO exchange failed");
+        const errorData = (await response.json().catch(() => null)) as {
+          error?: string | { message?: string };
+          error_string?: string;
+          message?: string;
+        } | null;
+        const msg =
+          (typeof errorData?.error === "object" ? errorData.error?.message : errorData?.error) ||
+          errorData?.error_string ||
+          errorData?.message ||
+          "SSO exchange failed";
+        throw new Error(msg);
       }
 
       const outcome = await authClient.initialize();

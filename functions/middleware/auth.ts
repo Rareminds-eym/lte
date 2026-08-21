@@ -1,15 +1,13 @@
-import type { AuthUser, VerifiedAuthContext } from "@rareminds-eym/auth-core";
+import type { VerifiedAuthUser as AuthUser, VerifiedAuthContext } from "@rareminds-eym/auth-core";
 import { createAuth } from "@rareminds-eym/auth-core";
 import { validateBackendEnv } from "../lib/env";
 import type { LteEnv } from "../lib/types";
 
-let _authInstance: ReturnType<typeof createAuth> | null = null;
-
 export function resetAuthInstance(): void {
-  _authInstance = null;
+  // No-op: Auth instance is now cleanly request-scoped per Cloudflare Pages runtime best practices
 }
 
-function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
+export function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
   const ssoRpcRaw = env.SSO_SERVICE;
   if (!ssoRpcRaw || typeof ssoRpcRaw !== "object") {
     throw new Error(
@@ -17,12 +15,10 @@ function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
     );
   }
 
-  if (_authInstance) return _authInstance;
-
   validateBackendEnv(env);
 
   try {
-    _authInstance = createAuth({
+    return createAuth({
       sso: ssoRpcRaw as unknown as Parameters<typeof createAuth>[0]["sso"],
       issuer: "sso-api",
       audience: "sso-client",
@@ -50,7 +46,6 @@ function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
       cookieMaxAgeSeconds: 604800,
       ssoRequestTimeoutMs: 5000,
     });
-    return _authInstance;
   } catch (error) {
     throw new Error(
       `Failed to initialize auth-core: ${error instanceof Error ? error.message : String(error)}`,

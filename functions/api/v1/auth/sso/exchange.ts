@@ -90,7 +90,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     const headers = new Headers();
     const cookieName = "__Host-rm-refresh";
     const attributes = "Secure; HttpOnly; Path=/; SameSite=Strict";
-    const maxAge = exchange.expires_in ?? 604800;
+    const maxAge = 604800; // 7-day refresh token lifetime
     const cookieHeader = `${cookieName}=${exchange.refresh_token}; ${attributes}; Max-Age=${maxAge}`;
     ssoLogger.debug("Setting refresh cookie", {
       cookieName,

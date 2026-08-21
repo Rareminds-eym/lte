@@ -1,53 +1,38 @@
 import { jsonError } from "@functions/lib/http";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { createAuth } from "@rareminds-eym/auth-core";
+import { createSsoGateway } from "@rareminds-eym/sso-gateway";
 
 const ASSET_PATH_PATTERN = /\.[a-z0-9]{2,5}$/i;
-
-let _authInstance: ReturnType<typeof createAuth> | null = null;
 
 export const onRequest = async ({ request, env }: PagesContext<LteEnv>) => {
   const url = new URL(request.url);
   const { pathname } = url;
 
-  // Delegate browser auth routes to Auth Core
+  // Delegate browser auth routes to SSO Gateway
   if (
     env.SSO_SERVICE &&
     (pathname.startsWith("/api/auth/") || pathname.startsWith("/api/v1/auth/")) &&
     pathname !== "/api/v1/auth/sso/exchange"
   ) {
     try {
-      if (!_authInstance) {
-        _authInstance = createAuth({
-          sso: env.SSO_SERVICE as unknown as Parameters<typeof createAuth>[0]["sso"],
-          issuer: "sso-api",
-          audience: "sso-client",
-          approvedOrigins: [
-            "https://lte.rareminds.in",
-            "http://localhost:8080",
-            "http://localhost:8789",
-            "http://127.0.0.1:8080",
-            "http://127.0.0.1:8789",
-            "http://localhost",
-            "http://127.0.0.1",
-          ],
-          credentialedCors: {
-            origins: [
-              "https://lte.rareminds.in",
-              "http://localhost:8080",
-              "http://localhost:8789",
-              "http://127.0.0.1:8080",
-              "http://127.0.0.1:8789",
-              "http://localhost",
-              "http://127.0.0.1",
-            ],
-          },
-          csrf: { name: "X-RM-CSRF", value: "1" },
-          cookieMaxAgeSeconds: 604800,
-          ssoRequestTimeoutMs: 5000,
-        });
-      }
-      const handled = await _authInstance.handleBrowserRequest(request);
+      const gateway = createSsoGateway({
+        sso: env.SSO_SERVICE as unknown as Parameters<typeof createSsoGateway>[0]["sso"],
+        issuer: "sso-api",
+        audience: "sso-client",
+        approvedOrigins: [
+          "https://lte.rareminds.in",
+          "http://localhost:8080",
+          "http://localhost:8789",
+          "http://127.0.0.1:8080",
+          "http://127.0.0.1:8789",
+          "http://localhost",
+          "http://127.0.0.1",
+        ],
+        csrf: { name: "X-RM-CSRF", value: "1" },
+        cookieMaxAgeSeconds: 604800,
+        ssoRequestTimeoutMs: 5000,
+      });
+      const handled = await gateway.handleBrowserRequest(request);
       if (handled) return handled;
     } catch {
       // Fall through to 404 if dispatch fails
