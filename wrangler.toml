@@ -16,7 +16,7 @@ host = "127.0.0.1"
 inspector_port = 9228
 
 # ============================================================================
-# SERVICE BINDINGS
+# LOCAL BINDINGS
 # ============================================================================
 
 [[services]]
@@ -24,32 +24,64 @@ binding = "SSO_SERVICE"
 service = "sso-api"
 entrypoint = "SsoWorker"
 
-# ============================================================================
-# QUEUE PRODUCERS
-# ============================================================================
-
 [[queues.producers]]
 queue = "lte-db-sync-queue"
 binding = "LTE_SYNC_QUEUE"
-
-# ============================================================================
-# R2 BUCKET BINDINGS
-# ============================================================================
 
 [[r2_buckets]]
 binding = "STORAGE_BUCKET"
 bucket_name = "lte"
 
-# ============================================================================
-# VARIABLES
-# ============================================================================
-
 [vars]
 ENVIRONMENT = "production"
 SSO_WORKER_LOCAL_URL = "http://127.0.0.1:8787"
-COOKIE_DOMAIN = ".rareminds.in"
 SKILLPASSPORT_INTERNAL_URL = "http://127.0.0.1:8788"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
+
+# ============================================================================
+# PRODUCTION BINDINGS
+# ============================================================================
+
+[env.production.vars]
+ENVIRONMENT = "production"
+COOKIE_DOMAIN = ".rareminds.in"
+SKILLPASSPORT_INTERNAL_URL = "https://skillpassport.rareminds.in"
+R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
+
+[[env.production.services]]
+binding = "SSO_SERVICE"
+service = "sso-api"
+entrypoint = "SsoWorker"
+
+[[env.production.queues.producers]]
+queue = "lte-db-sync-queue"
+binding = "LTE_SYNC_QUEUE"
+
+[[env.production.r2_buckets]]
+binding = "STORAGE_BUCKET"
+bucket_name = "lte"
+
+# ============================================================================
+# PREVIEW BINDINGS
+# ============================================================================
+
+[env.preview.vars]
+ENVIRONMENT = "development"
+SKILLPASSPORT_INTERNAL_URL = "https://skillpassport.pages.dev"
+R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
+
+[[env.preview.services]]
+binding = "SSO_SERVICE"
+service = "sso-api-dev"
+entrypoint = "SsoWorker"
+
+[[env.preview.queues.producers]]
+queue = "lte-db-sync-queue-dev"
+binding = "LTE_SYNC_QUEUE"
+
+[[env.preview.r2_buckets]]
+binding = "STORAGE_BUCKET"
+bucket_name = "lte"
 
 # ============================================================================
 # SECRETS
