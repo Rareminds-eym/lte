@@ -1,5 +1,6 @@
 import { jsonError } from "@functions/lib/http";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { apiLogger } from "@functions/shared/logger";
 import { createSsoGateway } from "@rareminds-eym/sso-gateway";
 
 const ASSET_PATH_PATTERN = /\.[a-z0-9]{2,5}$/i;
@@ -34,8 +35,8 @@ export const onRequest = async ({ request, env }: PagesContext<LteEnv>) => {
       });
       const handled = await gateway.handleBrowserRequest(request);
       if (handled) return handled;
-    } catch {
-      // Fall through to 404 if dispatch fails
+    } catch (error) {
+      apiLogger.error("SSO Gateway request dispatch failed", error, { pathname });
     }
   }
 

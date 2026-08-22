@@ -86,11 +86,13 @@ export const LevelContentPage: React.FC = () => {
     data: level,
     isLoading: isLevelLoading,
     isError: isLevelError,
+    refetch: refetchLevel,
   } = useLevelDetails(levelId);
   const {
     data: levelModule,
     isLoading: isModuleLoading,
     isError: isModuleError,
+    refetch: refetchModule,
   } = useLevelModuleDetails(levelId, hasValidRouteParams ? moduleNumber : undefined);
   const data = useMemo(
     () => (level && levelModule ? { level, module: levelModule } : undefined),
@@ -177,9 +179,9 @@ export const LevelContentPage: React.FC = () => {
     });
   };
 
-  const handleModuleSelect = (targetModuleNo: number) => {
+  const handleModuleSelect = (targetModuleNumber: number) => {
     if (!levelId) return;
-    navigate(`/my-courses/${levelId}/modules/${targetModuleNo}?stage=engage`);
+    navigate(`/my-courses/${levelId}/modules/${targetModuleNumber}?stage=engage`);
     setMobilePanelOpen(null);
   };
 
@@ -214,15 +216,30 @@ export const LevelContentPage: React.FC = () => {
     setIsStageInfoExpanded((prev) => !prev);
   };
 
-  const renderUnavailableState = (message: string) => (
-    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-xs border border-line-subtle text-center max-w-md w-full">
+  const renderUnavailableState = (message: string, onRetry?: () => void) => (
+    <div
+      className="bg-white p-6 md:p-8 rounded-2xl shadow-xs border border-line-subtle text-center max-w-md w-full"
+      role="alert"
+    >
       <h3 className="text-base md:text-lg font-bold text-content-primary mb-2">
         Course Content Not Available
       </h3>
       <p className="text-xs text-content-secondary mb-4">{message}</p>
-      <Button type="button" onClick={handleBackToOverview} size="sm">
-        Back to Courses
-      </Button>
+      <div className="flex justify-center gap-2">
+        {onRetry && (
+          <Button type="button" onClick={onRetry} size="sm" variant="primary">
+            Retry
+          </Button>
+        )}
+        <Button
+          type="button"
+          onClick={handleBackToOverview}
+          size="sm"
+          variant={onRetry ? "outline" : "primary"}
+        >
+          Back to Courses
+        </Button>
+      </div>
     </div>
   );
 
@@ -244,9 +261,12 @@ export const LevelContentPage: React.FC = () => {
   useEffect(() => {
     if (!data) return;
 
-    const fallbackStage = routeFirstIncompleteStage ?? routeStageSequence[0] ?? "engage";
-    if (!routeStageSequence.includes(activeStage) || isRouteStageLocked) {
+    if (isRouteStageLocked && routeFirstIncompleteStage) {
       setSearchParams((prev) => {
+        const fallbackStage =
+          (prev.get("stage")?.toLowerCase() as LteStage | null) || routeFirstIncompleteStage;
+        if (prev.get("stage") === fallbackStage) return prev;
+
         const updated = new URLSearchParams(prev);
         updated.set("stage", fallbackStage);
         updated.delete("content");
@@ -288,7 +308,10 @@ export const LevelContentPage: React.FC = () => {
   if (isLevelError || isModuleError) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-surface-secondary p-4">
-        {renderUnavailableState(LEVEL_CONTENT_UNAVAILABLE_MESSAGE)}
+        {renderUnavailableState(LEVEL_CONTENT_UNAVAILABLE_MESSAGE, () => {
+          void refetchLevel();
+          void refetchModule();
+        })}
       </div>
     );
   }

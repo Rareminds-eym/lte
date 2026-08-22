@@ -11,21 +11,27 @@
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { apiLogger } from "@functions/shared/logger";
 import { getCapabilitiesByRoleId } from "./queries";
 import { GetCapabilitiesRequestSchema } from "./schemas";
 import type { GetCapabilitiesRequest, GetCapabilitiesResponse } from "./types";
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
+  const requestId = crypto.randomUUID();
+  let roleId: string | undefined;
   try {
     const parsedBody = GetCapabilitiesRequestSchema.safeParse(
       await readJsonObject(context.request),
     );
     if (!parsedBody.success) {
-      return jsonError(parsedBody.error.issues[0]?.message ?? "Invalid request body", 400);
+      return jsonError(parsedBody.error.issues[0]?.message ?? "Invalid request body", 400, {
+        code: "INVALID_REQUEST_BODY",
+        requestId,
+      });
     }
 
     const body: GetCapabilitiesRequest = parsedBody.data;
-    const { roleId } = body;
+    roleId = body.roleId;
 
     const supabase = createServiceSupabase(context.env);
     const capabilities = await getCapabilitiesByRoleId(supabase, roleId);
@@ -36,7 +42,7 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       count: capabilities.length,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(errorMessage, 500);
+    apiLogger.error("Failed to fetch capabilities by role ID", error, { requestId, roleId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }

@@ -59,6 +59,7 @@ allowed_usage:
 authentication:
 frontend_client: "@rareminds-eym/auth-client"
 backend_core: "@rareminds-eym/auth-core"
+gateway: "@rareminds-eym/sso-gateway"
 direct_supabase_auth_allowed: false
 
 styling:
@@ -405,21 +406,161 @@ rules:
   * Core configuration constants should be centralized in config modules (e.g., `shared/config/`).
   * No secrets, API keys, or database credentials should ever be hardcoded.
 
+# --------------------------------------------------------------------------
+# ERROR HANDLING & RESILIENCE (INDUSTRIAL-GRADE STANDARDS)
+# --------------------------------------------------------------------------
+
 * category: error-handling
-  title: "Correct Error Handling (No Fallbacks)"
+  title: "Strict Prohibition of Empty or Silent Catch Blocks"
   severity: critical
   description: |
-  Error handling must be robust and handled correctly at all layers.
-  * Empty catch blocks (`try {} catch (e) {}` with no logging or action) are strictly prohibited.
-  * Catch and handle all potential promise rejections, database errors, and fetch failures.
-  * Always log errors using the centralized logging utility (`logger.error`).
-  * Provide helpful and graceful user-facing error states (e.g., UI error boundaries, toast notifications) rather than silent failures or basic fallback logic.
+  Empty or silent catch blocks (`try {} catch (e) {}` or `catch {}` with no logging or action) are strictly prohibited for all operational, network, storage, SSO, and database I/O operations.
+  * Every operational caught error must be handled or logged via the centralized logger (`logger.error` / `apiLogger.error`).
+  * Swallowing exceptions during external proxying, SSO dispatch, or database queries (e.g. falling through to 404 or returning null without logs) is a rule violation.
+  * Exception: Pure synchronous parsing/validation guards (e.g., `try { return new URL(str); } catch { return null; }` or safe JSON parsing with a known default value) are permitted, provided they have no side effects.
+
+* category: error-handling
+  title: "Sanitized 500 Responses & Opaque Internal Errors (OWASP ASVS)"
+  severity: critical
+  description: |
+  Backend endpoints must NEVER leak raw internal exceptions, database error strings, SQL queries, or schema details in HTTP 500 responses.
+  * When a 500 Internal Server Error occurs, the response body MUST contain a sanitized, safe generic message (e.g. "An unexpected internal error occurred") along with a correlation `requestId`.
+  * The full error stack and driver details must be logged securely server-side only (`apiLogger.error(..., error, { requestId })`).
+
+* category: error-handling
+  title: "Mandatory Inspection of Supabase Database Errors"
+  severity: critical
+  description: |
+  All Supabase client query calls MUST explicitly inspect and handle the returned `error` object (`const { data, error } = await supabase...`).
+  * Destructuring only `const { data }` while ignoring `error` is strictly prohibited.
+  * Database errors must be checked before evaluating `data` length or existence; a failed query must never be silently interpreted as an empty record set (e.g. `!data` or `rows.length === 0`).
+
+* category: error-handling
+  title: "Semantic HTTP Status Code Precision"
+  severity: critical
+  description: |
+  Every backend endpoint must return semantically accurate HTTP status codes:
+  * Client-side errors, missing resource lookups, or validation failures must return 4xx codes (400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Unprocessable Entity, 429 Rate Limited).
+  * Missing resources (e.g. non-existent level, missing active learning track) must NOT be converted to HTTP 500 Internal Server Errors.
+  * Endpoints must NEVER return HTTP 200 OK with `{ success: false }` for failed operations or missing entities.
+
+* category: error-handling
+  title: "Mandatory Outbound Fetch Timeouts"
+  severity: critical
+  description: |
+  All outbound `fetch()` requests across Cloudflare Pages Functions and frontend API clients MUST enforce explicit timeouts using `AbortSignal.timeout(ms)` (except for intentional long-lived streaming connections like SSE).
+  * Backend outbound calls (e.g. upstream asset proxies, third-party AI APIs) must specify bounded timeouts (max 15s to 30s).
+  * Indefinite or untimed `fetch()` calls that risk stalling serverless isolates or client threads are prohibited.
+
+* category: error-handling
+  title: "Distributed Rate Limiting at the Edge"
+  severity: high
+  description: |
+  Security-critical and cost-sensitive edge endpoints (e.g., AI evaluations, readiness calculations, auth exchanges) must not rely solely on in-memory JavaScript `Map`s for rate limiting.
+  * Serverless isolates are ephemeral and distributed across hundreds of edge locations.
+  * Rate limiting must be backed by distributed storage (e.g. Cloudflare KV, D1, Durable Objects) or platform-level rate limiting rules.
+
+* category: error-handling
+  title: "Multi-Table Transactional Integrity"
+  severity: critical
+  description: |
+  Operations that mutate multiple database tables sequentially (e.g. artifact evaluation saving to flows, submissions, and module progress) must maintain transactional integrity.
+  * Wrap multi-table operations in atomic database RPC functions (Supabase stored procedures) or implement explicit compensating rollback sagas to prevent partially committed, corrupt database states.
+
+* category: error-handling
+  title: "Granular UI Error Boundaries & Blast Radius Containment"
+  severity: critical
+  description: |
+  The frontend must not rely exclusively on a single root `<ErrorBoundary>`.
+  * Every route screen, independent widget (e.g., Navigation Drawer, Level Modules Drawer, Stepper Bar), and media viewer (PDF, PPTX, Video) must be wrapped in its own localized `<ErrorBoundary>`.
+  * Sub-component rendering crashes must be isolated with contextual fallback and retry controls without unmounting or crashing the rest of the application.
+
+* category: error-handling
+  title: "Asynchronous Canvas & Media Viewer Protection"
+  severity: critical
+  description: |
+  All asynchronous rendering pipelines (PDF.js canvas render promises, PPTX DOM builders, video element event listeners) must be wrapped in `try/catch` handlers.
+  * Unhandled promise rejections inside `useEffect` or lifecycle hooks are strictly prohibited.
+  * Handlers must check component mount/active lifecycle flags and transition to dedicated error fallback states if rendering fails.
+
+* category: error-handling
+  title: "TanStack Query Error & Retry Policy"
+  severity: high
+  description: |
+  TanStack Query must be configured with resilient error policies:
+  * Queries must NOT retry 4xx client errors (401, 403, 404, 422). Retries must be reserved only for idempotent network dropouts or 5xx server errors.
+  * The global `QueryClient` must configure `QueryCache` and `MutationCache` error listeners for centralized telemetry.
+  * Mutation idempotency keys must be reused across retries of the same logical action and cleared upon successful completion (onSuccess), so failed network attempts do not duplicate actions server-side while new subsequent actions generate fresh keys.
+
+* category: error-handling
+  title: "Preserve Rich Metadata in Frontend ApiError"
+  severity: high
+  description: |
+  The frontend `ApiError` class must preserve and expose structured metadata returned by the backend:
+  * Must store `code`, `details`, and `requestId` in addition to `message` and `status`.
+  * Client hooks and error boundaries must use machine-readable error codes rather than fragile substring matching on error messages.
+
+* category: error-handling
+  title: "Purge Query Cache on User Logout"
+  severity: critical
+  description: |
+  When a user logs out via `authStore.logout()`, `queryClient.clear()` MUST be executed unconditionally.
+  * Never leave sensitive user records, course progress, or profile information in memory after session termination.
+
+* category: error-handling
+  title: "Global Browser Unhandled Exception Telemetry"
+  severity: high
+  description: |
+  The frontend application bootstrap (`src/main.tsx` / `src/app/App.tsx`) must register global `window.onerror` and `window.addEventListener('unhandledrejection')` listeners.
+  * All unhandled browser exceptions and promise rejections must be captured, formatted, and logged to prevent silent UI failures in production.
+
+* category: error-handling
+  title: "Accessible & Non-Destructive UI Error States"
+  severity: medium
+  description: |
+  User-facing error components must prioritize user recovery:
+  * Provide non-destructive retry actions (e.g. calling `refetch()` or resetting the error boundary) rather than forcing full-page reloads (`window.location.reload()`).
+  * Form validation errors must be exposed via accessible inline field states (`aria-invalid="true"`, `aria-describedby`) and typed toast alerts (`toast.error()`), never through generic unstyled popups alone.
+
+* category: error-handling
+  title: "Mandatory ctx.waitUntil for Background Serverless Tasks"
+  severity: critical
+  description: |
+  In Cloudflare Pages Functions, floating asynchronous promises (e.g. fire-and-forget daily logins, XP triggers, streak computations) MUST be passed to `context.waitUntil(promise)`.
+  * Invoking unawaited promises without `waitUntil()` causes the Cloudflare runtime to terminate/freeze the isolate immediately upon returning the HTTP response, silently dropping pending database writes.
+  * Every background promise passed to `waitUntil()` must contain internal `try/catch` error logging to prevent unhandled background rejections.
+
+* category: error-handling
+  title: "Safe Keepalive & Beacon Fetch Error Handling"
+  severity: high
+  description: |
+  Asynchronous analytics, timer flushes, and beacon calls using `fetch(..., { keepalive: true })` or unmounted lifecycle cleanup MUST have attached `.catch()` or `try/catch` handlers.
+  * Never execute floating `void fetch(...)` without error handling during `beforeunload`, `pagehide`, or visibility change events.
+
+* category: error-handling
+  title: "W3C Distributed Trace Context & Correlation Headers"
+  severity: high
+  description: |
+  Requests traversing client, Pages Functions, and backend Service Bindings (e.g. SSO Worker) must propagate W3C Trace Context (`traceparent` header) and consistent correlation `requestId`.
+  * Ensure error logs across microservices share the same correlation ID so distributed transaction failures can be diagnosed without guessing.
 
 # --------------------------------------------------------------------------
 
 # AUTHENTICATION
 
 # --------------------------------------------------------------------------
+
+* category: authentication
+  title: "Delegate Browser Auth Routes via createSsoGateway in functions/[[path]].ts"
+  severity: critical
+  description: |
+  Browser-facing authentication endpoints (`/api/auth/*` and `/api/v1/auth/*`, excluding `/api/v1/auth/sso/exchange`)
+  must be intercepted in the Cloudflare Pages Functions catch-all handler `functions/[[path]].ts` and delegated
+  to `@rareminds-eym/sso-gateway` via `createSsoGateway`.
+  * Gateway dispatch must use the `env.SSO_SERVICE` Service Binding.
+  * Approved origins must explicitly match the allowed domain whitelist (e.g. `https://lte.rareminds.in`, local dev origins).
+  * Gateway execution errors must be logged with `apiLogger.error` and must NOT be swallowed with empty `catch {}` blocks.
+  * `functions/[[path]].ts` serves as the edge router: delegating auth routes, returning 404 for unhandled `/api/` paths, proxying static assets, and serving `/index.html` for client-side SPA routing.
 
 * category: authentication
   title: "No direct Supabase Auth usage"
@@ -431,6 +572,7 @@ rules:
 
   * `@rareminds-eym/auth-client` on the frontend
   * `@rareminds-eym/auth-core` on the backend
+  * `@rareminds-eym/sso-gateway` on the edge gateway
 
   Allowed frontend examples:
 
@@ -1897,3 +2039,35 @@ primary_rule: |
       methods (env.SSO_SERVICE.<method>()) rather than direct REST HTTP calls.
       Method calls must be typed via SsoRpcService interface in functions/shared/types.ts.
     severity: high
+
+  - category: error-handling
+    title: "Sanitize HTTP 500 error responses and inspect all Supabase query errors"
+    description: |
+      1. Backend 500 responses must never leak raw database/driver strings or internal exceptions to clients;
+         always return a generic message with a correlation requestId and log details server-side.
+      2. All Supabase queries must destructure and handle `error` (never discard `error` or assume null data means empty rows).
+      3. Outbound fetch calls must enforce bounded timeouts with AbortSignal.timeout(ms).
+      4. Avoid in-memory Map rate limiters at the edge; use distributed KV/D1/platform limiters.
+      5. Background tasks in serverless edge must use context.waitUntil() to prevent isolate termination data loss.
+    severity: critical
+
+  - category: error-handling
+    title: "Enforce granular UI Error Boundaries, async render try/catch, and query cache logout purge"
+    description: |
+      1. Every route, independent widget, and media viewer (PDF, PPTX) must have its own localized <ErrorBoundary>.
+      2. All async canvas/media rendering promises must be wrapped in try/catch to eliminate unhandled promise rejections.
+      3. TanStack Query must not retry 4xx errors, and authStore.logout() must unconditionally call queryClient.clear().
+      4. Frontend ApiError must preserve backend `code`, `details`, and `requestId`.
+      5. Application root must register global window.onerror, unhandledrejection handlers, and W3C trace propagation.
+    severity: critical
+
+  - category: authentication
+    title: "Delegate Browser Auth Routes via createSsoGateway in functions/[[path]].ts"
+    description: |
+      1. Browser-facing auth routes (/api/auth/* and /api/v1/auth/*) must be intercepted in functions/[[path]].ts
+         and dispatched via createSsoGateway from @rareminds-eym/sso-gateway using env.SSO_SERVICE.
+      2. Gateway errors must be logged with apiLogger.error and must not be swallowed with empty catch blocks.
+      3. functions/[[path]].ts serves as the single edge router for auth delegation, /api/ 404 fallbacks, and SPA index.html serving.
+    severity: critical
+
+

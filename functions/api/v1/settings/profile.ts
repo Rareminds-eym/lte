@@ -250,12 +250,15 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
 
     const profileStrength = calculateProfileStrength(rawProfile);
 
-    // Fire-and-forget: award +50 XP when profile reaches 100% completion.
+    // Background task: award +50 XP when profile reaches 100% completion.
     // Idempotency key (profile:{userId}) ensures this is only ever awarded once.
     if (profileStrength === 100) {
-      completeProfile(supabase, userId).catch((err) => {
+      const task = completeProfile(supabase, userId).catch((err) => {
         apiLogger.error("[XP] profile_completed award failed", err, { userId });
       });
+      if (typeof context.waitUntil === "function") {
+        context.waitUntil(task);
+      }
     }
 
     return jsonResponse<SettingsProfileResponse>({

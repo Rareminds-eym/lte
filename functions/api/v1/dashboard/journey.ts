@@ -52,20 +52,26 @@ async function findOpenLevel(
   userId: string,
   pathIds: string[],
 ): Promise<{ levelId?: string; moduleId?: string; started: boolean }> {
-  const { data: rows } = await supabase
+  const { data: rows, error: progressError } = await supabase
     .from("user_capability_level_progress")
     .select("id, level_id, status, updated_at")
     .eq("user_id", userId)
     .in("learning_path_id", pathIds)
-    .order("sequence_no", { ascending: true });
+    .order("updated_at", { ascending: false });
+
+  if (progressError) {
+    throw new Error(`Failed to query level progress: ${progressError.message}`);
+  }
 
   const allRows = (rows ?? []) as LevelProgressRow[];
   if (allRows.length === 0) return { started: false };
 
-  const open = allRows.filter((r) => r.status !== "completed");
+  const open = allRows
+    .filter((r) => r.status !== "completed")
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   if (open.length === 0) return { started: true };
 
-  const { data: recentModule } = await supabase
+  const { data: recentModule, error: moduleError } = await supabase
     .from("user_module_progress")
     .select("module_id, user_capability_level_progress_id")
     .in(
@@ -76,6 +82,10 @@ async function findOpenLevel(
     .order("last_activity_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (moduleError) {
+    throw new Error(`Failed to query recent module progress: ${moduleError.message}`);
+  }
 
   if (recentModule) {
     const row = open.find(
@@ -93,8 +103,7 @@ async function findOpenLevel(
     }
   }
 
-  const mostRecent = open.reduce((a, b) => ((a.updated_at ?? "") >= (b.updated_at ?? "") ? a : b));
-  return { levelId: mostRecent.level_id, started: true };
+  return { levelId: open[0]?.level_id, started: true };
 }
 
 /** Title of the module's first active artifact question, or null. */
@@ -235,7 +244,6 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     apiLogger.error("Failed to fetch dashboard journey", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }

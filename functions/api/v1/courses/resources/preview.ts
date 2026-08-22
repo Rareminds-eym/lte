@@ -1,5 +1,6 @@
 import { jsonError } from "@functions/lib/http";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { apiLogger } from "@functions/shared/logger";
 
 const ALLOWED_RESOURCE_HOST = "bucket.lte.rareminds.in";
 const ALLOWED_RESOURCE_PATH_PREFIX = "/resources/";
@@ -42,8 +43,14 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
   }
 
   try {
-    const upstreamResponse = await fetch(resourceUrl.toString());
+    const upstreamResponse = await fetch(resourceUrl.toString(), {
+      signal: AbortSignal.timeout(15_000),
+    });
     if (!upstreamResponse.ok || !upstreamResponse.body) {
+      apiLogger.warn("Upstream preview fetch returned non-200", {
+        status: upstreamResponse.status,
+        url: resourceUrl.toString(),
+      });
       return jsonError("Resource preview is not available right now.", 502);
     }
 
@@ -62,7 +69,10 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       status: 200,
       headers,
     });
-  } catch {
+  } catch (error) {
+    apiLogger.error("Failed to proxy resource preview", error, {
+      url: resourceUrl.toString(),
+    });
     return jsonError("Resource preview is not available right now.", 502);
   }
 }

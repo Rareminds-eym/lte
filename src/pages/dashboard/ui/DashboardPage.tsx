@@ -3,12 +3,13 @@ import { useMemo, useState } from "react";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { useDashboardData } from "@/entities/dashboard";
 import { XpRewardModal } from "@/features/xp-reward";
+import { Button } from "@/shared/ui";
 import { DashboardContent } from "@/widgets/dashboard";
 import { LearningPathEmptyState } from "@/widgets/learning-path";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 
 export const DashboardPage: React.FC = () => {
-  const { data, isPending, isError } = useDashboardData();
+  const { data, isPending, isError, refetch } = useDashboardData();
   const activeTrack = useLearningPathStore((s) => s.activeTrack);
   const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
   const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
@@ -57,26 +58,27 @@ export const DashboardPage: React.FC = () => {
     return <DashboardSkeleton />;
   }
 
-  if (needsAssessment) {
-    return <LearningPathEmptyState />;
-  }
-
-  if (isError) {
+  if (isError && !data) {
     return (
-      <div className="p-8 text-center bg-surface-primary rounded-2xl border border-line-default max-w-lg mx-auto my-12 shadow-sm">
+      <div
+        className="p-8 text-center bg-surface-primary rounded-2xl border border-line-default max-w-lg mx-auto my-12 shadow-sm"
+        role="alert"
+      >
         <h2 className="text-lg font-bold text-content-primary mb-2">Unable to load Dashboard</h2>
         <p className="text-xs text-content-secondary mb-4">
           There was an error loading your dashboard metrics. Please try again.
         </p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-brand-600 text-content-inverse font-semibold text-xs rounded-lg hover:bg-brand-700 transition-colors cursor-pointer"
-        >
-          Reload Page
-        </button>
+        <div className="flex justify-center">
+          <Button type="button" size="sm" variant="primary" onClick={() => void refetch()}>
+            Retry Loading Dashboard
+          </Button>
+        </div>
       </div>
     );
+  }
+
+  if (needsAssessment) {
+    return <LearningPathEmptyState />;
   }
 
   // Merge the real active track details and list of tracks from store if available

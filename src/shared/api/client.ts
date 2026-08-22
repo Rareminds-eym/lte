@@ -44,21 +44,50 @@ async function apiRequest(path: string, options: ApiFetchOptions = {}): Promise<
 
   if (!response.ok) {
     let errorMessage = `API Request failed with status ${response.status}`;
+    let errorCode: string | undefined;
+    let errorDetails: unknown | undefined;
+    let requestId: string | undefined;
+
     try {
       const clonedResponse = typeof response.clone === "function" ? response.clone() : response;
       try {
         const errorJson = (await clonedResponse.json()) as unknown;
         if (errorJson && typeof errorJson === "object") {
-          const record = errorJson as { message?: unknown; error?: unknown };
+          const record = errorJson as {
+            message?: unknown;
+            error?: unknown;
+            code?: unknown;
+            details?: unknown;
+            requestId?: unknown;
+          };
+
+          if (typeof record.code === "string") errorCode = record.code;
+          if (typeof record.requestId === "string") requestId = record.requestId;
+          if (record.details !== undefined) errorDetails = record.details;
+
           if (typeof record.message === "string") {
             errorMessage = record.message;
           } else if (record.error) {
             if (typeof record.error === "string") {
               errorMessage = record.error;
             } else if (typeof record.error === "object" && record.error !== null) {
-              const innerError = record.error as { message?: unknown };
+              const innerError = record.error as {
+                message?: unknown;
+                code?: unknown;
+                details?: unknown;
+                requestId?: unknown;
+              };
               if (typeof innerError.message === "string") {
                 errorMessage = innerError.message;
+              }
+              if (typeof innerError.code === "string" && !errorCode) {
+                errorCode = innerError.code;
+              }
+              if (innerError.details !== undefined && !errorDetails) {
+                errorDetails = innerError.details;
+              }
+              if (typeof innerError.requestId === "string" && !requestId) {
+                requestId = innerError.requestId;
               }
             }
           }
@@ -75,8 +104,11 @@ async function apiRequest(path: string, options: ApiFetchOptions = {}): Promise<
       );
     }
 
-    logger.error(`Response Error: ${response.status} ${path} — ${errorMessage}`);
-    throw new ApiError(errorMessage, response.status);
+    logger.error(`Response Error: ${response.status} ${path} — ${errorMessage}`, undefined, {
+      code: errorCode,
+      requestId,
+    });
+    throw new ApiError(errorMessage, response.status, errorCode, errorDetails, requestId);
   }
 
   logger.info(`Response Success: ${response.status} ${path}`);

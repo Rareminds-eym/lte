@@ -68,9 +68,9 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     if (pathError) throw pathError;
 
     if (!path) {
-      return jsonResponse({
-        success: false,
-        message: "No active learning path found for this user",
+      return jsonError("No active learning path found for this user", 404, {
+        code: "LEARNING_PATH_NOT_FOUND",
+        requestId,
       });
     }
 
@@ -91,7 +91,6 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
 
     apiLogger.error("Failed to execute manual readiness recalculation", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }

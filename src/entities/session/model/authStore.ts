@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getLogger } from "@/shared";
 import { authClient } from "@/shared/api/authClient";
+import { queryClient } from "@/shared/lib/queryClient";
 import type { AuthUser } from "@/shared/types/auth";
 
 const logger = getLogger("authStore");
@@ -162,15 +163,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await authClient.logout();
     } catch {
-      // Ignore logout errors
+      // Ignore logout transport errors
+    } finally {
+      queryClient.clear();
+      set({
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        initialized: true,
+        error: null,
+      });
     }
-    set({
-      user: null,
-      isAuthenticated: false,
-      loading: false,
-      initialized: true,
-      error: null,
-    });
   },
 }));
 
@@ -178,6 +181,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 authClient.subscribe((event) => {
   const phase = event.state.phase;
   if (phase === "unauthenticated" || phase === "destroyed") {
+    queryClient.clear();
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,

@@ -163,11 +163,19 @@ export async function syncSsoShadowData(
   subscription: SsoSubscriptionSnapshot | null,
 ): Promise<void> {
   // 1. Check if user record already exists in LTE DB
-  const { data: existingUser } = await supabase
+  const { data: existingUser, error: userLookupError } = await supabase
     .from("users")
     .select("id")
     .eq("id", user.sub)
     .maybeSingle();
+
+  if (userLookupError) {
+    authLogger.error("Failed to check existing user in LTE DB", userLookupError, {
+      userId: user.sub,
+    });
+    throw new Error(`Failed to check existing user: ${userLookupError.message}`);
+  }
+
   if (!existingUser) {
     authLogger.info("[Option 1 Applied] User data not found in LTE DB. Provisioning...", {
       userId: user.sub,
@@ -181,11 +189,19 @@ export async function syncSsoShadowData(
 
   // 2. Check if subscription_cache record already exists in LTE DB
   if (subscription) {
-    const { data: existingSub } = await supabase
+    const { data: existingSub, error: subLookupError } = await supabase
       .from("subscription_cache")
       .select("id")
       .eq("id", subscription.id)
       .maybeSingle();
+
+    if (subLookupError) {
+      authLogger.error("Failed to check existing subscription cache in LTE DB", subLookupError, {
+        subscriptionId: subscription.id,
+      });
+      throw new Error(`Failed to check existing subscription cache: ${subLookupError.message}`);
+    }
+
     if (!existingSub) {
       authLogger.info(
         "[Option 1 Applied] Subscription cache not found in LTE DB. Provisioning...",
