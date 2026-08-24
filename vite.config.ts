@@ -176,6 +176,7 @@ export default defineConfig({
 			reporter: ["text", "lcov", "html", "json-summary"],
 			exclude: [
 				"node_modules/",
+				"vendor/**",
 				"src/setupTests.ts",
 				"**/*.d.ts",
 				"src/shared/config/env.ts",
