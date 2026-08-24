@@ -1,7 +1,15 @@
-import { validateBackendEnv } from "../../../../lib/env";
-import { jsonError, jsonResponse, readJsonObject } from "../../../../lib/http";
-import { createServiceSupabase } from "../../../../lib/supabase";
-import { syncSsoShadowData } from "../../../../lib/sync-shadow";
+import { createRefreshCookie } from "@functions/lib/cookies";
+import { validateBackendEnv } from "@functions/lib/env";
+import {
+  getClientIp,
+  getUserAgent,
+  jsonError,
+  jsonResponse,
+  readJsonObject,
+} from "@functions/lib/http";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
+import { exchangeAuthorizationCode } from "@functions/lib/sso-client";
+import { syncSsoShadowData } from "@functions/lib/sync-shadow";
 import type {
   AuthSuccessResponse,
   LteEnv,

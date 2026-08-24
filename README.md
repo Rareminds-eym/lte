@@ -55,7 +55,7 @@ For detailed onboarding notes, see [TEAM_ONBOARDING.md](TEAM_ONBOARDING.md).
 - `npm run build:dev` - Creates a development-mode build.
 - `npm run pages:build` - Runs the production build for Pages usage.
 
-The Vite build output directory is configured as `build/`.
+The Vite build output directory is configured as `dist/`.
 
 ### Workers and Pages
 
@@ -72,6 +72,8 @@ Note: `workers:dev` references worker-specific scripts for email, payments, SSO,
 - `npm run lint:css` - **Validates Tailwind CSS usage** in stylesheets.
 - `npm run lint:files` - **Validates that only .ts and .tsx files exist** in `src/` and `functions/` directories.
 - `npm run lint:console` - **Detects console statements** in production code (use proper logging instead).
+- `npm run lint:fsd` - **Runs Steiger linter** to check for FSD architectural boundary violations.
+- `npm run lint:knip` - **Runs Knip linter** to check for dead code (unused files, exports, types, and dependencies).
 - `npm run lint:biome` - **Runs Biome linter and formatter** for code quality and style.
 - `npm run typecheck` - Runs TypeScript type checking with `tsconfig.app.json`.
 - `npm run setup:husky` - Sets up Husky git hooks for pre-commit validation.
@@ -120,25 +122,34 @@ learning-transform-engine/
 |   |-- CONFIGURATION_PROTECTION.md
 |   `-- DEPLOYMENT.md
 |-- functions/
-|   |-- auth/
-|   |   `-- login.ts
-|   |-- courses/
-|   |   `-- getCourses.ts
-|   |-- enrollments/
-|   |   `-- enrollUser.ts
+|   |-- api/
+|   |   `-- v1/
+|   |       |-- artifacts/
+|   |       |-- auth/
+|   |       |-- capabilities/
+|   |       |-- courses/
+|   |       |-- dashboard/
+|   |       |-- learning-paths/
+|   |       |-- readiness/
+|   |       `-- settings/
+|   |-- lib/
+|   |   |-- artifact-evaluator/
+|   |   |-- cookies.ts
+|   |   |-- env.ts
+|   |   |-- r2-client.ts
+|   |   |-- skill-gateway.ts
+|   |   |-- sso-client.ts
+|   |   |-- supabase.ts
+|   |   |-- sync-shadow.ts
+|   |   `-- xp-engine.ts
 |   |-- middleware/
 |   |   |-- auth.ts
-|   |   `-- errorHandler.ts
-|   |-- notifications/
-|   |   `-- sendNotification.ts
+|   |   `-- rate-limiter.ts
 |   |-- schemas/
+|   |   |-- artifacts.ts
 |   |   `-- index.ts
-|   |-- shared/
-|   |   `-- index.ts
-|   |-- uploads/
-|   |   `-- uploadFile.ts
-|   `-- users/
-|       `-- getUser.ts
+|   `-- shared/
+|       `-- logger.ts
 |-- public/
 |   |-- favicon.ico
 |   |-- manifest.json
@@ -162,12 +173,19 @@ learning-transform-engine/
 |   |   `-- styles/
 |   |       `-- index.css
 |   |-- entities/
-|   |   `-- index.ts
+|   |   |-- active-learning-path/
+|   |   |-- course/
+|   |   |-- dashboard/
+|   |   |-- session/
+|   |   `-- settings/
 |   |-- features/
-|   |   `-- index.ts
+|   |   `-- submit-artifact/
 |   |-- pages/
-|   |   |-- Dashboard.tsx
-|   |   `-- NotFound.tsx
+|   |   |-- dashboard/
+|   |   |-- course-detail/
+|   |   |-- level-content/
+|   |   |-- level-modules/
+|   |   `-- settings/
 |   |-- shared/
 |   |   |-- api/
 |   |   |   `-- index.ts
@@ -199,6 +217,7 @@ learning-transform-engine/
 |-- index.html
 |-- nginx.conf
 |-- package.json
+|-- steiger.config.js
 |-- tsconfig.json
 |-- tsconfig.node.json
 `-- vite.config.ts
@@ -630,7 +649,7 @@ Vitest is configured in `vite.config.ts` with:
 npm run build
 ```
 
-The optimized build is written to `build/`.
+The optimized build is written to `dist/`.
 
 ## Deployment Notes
 
@@ -643,9 +662,37 @@ Deployment-related files are included in the repository:
 - `.github/workflows/ci.yml` - Main CI workflow.
 - `.github/workflows/codeql.yml` - Security scanning workflow.
 
-## Contributing
+## API / Backend Information
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for contribution guidelines.
+The LTE backend utilizes **Cloudflare Pages Functions** (located in the `functions/` directory) to handle API requests, business logic orchestration, and integrations.
+
+### Key Architectures:
+- **Routing:** Cloudflare Pages Functions automatically route incoming `/api/v1/*` requests to respective files under `functions/api/v1/`.
+- **Supabase Integration:** The database client is initialized via `functions/lib/supabase.ts`. It acts as the sync target for user profiles and subscriptions.
+- **SSO Synchronization:** Synchronizes users and organizations between SkillPassport and the LTE client application using the client implementation at `functions/lib/sso-client.ts`.
+- **R2 Storage Client:** Handles file uploads and retrieves artifacts securely through Cloudflare R2 (`functions/lib/r2-client.ts`).
+- **XP Engine:** Processes and awards XP points based on consistency, streak, and legacy rules (`functions/lib/xp-engine.ts`).
+
+---
+
+## Contributing Guidelines
+
+We welcome contributions! To maintain a clean, stable, and highly structured codebase, all contributors must strictly adhere to the following rules:
+
+### Branch Naming Conventions
+- Features: `feat/short-description`
+- Bug Fixes: `fix/short-description`
+- Documentation: `docs/short-description`
+- Code Quality/Refactoring: `refactor/short-description`
+- Build/Config: `chore/short-description`
+
+### Pull Request & Code Quality Flow
+1. **Pass Staged/Pre-commit Hooks:** Running `git commit` automatically triggers Husky hooks that run file check rules, console check rules, ESLint, Biome checking/formatting, and typechecking.
+2. **TypeScript Only:** Absolutely no `.js` or `.jsx` files are permitted in `src/` or `functions/`.
+3. **No Unused Code:** Run `npm run lint:knip` to verify that no unused files, unused exports, or dead dependencies are introduced.
+4. **FSD Compliance:** Run `npm run lint:fsd` to ensure there are no Feature-Sliced Design boundary cross-layer or peer-slice import violations. Keep components mobile-first and lazy-load route elements.
+5. **Write Unit Tests:** Every new logic module or UI widget must have a corresponding Vitest unit test in the proper test path (e.g. `[Component].test.tsx` in `__tests__/`).
+6. **Conventional Commits:** Commit messages must strictly follow the conventional commit format: `type(scope): message`.
 
 ## License
 

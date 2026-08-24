@@ -72,6 +72,8 @@ export interface ModuleStageContent {
   stageName: Lte6eStage;
   stageOrder: number;
   stageDescription: string;
+  moduleContext: string | null;
+  curriculumReference: Record<string, unknown> | string[] | null;
   items: EContentItem[];
   artifacts: ModuleArtifact[];
   artifactType: "practice" | "final" | null;
@@ -106,6 +108,7 @@ export interface LevelDetailsResponse {
   levelCode: string;
   capabilityName?: string;
   capabilityCode?: string;
+  capabilitySlug?: string;
   title: string;
   description: string;
   levelProblemStatement: LevelProblemStatement;

@@ -35,6 +35,7 @@ describe("learningPathApi", () => {
             readinessScore: 85,
             status: "in_progress",
             updatedAt: "2026-08-11T09:00:00Z",
+            metadata: {},
           },
         ],
       };

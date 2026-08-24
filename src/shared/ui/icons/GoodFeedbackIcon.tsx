@@ -43,5 +43,3 @@ export const GoodFeedbackIcon: React.FC<IconProps> = ({ size = 18, className = "
     </defs>
   </svg>
 );
-
-export default GoodFeedbackIcon;

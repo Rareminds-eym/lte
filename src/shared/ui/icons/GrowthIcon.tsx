@@ -33,5 +33,3 @@ export const GrowthIcon: React.FC<IconProps> = ({
     />
   </svg>
 );
-
-export default GrowthIcon;

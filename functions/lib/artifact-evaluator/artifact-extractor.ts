@@ -1,4 +1,4 @@
-import { apiLogger } from "../../shared/logger";
+import { apiLogger } from "@functions/shared/logger";
 import { checkZipExpansion } from "./artifact-file-guard";
 
 export interface ExtractedArtifactContent {

@@ -38,7 +38,6 @@ describe("LevelHeader Widget", () => {
 
   it("opens options menu and handles required actions", () => {
     const onShare = vi.fn();
-    const onDownload = vi.fn();
     const onReport = vi.fn();
 
     render(
@@ -46,7 +45,6 @@ describe("LevelHeader Widget", () => {
         levelTitle="System Failure Investigation"
         activeStage="engage"
         onShareLink={onShare}
-        onDownloadResources={onDownload}
         onReportIssue={onReport}
       />,
     );
@@ -59,11 +57,8 @@ describe("LevelHeader Widget", () => {
     expect(onShare).toHaveBeenCalledTimes(1);
 
     fireEvent.click(optionsBtn);
-    const downloadBtn = screen.getByText("Download Resources");
-    fireEvent.click(downloadBtn);
-    expect(onDownload).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Download Resources")).not.toBeInTheDocument();
 
-    fireEvent.click(optionsBtn);
     const reportBtn = screen.getByText("Report Content Issue");
     fireEvent.click(reportBtn);
     expect(onReport).toHaveBeenCalledTimes(1);

@@ -1,8 +1,7 @@
 import { File as NodeFile } from "node:buffer";
 import { ARTIFACT_LIMITS } from "@functions/lib/artifact-evaluator";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ArtifactSubmissionError } from "../queries";
 import { onRequestPost } from "../submit";
@@ -16,7 +15,7 @@ vi.mock("../queries", async (importOriginal) => {
   return { ...actual, submitArtifactSubmission: submitArtifactSubmissionMock };
 });
 
-vi.mock("@functions/lib/supabase", () => ({ createServiceSupabase: vi.fn() }));
+vi.mock("@functions/lib/query-gateway", () => ({ createServiceQueryGateway: vi.fn() }));
 
 const UUID_A = "11111111-1111-4111-8111-111111111111";
 const UUID_B = "22222222-2222-4222-8222-222222222222";
@@ -99,7 +98,14 @@ function multipartRequest(
 }
 
 describe("POST /api/v1/artifacts/submit", () => {
-  const mockSupabase = { from: vi.fn() } as unknown as SupabaseClient;
+  const mockGateway = {
+    read: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    upsert: vi.fn(),
+    delete: vi.fn(),
+    rpc: vi.fn(),
+  };
 
   beforeAll(() => {
     vi.stubGlobal("File", NodeFile);
@@ -112,7 +118,7 @@ describe("POST /api/v1/artifacts/submit", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
-    vi.mocked(createServiceSupabase).mockReturnValue(mockSupabase);
+    vi.mocked(createServiceQueryGateway).mockReturnValue(mockGateway);
   });
 
   it("returns 401 when the user is not on the context", async () => {
@@ -270,11 +276,20 @@ describe("POST /api/v1/artifacts/submit", () => {
     expect(body.success).toBe(true);
     expect(body.submission_id).toBe("submission-1");
 
-    expect(createServiceSupabase).toHaveBeenCalled();
+    expect(createServiceQueryGateway).toHaveBeenCalled();
     expect(submitArtifactSubmissionMock).toHaveBeenCalledTimes(1);
     const [supabase, , userId, payload, files, idempotencyKey] = submitArtifactSubmissionMock.mock
       .calls[0] as unknown[];
-    expect(supabase).toBe(mockSupabase);
+    expect(supabase).toEqual(
+      expect.objectContaining({
+        read: expect.any(Function),
+        insert: expect.any(Function),
+        update: expect.any(Function),
+        upsert: expect.any(Function),
+        delete: expect.any(Function),
+        rpc: expect.any(Function),
+      }),
+    );
     expect(userId).toBe(user.sub);
     expect(payload).toEqual(validPayload);
     expect(files).toBeInstanceOf(Map);

@@ -8,7 +8,7 @@ const longDescription = `${"Build a practical workflow with clear checkpoints. "
 
 function renderLevelHeroBanner(overrides = {}) {
   const props = {
-    capabilityCode: "gen-ai",
+    capabilitySlug: "gen-ai-slug",
     levelBadge: "Level 1",
     title: "Generative AI Foundations",
     description: "Short learning path summary.",
@@ -40,7 +40,7 @@ describe("LevelHeroBanner", () => {
 
     expect(screen.getByRole("link", { name: /back to courses/i })).toHaveAttribute(
       "href",
-      "/my-courses/gen-ai",
+      "/my-courses/gen-ai-slug",
     );
     expect(screen.getByRole("heading", { name: "Generative AI Foundations" })).toBeVisible();
     expect(screen.getByText("40%")).toBeVisible();

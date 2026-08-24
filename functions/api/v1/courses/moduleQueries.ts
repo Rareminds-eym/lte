@@ -1,5 +1,9 @@
+import {
+  asQueryGateway,
+  QueryGatewayDatabaseError,
+  type QueryGatewaySource,
+} from "@functions/lib/query-gateway";
 import { LTE_STAGE_SEQUENCE, normalizeStageName } from "@functions/lib/stage-sequence";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getArtifactTypeByStage,
   getSubmittedFilesByArtifactId,
@@ -14,119 +18,35 @@ import type {
   ModuleStageContent,
 } from "./types";
 
-export async function getModuleDetails(
-  supabase: SupabaseClient,
-  levelId: string,
-  moduleNo: number,
-  userId?: string,
-): Promise<{
-  id: string;
-  levelId: string;
-  levelCode: string;
-  levelTitle: string;
-  moduleNo: number;
-  title: string;
-  description: string;
-  moduleProblemStatement: unknown;
-  pressurePoints: unknown;
-  userConfusion: unknown;
-  industryChallenge: unknown;
-  prerequisites: unknown;
-  whatYoullLearn: unknown;
-  whenToApply: unknown;
-  support: Record<string, unknown>;
-  knowledge: Record<string, unknown>;
-  tools: Record<string, unknown>;
-  learningContent: Record<string, unknown>;
-  stages: ModuleStageContent[];
-  progressPercentage: number;
-  completedStages: string[];
-} | null> {
-  // Fetch the active level
-  const { data: levelData, error: levelError } = await supabase
-    .from("levels")
-    .select("id, level_code, title")
-    .eq("id", levelId)
-    .eq("is_active", true)
-    .single();
+const moduleProgressReadPolicy = {
+  table: "user_module_progress",
+  operation: "read",
+  columns: ["id", "completion_percentage"],
+  filters: ["user_id", "module_id"],
+  ownership: {
+    column: "user_id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+} as const;
 
-  if (levelError || !levelData) {
-    return null;
-  }
+const completedStageProgressReadPolicy = {
+  table: "user_stage_progress",
+  operation: "read",
+  columns: ["stage_name"],
+  filters: ["user_module_progress_id", "status"],
+} as const;
 
-  // Fetch module data
-  const { data: moduleData, error: moduleError } = await supabase
-    .from("modules")
-    .select(`
-      id,
-      level_id,
-      module_no,
-      title,
-      description,
-      module_problem_statement,
-      pressure_points,
-      user_confusion,
-      industry_challenge,
-      prerequisites,
-      what_youll_learn,
-      when_to_apply,
-      support,
-      knowledge,
-      tools,
-      learning_content
-    `)
-    .eq("level_id", levelData.id)
-    .eq("module_no", moduleNo)
-    .eq("is_active", true)
-    .single();
-
-  if (moduleError || !moduleData) {
-    return null;
-  }
-
-  const rawModule = moduleData as unknown as ModuleRow;
-
-  const ALL_STAGES = [...LTE_STAGE_SEQUENCE];
-  let completedStages: string[] = [];
-  let progressPercentage = 0;
-
-  if (userId) {
-    const { data: moduleProgress } = await supabase
-      .from("user_module_progress")
-      .select("id, completion_percentage")
-      .eq("user_id", userId)
-      .eq("module_id", rawModule.id)
-      .maybeSingle();
-
-    if (moduleProgress) {
-      progressPercentage = moduleProgress.completion_percentage || 0;
-
-      const { data: stagesProg } = await supabase
-        .from("user_stage_progress")
-        .select("stage_name")
-        .eq("user_module_progress_id", moduleProgress.id)
-        .eq("status", "completed");
-
-      if (stagesProg) {
-        completedStages = stagesProg.map((s) => normalizeStageName(s.stage_name));
-      }
-    }
-  }
-
-  const completedStageSet = new Set(completedStages.map(normalizeStageName));
-  const firstIncompleteStage = ALL_STAGES.find((stage) => !completedStageSet.has(stage));
-  const allowedStages = firstIncompleteStage
-    ? Array.from(completedStageSet).concat(firstIncompleteStage)
-    : ALL_STAGES;
-
-  // Fetch module content with stages and artifacts
-  const { data: modulesContentData, error: modulesContentError } = await supabase
-    .from("modules_content")
-    .select(`
+const moduleStageContentReadPolicy = {
+  table: "modules_content",
+  operation: "read",
+  select: `
       id,
       stage_name,
       stage_order,
       stage_description,
+      module_context,
+      curriculum_reference,
       is_active,
       e_content (
         id,
@@ -168,27 +88,175 @@ export async function getModuleDetails(
           is_downloadable
         )
       )
-    `)
-    .eq("module_id", rawModule.id)
-    .eq("is_active", true)
-    .in("stage_name", allowedStages);
+    `,
+  filters: ["module_id", "is_active", "stage_name"],
+  defaultFilters: [{ column: "is_active", op: "eq", value: true }],
+} as const;
 
-  if (modulesContentError) {
-    throw new Error(`Failed to fetch module stage content: ${modulesContentError.message}`);
+const activeLevelSummaryReadPolicy = {
+  table: "levels",
+  operation: "read",
+  columns: ["id", "level_code", "title"],
+  filters: ["id", "is_active"],
+  defaultFilters: [{ column: "is_active", op: "eq", value: true }],
+} as const;
+
+const activeModuleDetailsReadPolicy = {
+  table: "modules",
+  operation: "read",
+  columns: [
+    "id",
+    "level_id",
+    "module_no",
+    "title",
+    "description",
+    "module_problem_statement",
+    "pressure_points",
+    "user_confusion",
+    "industry_challenge",
+    "prerequisites",
+    "what_youll_learn",
+    "when_to_apply",
+    "support",
+    "knowledge",
+    "tools",
+    "learning_content",
+  ],
+  filters: ["level_id", "module_no", "is_active"],
+  defaultFilters: [{ column: "is_active", op: "eq", value: true }],
+} as const;
+
+export async function getModuleDetails(
+  source: QueryGatewaySource,
+  levelId: string,
+  moduleNo: number,
+  userId?: string,
+): Promise<{
+  id: string;
+  levelId: string;
+  levelCode: string;
+  levelTitle: string;
+  moduleNo: number;
+  title: string;
+  description: string;
+  moduleProblemStatement: unknown;
+  pressurePoints: unknown;
+  userConfusion: unknown;
+  industryChallenge: unknown;
+  prerequisites: unknown;
+  whatYoullLearn: unknown;
+  whenToApply: unknown;
+  support: Record<string, unknown>;
+  knowledge: Record<string, unknown>;
+  tools: Record<string, unknown>;
+  learningContent: Record<string, unknown>;
+  stages: ModuleStageContent[];
+  progressPercentage: number;
+  completedStages: string[];
+} | null> {
+  const qb = asQueryGateway(source);
+  // Fetch the active level
+  let levelData: { id: string; level_code: string; title: string } | null;
+  try {
+    levelData = (await qb.read(activeLevelSummaryReadPolicy, {
+      filters: [{ column: "id", op: "eq", value: levelId }],
+      result: "maybeSingle",
+    })) as { id: string; level_code: string; title: string } | null;
+  } catch (error) {
+    if (error instanceof QueryGatewayDatabaseError) {
+      return null;
+    }
+    throw error;
   }
 
-  const artifactTypeByStage = await getArtifactTypeByStage(supabase, rawModule.id, ALL_STAGES);
+  if (!levelData) {
+    return null;
+  }
+
+  // Fetch module data
+  let moduleData: unknown;
+  try {
+    moduleData = await qb.read(activeModuleDetailsReadPolicy, {
+      filters: [
+        { column: "level_id", op: "eq", value: levelData.id },
+        { column: "module_no", op: "eq", value: moduleNo },
+      ],
+      result: "maybeSingle",
+    });
+  } catch (error) {
+    if (error instanceof QueryGatewayDatabaseError) {
+      return null;
+    }
+    throw error;
+  }
+
+  if (!moduleData) {
+    return null;
+  }
+
+  const rawModule = moduleData as unknown as ModuleRow;
+
+  const ALL_STAGES = [...LTE_STAGE_SEQUENCE];
+  let completedStages: string[] = [];
+  let progressPercentage = 0;
+
+  if (userId) {
+    const moduleProgress = (await qb.read(moduleProgressReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "module_id", op: "eq", value: rawModule.id }],
+      result: "maybeSingle",
+    })) as { id: string; completion_percentage: number | null } | null;
+
+    if (moduleProgress) {
+      progressPercentage = moduleProgress.completion_percentage || 0;
+
+      const stagesProg = (await qb.read(completedStageProgressReadPolicy, {
+        filters: [
+          { column: "user_module_progress_id", op: "eq", value: moduleProgress.id },
+          { column: "status", op: "eq", value: "completed" },
+        ],
+      })) as Array<{ stage_name: string }> | null;
+
+      if (stagesProg) {
+        completedStages = stagesProg.map((s) => normalizeStageName(s.stage_name));
+      }
+    }
+  }
+
+  const completedStageSet = new Set(completedStages.map(normalizeStageName));
+  const firstIncompleteStage = ALL_STAGES.find((stage) => !completedStageSet.has(stage));
+  const allowedStages = firstIncompleteStage
+    ? Array.from(completedStageSet).concat(firstIncompleteStage)
+    : ALL_STAGES;
+
+  // Fetch module content with stages and artifacts
+  let modulesContentData: ModuleContentRow[] | null;
+  try {
+    modulesContentData = (await qb.read(moduleStageContentReadPolicy, {
+      filters: [
+        { column: "module_id", op: "eq", value: rawModule.id },
+        { column: "stage_name", op: "in", value: allowedStages },
+      ],
+    })) as ModuleContentRow[] | null;
+  } catch (error) {
+    if (error instanceof QueryGatewayDatabaseError) {
+      const causeMessage =
+        error.cause && typeof error.cause === "object" && "message" in error.cause
+          ? String(error.cause.message)
+          : error.message;
+      throw new Error(`Failed to fetch module stage content: ${causeMessage}`);
+    }
+    throw error;
+  }
+
+  const artifactTypeByStage = await getArtifactTypeByStage(qb, rawModule.id, ALL_STAGES);
 
   rawModule.modules_content = modulesContentData as unknown as ModuleContentRow[];
   const artifactIds = (rawModule.modules_content || [])
     .flatMap((mc) => mc.module_artifacts || [])
     .filter((artifact) => artifact.is_active)
     .map((artifact) => artifact.id);
-  const submittedFilesByArtifactId = await getSubmittedFilesByArtifactId(
-    supabase,
-    userId,
-    artifactIds,
-  );
+  const submittedFilesByArtifactId = await getSubmittedFilesByArtifactId(qb, userId, artifactIds);
 
   const rawStagesMap = new Map<string, ModuleStageContent>();
 
@@ -224,6 +292,8 @@ export async function getModuleDetails(
         stageName: mc.stage_name,
         stageOrder: mc.stage_order,
         stageDescription: mc.stage_description || "",
+        moduleContext: mc.module_context || null,
+        curriculumReference: mc.curriculum_reference ?? null,
         items,
         artifacts,
         artifactType,
@@ -242,6 +312,8 @@ export async function getModuleDetails(
       stageName,
       stageOrder: index + 1,
       stageDescription: "",
+      moduleContext: null,
+      curriculumReference: null,
       items: [] as EContentItem[],
       artifacts: [] as ModuleArtifact[],
       artifactType: artifactTypeByStage.get(stageName) ?? null,

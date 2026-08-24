@@ -1,10 +1,13 @@
+import {
+  ArtifactSubmissionError,
+  getSubmissionEvaluationFlow,
+} from "@functions/api/v1/artifacts/queries";
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getAuthUser } from "@functions/middleware";
 import { uuidSchema } from "@functions/schemas";
 import { apiLogger } from "@functions/shared/logger";
-import { ArtifactSubmissionError, getSubmissionEvaluationFlow } from "../../queries";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -24,8 +27,8 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     if (!user) {
       return jsonError("Unauthorized", 401, { code: "UNAUTHORIZED", requestId });
     }
-    const supabase = createServiceSupabase(context.env);
-    const flow = await getSubmissionEvaluationFlow(supabase, validSubmissionId, user.sub);
+    const qb = createServiceQueryGateway(context.env);
+    const flow = await getSubmissionEvaluationFlow(qb, validSubmissionId, user.sub);
     const meta = flow?.metadata as Record<string, unknown> | null;
 
     return jsonResponse({

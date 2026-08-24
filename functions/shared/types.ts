@@ -15,9 +15,14 @@ export interface AssetsBinding {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
 }
 
+export interface QueueSender {
+  send(msg: unknown, opts?: { contentType?: string }): Promise<void>;
+}
+
 export interface LteEnv {
   ASSETS: AssetsBinding;
-  SSO_SERVICE: unknown;
+  LTE_SYNC_QUEUE?: QueueSender;
+  SSO_SERVICE: SsoRpcService;
   STORAGE_BUCKET: R2BucketBinding;
   R2_PUBLIC_DOMAIN?: string;
   SUPABASE_URL: string;

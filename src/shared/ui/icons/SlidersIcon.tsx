@@ -26,5 +26,3 @@ export const SlidersIcon: React.FC<IconProps> = ({
     />
   </svg>
 );
-
-export default SlidersIcon;

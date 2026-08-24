@@ -1,6 +1,7 @@
 import { sanitizeContentDispositionFilename } from "@functions/lib/artifact-evaluator";
+import type { QueryGateway } from "@functions/lib/query-gateway";
+import { QueryGatewayDatabaseError } from "@functions/lib/query-gateway/errors";
 import type { LteEnv } from "@functions/lib/types";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArtifactSubmissionError } from "./file-validation";
 
 export { ArtifactSubmissionError } from "./file-validation";
@@ -16,6 +17,28 @@ interface ArtifactFileRow {
   file_size_bytes: number | null;
 }
 
+const ownedArtifactFileReadPolicy = {
+  table: "artifact_submission_files",
+  operation: "read",
+  select: `
+    id,
+    submission_id,
+    question_id,
+    file_name,
+    file_url,
+    object_key,
+    file_type,
+    file_size_bytes,
+    artifact_submissions!inner(user_id)
+  `,
+  filters: ["id", "artifact_submissions.user_id"],
+  ownership: {
+    column: "artifact_submissions.user_id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+} as const;
+
 function getObjectKeyFromFileUrl(fileUrl: string): string {
   try {
     const url = new URL(fileUrl);
@@ -25,42 +48,47 @@ function getObjectKeyFromFileUrl(fileUrl: string): string {
   }
 }
 
+function isNotFoundDatabaseError(error: QueryGatewayDatabaseError): boolean {
+  const cause = error.cause as { code?: unknown; message?: unknown } | undefined;
+  return (
+    cause?.code === "PGRST116" || String(cause?.message ?? error.message).includes("not found")
+  );
+}
+
 export async function requireOwnedFile(
-  supabase: SupabaseClient,
+  qb: QueryGateway,
   fileId: string,
   userId: string,
 ): Promise<ArtifactFileRow> {
-  const { data, error } = await supabase
-    .from("artifact_submission_files")
-    .select(`
-      id,
-      submission_id,
-      question_id,
-      file_name,
-      file_url,
-      object_key,
-      file_type,
-      file_size_bytes,
-      artifact_submissions!inner(user_id)
-    `)
-    .eq("id", fileId)
-    .eq("artifact_submissions.user_id", userId)
-    .single();
-
-  if (error || !data) {
+  try {
+    const file = (await qb.read(ownedArtifactFileReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "id", op: "eq", value: fileId }],
+      result: "single",
+    })) as ArtifactFileRow;
+    if (!file) {
+      throw new ArtifactSubmissionError("Artifact file was not found.", 404, "FILE_NOT_FOUND");
+    }
+    return file;
+  } catch (error) {
+    if (error instanceof QueryGatewayDatabaseError) {
+      if (isNotFoundDatabaseError(error)) {
+        throw new ArtifactSubmissionError("Artifact file was not found.", 404, "FILE_NOT_FOUND");
+      }
+      throw error;
+    }
+    if (error instanceof Error) throw error;
     throw new ArtifactSubmissionError("Artifact file was not found.", 404, "FILE_NOT_FOUND");
   }
-
-  return data as ArtifactFileRow;
 }
 
 export async function createArtifactFileDownloadResponse(
-  supabase: SupabaseClient,
+  qb: QueryGateway,
   env: Pick<LteEnv, "STORAGE_BUCKET">,
   userId: string,
   fileId: string,
 ): Promise<Response> {
-  const file = await requireOwnedFile(supabase, fileId, userId);
+  const file = await requireOwnedFile(qb, fileId, userId);
   const objectKey =
     file.object_key ?? (file.file_url ? getObjectKeyFromFileUrl(file.file_url) : null);
   if (!objectKey) {

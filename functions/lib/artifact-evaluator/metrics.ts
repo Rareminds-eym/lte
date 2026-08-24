@@ -10,7 +10,7 @@
  * dashboards are ever needed, the upgrade is a queue/analytics write of the
  * snapshot; the emission points stay identical.
  */
-import { apiLogger } from "../../shared/logger";
+import { apiLogger } from "@functions/shared/logger";
 import { percentile } from "./drift-stats";
 
 export const METRIC = {

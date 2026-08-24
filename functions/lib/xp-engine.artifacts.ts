@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { asQueryGateway, type QueryGatewayFilter, type QueryGatewaySource } from "./query-gateway";
 import {
   assertStageSequenceAllowed,
   getStageCompletionPercentage,
@@ -7,99 +7,359 @@ import {
 import { awardXp } from "./xp-engine.core";
 import { triggerReadinessRecalculation } from "./xp-engine.progress";
 
+const moduleContentStageReadPolicy = {
+  table: "modules_content",
+  operation: "read",
+  columns: ["module_id", "stage_name", "stage_order"],
+  filters: ["id"],
+} as const;
+
+const eContentByModuleContentReadPolicy = {
+  table: "e_content",
+  operation: "read",
+  columns: ["id"],
+  filters: ["modules_content_id"],
+} as const;
+
+const moduleLevelReadPolicy = {
+  table: "modules",
+  operation: "read",
+  columns: ["level_id"],
+  filters: ["id"],
+} as const;
+
+const levelProgressReadPolicy = {
+  table: "user_capability_level_progress",
+  operation: "read",
+  columns: ["id"],
+  filters: ["user_id", "level_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const moduleProgressReadPolicy = {
+  table: "user_module_progress",
+  operation: "read",
+  columns: ["id", "stages_completed", "module_status"],
+  filters: ["user_id", "module_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const moduleProgressInsertPolicy = {
+  table: "user_module_progress",
+  operation: "insert",
+  insertColumns: [
+    "user_id",
+    "module_id",
+    "user_capability_level_progress_id",
+    "module_status",
+    "current_stage",
+    "stages_completed",
+    "completion_percentage",
+  ],
+  returningColumns: ["id", "stages_completed", "module_status"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const moduleProgressUpdatePolicy = {
+  table: "user_module_progress",
+  operation: "update",
+  updateColumns: [
+    "stages_completed",
+    "completion_percentage",
+    "current_stage",
+    "last_activity_at",
+    "module_status",
+    "artifact_submitted",
+    "artifact_approval_status",
+    "updated_at",
+  ],
+  filters: ["id", "user_id"],
+  requireFilter: true,
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const completedStageNamesReadPolicy = {
+  table: "user_stage_progress",
+  operation: "read",
+  columns: ["stage_name"],
+  filters: ["user_id", "user_module_progress_id", "status"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const stageProgressReadPolicy = {
+  table: "user_stage_progress",
+  operation: "read",
+  columns: ["id", "status"],
+  filters: ["user_id", "user_module_progress_id", "e_content_id", "stage_name"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const stageProgressInsertPolicy = {
+  table: "user_stage_progress",
+  operation: "insert",
+  insertColumns: [
+    "user_module_progress_id",
+    "user_id",
+    "e_content_id",
+    "stage_name",
+    "stage_order",
+    "status",
+    "completed_at",
+  ],
+  returningColumns: ["id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const stageProgressCompleteUpdatePolicy = {
+  table: "user_stage_progress",
+  operation: "update",
+  updateColumns: ["status", "completed_at", "updated_at"],
+  filters: ["id", "user_id"],
+  requireFilter: true,
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const currentEvaluationFlowReadPolicy = {
+  table: "artifact_evaluation_flows",
+  operation: "read",
+  columns: ["id", "decision", "evaluated_by", "score"],
+  filters: ["submission_id", "is_current_stage"],
+} as const;
+
+const evaluationFlowDemotePolicy = {
+  table: "artifact_evaluation_flows",
+  operation: "update",
+  updateColumns: ["is_current_stage"],
+  filters: ["submission_id"],
+  requireFilter: true,
+} as const;
+
+const evaluationFlowInsertPolicy = {
+  table: "artifact_evaluation_flows",
+  operation: "insert",
+  insertColumns: [
+    "submission_id",
+    "stage",
+    "status",
+    "evaluated_by",
+    "score",
+    "decision",
+    "completed_at",
+    "overall_status",
+    "is_current_stage",
+    "progression_triggered",
+    "metadata",
+  ],
+} as const;
+
+const artifactSubmissionEvaluationReadPolicy = {
+  table: "artifact_submissions",
+  operation: "read",
+  select: `
+    id,
+    artifact_id,
+    user_id,
+    attempt_no,
+    user_module_progress_id,
+    module_artifacts (
+      id,
+      artifact_type,
+      passing_score,
+      total_score
+    )
+  `,
+  filters: ["id"],
+} as const;
+
+const artifactSubmissionUserReadPolicy = {
+  table: "artifact_submissions",
+  operation: "read",
+  columns: ["user_id"],
+  filters: ["id"],
+} as const;
+
+const artifactSubmissionOverrideReadPolicy = {
+  table: "artifact_submissions",
+  operation: "read",
+  select: "artifact_id, module_artifacts(passing_score)",
+  filters: ["id"],
+} as const;
+
+const artifactSubmissionProgressReadPolicy = {
+  table: "artifact_submissions",
+  operation: "read",
+  columns: ["user_id", "user_module_progress_id"],
+  filters: ["id"],
+} as const;
+
+const artifactSubmissionStatusUpdatePolicy = {
+  table: "artifact_submissions",
+  operation: "update",
+  updateColumns: ["status", "sealed_at"],
+  filters: ["id", "user_id"],
+  requireFilter: true,
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+type StageContentRow = {
+  module_id: string;
+  stage_name: string;
+  stage_order: number;
+};
+
+type IdRow = { id: string };
+
+type ModuleProgressRow = {
+  id: string;
+  stages_completed: number;
+  module_status?: string | null;
+};
+
+type StageProgressRow = {
+  id: string;
+  status?: string | null;
+};
+
+type EvaluationFlowRow = {
+  id: string;
+  decision?: string | null;
+  evaluated_by?: string | null;
+  score?: number | null;
+};
+
+type ArtifactSubmissionEvaluationRow = {
+  id: string;
+  artifact_id: string;
+  user_id: string;
+  attempt_no: number;
+  user_module_progress_id: string;
+  module_artifacts:
+    | {
+        id: string;
+        artifact_type?: string | null;
+        passing_score?: number | null;
+        total_score?: number | null;
+      }
+    | Array<{
+        id: string;
+        artifact_type?: string | null;
+        passing_score?: number | null;
+        total_score?: number | null;
+      }>
+    | null;
+};
+
+type ArtifactSubmissionOverrideRow = {
+  artifact_id: string;
+  module_artifacts:
+    | { passing_score?: number | null }
+    | Array<{ passing_score?: number | null }>
+    | null;
+};
+
+function byId(id: string): QueryGatewayFilter {
+  return { column: "id", op: "eq", value: id };
+}
+
+async function readRequired<T>(read: Promise<unknown>, message: string): Promise<T> {
+  try {
+    const row = (await read) as T | null;
+    if (!row) throw new Error(message);
+    return row;
+  } catch {
+    throw new Error(message);
+  }
+}
+
+async function readOptional<T>(read: Promise<unknown>): Promise<T | null> {
+  try {
+    return (await read) as T | null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Marks a 6E module stage as completed.
  * Creates/Updates user_stage_progress and links the xp_event source_id to it.
  */
 export async function completeStage(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   userId: string,
   modulesContentId: string,
 ): Promise<{ success: boolean; xpAwarded: number; userStageProgressId: string }> {
-  // 1. Fetch modules content stage details
-  const { data: stageContent, error: stageError } = await supabase
-    .from("modules_content")
-    .select("module_id, stage_name, stage_order")
-    .eq("id", modulesContentId)
-    .single();
+  const qb = asQueryGateway(source);
 
-  if (stageError || !stageContent) {
-    throw new Error(`Modules content stage not found: ${modulesContentId}`);
-  }
+  // 1. Fetch modules content stage details
+  const stageContent = await readRequired<StageContentRow>(
+    qb.read(moduleContentStageReadPolicy, {
+      filters: [byId(modulesContentId)],
+      result: "single",
+    }),
+    `Modules content stage not found: ${modulesContentId}`,
+  );
 
   // 2. Resolve e_content ID for this modules_content stage (Required NOT NULL for stage progress)
-  const { data: content, error: contentError } = await supabase
-    .from("e_content")
-    .select("id")
-    .eq("modules_content_id", modulesContentId)
-    .limit(1)
-    .maybeSingle();
-
-  if (contentError || !content) {
-    throw new Error(`Associated e_content item not found for stage: ${modulesContentId}`);
-  }
+  const content = await readRequired<IdRow>(
+    qb.read(eContentByModuleContentReadPolicy, {
+      filters: [{ column: "modules_content_id", op: "eq", value: modulesContentId }],
+      limit: 1,
+      result: "maybeSingle",
+    }),
+    `Associated e_content item not found for stage: ${modulesContentId}`,
+  );
 
   // 3. Fetch or Create user_module_progress
-  const { data: progressList, error: progressQueryError } = await supabase
-    .from("user_module_progress")
-    .select("id, stages_completed, module_status")
-    .eq("user_id", userId)
-    .eq("module_id", stageContent.module_id);
+  const progressList = (await qb.read(moduleProgressReadPolicy, {
+    auth: { userId },
+    filters: [{ column: "module_id", op: "eq", value: stageContent.module_id }],
+  })) as ModuleProgressRow[] | null;
 
-  if (progressQueryError) throw progressQueryError;
-
-  let progressRecord = progressList?.[0];
+  let progressRecord: ModuleProgressRow | null = progressList?.[0] ?? null;
 
   if (!progressRecord) {
     assertStageSequenceAllowed(stageContent.stage_name, []);
 
-    const { data: moduleData } = await supabase
-      .from("modules")
-      .select("level_id")
-      .eq("id", stageContent.module_id)
-      .single();
+    const moduleData = (await qb.read(moduleLevelReadPolicy, {
+      filters: [byId(stageContent.module_id)],
+      result: "single",
+    })) as { level_id: string } | null;
 
     if (!moduleData) throw new Error("Module not found");
 
-    const { data: lvlProgress } = await supabase
-      .from("user_capability_level_progress")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("level_id", moduleData.level_id)
-      .single();
+    const lvlProgress = (await qb.read(levelProgressReadPolicy, {
+      auth: { userId },
+      filters: [{ column: "level_id", op: "eq", value: moduleData.level_id }],
+      result: "single",
+    })) as IdRow | null;
 
     if (!lvlProgress) {
       throw new Error(`Level progress not found for level: ${moduleData.level_id}`);
     }
 
-    const { data: newProgress, error: insertError } = await supabase
-      .from("user_module_progress")
-      .insert({
-        user_id: userId,
+    progressRecord = (await qb.insert(
+      moduleProgressInsertPolicy,
+      {
         module_id: stageContent.module_id,
         user_capability_level_progress_id: lvlProgress.id,
         module_status: "in_progress",
         current_stage: stageContent.stage_name,
         stages_completed: 1,
         completion_percentage: Math.round((1 / 6) * 100),
-      })
-      .select()
-      .single();
-
-    if (insertError) throw insertError;
-    progressRecord = newProgress;
+      },
+      { auth: { userId }, result: "single" },
+    )) as ModuleProgressRow | null;
   }
 
   if (!progressRecord) throw new Error("Failed to create or retrieve module progress");
 
-  const { data: completedStages, error: completedStagesError } = await supabase
-    .from("user_stage_progress")
-    .select("stage_name")
-    .eq("user_module_progress_id", progressRecord.id)
-    .eq("user_id", userId)
-    .eq("status", "completed");
-
-  if (completedStagesError) throw completedStagesError;
+  const completedStages = (await qb.read(completedStageNamesReadPolicy, {
+    auth: { userId },
+    filters: [
+      { column: "user_module_progress_id", op: "eq", value: progressRecord.id },
+      { column: "status", op: "eq", value: "completed" },
+    ],
+  })) as Array<{ stage_name: string }> | null;
 
   assertStageSequenceAllowed(
     stageContent.stage_name,
@@ -107,58 +367,55 @@ export async function completeStage(
   );
 
   // 4. Fetch or Create user_stage_progress record
-  const { data: stageProgress, error: stageProgressQueryError } = await supabase
-    .from("user_stage_progress")
-    .select("id, status")
-    .eq("user_module_progress_id", progressRecord.id)
-    .eq("user_id", userId)
-    .eq("e_content_id", content.id)
-    .eq("stage_name", stageContent.stage_name)
-    .maybeSingle();
-
-  if (stageProgressQueryError) throw stageProgressQueryError;
+  const stageProgress = (await qb.read(stageProgressReadPolicy, {
+    auth: { userId },
+    filters: [
+      { column: "user_module_progress_id", op: "eq", value: progressRecord.id },
+      { column: "e_content_id", op: "eq", value: content.id },
+      { column: "stage_name", op: "eq", value: stageContent.stage_name },
+    ],
+    result: "maybeSingle",
+  })) as StageProgressRow | null;
 
   let stageProgressId = "";
   let isNewCompletion = false;
 
   if (!stageProgress) {
-    const { data: newStageProgress, error: insertStageError } = await supabase
-      .from("user_stage_progress")
-      .insert({
+    const newStageProgress = (await qb.insert(
+      stageProgressInsertPolicy,
+      {
         user_module_progress_id: progressRecord.id,
-        user_id: userId,
         e_content_id: content.id,
         stage_name: stageContent.stage_name,
         stage_order: stageContent.stage_order,
         status: "completed",
         completed_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
+      },
+      { auth: { userId }, result: "single" },
+    )) as IdRow | null;
 
-    if (insertStageError) throw insertStageError;
+    if (!newStageProgress) throw new Error("Failed to create stage progress");
     stageProgressId = newStageProgress.id;
     isNewCompletion = true;
   } else {
     stageProgressId = stageProgress.id;
     if (stageProgress.status !== "completed") {
-      const { error: updateStageError } = await supabase
-        .from("user_stage_progress")
-        .update({
+      await qb.update(stageProgressCompleteUpdatePolicy, {
+        auth: { userId },
+        filters: [byId(stageProgress.id)],
+        data: {
           status: "completed",
           completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        })
-        .eq("id", stageProgress.id);
-
-      if (updateStageError) throw updateStageError;
+        },
+      });
       isNewCompletion = true;
     }
   }
 
   // 5. Award Stage Completion XP (+1 Evidence)
   const xpResult = await awardXp(
-    supabase,
+    source,
     userId,
     "stage_completed",
     "user_stage_progress",
@@ -168,10 +425,7 @@ export async function completeStage(
 
   // 6. Update user_module_progress progress counters if this is a newly completed stage
   if (isNewCompletion && !xpResult.alreadyAwarded) {
-    const nextStagesCompleted = Math.min(
-      LTE_STAGE_COUNT,
-      (progressRecord as NonNullable<typeof progressRecord>).stages_completed + 1,
-    );
+    const nextStagesCompleted = Math.min(LTE_STAGE_COUNT, progressRecord.stages_completed + 1);
     const completionPercentage = getStageCompletionPercentage(nextStagesCompleted);
 
     const updatePayload: Record<string, unknown> = {
@@ -184,16 +438,15 @@ export async function completeStage(
       updatePayload["module_status"] = "completed";
     }
 
-    const { error: updateError } = await supabase
-      .from("user_module_progress")
-      .update(updatePayload)
-      .eq("id", (progressRecord as NonNullable<typeof progressRecord>).id);
-
-    if (updateError) throw updateError;
+    await qb.update(moduleProgressUpdatePolicy, {
+      auth: { userId },
+      filters: [byId(progressRecord.id)],
+      data: updatePayload,
+    });
   }
 
   // Trigger readiness recalculation on event
-  await triggerReadinessRecalculation(supabase, userId);
+  await triggerReadinessRecalculation(source, userId);
 
   return { success: true, xpAwarded: xpResult.xpAwarded, userStageProgressId: stageProgressId };
 }
@@ -203,43 +456,31 @@ export async function completeStage(
  * Awards attempt-tiered XP, transition statuses, and manages idempotency.
  */
 export async function evaluateArtifact(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   submissionId: string,
 ): Promise<{ success: boolean; evidenceXpAwarded: number; engagementXpAwarded: number }> {
-  // 1. Query the latest evaluation flow record
-  const { data: flow, error: flowError } = await supabase
-    .from("artifact_evaluation_flows")
-    .select("decision, evaluated_by")
-    .eq("submission_id", submissionId)
-    .eq("is_current_stage", true)
-    .single();
+  const qb = asQueryGateway(source);
 
-  if (flowError || !flow) {
-    throw new Error(`Current evaluation flow not found for submission: ${submissionId}`);
-  }
+  // 1. Query the latest evaluation flow record
+  const flow = await readRequired<EvaluationFlowRow>(
+    qb.read(currentEvaluationFlowReadPolicy, {
+      filters: [
+        { column: "submission_id", op: "eq", value: submissionId },
+        { column: "is_current_stage", op: "eq", value: true },
+      ],
+      result: "single",
+    }),
+    `Current evaluation flow not found for submission: ${submissionId}`,
+  );
 
   // 2. Fetch submission details and join artifact type
-  const { data: submission, error: subError } = await supabase
-    .from("artifact_submissions")
-    .select(`
-      id,
-      artifact_id,
-      user_id,
-      attempt_no,
-      user_module_progress_id,
-      module_artifacts (
-        id,
-        artifact_type,
-        passing_score,
-        total_score
-      )
-    `)
-    .eq("id", submissionId)
-    .single();
-
-  if (subError || !submission) {
-    throw new Error(`Submission not found: ${submissionId}`);
-  }
+  const submission = await readRequired<ArtifactSubmissionEvaluationRow>(
+    qb.read(artifactSubmissionEvaluationReadPolicy, {
+      filters: [byId(submissionId)],
+      result: "single",
+    }),
+    `Submission not found: ${submissionId}`,
+  );
 
   const userId = submission.user_id;
   const attemptNo = submission.attempt_no;
@@ -258,14 +499,15 @@ export async function evaluateArtifact(
 
   // 3. State Transitions & XP Calculations based on decision
   if (flow.decision === "pass") {
-    await supabase
-      .from("artifact_submissions")
-      .update({ status: "accepted", sealed_at: new Date().toISOString() })
-      .eq("id", submissionId);
+    await qb.update(artifactSubmissionStatusUpdatePolicy, {
+      auth: { userId },
+      filters: [byId(submissionId)],
+      data: { status: "accepted", sealed_at: new Date().toISOString() },
+    });
 
     if (isPractice) {
       const xpRes = await awardXp(
-        supabase,
+        source,
         userId,
         "practice_artifact_accepted",
         "artifact_submissions",
@@ -280,29 +522,24 @@ export async function evaluateArtifact(
         eventType = "final_artifact_accepted_3";
       }
 
-      const xpRes = await awardXp(
-        supabase,
-        userId,
-        eventType,
-        "artifact_submissions",
-        submissionId,
-      );
+      const xpRes = await awardXp(source, userId, eventType, "artifact_submissions", submissionId);
       evidenceXp = xpRes.xpAwarded;
 
-      await supabase
-        .from("user_module_progress")
-        .update({
+      await qb.update(moduleProgressUpdatePolicy, {
+        auth: { userId },
+        filters: [byId(submission.user_module_progress_id)],
+        data: {
           module_status: "mastered",
           artifact_submitted: true,
           artifact_approval_status: "approved",
           updated_at: new Date().toISOString(),
-        })
-        .eq("id", submission.user_module_progress_id);
+        },
+      });
     }
 
     if (flow.evaluated_by) {
       const xpRes = await awardXp(
-        supabase,
+        source,
         userId,
         "manual_eval_accepted",
         "artifact_submissions",
@@ -311,22 +548,24 @@ export async function evaluateArtifact(
       engagementXp = xpRes.xpAwarded;
     }
   } else if (flow.decision === "fail" || flow.decision === "return") {
-    await supabase
-      .from("artifact_submissions")
-      .update({ status: "resubmission_required" })
-      .eq("id", submissionId);
+    await qb.update(artifactSubmissionStatusUpdatePolicy, {
+      auth: { userId },
+      filters: [byId(submissionId)],
+      data: { status: "resubmission_required" },
+    });
 
-    await supabase
-      .from("user_module_progress")
-      .update({
+    await qb.update(moduleProgressUpdatePolicy, {
+      auth: { userId },
+      filters: [byId(submission.user_module_progress_id)],
+      data: {
         artifact_approval_status: "resubmission_required",
         updated_at: new Date().toISOString(),
-      })
-      .eq("id", submission.user_module_progress_id);
+      },
+    });
 
     if (isPractice) {
       const xpRes = await awardXp(
-        supabase,
+        source,
         userId,
         "practice_artifact_failed",
         "artifact_submissions",
@@ -335,7 +574,7 @@ export async function evaluateArtifact(
       engagementXp = xpRes.xpAwarded;
     } else {
       const xpRes = await awardXp(
-        supabase,
+        source,
         userId,
         "final_artifact_failed",
         "artifact_submissions",
@@ -346,7 +585,7 @@ export async function evaluateArtifact(
   }
 
   // Trigger readiness recalculation on event
-  await triggerReadinessRecalculation(supabase, userId);
+  await triggerReadinessRecalculation(source, userId);
 
   return { success: true, evidenceXpAwarded: evidenceXp, engagementXpAwarded: engagementXp };
 }
@@ -357,98 +596,101 @@ export async function evaluateArtifact(
  * Fail -> fallback_eval_failed (+1 XP)
  */
 export async function evaluateFallback(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   submissionId: string,
 ): Promise<{ success: boolean; xpAwarded: number }> {
-  const { data: flow, error: flowError } = await supabase
-    .from("artifact_evaluation_flows")
-    .select("decision, evaluated_by")
-    .eq("submission_id", submissionId)
-    .eq("is_current_stage", true)
-    .single();
+  const qb = asQueryGateway(source);
 
-  if (flowError || !flow) {
-    throw new Error(`Current evaluation flow not found for submission: ${submissionId}`);
-  }
+  const flow = await readRequired<EvaluationFlowRow>(
+    qb.read(currentEvaluationFlowReadPolicy, {
+      filters: [
+        { column: "submission_id", op: "eq", value: submissionId },
+        { column: "is_current_stage", op: "eq", value: true },
+      ],
+      result: "single",
+    }),
+    `Current evaluation flow not found for submission: ${submissionId}`,
+  );
 
-  const { data: submission, error: subError } = await supabase
-    .from("artifact_submissions")
-    .select("user_id")
-    .eq("id", submissionId)
-    .single();
-
-  if (subError || !submission) {
-    throw new Error(`Submission not found: ${submissionId}`);
-  }
+  const submission = await readRequired<{ user_id: string }>(
+    qb.read(artifactSubmissionUserReadPolicy, {
+      filters: [byId(submissionId)],
+      result: "single",
+    }),
+    `Submission not found: ${submissionId}`,
+  );
 
   const userId = submission.user_id;
 
   if (flow.decision === "pass") {
     const xpRes = await awardXp(
-      supabase,
+      source,
       userId,
       "manual_eval_accepted",
       "artifact_submissions",
       submissionId,
       { reviewer_id: flow.evaluated_by, fallback_type: "pass" },
     );
-    await triggerReadinessRecalculation(supabase, userId);
-    return { success: true, xpAwarded: xpRes.xpAwarded };
-  } else {
-    const xpRes = await awardXp(
-      supabase,
-      userId,
-      "fallback_eval_failed",
-      "artifact_submissions",
-      submissionId,
-      { reviewer_id: flow.evaluated_by, fallback_type: "fail" },
-    );
-    await triggerReadinessRecalculation(supabase, userId);
+    await triggerReadinessRecalculation(source, userId);
     return { success: true, xpAwarded: xpRes.xpAwarded };
   }
+
+  const xpRes = await awardXp(
+    source,
+    userId,
+    "fallback_eval_failed",
+    "artifact_submissions",
+    submissionId,
+    { reviewer_id: flow.evaluated_by, fallback_type: "fail" },
+  );
+  await triggerReadinessRecalculation(source, userId);
+  return { success: true, xpAwarded: xpRes.xpAwarded };
 }
 
 /**
  * Authorized Admin Score correction logic. Fully audited and immutable.
  */
 export async function adminOverrideArtifact(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   adminId: string,
   submissionId: string,
   newScore: number,
   justification: string,
 ): Promise<{ success: boolean }> {
-  // 1. Fetch current active flow
-  const { data: previousFlow, error: flowQueryError } = await supabase
-    .from("artifact_evaluation_flows")
-    .select("*")
-    .eq("submission_id", submissionId)
-    .eq("is_current_stage", true)
-    .single();
+  const qb = asQueryGateway(source);
 
-  if (flowQueryError || !previousFlow) {
-    throw new Error(`Current evaluation flow not found for submission: ${submissionId}`);
-  }
+  // 1. Fetch current active flow
+  const previousFlow = await readRequired<EvaluationFlowRow>(
+    qb.read(currentEvaluationFlowReadPolicy, {
+      filters: [
+        { column: "submission_id", op: "eq", value: submissionId },
+        { column: "is_current_stage", op: "eq", value: true },
+      ],
+      result: "single",
+    }),
+    `Current evaluation flow not found for submission: ${submissionId}`,
+  );
 
   // 2. Set previous flows to current = false
-  await supabase
-    .from("artifact_evaluation_flows")
-    .update({ is_current_stage: false })
-    .eq("submission_id", submissionId);
+  await qb.update(evaluationFlowDemotePolicy, {
+    filters: [{ column: "submission_id", op: "eq", value: submissionId }],
+    data: { is_current_stage: false },
+  });
 
-  const { data: submission } = await supabase
-    .from("artifact_submissions")
-    .select("artifact_id, module_artifacts(passing_score)")
-    .eq("id", submissionId)
-    .single();
+  const submission = await readOptional<ArtifactSubmissionOverrideRow>(
+    qb.read(artifactSubmissionOverrideReadPolicy, {
+      filters: [byId(submissionId)],
+      result: "single",
+    }),
+  );
 
   const moduleArtifacts = submission?.module_artifacts;
   const singleArtifact = Array.isArray(moduleArtifacts) ? moduleArtifacts[0] : moduleArtifacts;
-  const passingScore = (singleArtifact as { passing_score?: number } | null)?.passing_score ?? 60;
+  const passingScore = singleArtifact?.passing_score ?? 60;
   const decision = newScore >= passingScore ? "pass" : "fail";
 
   // 3. Create a NEW evaluation entry reflecting correction
-  const { error: insertError } = await supabase.from("artifact_evaluation_flows").insert({
+  await qb.insert(evaluationFlowInsertPolicy, {
     submission_id: submissionId,
     stage: "ai",
     status: "completed",
@@ -470,40 +712,41 @@ export async function adminOverrideArtifact(
     },
   });
 
-  if (insertError) throw insertError;
-
   // 4. Update the user_module_progress module status if changed
-  const { data: subDetail } = await supabase
-    .from("artifact_submissions")
-    .select("user_id, user_module_progress_id")
-    .eq("id", submissionId)
-    .single();
+  const subDetail = await readOptional<{ user_id: string; user_module_progress_id: string }>(
+    qb.read(artifactSubmissionProgressReadPolicy, {
+      filters: [byId(submissionId)],
+      result: "single",
+    }),
+  );
 
   if (subDetail) {
     if (decision === "pass") {
-      await supabase
-        .from("user_module_progress")
-        .update({
+      await qb.update(moduleProgressUpdatePolicy, {
+        auth: { userId: subDetail.user_id },
+        filters: [byId(subDetail.user_module_progress_id)],
+        data: {
           module_status: "mastered",
           artifact_approval_status: "approved",
           updated_at: new Date().toISOString(),
-        })
-        .eq("id", subDetail.user_module_progress_id);
+        },
+      });
     } else {
-      await supabase
-        .from("user_module_progress")
-        .update({
+      await qb.update(moduleProgressUpdatePolicy, {
+        auth: { userId: subDetail.user_id },
+        filters: [byId(subDetail.user_module_progress_id)],
+        data: {
           module_status: "in_progress",
           artifact_approval_status: "resubmission_required",
           updated_at: new Date().toISOString(),
-        })
-        .eq("id", subDetail.user_module_progress_id);
+        },
+      });
     }
   }
 
   // Trigger readiness recalculation on event
   if (subDetail?.user_id) {
-    await triggerReadinessRecalculation(supabase, subDetail.user_id);
+    await triggerReadinessRecalculation(source, subDetail.user_id);
   }
 
   return { success: true };

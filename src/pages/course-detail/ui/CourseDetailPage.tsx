@@ -1,9 +1,14 @@
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useLearningPathStore } from "@/entities/active-learning-path";
-import { CourseCardGridSkeleton, useCapabilityLevels, useCourses } from "@/entities/course";
+import {
+  CourseCardGridSkeleton,
+  useActiveCourse,
+  useCapabilityLevels,
+  useCourses,
+} from "@/entities/course";
 import { useAuthStore } from "@/entities/session";
 import { LearningPathInitializer } from "@/features/initialize-learning-path";
 import { getLogger } from "@/shared";
@@ -32,7 +37,7 @@ const hasInitError = (state: unknown): state is InitErrorState => {
 };
 
 export const CourseDetailPage: React.FC = () => {
-  const { capabilityCode } = useParams<{ capabilityCode: string }>();
+  const { capabilitySlug } = useParams<{ capabilitySlug: string }>();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -43,13 +48,28 @@ export const CourseDetailPage: React.FC = () => {
 
   // Fetch remote user courses & capabilities state via TanStack Query
   const { data: courses, isPending, error } = useCourses(userId ?? undefined);
+  // Find active course dynamically from API response
+  const activeCourse = useActiveCourse(courses, capabilitySlug);
+
+  const resolvedCode = activeCourse?.capabilityCode ?? capabilitySlug ?? "";
+
+  useEffect(() => {
+    if (
+      activeCourse?.slug &&
+      activeCourse.slug.length > 0 &&
+      decodeURIComponent(capabilitySlug || "") !== activeCourse.slug
+    ) {
+      navigate(`/my-courses/${encodeURIComponent(activeCourse.slug)}`, { replace: true });
+    }
+  }, [activeCourse, capabilitySlug, navigate]);
+
   const {
     data: apiLevels,
     isPending: isLevelsPending,
     isError: isLevelsError,
     error: levelsError,
     refetch: refetchLevels,
-  } = useCapabilityLevels(capabilityCode ?? "");
+  } = useCapabilityLevels(resolvedCode);
   // Track whether the learning path is still being loaded/created.
   // During the SkillPassport → LTE transition the LP may not exist yet;
   // the levels query is gated on it, so show a skeleton while it settles.
@@ -58,7 +78,7 @@ export const CourseDetailPage: React.FC = () => {
 
   const initError = hasInitError(location.state) ? location.state.initializationError : undefined;
 
-  if (!capabilityCode) {
+  if (!capabilitySlug) {
     return (
       <section role="alert" aria-live="assertive" className="p-8 text-danger-600 font-semibold">
         Invalid course URL.
@@ -66,21 +86,12 @@ export const CourseDetailPage: React.FC = () => {
     );
   }
 
-  // Find active course dynamically from API response
-  const activeCourse =
-    courses?.find(
-      (c) =>
-        c.capabilityCode.toLowerCase() === capabilityCode.toLowerCase() ||
-        c.capabilityId === capabilityCode ||
-        c.id === capabilityCode,
-    ) ?? null;
-
   // Metadata strictly coming from active course DB object
-  const title = activeCourse?.title ?? activeCourse?.capabilityCode ?? capabilityCode;
+  const title = activeCourse?.title ?? activeCourse?.capabilityCode ?? resolvedCode;
   const description = activeCourse?.description ?? "";
 
   const roleTitle = activeCourse?.priority ? `${activeCourse.priority} ENGINEER` : "";
-  const heroCode = activeCourse?.badge ?? activeCourse?.capabilityCode ?? capabilityCode;
+  const heroCode = activeCourse?.badge ?? activeCourse?.capabilityCode ?? resolvedCode;
 
   const statusLabel =
     activeCourse?.status === "completed"
@@ -118,10 +129,9 @@ export const CourseDetailPage: React.FC = () => {
       toast.error("This level is locked. Complete the previous level first.");
       return;
     }
-    if (capabilityCode && levelId) {
-      navigate(
-        `/courses/${encodeURIComponent(capabilityCode)}/levels/${encodeURIComponent(levelId)}`,
-      );
+    if (resolvedCode && levelId) {
+      const targetSlug = activeCourse?.slug ?? resolvedCode;
+      navigate(`/courses/${encodeURIComponent(targetSlug)}/levels/${encodeURIComponent(levelId)}`);
     } else {
       toast.error("Unable to navigate to level modules: level ID is missing.");
     }
@@ -155,12 +165,12 @@ export const CourseDetailPage: React.FC = () => {
     <main className="min-h-screen bg-surface-secondary pb-16" data-testid="course-detail-page">
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
         <ErrorBoundary FallbackComponent={ErrorFallback}>
-          <LearningPathInitializer capabilityCode={capabilityCode} />
+          <LearningPathInitializer capabilityCode={resolvedCode} />
         </ErrorBoundary>
 
         {/* Visually hidden heading for accessibility */}
         <h1 className="sr-only">
-          Course Details - {title} ({capabilityCode})
+          Course Details - {title} ({resolvedCode})
         </h1>
 
         {initError && (
@@ -180,7 +190,7 @@ export const CourseDetailPage: React.FC = () => {
           code={heroCode}
           status={statusLabel}
           roleTitle={roleTitle}
-          capabilityCode={capabilityCode}
+          capabilityCode={resolvedCode}
           title={title}
           description={description}
         />

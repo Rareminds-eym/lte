@@ -1,13 +1,61 @@
+import { emitStageCompletedEvent } from "@functions/api/v1/courses/lteSyncQueue";
+import { upsertStageProgress } from "@functions/api/v1/courses/queries";
+import { LevelModuleParamsSchema } from "@functions/api/v1/courses/schemas";
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
+import { QueryGatewayDatabaseError } from "@functions/lib/query-gateway/errors";
 import { LTE_STAGE_SEQUENCE, StageSequenceError } from "@functions/lib/stage-sequence";
-import { createServiceSupabase } from "@functions/lib/supabase";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { completeStage, getUserTotalXp } from "@functions/lib/xp-engine";
+import { awardXp } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
 import { z } from "zod";
-import { recalculateLevelProgress, upsertStageProgress } from "../../../../queries";
-import { LevelModuleParamsSchema } from "../../../../schemas";
+
+const eContentModuleContentReadPolicy = {
+  table: "e_content",
+  operation: "read",
+  columns: ["modules_content_id"],
+  filters: ["id"],
+} as const;
+
+const routeLevelProgressReadPolicy = {
+  table: "user_capability_level_progress",
+  operation: "read",
+  columns: ["id", "status"],
+  filters: ["user_id", "level_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const routeXpEventReadPolicy = {
+  table: "xp_events",
+  operation: "read",
+  columns: ["xp_amount"],
+  filters: ["user_id", "event_type", "source_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const routeXpTotalReadPolicy = {
+  table: "xp_events",
+  operation: "read",
+  columns: ["xp_amount"],
+  filters: ["user_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  maxPageSize: 1000,
+} as const;
+
+const routeStageProgressReadPolicy = {
+  table: "user_stage_progress",
+  operation: "read",
+  columns: ["user_module_progress_id", "time_spent_seconds"],
+  filters: ["id"],
+} as const;
+
+const routeModuleProgressCountersReadPolicy = {
+  table: "user_module_progress",
+  operation: "read",
+  columns: ["stages_completed", "completion_percentage"],
+  filters: ["id"],
+} as const;
 
 const StageProgressBodySchema = z.object({
   eContentId: z.string().uuid("Invalid eContentId format"),
@@ -20,6 +68,27 @@ const StageProgressBodySchema = z.object({
     .max(24 * 60 * 60)
     .optional(),
 });
+
+async function getRouteUserTotalXp(
+  qb: ReturnType<typeof createServiceQueryGateway>,
+  userId: string,
+): Promise<number> {
+  let page = 1;
+  let total = 0;
+
+  while (true) {
+    const rows = (await qb.read(routeXpTotalReadPolicy, {
+      auth: { userId },
+      page,
+      pageSize: 1000,
+    })) as Array<{ xp_amount: number | null }> | null;
+
+    const batch = rows ?? [];
+    total += batch.reduce((sum, row) => sum + (row.xp_amount ?? 0), 0);
+    if (batch.length < 1000) return total;
+    page += 1;
+  }
+}
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -57,9 +126,13 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
 
     const { eContentId, stageName, status, durationSeconds } = parsedBody.data;
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
-    let progressData: Record<string, unknown>;
+    let progressData: {
+      stageProgressId: string;
+      stagesCompleted: number | null | undefined;
+      completionPercentage: number | null | undefined;
+    };
     let xpAwarded = 0;
     let totalXp = 0;
     let levelCompleted = false;
@@ -67,13 +140,23 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 
     if (status === "completed") {
       // 1. Resolve modules_content_id from e_content
-      const { data: eContent, error: eError } = await supabase
-        .from("e_content")
-        .select("modules_content_id")
-        .eq("id", eContentId)
-        .single();
+      let eContent: { modules_content_id?: string | null } | null;
+      try {
+        eContent = (await qb.read(eContentModuleContentReadPolicy, {
+          filters: [{ column: "id", op: "eq", value: eContentId }],
+          result: "single",
+        })) as { modules_content_id?: string | null } | null;
+      } catch (error) {
+        if (error instanceof QueryGatewayDatabaseError) {
+          return jsonError("Associated modules_content stage not found for eContentId", 404, {
+            code: "NOT_FOUND",
+            requestId,
+          });
+        }
+        throw error;
+      }
 
-      if (eError || !eContent) {
+      if (!eContent?.modules_content_id) {
         return jsonError("Associated modules_content stage not found for eContentId", 404, {
           code: "NOT_FOUND",
           requestId,
@@ -81,97 +164,17 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       }
 
       // Query level progress status before recalculation
-      const { data: levelProgressBefore } = await supabase
-        .from("user_capability_level_progress")
-        .select("status")
-        .eq("user_id", userId)
-        .eq("level_id", levelId)
-        .maybeSingle();
+      const levelProgressBefore = (await qb.read(routeLevelProgressReadPolicy, {
+        auth: { userId },
+        filters: [{ column: "level_id", op: "eq", value: levelId }],
+        result: "maybeSingle",
+      })) as { id?: string; status?: string | null } | null;
 
       const wasLevelCompleted = levelProgressBefore?.status === "completed";
 
-      // 2. Call completeStage from the unified XP engine
-      const xpResult = await completeStage(supabase, userId, eContent.modules_content_id);
-      xpAwarded = xpResult.xpAwarded;
-
-      // Recalculate level progress to trigger level completions and on-time rewards
-      try {
-        await recalculateLevelProgress(supabase, userId, levelId);
-      } catch (err) {
-        apiLogger.error("Failed to recalculate level progress", err, { userId, levelId });
-      }
-
-      // Query level progress status and XP events after recalculation
-      const { data: levelProgressAfter } = await supabase
-        .from("user_capability_level_progress")
-        .select("id, status")
-        .eq("user_id", userId)
-        .eq("level_id", levelId)
-        .maybeSingle();
-
-      const isLevelCompleted = levelProgressAfter?.status === "completed";
-      if (isLevelCompleted && !wasLevelCompleted && levelProgressAfter?.id) {
-        levelCompleted = true;
-        const { data: xpEvent } = await supabase
-          .from("xp_events")
-          .select("xp_amount")
-          .eq("user_id", userId)
-          .eq("event_type", "course_completed_on_time")
-          .eq("source_id", levelProgressAfter.id)
-          .maybeSingle();
-
-        if (xpEvent) {
-          levelXpAwarded = xpEvent.xp_amount;
-        }
-      }
-
-      totalXp = await getUserTotalXp(supabase, userId);
-
-      // 3. Fetch the updated progress counters from user_module_progress to return to client
-      const { data: stageProg, error: stageProgErr } = await supabase
-        .from("user_stage_progress")
-        .select("user_module_progress_id, time_spent_seconds")
-        .eq("id", xpResult.userStageProgressId)
-        .single();
-
-      if (stageProgErr || !stageProg) {
-        throw new Error("Failed to find module progress ID for returning status data");
-      }
-
-      if (durationSeconds && durationSeconds > 0) {
-        const { error: timerUpdateError } = await supabase
-          .from("user_stage_progress")
-          .update({
-            time_spent_seconds: (stageProg.time_spent_seconds ?? 0) + durationSeconds,
-            last_viewed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", xpResult.userStageProgressId);
-
-        if (timerUpdateError) {
-          throw new Error(`Failed to update content viewing time: ${timerUpdateError.message}`);
-        }
-      }
-
-      const { data: updatedProgress, error: progressFetchErr } = await supabase
-        .from("user_module_progress")
-        .select("stages_completed, completion_percentage")
-        .eq("id", stageProg.user_module_progress_id)
-        .single();
-
-      if (progressFetchErr || !updatedProgress) {
-        throw new Error("Failed to fetch updated progress counters");
-      }
-
-      progressData = {
-        stageProgressId: xpResult.userStageProgressId,
-        stagesCompleted: updatedProgress.stages_completed,
-        completionPercentage: updatedProgress.completion_percentage,
-      };
-    } else {
-      // Standard in-progress update
+      // 2. Complete stage progress through the gateway and award idempotent XP.
       progressData = await upsertStageProgress(
-        supabase,
+        qb,
         userId,
         levelId,
         moduleNumber,
@@ -180,6 +183,115 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
         status,
         durationSeconds,
       );
+      const xpResult = await awardXp(
+        qb,
+        userId,
+        "stage_completed",
+        "user_stage_progress",
+        String(progressData.stageProgressId),
+        { modules_content_id: eContent.modules_content_id, stage_name: stageName },
+      );
+      xpAwarded = xpResult.xpAwarded;
+
+      // Query level progress status and XP events after recalculation
+      const levelProgressAfter = (await qb.read(routeLevelProgressReadPolicy, {
+        auth: { userId },
+        filters: [{ column: "level_id", op: "eq", value: levelId }],
+        result: "maybeSingle",
+      })) as { id?: string; status?: string | null } | null;
+
+      const isLevelCompleted = levelProgressAfter?.status === "completed";
+      if (isLevelCompleted && !wasLevelCompleted && levelProgressAfter?.id) {
+        levelCompleted = true;
+        const xpEvent = (await qb.read(routeXpEventReadPolicy, {
+          auth: { userId },
+          filters: [
+            { column: "event_type", op: "eq", value: "course_completed_on_time" },
+            { column: "source_id", op: "eq", value: levelProgressAfter.id },
+          ],
+          result: "maybeSingle",
+        })) as { xp_amount?: number | null } | null;
+
+        if (xpEvent) {
+          levelXpAwarded = xpEvent.xp_amount ?? 0;
+        }
+      }
+
+      totalXp = await getRouteUserTotalXp(qb, userId);
+
+      // 3. Fetch the updated progress counters from user_module_progress to return to client
+      let stageProg: {
+        user_module_progress_id?: string | null;
+        time_spent_seconds?: number | null;
+      } | null;
+      try {
+        stageProg = (await qb.read(routeStageProgressReadPolicy, {
+          filters: [{ column: "id", op: "eq", value: progressData.stageProgressId }],
+          result: "single",
+        })) as {
+          user_module_progress_id?: string | null;
+          time_spent_seconds?: number | null;
+        } | null;
+      } catch (error) {
+        if (error instanceof QueryGatewayDatabaseError) {
+          throw new Error("Failed to find module progress ID for returning status data");
+        }
+        throw error;
+      }
+
+      if (!stageProg) {
+        throw new Error("Failed to find module progress ID for returning status data");
+      }
+
+      let updatedProgress: {
+        stages_completed?: number | null;
+        completion_percentage?: number | null;
+      } | null;
+      try {
+        updatedProgress = (await qb.read(routeModuleProgressCountersReadPolicy, {
+          filters: [{ column: "id", op: "eq", value: stageProg.user_module_progress_id }],
+          result: "single",
+        })) as { stages_completed?: number | null; completion_percentage?: number | null } | null;
+      } catch (error) {
+        if (error instanceof QueryGatewayDatabaseError) {
+          throw new Error("Failed to fetch updated progress counters");
+        }
+        throw error;
+      }
+
+      if (!updatedProgress) {
+        throw new Error("Failed to fetch updated progress counters");
+      }
+
+      progressData = {
+        stageProgressId: progressData.stageProgressId,
+        stagesCompleted: updatedProgress.stages_completed,
+        completionPercentage: updatedProgress.completion_percentage,
+      };
+    } else {
+      // Standard in-progress update
+      progressData = await upsertStageProgress(
+        qb,
+        userId,
+        levelId,
+        moduleNumber,
+        eContentId,
+        stageName,
+        status,
+        durationSeconds,
+      );
+    }
+
+    // Emit self-contained sync event to Cloudflare Queue ONLY AFTER DB writes succeeded!
+    if (status === "completed") {
+      await emitStageCompletedEvent(qb, context.env, {
+        userId,
+        levelId,
+        moduleNumber,
+        durationSeconds,
+        levelCompleted,
+        status,
+      });
     }
 
     return jsonResponse({

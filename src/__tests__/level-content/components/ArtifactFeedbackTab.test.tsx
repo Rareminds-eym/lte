@@ -90,6 +90,28 @@ describe("ArtifactFeedbackTab", () => {
     expect(screen.getByText("Add more evidence.")).toBeInTheDocument();
   });
 
+  it("renders failed rubric scores in red", () => {
+    renderTab({
+      attempts: [
+        createAttempt(1, {
+          ...baseEvaluation,
+          decision: "revise_and_resubmit",
+          rubric_rows: [
+            {
+              label: "Completeness",
+              score: 0,
+              maxScore: 3,
+              level: "Not demonstrated",
+              tone: "error",
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(screen.getByText("0/3 (Not demonstrated)")).toHaveClass("text-danger-600");
+  });
+
   it("shows a dash for the score and a not-available state when no evaluation exists", () => {
     renderTab({ attempts: [createAttempt(1)] });
 

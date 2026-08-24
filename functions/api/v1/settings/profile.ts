@@ -1,7 +1,6 @@
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { completeProfile } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
 import { ProfileUpdateSchema } from "./schemas";
@@ -32,6 +31,55 @@ interface UserMetadata extends Record<string, unknown> {
   twoFactorEnabled?: unknown;
   loginAlertsEnabled?: unknown;
 }
+
+interface SettingsUserRow {
+  first_name: string | null;
+  last_name: string | null;
+  email?: string | null;
+  phone: string | null;
+  metadata: UserMetadata | null;
+}
+
+const settingsUserReadPolicy = {
+  table: "users",
+  operation: "read",
+  columns: ["first_name", "last_name", "email", "phone", "metadata"],
+  filters: ["id"],
+  ownership: {
+    column: "id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+} as const;
+
+const settingsUserUpdatePolicy = {
+  table: "users",
+  operation: "update",
+  updateColumns: ["first_name", "last_name", "phone", "metadata", "updated_at"],
+  filters: ["id"],
+  requireFilter: true,
+  ownership: {
+    column: "id",
+    source: "authenticatedUserId",
+    required: true,
+  },
+} as const;
+
+const profileCompletionXpInsertPolicy = {
+  table: "xp_events",
+  operation: "insert",
+  insertColumns: [
+    "user_id",
+    "event_type",
+    "xp_category",
+    "xp_amount",
+    "source_type",
+    "source_id",
+    "idempotency_key",
+    "metadata",
+  ],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
 
 function getMetaString(obj: Record<string, unknown>, keys: string[]): string {
   for (const k of keys) {
@@ -70,17 +118,11 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const user = await requireAuth(context.request, context.env);
     const userId = user.sub;
 
-    const supabase = createServiceSupabase(context.env);
-
-    const { data: dbUser, error } = await supabase
-      .from("users")
-      .select("first_name, last_name, email, phone, metadata")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (error) {
-      throw error;
-    }
+    const qb = createServiceQueryGateway(context.env);
+    const dbUser = (await qb.read(settingsUserReadPolicy, {
+      auth: { userId },
+      result: "maybeSingle",
+    })) as SettingsUserRow | null;
 
     const metadata = (dbUser?.metadata ?? user.user_metadata ?? {}) as UserMetadata;
 
@@ -157,14 +199,13 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
       });
     }
 
-    const supabase = createServiceSupabase(context.env);
+    const qb = createServiceQueryGateway(context.env);
 
     // Fetch existing metadata to merge
-    const { data: existingUser } = await supabase
-      .from("users")
-      .select("first_name, last_name, phone, metadata")
-      .eq("id", userId)
-      .maybeSingle();
+    const existingUser = (await qb.read(settingsUserReadPolicy, {
+      auth: { userId },
+      result: "maybeSingle",
+    })) as SettingsUserRow | null;
 
     const existingMetadata = (existingUser?.metadata ?? {}) as UserMetadata;
 
@@ -184,7 +225,7 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
 
     if (bodyFullName.length > 0) {
       const parts = bodyFullName.split(" ");
-      firstName = parts[0];
+      firstName = parts[0] ?? "";
       lastName = parts.slice(1).join(" ");
     } else {
       if (bodyFirstName.length > 0) firstName = bodyFirstName;
@@ -204,20 +245,16 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
     };
 
     const now = new Date().toISOString();
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({
+    await qb.update(settingsUserUpdatePolicy, {
+      auth: { userId },
+      data: {
         first_name: firstName,
         last_name: lastName,
         phone,
         metadata: updatedMetadata,
         updated_at: now,
-      })
-      .eq("id", userId);
-
-    if (updateError) {
-      throw updateError;
-    }
+      },
+    });
 
     const fullName = `${firstName} ${lastName}`.trim();
     const email = user.email;

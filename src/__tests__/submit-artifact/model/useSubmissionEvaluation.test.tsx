@@ -63,7 +63,9 @@ describe("useSubmissionEvaluation", () => {
     const { result } = renderHook(() => useSubmissionEvaluation("submission-1"), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockGetSubmissionEvaluation).toHaveBeenCalledWith("submission-1");
+    expect(mockGetSubmissionEvaluation).toHaveBeenCalledTimes(1);
+    expect(mockGetSubmissionEvaluation.mock.calls[0]?.[0]).toBe("submission-1");
+    expect(mockGetSubmissionEvaluation.mock.calls[0]?.[1]).toBeInstanceOf(AbortSignal);
     expect(result.current.data).toEqual(evaluationResponse);
     expect(queryClient.getQueryData(["submission-evaluation", "user-1", "submission-1"])).toEqual(
       evaluationResponse,

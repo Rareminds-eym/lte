@@ -20,7 +20,7 @@ describe("upsertModuleProgress", () => {
   it("updates existing not_started progress to in_progress with the default status", async () => {
     const ump = mockChain({
       maybeSingle: ok({ id: "mp-1", module_status: "not_started" }),
-      insert: ok({ id: "mp-new" }),
+      upsert: ok({ id: "mp-new" }),
       thenQueue: [{ data: null, error: null }],
     });
     const supabase = makeSupabase({
@@ -41,7 +41,7 @@ describe("upsertModuleProgress", () => {
   it("returns the existing id without updating for other statuses", async () => {
     const ump = mockChain({
       maybeSingle: ok({ id: "mp-1", module_status: "completed" }),
-      insert: ok({ id: "mp-new" }),
+      upsert: ok({ id: "mp-new" }),
       thenQueue: [{ data: null, error: null }],
     });
     const supabase = makeSupabase({
@@ -75,10 +75,10 @@ describe("upsertModuleProgress", () => {
     );
   });
 
-  it("inserts new module progress and returns its id", async () => {
+  it("upserts new module progress and returns its id", async () => {
     const ump = mockChain({
       maybeSingle: { data: null, error: null },
-      insert: ok({ id: "mp-new" }),
+      upsert: ok({ id: "mp-new" }),
       thenQueue: [{ data: null, error: null }],
     });
     const supabase = makeSupabase({
@@ -89,7 +89,7 @@ describe("upsertModuleProgress", () => {
     await expect(upsertModuleProgress(supabase, "user-1", "level-1", 1, "completed")).resolves.toBe(
       "mp-new",
     );
-    expect(ump.insert).toHaveBeenCalledWith(
+    expect(ump.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         user_id: "user-1",
         user_capability_level_progress_id: "lvl-prog-1",
@@ -101,13 +101,16 @@ describe("upsertModuleProgress", () => {
         artifact_submitted: false,
         artifact_approval_status: "not_submitted",
       }),
+      expect.objectContaining({
+        onConflict: "user_id,user_capability_level_progress_id,module_id",
+      }),
     );
   });
 
-  it("throws when inserting module progress fails", async () => {
-    const supabase = makeSupabase(moduleProgressChains({ insert: err("insert down") }));
+  it("throws when upserting module progress fails", async () => {
+    const supabase = makeSupabase(moduleProgressChains({ upsert: err("upsert down") }));
     await expect(upsertModuleProgress(supabase, "user-1", "level-1", 1)).rejects.toThrow(
-      "Failed to insert module progress: insert down",
+      "Failed to upsert module progress: upsert down",
     );
   });
 });

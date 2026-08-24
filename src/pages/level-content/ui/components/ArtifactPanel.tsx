@@ -17,7 +17,8 @@ interface ArtifactPanelProps {
   isPanelExpanded?: boolean;
   expandedArtifactQuestionId: string | null | undefined;
   setExpandedArtifactQuestionId: React.Dispatch<React.SetStateAction<string | null | undefined>>;
-  onXpEarned?: (xpAmount: number) => void;
+  onXpEarned?: (xpAmount: number, eventType: string) => void;
+  onArtifactSubmitted?: (artifactId: string) => void;
 }
 
 /**
@@ -49,6 +50,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   expandedArtifactQuestionId,
   setExpandedArtifactQuestionId,
   onXpEarned,
+  onArtifactSubmitted,
 }) => {
   const [submittedFilesByArtifactId, setSubmittedFilesByArtifactId] = useState<
     Record<string, ModuleArtifactSubmittedFile[]>
@@ -149,9 +151,15 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     }));
     setActiveFeedbackAttemptNo(response.attempt_no);
     setActiveArtifactTab("feedback");
+    onArtifactSubmitted?.(activeArtifact.id);
 
-    if (response.evaluation?.calculated_xp && response.evaluation.calculated_xp > 0) {
-      onXpEarned?.(response.evaluation.calculated_xp);
+    // Show XP modal if XP was awarded
+    if (response.evaluation?.calculated_xp !== undefined && response.evaluation.calculated_xp > 0) {
+      const eventType = response.evaluation.event_type;
+      // Only show modal if we have a valid event type from backend
+      if (eventType) {
+        onXpEarned?.(response.evaluation.calculated_xp, eventType);
+      }
     }
   };
 

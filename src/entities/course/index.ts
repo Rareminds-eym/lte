@@ -39,6 +39,7 @@ export {
   normalizeLteStageName,
 } from "./model/stages";
 export type { Course, CourseStatus } from "./model/types";
+export { useActiveCourse } from "./model/useActiveCourse";
 export { useCapabilityLevels } from "./model/useCapabilityLevels";
 export { useCourses } from "./model/useCourses";
 export {

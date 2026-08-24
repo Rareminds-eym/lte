@@ -544,6 +544,27 @@ rules:
   Requests traversing client, Pages Functions, and backend Service Bindings (e.g. SSO Worker) must propagate W3C Trace Context (`traceparent` header) and consistent correlation `requestId`.
   * Ensure error logs across microservices share the same correlation ID so distributed transaction failures can be diagnosed without guessing.
 
+* category: naming
+  title: "Naming and Casing Conventions"
+  severity: critical
+  description: |
+    All project files and directories must adhere to the following naming and casing conventions:
+
+    | Item                  | Convention        | Example                                                   |
+    | --------------------- | ----------------- | --------------------------------------------------------- |
+    | FSD layers            | lowercase         | `entities/`, `features/`, `widgets/`, `pages/`, `shared/` |
+    | slices                | kebab-case        | `course-detail/`, `career-paths/`                         |
+    | nested folders        | kebab-case        | `resource-content-viewer/`                                |
+    | standard FSD segments | lowercase         | `ui/`, `model/`, `api/`, `lib/`, `config/`                |
+    | React component files | PascalCase        | `DocxContentViewer.tsx`                                   |
+    | hooks                 | camelCase         | `useCourseProgress.ts`                                    |
+    | utilities             | camelCase         | `formatDuration.ts`                                       |
+    | schemas               | camelCase         | `courseSchema.ts`                                         |
+    | stores                | camelCase         | `courseStore.ts`                                          |
+    | API modules           | camelCase         | `courseApi.ts`                                            |
+    | public API            | lowercase         | `index.ts`                                                |
+    | tests                 | match source file | `DocxContentViewer.test.tsx`                              |
+
 # --------------------------------------------------------------------------
 
 # AUTHENTICATION

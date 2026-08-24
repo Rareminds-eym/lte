@@ -1,10 +1,13 @@
+import {
+  ArtifactSubmissionError,
+  createArtifactFileDownloadResponse,
+} from "@functions/api/v1/artifacts/file-queries";
 import { jsonError } from "@functions/lib/http";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getAuthUser } from "@functions/middleware";
 import { uuidSchema } from "@functions/schemas";
 import { apiLogger } from "@functions/shared/logger";
-import { ArtifactSubmissionError, createArtifactFileDownloadResponse } from "../../file-queries";
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -19,13 +22,8 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       return jsonError("Invalid file id.", 400, { code: "VALIDATION_ERROR", requestId });
     }
 
-    const supabase = createServiceSupabase(context.env);
-    return await createArtifactFileDownloadResponse(
-      supabase,
-      context.env,
-      user.sub,
-      parsedFileId.data,
-    );
+    const qb = createServiceQueryGateway(context.env);
+    return await createArtifactFileDownloadResponse(qb, context.env, user.sub, parsedFileId.data);
   } catch (error) {
     if (error instanceof ArtifactSubmissionError) {
       return jsonError(error.message, error.status, { code: error.code, requestId });

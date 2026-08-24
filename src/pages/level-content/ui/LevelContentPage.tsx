@@ -15,14 +15,13 @@ import {
   useUpdateStageProgress,
 } from "@/entities/course";
 import { DASHBOARD_QUERY_KEY } from "@/entities/dashboard";
-import { XpRewardModal } from "@/features/xp-reward";
+import { useXpModalStore } from "@/shared/store";
 import {
   Button,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
-  DownloadIcon,
   ExpandIcon,
   IconButton,
   type IconProps,
@@ -61,24 +60,17 @@ export const LevelContentPage: React.FC = () => {
   const [isStageInfoOpen, setIsStageInfoOpen] = useState(true);
   const [isStageInfoExpanded, setIsStageInfoExpanded] = useState(false);
   const [mobilePanelOpen, setMobilePanelOpen] = useState<"modules" | "stageInfo" | null>(null);
-  const isDownloading = false;
   const [prevModuleId, setPrevModuleId] = useState<string | undefined>(undefined);
   const [isScenarioExpanded, setIsScenarioExpanded] = useState(false);
   const [expandedArtifactQuestionId, setExpandedArtifactQuestionId] = useState<
     string | null | undefined
   >();
   const contentViewerRef = useRef<HTMLDivElement>(null);
+  const addEvent = useXpModalStore((s) => s.addEvent);
 
-  const [showXpModal, setShowXpModal] = useState(false);
-  const [xpModalSource, setXpModalSource] = useState<
-    "stage_complete" | "artifact_submit" | "level_complete" | null
-  >(null);
-  const [xpAwardedAmount, setXpAwardedAmount] = useState(0);
   const [totalXpAmount, setTotalXpAmount] = useState(0);
-  const [xpCategory, setXpCategory] = useState<"evidence" | "engagement">("evidence");
-  const [pendingNextStage, setPendingNextStage] = useState<LteStage | null>(null);
-  const [pendingNextModuleNo, setPendingNextModuleNo] = useState<number | null>(null);
   const [optimisticCompletedStages, setOptimisticCompletedStages] = useState<LteStage[]>([]);
+  const [submittedArtifactIds, setSubmittedArtifactIds] = useState<string[]>([]);
 
   const moduleNumber = Number(moduleNo);
   const hasValidRouteParams = Boolean(levelId) && Number.isInteger(moduleNumber);
@@ -102,6 +94,7 @@ export const LevelContentPage: React.FC = () => {
   if (levelModule?.id !== prevModuleId) {
     setPrevModuleId(levelModule?.id);
     setOptimisticCompletedStages([]);
+    setSubmittedArtifactIds([]);
     setIsScenarioExpanded(false);
   }
   const nextModuleNoForPrefetch = Number.isInteger(moduleNumber) ? moduleNumber + 1 : undefined;
@@ -193,10 +186,6 @@ export const LevelContentPage: React.FC = () => {
   const handleToggleStageInfo = () => {
     setIsStageInfoOpen((prev) => !prev);
     setMobilePanelOpen((prev) => (prev === "stageInfo" ? null : "stageInfo"));
-  };
-
-  const handleDownloadContent = async (item: EContentItem) => {
-    window.open(item.url, "_blank", "noopener,noreferrer");
   };
 
   const handleExpandContent = async (item: EContentItem) => {
@@ -383,7 +372,28 @@ export const LevelContentPage: React.FC = () => {
   const nextStageAfterCurrentCompletion = isModuleCompleteAfterCurrentStage
     ? nextStage
     : (nextIncompleteStageAfterCurrent ?? firstIncompleteStage);
+  const isArtifactSubmitted = (artifactId: string, submittedFiles?: unknown[]) =>
+    (submittedFiles?.length ?? 0) > 0 || submittedArtifactIds.includes(artifactId);
+  const finalArtifactStageIndex = navigableStages.findIndex((stageName) => {
+    const stage = levelModule.stages.find((moduleStage) => moduleStage.stageName === stageName);
+    return stage?.artifacts.some(
+      (artifact) =>
+        artifact.artifactType === "final" &&
+        artifact.isActive &&
+        !isArtifactSubmitted(artifact.id, artifact.submittedFiles),
+    );
+  });
+  const activeStageHasUnsubmittedFinalArtifact = activeStageContent.artifacts.some(
+    (artifact) =>
+      artifact.artifactType === "final" &&
+      artifact.isActive &&
+      !isArtifactSubmitted(artifact.id, artifact.submittedFiles),
+  );
+  const isStageAfterUnsubmittedFinalArtifact = (stage: LteStage) =>
+    finalArtifactStageIndex >= 0 && navigableStages.indexOf(stage) > finalArtifactStageIndex;
   const isStageLockedForCompletedSet = (stage: LteStage, stageSet: Set<LteStage>) => {
+    if (isStageAfterUnsubmittedFinalArtifact(stage)) return true;
+
     const firstAvailableStage = getFirstIncompleteStage(navigableStages, stageSet);
     return Boolean(firstAvailableStage && !stageSet.has(stage) && stage !== firstAvailableStage);
   };
@@ -448,11 +458,11 @@ export const LevelContentPage: React.FC = () => {
     };
   });
 
-  const handleCloseXpModal = () => {
-    setShowXpModal(false);
-    const source = xpModalSource;
-    setXpModalSource(null);
-
+  const triggerNavigationTransition = (
+    source: "stage_complete" | "artifact_submit" | "level_complete",
+    pendingStage: LteStage | null,
+    pendingModule: number | null,
+  ) => {
     if (source === "artifact_submit") {
       return;
     }
@@ -465,16 +475,18 @@ export const LevelContentPage: React.FC = () => {
       return;
     }
 
-    if (pendingNextStage) {
-      setPendingNextStage(null);
-      handleStageSelect(pendingNextStage);
-    } else if (pendingNextModuleNo && levelId) {
-      const moduleToOpen = pendingNextModuleNo;
-      setPendingNextModuleNo(null);
-      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${moduleToOpen}?stage=engage`);
+    if (pendingStage) {
+      if (isStageAfterUnsubmittedFinalArtifact(pendingStage)) return;
+      handleStageSelect(pendingStage);
+    } else if (pendingModule && levelId) {
+      if (finalArtifactStageIndex >= 0) return;
+      navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${pendingModule}?stage=engage`);
     } else {
+      if (finalArtifactStageIndex >= 0) return;
       toast.success("Course completed successfully!");
-      navigate(getCourseOverviewPath(level.capabilityCode));
+      if (level?.capabilityCode) {
+        navigate(getCourseOverviewPath(level.capabilityCode));
+      }
     }
   };
 
@@ -488,10 +500,12 @@ export const LevelContentPage: React.FC = () => {
 
   const handleNextModule = () => {
     if (!levelId || !nextModuleExists) return;
+    if (finalArtifactStageIndex >= 0) return;
     navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${nextModuleNo}?stage=engage`);
   };
 
   const handleCompleteCourse = () => {
+    if (finalArtifactStageIndex >= 0) return;
     toast.success("Course completed successfully!");
     navigate(getCourseOverviewPath(level.capabilityCode));
   };
@@ -536,21 +550,32 @@ export const LevelContentPage: React.FC = () => {
             );
 
             if (data?.levelCompleted) {
-              setXpAwardedAmount(data.levelXpAwarded ?? 0);
-              setTotalXpAmount(data.totalXp ?? 0);
-              setXpCategory("evidence");
-              setXpModalSource("level_complete");
-              setShowXpModal(true);
+              const awarded = data.levelXpAwarded ?? 0;
+              const total = data.totalXp ?? 0;
+              setTotalXpAmount(total);
+              addEvent({
+                id: crypto.randomUUID(),
+                xpAmount: awarded,
+                totalXp: total,
+                eventType: "course_completed_on_time",
+                xpCategory: "evidence",
+                onClose: () => triggerNavigationTransition("level_complete", null, null),
+              });
             } else if (data?.xpAwarded && data.xpAwarded > 0) {
-              setXpAwardedAmount(data.xpAwarded);
-              setTotalXpAmount(data.totalXp ?? 0);
-              setXpCategory(data.xpCategory ?? "evidence");
-              setPendingNextStage(nextStageAfterCurrentCompletion);
-              setPendingNextModuleNo(
-                isModuleCompleteAfterCurrentStage && nextModuleExists ? nextModuleNo : null,
-              );
-              setXpModalSource("stage_complete");
-              setShowXpModal(true);
+              const awarded = data.xpAwarded;
+              const total = data.totalXp ?? 0;
+              setTotalXpAmount(total);
+              const pStage = nextStageAfterCurrentCompletion;
+              const pModule =
+                isModuleCompleteAfterCurrentStage && nextModuleExists ? nextModuleNo : null;
+              addEvent({
+                id: crypto.randomUUID(),
+                xpAmount: awarded,
+                totalXp: total,
+                eventType: activeStage,
+                xpCategory: (data.xpCategory as "evidence" | "engagement") ?? "evidence",
+                onClose: () => triggerNavigationTransition("stage_complete", pStage, pModule),
+              });
             } else {
               if (nextStageAfterCurrentCompletion) {
                 handleStageNavigation(nextStageAfterCurrentCompletion, completedStageSetAfterSave);
@@ -596,14 +621,16 @@ export const LevelContentPage: React.FC = () => {
       : nextModuleExists
         ? "Mark Done & Next Module"
         : "Finish Course";
+  const isPrimaryNextBlockedByFinalArtifact =
+    activeStageHasUnsubmittedFinalArtifact && !nextContent;
 
   const renderStageNavigationBar = () => (
-    <div className="sticky bottom-0 z-20 grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-line-default bg-surface-primary px-4 shadow-[0_-4px_12px_rgba(15,23,42,0.05)]">
+    <div className="sticky bottom-0 z-20 grid min-h-[76px] shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 border-t border-line-default bg-surface-primary px-6 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.05)] sm:h-14 sm:min-h-14 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-4 sm:py-0">
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="justify-self-start text-content-muted"
+        className="h-12 w-full justify-center justify-self-stretch px-3 text-sm text-content-muted sm:h-auto sm:w-auto sm:justify-self-start sm:text-xs"
         disabled={!previousStage || isStageLocked(previousStage)}
         icon={<ChevronLeftIcon size={16} />}
         onClick={() => handleStageNavigation(previousStage)}
@@ -611,7 +638,7 @@ export const LevelContentPage: React.FC = () => {
         Previous
       </Button>
 
-      <div className="flex items-center gap-1.5">
+      <div className="hidden items-center justify-self-center gap-1.5 sm:flex">
         {navigableStages.map((stage) => {
           const isCompleted = completedStageSet.has(stage);
           const isLocked = isStageLocked(stage);
@@ -639,11 +666,11 @@ export const LevelContentPage: React.FC = () => {
       <Button
         type="button"
         size="sm"
-        className="justify-self-end"
+        className="h-12 w-full justify-center justify-self-stretch px-3 text-sm sm:h-auto sm:w-auto sm:justify-self-end sm:text-xs"
         onClick={handlePrimaryNext}
-        disabled={isUpdateStagePending}
+        disabled={isUpdateStagePending || isPrimaryNextBlockedByFinalArtifact}
       >
-        <span className="inline-flex items-center gap-2">
+        <span className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap text-center leading-tight sm:gap-2">
           {primaryNextLabel}
           {primaryNextLabel === "Complete Course" || primaryNextLabel === "Finish Course" ? (
             <CheckIcon size={16} />
@@ -662,6 +689,8 @@ export const LevelContentPage: React.FC = () => {
       activeStage={activeStage}
       activeArtifactType={activeArtifactType}
       stageDescription={stageDescription}
+      stageModuleContext={activeStageContent.moduleContext}
+      stageCurriculumReference={activeStageContent.curriculumReference}
       stageSummary={stageSummary}
       previewItems={previewItems}
       isScenarioExpanded={isScenarioExpanded && isScenarioOverflowing}
@@ -676,14 +705,21 @@ export const LevelContentPage: React.FC = () => {
           isPanelExpanded={isStageInfoExpanded}
           expandedArtifactQuestionId={expandedArtifactQuestionId}
           setExpandedArtifactQuestionId={setExpandedArtifactQuestionId}
-          onXpEarned={(xpAmount) => {
-            setXpAwardedAmount(xpAmount);
+          onXpEarned={(xpAmount, eventType) => {
             setTotalXpAmount((prev) => prev + xpAmount);
-            setXpCategory("evidence");
-            setPendingNextStage(null);
-            setPendingNextModuleNo(null);
-            setXpModalSource("artifact_submit");
-            setShowXpModal(true);
+            addEvent({
+              id: crypto.randomUUID(),
+              xpAmount: xpAmount,
+              totalXp: totalXpAmount + xpAmount,
+              eventType: eventType,
+              xpCategory: "evidence",
+              onClose: () => triggerNavigationTransition("artifact_submit", null, null),
+            });
+          }}
+          onArtifactSubmitted={(artifactId) => {
+            setSubmittedArtifactIds((currentIds) =>
+              currentIds.includes(artifactId) ? currentIds : [...currentIds, artifactId],
+            );
           }}
         />
       )}
@@ -754,15 +790,6 @@ export const LevelContentPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <IconButton
-                onClick={() => void handleDownloadContent(selectedContent)}
-                disabled={isDownloading}
-                aria-label="Download selected resource"
-                icon={<DownloadIcon size={15} />}
-                size="sm"
-                variant="outline"
-                className="rounded-lg"
-              />
               <IconButton
                 onClick={() => void handleExpandContent(selectedContent)}
                 aria-label="Expand selected resource"
@@ -898,15 +925,6 @@ export const LevelContentPage: React.FC = () => {
             )}
           </div>
         )}
-
-        <XpRewardModal
-          isOpen={showXpModal}
-          xpAmount={xpAwardedAmount}
-          totalXp={totalXpAmount}
-          stageName={xpModalSource === "level_complete" ? "course_completed_on_time" : activeStage}
-          onClose={handleCloseXpModal}
-          xpCategory={xpCategory}
-        />
       </div>
     </div>
   );

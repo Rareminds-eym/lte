@@ -137,12 +137,12 @@ export const CoursesPage = () => {
     <div className="mx-auto max-w-[1440px] space-y-6">
       <LearningPathInitializer />
       <header>
-        <div className="flex items-start justify-between gap-6">
-          <div className="flex items-start gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div className="flex min-w-0 items-start gap-3">
             <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center shrink-0 mt-1">
               <BookOpenIcon size={20} className="text-accent-purple-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold text-content-primary leading-tight">My Courses</h1>
               <p className="text-sm text-content-secondary mt-0.5">
                 Track your enrolled courses and continue where you left off.
@@ -150,7 +150,7 @@ export const CoursesPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          <div className="flex max-w-full items-center gap-2 overflow-x-auto pb-1 sm:shrink-0 sm:flex-wrap sm:justify-end sm:overflow-visible sm:pb-0">
             <StatsPill
               icon={<LayersIcon size={14} />}
               count={total}
@@ -178,7 +178,7 @@ export const CoursesPage = () => {
         <div
           role="tablist"
           aria-label="Filter by role"
-          className="flex items-center gap-6 border-b border-line-default"
+          className="flex items-center gap-4 overflow-x-auto border-b border-line-default scrollbar-none sm:gap-6"
         >
           {roleTabs.map((tab) => {
             const count = tab.id === null ? total : (roleCounts[tab.id] ?? 0);
@@ -194,7 +194,7 @@ export const CoursesPage = () => {
                   setCurrentPage(1);
                 }}
                 className={cn(
-                  "relative pb-3 text-sm font-medium transition-colors cursor-pointer",
+                  "relative shrink-0 pb-3 text-sm font-medium transition-colors cursor-pointer",
                   isActive ? "text-brand-600" : "text-content-secondary hover:text-content-primary",
                 )}
               >
@@ -218,7 +218,7 @@ export const CoursesPage = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Button
           variant="outline"
           size="sm"
@@ -228,7 +228,7 @@ export const CoursesPage = () => {
           Filter
         </Button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <span className="text-sm text-content-secondary font-medium">
             {filteredCourses.length} courses
           </span>
@@ -283,7 +283,7 @@ const StatsPill: React.FC<{
 }> = ({ icon, count, label, className }) => (
   <span
     className={cn(
-      "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-sm font-medium [&_svg]:block [&_svg]:shrink-0",
+      "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 rounded-full border text-sm font-medium [&_svg]:block [&_svg]:shrink-0",
       className,
     )}
   >

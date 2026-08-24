@@ -6,10 +6,14 @@ import {
   upsertLearningPath,
   upsertLearningTrack,
 } from "@functions/api/v1/learning-paths/queries";
+import {
+  asQueryGateway,
+  type QueryGateway,
+  type QueryGatewaySource,
+} from "@functions/lib/query-gateway";
 import { callSkill } from "@functions/lib/skill-gateway";
 import type { LteEnv } from "@functions/lib/types";
 import { createLogger } from "@functions/shared/logger";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 const logger = createLogger("learner-track");
@@ -25,6 +29,7 @@ const LearningTrackDataSchema = z.object({
       fit: z.string(),
       matchScore: z.number(),
       whyItFits: z.string(),
+      industry: z.string().optional(),
     })
     .optional(),
   tracks: z
@@ -37,6 +42,7 @@ const LearningTrackDataSchema = z.object({
         fit: z.string(),
         matchScore: z.number(),
         whyItFits: z.string(),
+        industry: z.string().optional(),
       }),
     )
     .optional(),
@@ -46,6 +52,37 @@ export interface ResolvedTrack {
   data: ActiveTrackDetail | null;
   needsAssessment: boolean;
 }
+
+const latestLearningTrackReadPolicy = {
+  table: "learning_tracks",
+  operation: "read",
+  columns: ["id", "track", "fit", "match_score", "why_it_fits"],
+  filters: ["user_id"],
+  sorts: ["updated_at"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const learningTrackReactivatePolicy = {
+  table: "learning_tracks",
+  operation: "update",
+  updateColumns: ["is_active"],
+  filters: ["user_id", "id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  requireFilter: true,
+} as const;
+
+const roleByNameReadPolicy = {
+  table: "roles",
+  operation: "read",
+  columns: ["id"],
+  filters: ["role_name"],
+} as const;
+
+const fallbackRoleReadPolicy = {
+  table: "roles",
+  operation: "read",
+  columns: ["id"],
+} as const;
 
 /**
  * Resolve the learner's track in 3 layers:
@@ -60,35 +97,42 @@ export interface ResolvedTrack {
  * Layer 3 after logging (fail-closed, degraded-not-broken).
  */
 export async function resolveActiveTrack(
-  supabase: SupabaseClient,
+  source: QueryGatewaySource,
   env: LteEnv,
   userId: string,
 ): Promise<ResolvedTrack> {
+  const qb = asQueryGateway(source);
   // Layer 1 — LTE local state.
-  const local = await getActiveLearningTrack(supabase, userId);
+  const local = await getActiveLearningTrack(qb, userId);
   if (local) return { data: local, needsAssessment: false };
 
   // Search for any inactive learning track for this user and reactivate it
-  const { data: inactiveTrack, error: inactiveError } = await supabase
-    .from("learning_tracks")
-    .select("id, track, fit, match_score, why_it_fits")
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  let inactiveTrack: { id: string } | null = null;
+  try {
+    inactiveTrack = (await qb.read(latestLearningTrackReadPolicy, {
+      auth: { userId },
+      sort: [{ column: "updated_at", ascending: false }],
+      limit: 1,
+      result: "maybeSingle",
+    })) as { id: string } | null;
+  } catch {
+    inactiveTrack = null;
+  }
 
-  if (inactiveTrack && !inactiveError) {
+  if (inactiveTrack) {
     // Reactivate this track by setting is_active = true
-    const { error: reactivateError } = await supabase
-      .from("learning_tracks")
-      .update({ is_active: true })
-      .eq("id", inactiveTrack.id);
-
-    if (!reactivateError) {
-      const refreshed = await getActiveLearningTrack(supabase, userId);
+    try {
+      await qb.update(learningTrackReactivatePolicy, {
+        auth: { userId },
+        data: { is_active: true },
+        filters: [{ column: "id", op: "eq", value: inactiveTrack.id }],
+      });
+      const refreshed = await getActiveLearningTrack(qb, userId);
       if (refreshed) {
         return { data: refreshed, needsAssessment: false };
       }
+    } catch {
+      // Fall through to SkillPassport lookup.
     }
   }
 
@@ -100,18 +144,18 @@ export async function resolveActiveTrack(
       const tracks = parsed.data.tracks || (parsed.data.track ? [parsed.data.track] : []);
       if (tracks.length > 0) {
         // Deactivate other tracks first to ensure only the new primary track is active
-        await deactivateOtherTracks(supabase, userId);
+        await deactivateOtherTracks(qb, userId);
 
         const primaryTrackName = tracks[0]?.trackName;
         const trackMap = new Map<string, string>(); // trackName -> trackId
 
         for (const trackItem of tracks) {
-          const roleId = trackItem.roleId || (await resolveRoleId(supabase, trackItem.roleName));
+          const roleId = trackItem.roleId || (await resolveRoleId(qb, trackItem.roleName));
           const isActiveTrack = trackItem.trackName === primaryTrackName;
 
           let trackId = trackMap.get(trackItem.trackName);
           if (!trackId) {
-            trackId = await upsertLearningTrack(supabase, {
+            trackId = await upsertLearningTrack(qb, {
               userId,
               attemptId: trackItem.attemptId,
               fit: trackItem.fit,
@@ -123,19 +167,20 @@ export async function resolveActiveTrack(
             trackMap.set(trackItem.trackName, trackId);
           }
 
-          const learningPathId = await upsertLearningPath(supabase, {
+          const learningPathId = await upsertLearningPath(qb, {
             userId,
             trackId,
             roleId,
+            metadata: trackItem.industry ? { industry: trackItem.industry } : {},
           });
 
           // Sync capabilities for any role belonging to the active track
           if (isActiveTrack) {
-            await syncUserCapabilities(supabase, { userId, learningPathId, roleId });
+            await syncUserCapabilities(qb, { userId, learningPathId, roleId });
           }
         }
 
-        const refreshed = await getActiveLearningTrack(supabase, userId);
+        const refreshed = await getActiveLearningTrack(qb, userId);
         return { data: refreshed, needsAssessment: false };
       }
     }
@@ -154,25 +199,26 @@ export async function resolveActiveTrack(
  * Map a Skill career-cluster title to an LTE roles.id:
  * exact case-insensitive name match -> contains match -> first catalog role.
  */
-async function resolveRoleId(supabase: SupabaseClient, roleName: string): Promise<string> {
-  const exact = await supabase
-    .from("roles")
-    .select("id")
-    .ilike("role_name", roleName)
-    .maybeSingle();
-  if (exact.data?.id) return exact.data.id;
+async function resolveRoleId(qb: QueryGateway, roleName: string): Promise<string> {
+  const exact = (await qb.read(roleByNameReadPolicy, {
+    filters: [{ column: "role_name", op: "ilike", value: roleName }],
+    result: "maybeSingle",
+  })) as { id: string } | null;
+  if (exact?.id) return exact.id;
 
   const escaped = roleName.replace(/[%_\\]/g, (m) => `\\${m}`);
-  const contains = await supabase
-    .from("roles")
-    .select("id")
-    .ilike("role_name", `%${escaped}%`)
-    .limit(1)
-    .maybeSingle();
-  if (contains.data?.id) return contains.data.id;
+  const contains = (await qb.read(roleByNameReadPolicy, {
+    filters: [{ column: "role_name", op: "ilike", value: `%${escaped}%` }],
+    limit: 1,
+    result: "maybeSingle",
+  })) as { id: string } | null;
+  if (contains?.id) return contains.id;
 
-  const fallback = await supabase.from("roles").select("id").limit(1).maybeSingle();
-  if (fallback.data?.id) return fallback.data.id;
+  const fallback = (await qb.read(fallbackRoleReadPolicy, {
+    limit: 1,
+    result: "maybeSingle",
+  })) as { id: string } | null;
+  if (fallback?.id) return fallback.id;
 
   throw new Error("No roles available in LTE catalog");
 }

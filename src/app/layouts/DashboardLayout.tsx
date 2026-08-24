@@ -117,12 +117,12 @@ export const DashboardLayout: React.FC = () => {
         isCollapsed={isCollapsed}
         onToggleCollapse={toggleSidebar}
         onNavigate={handleNavigate}
-        className="hidden md:flex"
+        className="hidden lg:flex"
       />
 
       {/* Mobile Navigation Drawer Overlay */}
       {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
+        <div className="fixed inset-0 z-50 flex lg:hidden">
           <button
             type="button"
             aria-label="Close navigation drawer"
@@ -152,7 +152,7 @@ export const DashboardLayout: React.FC = () => {
         <DashboardScrollRestoration />
         <main
           id={DASHBOARD_SCROLL_CONTAINER_ID}
-          className="flex-1 p-4 md:p-6 overflow-y-auto min-w-0"
+          className="flex-1 p-4 lg:p-6 overflow-y-auto min-w-0"
         >
           <Outlet />
         </main>

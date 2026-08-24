@@ -7,7 +7,6 @@ import {
   Breadcrumb,
   CodeBracketsIcon,
   DotsVerticalIcon,
-  DownloadIcon,
   FlagIcon,
   LayerStackIcon,
   LightbulbIcon,
@@ -28,7 +27,6 @@ export interface LevelHeaderProps {
   onToggleModules?: () => void;
   onToggleStageInfo?: () => void;
   onShareLink?: () => void;
-  onDownloadResources?: () => void;
   onReportIssue?: () => void;
   className?: string;
 }
@@ -55,7 +53,6 @@ export const LevelHeader: React.FC<LevelHeaderProps> = ({
   onToggleModules,
   onToggleStageInfo,
   onShareLink,
-  onDownloadResources,
   onReportIssue,
   className = "",
 }) => {
@@ -87,11 +84,6 @@ export const LevelHeader: React.FC<LevelHeaderProps> = ({
     } else {
       navigator.clipboard.writeText(window.location.href);
     }
-  };
-
-  const handleDownload = () => {
-    setIsMenuOpen(false);
-    onDownloadResources?.();
   };
 
   const handleReport = () => {
@@ -178,15 +170,6 @@ export const LevelHeader: React.FC<LevelHeaderProps> = ({
             >
               <ShareLinkIcon size={14} className="text-content-secondary" />
               <span>Copy Link</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="w-full px-3 py-2 text-xs text-content-primary hover:bg-surface-muted rounded-lg flex items-center gap-2.5 font-medium transition-colors cursor-pointer text-left"
-            >
-              <DownloadIcon size={14} className="text-content-secondary" />
-              <span>Download Resources</span>
             </button>
 
             <div className="my-1 border-t border-line-subtle" />

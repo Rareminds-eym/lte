@@ -33,5 +33,3 @@ export const PortfolioIcon: React.FC<IconProps> = ({
     />
   </svg>
 );
-
-export default PortfolioIcon;

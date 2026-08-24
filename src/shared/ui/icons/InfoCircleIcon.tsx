@@ -26,5 +26,3 @@ export const InfoCircleIcon: React.FC<IconProps> = ({
     />
   </svg>
 );
-
-export default InfoCircleIcon;

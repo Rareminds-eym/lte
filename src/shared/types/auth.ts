@@ -37,6 +37,8 @@ export interface ActiveTrackRole {
   readinessScore: number;
   status: string;
   updatedAt: string | null;
+  domain?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CareerTrackItem {
@@ -58,10 +60,4 @@ export interface ActiveTrackDetail {
   tracks?: CareerTrackItem[];
   overallProgress?: number;
   completionCount?: number;
-}
-
-export interface ActiveLearningPathResponse {
-  success: boolean;
-  data: ActiveTrackDetail | null;
-  needsAssessment?: boolean;
 }

@@ -92,6 +92,10 @@ const mockLevelContentData = {
         stageName: "engage",
         stageOrder: 1,
         stageDescription: "Understand the incident context before taking action.",
+        moduleContext: "Engage stage context from modules_content.",
+        curriculumReference: {
+          technical_concepts: "How to isolate useful signals.",
+        },
         isActive: true,
         items: [
           {
@@ -461,6 +465,29 @@ describe("LevelContentPage", () => {
           stage.stageName === "evolve"
             ? {
                 ...stage,
+                artifacts: stage.artifacts.map((artifact) =>
+                  artifact.artifactType === "final"
+                    ? {
+                        ...artifact,
+                        submittedFiles: [
+                          {
+                            id: "file-final-1",
+                            submissionId: "submission-final-1",
+                            questionId: "question-final-1",
+                            fileName: "Final_Evidence_Pack.xlsx",
+                            fileType: "xlsx",
+                            fileSizeBytes: 1024,
+                            downloadUrl: "/api/v1/artifacts/files/file-final-1/download",
+                            attemptNo: 1,
+                            versionLabel: "v1",
+                            isLatest: true,
+                            submittedAt: "2026-08-17T00:00:00.000Z",
+                            uploadedAt: "2026-08-17T00:00:00.000Z",
+                          },
+                        ],
+                      }
+                    : artifact,
+                ),
                 items: [
                   {
                     id: "content-final-review",
@@ -501,6 +528,62 @@ describe("LevelContentPage", () => {
     expect(useLevelModuleDetailsMock).toHaveBeenCalledWith(levelId, 2);
   });
 
+  it("blocks forward progress after an unsubmitted final artifact stage", () => {
+    const data = {
+      ...mockLevelContentData,
+      module: {
+        ...mockLevelContentData.module,
+        completedStages: ["engage", "explore", "explain"],
+        stages: mockLevelContentData.module.stages.map((stage) =>
+          stage.stageName === "express"
+            ? {
+                ...stage,
+                items: [
+                  {
+                    id: "content-express-final",
+                    contentType: "slide",
+                    title: "Final Artifact Instructions",
+                    description: "Submit before moving forward.",
+                    url: "https://example.com/final-artifact",
+                    sortOrder: 1,
+                    durationSeconds: 120,
+                    xpReward: 0,
+                    mimeType: null,
+                    fileSizeBytes: null,
+                    status: "published",
+                  },
+                ],
+                artifacts: stage.artifacts.map((artifact) => ({
+                  ...artifact,
+                  artifactType: "final",
+                  id: "artifact-final-express",
+                })),
+              }
+            : stage,
+        ),
+      },
+    };
+    useLevelDetailsMock.mockReturnValue({
+      data: data.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: data.module,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage(`/my-courses/${levelId}/modules/1?stage=express`);
+
+    expect(screen.getByRole("button", { name: /Mark Done & Next/i })).toBeDisabled();
+    screen.getAllByRole("button", { name: /evolve/i }).forEach((button) => {
+      expect(button).toBeDisabled();
+    });
+  });
+
   it("returns to the capability overview when the final module is complete", () => {
     const data = {
       level: {
@@ -515,6 +598,29 @@ describe("LevelContentPage", () => {
           stage.stageName === "evolve"
             ? {
                 ...stage,
+                artifacts: stage.artifacts.map((artifact) =>
+                  artifact.artifactType === "final"
+                    ? {
+                        ...artifact,
+                        submittedFiles: [
+                          {
+                            id: "file-final-1",
+                            submissionId: "submission-final-1",
+                            questionId: "question-final-1",
+                            fileName: "Final_Evidence_Pack.xlsx",
+                            fileType: "xlsx",
+                            fileSizeBytes: 1024,
+                            downloadUrl: "/api/v1/artifacts/files/file-final-1/download",
+                            attemptNo: 1,
+                            versionLabel: "v1",
+                            isLatest: true,
+                            submittedAt: "2026-08-17T00:00:00.000Z",
+                            uploadedAt: "2026-08-17T00:00:00.000Z",
+                          },
+                        ],
+                      }
+                    : artifact,
+                ),
                 items: [
                   {
                     id: "content-final-review",
@@ -632,20 +738,8 @@ describe("LevelContentPage", () => {
     const docTab = screen.getByRole("button", { name: "Doc details" });
     fireEvent.click(docTab);
 
-    // Click download resource button
-    const downloadBtn = screen.getByLabelText("Download selected resource");
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
-    vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.reject(new Error("Network Error")),
-    );
-    fireEvent.click(downloadBtn);
-    await waitFor(() =>
-      expect(openSpy).toHaveBeenCalledWith(
-        "https://example.com/doc",
-        "_blank",
-        "noopener,noreferrer",
-      ),
-    );
+    expect(screen.queryByLabelText("Download selected resource")).not.toBeInTheDocument();
 
     // Click expand resource button
     const expandBtn = screen.getByLabelText("Expand selected resource");

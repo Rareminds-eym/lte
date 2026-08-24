@@ -1,6 +1,6 @@
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { resolveActiveTrack } from "@functions/lib/learner-track";
-import { createServiceSupabase } from "@functions/lib/supabase";
+import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
@@ -11,8 +11,8 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const user = await requireAuth(context.request, context.env);
     const userId = user.sub;
 
-    const supabase = createServiceSupabase(context.env);
-    const { data, needsAssessment } = await resolveActiveTrack(supabase, context.env, userId);
+    const qb = createServiceQueryGateway(context.env);
+    const { data, needsAssessment } = await resolveActiveTrack(qb, context.env, userId);
 
     return jsonResponse({
       success: true,
