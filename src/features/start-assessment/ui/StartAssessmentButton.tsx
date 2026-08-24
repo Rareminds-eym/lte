@@ -1,6 +1,5 @@
 import type React from "react";
-import { getSkillpassportUrl } from "@/shared/config";
-import { getLogger } from "@/shared/config/logging";
+import { getLogger, getSkillpassportUrl } from "@/shared/config";
 import { Button, toast } from "@/shared/ui";
 
 interface StartAssessmentButtonProps {

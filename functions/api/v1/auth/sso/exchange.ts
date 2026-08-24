@@ -13,12 +13,28 @@ import { triggerDailyLoginWithEngagement } from "../../../../lib/xp-engine";
 import { toAuthApiUser } from "../../../../middleware/auth";
 import { ssoLogger } from "../../../../shared/logger";
 
+// Outbound SSO RPCs must be bounded so a hung SSO worker cannot stall the isolate.
+const SSO_RPC_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${SSO_RPC_TIMEOUT_MS}ms`)),
+      SSO_RPC_TIMEOUT_MS,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 function getStringField(body: Record<string, unknown>, field: string): string | null {
   const value = body[field];
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
+  const requestId = crypto.randomUUID();
+  const ssoService = context.env.SSO_SERVICE as SsoServiceBinding;
   try {
     validateBackendEnv(context.env);
     ssoLogger.debug("SSO_SERVICE binding available");
@@ -36,56 +52,69 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 
     let exchange: SsoExchangeResponse;
     try {
-      exchange = await (context.env.SSO_SERVICE as SsoServiceBinding).exchangeAuthorizationCode({
-        code,
-        state,
-        redirectUri,
-        targetApp: "lte",
-        ip: context.request.headers.get("CF-Connecting-IP") || undefined,
-        ua: context.request.headers.get("User-Agent") || undefined,
-      });
+      exchange = await withTimeout(
+        ssoService.exchangeAuthorizationCode({
+          code,
+          state,
+          redirectUri,
+          targetApp: "lte",
+          ip: context.request.headers.get("CF-Connecting-IP") || undefined,
+          ua: context.request.headers.get("User-Agent") || undefined,
+        }),
+        "SSO authorization-code exchange",
+      );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "SSO exchange failed";
-      ssoLogger.error("SSO exchange failed", err instanceof Error ? err : new Error(message));
-      return jsonError(message, 401);
+      // Full detail stays server-side; the client gets a sanitized message (OWASP).
+      ssoLogger.error("SSO exchange failed", err instanceof Error ? err : new Error(String(err)), {
+        requestId,
+      });
+      return jsonError("Authentication failed", 401, {
+        code: "AUTH_EXCHANGE_FAILED",
+        requestId,
+      });
     }
 
     ssoLogger.info("Exchange successful", { userId: exchange.user.sub });
 
     if (!exchange.user.products.includes("lte")) {
-      return jsonError("LTE access is required", 403);
+      return jsonError("LTE access is required", 403, { requestId });
     }
 
-    // BLOCKING: must complete before response is returned.
+    // BLOCKING and FAIL-CLOSED: must complete before any tokens are issued.
     // authClient.initialize() fires immediately after this response, rotating the
-    // session and running get_jwt_claims(). The rows must exist before that happens.
+    // session and running get_jwt_claims(). If provisioning did not succeed, that
+    // rotation would fail — issuing a known-bad session is worse than retryable 503.
+    let provisioned = false;
     try {
-      const provision = await (context.env.SSO_SERVICE as SsoServiceBinding).provisionLteAccess({
-        userId: exchange.user.sub,
-        orgId: exchange.user.org_id,
-      });
-      if (!provision.success) {
-        ssoLogger.error(
-          "LTE provisioning failed",
-          new Error("provisionLteAccess returned success:false"),
-          {
-            userId: exchange.user.sub,
-          },
-        );
-      } else if (!provision.alreadyProvisioned) {
-        ssoLogger.info("LTE product provisioned for new user", { userId: exchange.user.sub });
-      }
+      const provision = await withTimeout(
+        ssoService.provisionLteAccess({
+          userId: exchange.user.sub,
+          orgId: exchange.user.org_id,
+        }),
+        "LTE provisioning",
+      );
+      provisioned = provision.success === true;
     } catch (err) {
-      // Non-fatal: log and continue. The exchange token itself already has "lte"
-      // so the current request succeeds; next rotation may still fail until fixed.
       ssoLogger.error(
         "LTE provisioning threw unexpectedly",
         err instanceof Error ? err : new Error(String(err)),
         {
           userId: exchange.user.sub,
+          requestId,
         },
       );
     }
+    if (!provisioned) {
+      ssoLogger.error("LTE provisioning failed — failing closed", undefined, {
+        userId: exchange.user.sub,
+        requestId,
+      });
+      return jsonError("Account setup is incomplete. Please try signing in again.", 503, {
+        code: "LTE_PROVISIONING_FAILED",
+        requestId,
+      });
+    }
+    ssoLogger.debug("LTE product provisioned", { userId: exchange.user.sub, requestId });
 
     const headers = new Headers();
     const cookieName = "__Host-rm-refresh";
@@ -112,9 +141,14 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
         context.waitUntil(bgTask);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "SSO shadow sync failed";
-      ssoLogger.error("SSO shadow sync failed", err instanceof Error ? err : new Error(message));
-      return jsonError("Internal server error during authentication sync", 500);
+      ssoLogger.error(
+        "SSO shadow sync failed",
+        err instanceof Error ? err : new Error(String(err)),
+        {
+          requestId,
+        },
+      );
+      return jsonError("Internal server error during authentication sync", 500, { requestId });
     }
 
     return jsonResponse<AuthSuccessResponse>(

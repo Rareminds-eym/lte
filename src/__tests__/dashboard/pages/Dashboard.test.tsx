@@ -6,6 +6,13 @@ import { useLearningPathStore } from "@/entities/active-learning-path";
 import { Dashboard } from "@/pages/dashboard";
 
 vi.mock("@/shared/api", () => ({
+  authClient: {
+    request: vi.fn(),
+    subscribe: vi.fn(),
+    initialize: vi.fn(),
+    getMe: vi.fn(),
+    logout: vi.fn(),
+  },
   apiFetch: vi.fn(),
 }));
 

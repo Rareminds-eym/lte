@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LevelContentPage } from "@/pages/level-content";
 
@@ -292,6 +293,61 @@ describe("LevelContentPage", () => {
     expect(
       screen.getByText("No learning content is available for this stage yet."),
     ).toBeInTheDocument();
+  });
+
+  // Regression: deep-linking a LOCKED stage must redirect to the first
+  // incomplete stage instead of rendering the locked stage's content (C2/H3).
+  it("redirects a deep-linked locked stage to the first incomplete stage", async () => {
+    let currentSearch = "";
+    function SearchProbe() {
+      const { search } = useLocation();
+      useEffect(() => {
+        currentSearch = search;
+      }, [search]);
+      return null;
+    }
+
+    const data = {
+      ...mockLevelContentData,
+      module: {
+        ...mockLevelContentData.module,
+        completedStages: ["engage", "explore"], // first incomplete = express
+      },
+    };
+    useLevelDetailsMock.mockReturnValue({
+      data: data.level,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: data.module,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter
+          initialEntries={[`/my-courses/${levelId}/modules/1?stage=evolve&content=content-1`]}
+        >
+          <Routes>
+            <Route
+              path="/my-courses/:levelId/modules/:moduleNo"
+              element={
+                <>
+                  <LevelContentPage />
+                  <SearchProbe />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(currentSearch).toBe("?stage=express"));
   });
 
   it("moves to the next stage after Mark Done & Next completes", async () => {

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { getLogger } from "@/shared";
-import { authClient } from "@/shared/api/authClient";
+import { apiPreAuthFetch, authClient } from "@/shared/api";
 import { queryClient } from "@/shared/lib/queryClient";
 import type { AuthUser } from "@/shared/types/auth";
 
@@ -60,14 +60,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             user_metadata: (d.userMetadata as Record<string, unknown>) ?? {},
           };
         }
+        // Only trust the authenticated state when identity resolution succeeded;
+        // otherwise route gates would render user-dependent screens against a
+        // null user. The refresh cookie survives, so a reload retries cleanly.
+        const trusted = user !== null;
         set({
           user,
-          isAuthenticated: true,
+          isAuthenticated: trusted,
           loading: false,
           initialized: true,
           error: null,
         });
-        logger.info("initialize succeeded");
+        if (trusted) {
+          logger.info("initialize succeeded");
+        } else {
+          logger.warn("initialize authenticated but identity fetch failed");
+        }
       } else {
         set({
           user: null,
@@ -89,36 +97,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       logger.info("Calling exchangeSsoCode", {
-        code: `${params.code.substring(0, 10)}...`,
-        state: `${params.state.substring(0, 10)}...`,
+        hasCode: !!params.code,
+        hasState: !!params.state,
         redirectUri: params.redirectUri,
         targetNext: params.targetNext,
       });
 
-      const response = await fetch("/api/v1/auth/sso/exchange", {
+      // Pre-auth endpoint: no access token exists yet, so this must use the
+      // sanctioned pre-auth client path (bounded timeout + ApiError parsing).
+      await apiPreAuthFetch("/api/v1/auth/sso/exchange", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           code: params.code,
           state: params.state,
           redirectUri: params.redirectUri,
         }),
       });
-
-      if (!response.ok) {
-        const errorData = (await response.json().catch(() => null)) as {
-          error?: string | { message?: string };
-          error_string?: string;
-          message?: string;
-        } | null;
-        const msg =
-          (typeof errorData?.error === "object" ? errorData.error?.message : errorData?.error) ||
-          errorData?.error_string ||
-          errorData?.message ||
-          "SSO exchange failed";
-        throw new Error(msg);
-      }
 
       const outcome = await authClient.initialize();
       const identityResult = await authClient.getMe();
@@ -136,6 +130,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           is_email_verified: d.emailVerified,
           user_metadata: (d.userMetadata as Record<string, unknown>) ?? {},
         };
+      }
+
+      // Exchange succeeded server-side but identity could not be resolved:
+      // surface an error rather than a half-authenticated state.
+      if (outcome.status === "authenticated" && user === null) {
+        throw new Error("Signed in, but the user profile could not be loaded. Please retry.");
       }
 
       set({
@@ -162,8 +162,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     try {
       await authClient.logout();
-    } catch {
-      // Ignore logout transport errors
+    } catch (error) {
+      // Local cleanup must proceed regardless; still record that the server
+      // may not have terminated the session.
+      logger.warn("Logout transport failed; local state cleared anyway", {
+        message: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       queryClient.clear();
       set({

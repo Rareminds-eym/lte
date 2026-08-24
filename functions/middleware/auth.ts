@@ -3,11 +3,21 @@ import { createAuth } from "@rareminds-eym/auth-core";
 import { validateBackendEnv } from "../lib/env";
 import type { LteEnv } from "../lib/types";
 
+// Memoize the Auth instance per SSO_SERVICE binding reference so per-instance
+// caches inside auth-core (e.g. JWKS) survive across requests instead of being
+// rebuilt — and re-fetched — on every call. resetAuthInstance() clears the
+// cache for tests.
+let cachedAuth: ReturnType<typeof createAuth> | null = null;
+let cachedBinding: unknown = null;
+
 export function resetAuthInstance(): void {
-  // No-op: Auth instance is now cleanly request-scoped per Cloudflare Pages runtime best practices
+  cachedAuth = null;
+  cachedBinding = null;
 }
 
 export function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
+  if (cachedAuth && cachedBinding === env.SSO_SERVICE) return cachedAuth;
+
   const ssoRpcRaw = env.SSO_SERVICE;
   if (!ssoRpcRaw || typeof ssoRpcRaw !== "object") {
     throw new Error(
@@ -18,7 +28,7 @@ export function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
   validateBackendEnv(env);
 
   try {
-    return createAuth({
+    cachedAuth = createAuth({
       sso: ssoRpcRaw as unknown as Parameters<typeof createAuth>[0]["sso"],
       issuer: "sso-api",
       audience: "sso-client",
@@ -46,6 +56,8 @@ export function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
       cookieMaxAgeSeconds: 604800,
       ssoRequestTimeoutMs: 5000,
     });
+    cachedBinding = ssoRpcRaw;
+    return cachedAuth;
   } catch (error) {
     throw new Error(
       `Failed to initialize auth-core: ${error instanceof Error ? error.message : String(error)}`,

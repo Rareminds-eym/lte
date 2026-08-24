@@ -1,5 +1,7 @@
 import type React from "react";
 import { lazy, Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+import { ErrorFallback } from "@/shared/ui";
 import { ImageContentViewer } from "./ImageContentViewer";
 import { ResourceViewerState } from "./ResourceViewerState";
 import { getResourceFileKind, type ResourceRendererProps } from "./types";
@@ -22,6 +24,14 @@ const ViewerFallback = ({ title }: { title: string }) => (
   <ResourceViewerState title={title} message="Loading preview..." />
 );
 
+// Local boundary per lazy viewer: a render-phase or chunk-load crash in one
+// viewer must not propagate to the root boundary and unmount the whole app.
+const BoundedViewer = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <ErrorBoundary FallbackComponent={ErrorFallback}>
+    <Suspense fallback={<ViewerFallback title={title} />}>{children}</Suspense>
+  </ErrorBoundary>
+);
+
 export type ResourceContentViewerProps = ResourceRendererProps;
 
 export const ResourceContentViewer: React.FC<ResourceContentViewerProps> = ({ item }) => {
@@ -32,30 +42,30 @@ export const ResourceContentViewer: React.FC<ResourceContentViewerProps> = ({ it
 
   if (fileKind === "pptx")
     return (
-      <Suspense fallback={<ViewerFallback title={item.title} />}>
+      <BoundedViewer title={item.title}>
         <PptxContentViewer title={item.title} url={item.url} />
-      </Suspense>
+      </BoundedViewer>
     );
 
   if (fileKind === "pdf")
     return (
-      <Suspense fallback={<ViewerFallback title={item.title} />}>
+      <BoundedViewer title={item.title}>
         <PdfContentViewer item={item} />
-      </Suspense>
+      </BoundedViewer>
     );
 
   if (fileKind === "docx")
     return (
-      <Suspense fallback={<ViewerFallback title={item.title} />}>
+      <BoundedViewer title={item.title}>
         <DocxContentViewer item={item} />
-      </Suspense>
+      </BoundedViewer>
     );
 
   if (fileKind === "xlsx")
     return (
-      <Suspense fallback={<ViewerFallback title={item.title} />}>
+      <BoundedViewer title={item.title}>
         <SpreadsheetContentViewer item={item} />
-      </Suspense>
+      </BoundedViewer>
     );
 
   if (fileKind === "audio") {

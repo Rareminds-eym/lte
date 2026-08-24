@@ -17,6 +17,7 @@ import { fetchCapabilityLevels } from "../api/courseApi";
  */
 export const useCapabilityLevels = (capabilityCode: string) => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const userId = useAuthStore((s) => s.user?.id);
   const activeTrack = useLearningPathStore((s) => s.activeTrack);
   const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
 
@@ -25,7 +26,9 @@ export const useCapabilityLevels = (capabilityCode: string) => {
   const learningPathReady = Boolean(activeTrack) && !activeLearningPathLoading;
 
   return useQuery({
-    queryKey: ["capabilityLevels", capabilityCode],
+    // userId partitions the cache per user so an account switch without a full
+    // logout can never serve the previous learner's levels.
+    queryKey: ["capabilityLevels", userId, capabilityCode],
     queryFn: () => fetchCapabilityLevels(capabilityCode),
     enabled: Boolean(capabilityCode) && hasAuth && learningPathReady,
     staleTime: 1000 * 60 * 5,

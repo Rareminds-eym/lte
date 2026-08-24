@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "@/app/App";
 import "@/app/styles/index.css";
-import { getLogger } from "@/shared/config/logging";
+import { getLogger } from "@/shared/config";
 
 const uncaughtLogger = getLogger("UncaughtGlobal");
 

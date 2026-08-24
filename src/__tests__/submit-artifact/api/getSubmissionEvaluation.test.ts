@@ -3,6 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockApiFetch = vi.fn();
 
 vi.mock("@/shared/api", () => ({
+  authClient: {
+    request: vi.fn(),
+    subscribe: vi.fn(),
+    initialize: vi.fn(),
+    getMe: vi.fn(),
+    logout: vi.fn(),
+  },
   apiFetch: (...args: unknown[]) => mockApiFetch(...args),
 }));
 

@@ -261,14 +261,13 @@ export const LevelContentPage: React.FC = () => {
   useEffect(() => {
     if (!data) return;
 
+    // A locked stage must ALWAYS redirect to the first incomplete stage.
+    // Trusting the existing ?stage= value here would render locked content on
+    // deep links (regression); validate any pre-existing value instead.
     if (isRouteStageLocked && routeFirstIncompleteStage) {
       setSearchParams((prev) => {
-        const fallbackStage =
-          (prev.get("stage")?.toLowerCase() as LteStage | null) || routeFirstIncompleteStage;
-        if (prev.get("stage") === fallbackStage) return prev;
-
         const updated = new URLSearchParams(prev);
-        updated.set("stage", fallbackStage);
+        updated.set("stage", routeFirstIncompleteStage);
         updated.delete("content");
         return updated;
       });
