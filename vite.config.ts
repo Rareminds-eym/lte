@@ -17,12 +17,9 @@ export default defineConfig({
 	resolve: {
 		tsconfigPaths: true,
 		alias: [
-			{ find: /^@rareminds-eym\/auth-core\/internal$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/auth-core/dist/internal.js") },
-			{ find: /^@rareminds-eym\/auth-core$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/auth-core/dist/index.js") },
-			{ find: /^@rareminds-eym\/auth-client$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/auth-client/dist/index.js") },
-			{ find: /^@rareminds-eym\/sso-gateway$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/sso-gateway/dist/index.js") },
-			{ find: /^@rareminds-eym\/identity-client$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/identity-client/dist/index.js") },
-			{ find: /^@rareminds-eym\/entitlements$/, replacement: path.resolve(__dirname, "../skill-echosystem-packages/entitlements/dist/index.js") },
+			// @rareminds-eym/* packages resolve via node_modules (published to
+			// GitHub Packages); sibling-path aliases were removed with the
+			// file:-dependency migration so builds are portable.
 			...(process.env.VITEST
 				? [
 					// Mock bare specifiers only, so functions/** subpath imports

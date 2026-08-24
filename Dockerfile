@@ -3,11 +3,15 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files + committed registry config (reads ${NPM_TOKEN} from env)
+COPY package*.json .npmrc ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies.
+#   docker build --secret id=npm_token,env=NPM_TOKEN .
+# The token lives only in this stage's env for the duration of npm ci;
+# it is never written to disk or carried into the final image.
+RUN --mount=type=secret,id=npm_token \
+    NPM_TOKEN="$(cat /run/secrets/npm_token)" npm ci
 
 # Copy source code
 COPY . .
@@ -18,8 +22,9 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-# Copy built assets from build stage
-COPY --from=build /app/build /usr/share/nginx/html
+# Copy built assets from build stage (token stays behind in the build stage)
+# Vite emits to dist/ (vite.config.ts outDir), not build/.
+COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
