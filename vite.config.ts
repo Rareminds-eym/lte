@@ -1,5 +1,5 @@
-import path from "node:path";
 import react from "@vitejs/plugin-react";
+import path from "node:path";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
 
@@ -15,14 +15,46 @@ export default defineConfig({
 		react(),
 	],
 	resolve: {
-		alias: {
-			"@": path.resolve(__dirname, "./src"),
-			"@functions": path.resolve(__dirname, "./functions"),
-		},
+		tsconfigPaths: true,
+		alias: [
+			// @rareminds-eym/* packages resolve via node_modules (published to
+			// GitHub Packages); sibling-path aliases were removed with the
+			// file:-dependency migration so builds are portable.
+			...(process.env.VITEST
+				? [
+					// Mock bare specifiers only, so functions/** subpath imports
+					// (e.g. pdfjs-dist/legacy/build/pdf.mjs) resolve to the real libs.
+					{
+						find: /^@file-viewer\/pptx$/,
+						replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+					{
+						find: /^docx-preview$/,
+						replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+					{
+						find: /^pdfjs-dist$/,
+						replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+					{
+						find: /^xlsx$/,
+						replacement: path.resolve(__dirname, "./src/__mocks__/viewerLibs.ts"),
+					},
+				]
+				: [
+					{
+						find: /^xlsx$/,
+						replacement: path.resolve(
+							__dirname,
+							"./vendor/sheetjs/xlsx-0.20.3/xlsx.mjs",
+						),
+					},
+				]),
+		],
 	},
-  optimizeDeps: {
-    exclude: ["@file-viewer/pptx"],
-  },
+	optimizeDeps: {
+		exclude: ["@file-viewer/pptx"],
+	},
 	server: {
 		host: '0.0.0.0',
 		port: 8080,
@@ -56,7 +88,7 @@ export default defineConfig({
 						return "pdf-vendor";
 					}
 					if (
-						normalized.includes("node_modules/xlsx/")
+						normalized.includes("vendor/sheetjs/xlsx-0.20.3/")
 					) {
 						return "spreadsheet-vendor";
 					}
@@ -144,6 +176,7 @@ export default defineConfig({
 			reporter: ["text", "lcov", "html", "json-summary"],
 			exclude: [
 				"node_modules/",
+				"vendor/**",
 				"src/setupTests.ts",
 				"**/*.d.ts",
 				"src/shared/config/env.ts",

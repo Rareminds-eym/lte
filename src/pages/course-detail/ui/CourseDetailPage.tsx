@@ -237,52 +237,54 @@ export const CourseDetailPage: React.FC = () => {
           </div>
 
           {/* Level Cards Section Content with Loading, Error, Retry, and Empty States */}
-          {isLevelsPending || learningPathLoading ? (
-            <CourseCardGridSkeleton count={3} />
-          ) : isLevelsError ? (
-            <div
-              role="alert"
-              aria-live="assertive"
-              className="rounded-2xl border border-danger-200 bg-danger-50 p-8 text-center shadow-xs"
-            >
-              <p className="text-base font-bold text-danger-700">Failed to load course levels</p>
-              <p className="mt-1 text-xs text-danger-600">
-                {levelsError instanceof Error ? levelsError.message : "Network or server error"}
-              </p>
-              <div className="mt-4 flex justify-center">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void refetchLevels()}
-                >
-                  Retry Loading Levels
-                </Button>
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            {isLevelsPending || learningPathLoading ? (
+              <CourseCardGridSkeleton count={3} />
+            ) : isLevelsError ? (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="rounded-2xl border border-danger-200 bg-danger-50 p-8 text-center shadow-xs"
+              >
+                <p className="text-base font-bold text-danger-700">Failed to load course levels</p>
+                <p className="mt-1 text-xs text-danger-600">
+                  {levelsError instanceof Error ? levelsError.message : "Network or server error"}
+                </p>
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void refetchLevels()}
+                  >
+                    Retry Loading Levels
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : dynamicLevelCards.length === 0 ? (
-            <div className="text-center py-12 text-content-secondary bg-surface-primary rounded-2xl border border-line-default">
-              No published levels found for this capability in the database.
-            </div>
-          ) : (
-            <div
-              className={
-                displayType === "card"
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                  : "space-y-2"
-              }
-            >
-              {dynamicLevelCards.map((level, idx) => (
-                <CourseLevelCard
-                  key={level.code}
-                  {...level}
-                  variant={displayType}
-                  onAction={() => handleLevelAction(level.id, level.status)}
-                  isLast={idx === dynamicLevelCards.length - 1}
-                />
-              ))}
-            </div>
-          )}
+            ) : dynamicLevelCards.length === 0 ? (
+              <div className="text-center py-12 text-content-secondary bg-surface-primary rounded-2xl border border-line-default">
+                No published levels found for this capability in the database.
+              </div>
+            ) : (
+              <div
+                className={
+                  displayType === "card"
+                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    : "space-y-2"
+                }
+              >
+                {dynamicLevelCards.map((level, idx) => (
+                  <CourseLevelCard
+                    key={level.code}
+                    {...level}
+                    variant={displayType}
+                    onAction={() => handleLevelAction(level.id, level.status)}
+                    isLast={idx === dynamicLevelCards.length - 1}
+                  />
+                ))}
+              </div>
+            )}
+          </ErrorBoundary>
         </section>
       </div>
     </main>

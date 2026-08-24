@@ -91,14 +91,31 @@ export class Logger {
     this.output(this.createEntry("warn", message, metadata));
   }
 
-  error(message: string, error?: Error, metadata?: Record<string, unknown>): void {
+  error(message: string, error?: unknown, metadata?: Record<string, unknown>): void {
     const logEntry = this.createEntry("error", message, metadata);
     if (error) {
-      logEntry.error = {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
+      if (error instanceof Error) {
+        logEntry.error = {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        };
+      } else if (typeof error === "object" && error !== null) {
+        const errObj = error as Record<string, unknown>;
+        const nameVal = errObj["name"];
+        const msgVal = errObj["message"];
+        const stackVal = errObj["stack"];
+        logEntry.error = {
+          name: typeof nameVal === "string" ? nameVal : "ObjectError",
+          message: typeof msgVal === "string" ? msgVal : JSON.stringify(error),
+          stack: typeof stackVal === "string" ? stackVal : undefined,
+        };
+      } else {
+        logEntry.error = {
+          name: "Error",
+          message: String(error),
+        };
+      }
     }
     this.output(logEntry);
   }

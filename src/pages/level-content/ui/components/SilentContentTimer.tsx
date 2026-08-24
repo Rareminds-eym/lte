@@ -39,7 +39,9 @@ export const SilentContentTimer: React.FC<SilentContentTimerProps> = ({
           {
             keepalive: true,
           },
-        );
+        ).catch(() => {
+          // Keepalive beacon failure on page unload is non-blocking
+        });
         return;
       }
 

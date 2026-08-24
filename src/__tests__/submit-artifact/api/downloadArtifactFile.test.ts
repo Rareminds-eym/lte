@@ -3,6 +3,13 @@ import { downloadArtifactFile } from "@/features/submit-artifact";
 import { apiFetchBlob } from "@/shared/api";
 
 vi.mock("@/shared/api", () => ({
+  authClient: {
+    request: vi.fn(),
+    subscribe: vi.fn(),
+    initialize: vi.fn(),
+    getMe: vi.fn(),
+    logout: vi.fn(),
+  },
   apiFetchBlob: vi.fn().mockResolvedValue(new Blob(["artifact"])),
 }));
 

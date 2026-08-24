@@ -1,16 +1,23 @@
-import type { AuthUser } from "@rareminds-eym/auth-core";
-import { initAuth, verifyJWT } from "@rareminds-eym/auth-core";
+import type { VerifiedAuthUser as AuthUser, VerifiedAuthContext } from "@rareminds-eym/auth-core";
+import { createAuth } from "@rareminds-eym/auth-core";
 import { validateBackendEnv } from "../lib/env";
 import type { LteEnv } from "../lib/types";
 
-/**
- * auth-core is initialized once per isolate with the SSO service binding,
- * then verifies JWTs via the SSO worker's JWKS over RPC (no local
- * hand-rolled crypto, no per-request re-initialization).
- */
-let _authInitialized = false;
+// Memoize the Auth instance per SSO_SERVICE binding reference so per-instance
+// caches inside auth-core (e.g. JWKS) survive across requests instead of being
+// rebuilt — and re-fetched — on every call. resetAuthInstance() clears the
+// cache for tests.
+let cachedAuth: ReturnType<typeof createAuth> | null = null;
+let cachedBinding: unknown = null;
 
-function ensureAuthInitialized(env: LteEnv): void {
+export function resetAuthInstance(): void {
+  cachedAuth = null;
+  cachedBinding = null;
+}
+
+export function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
+  if (cachedAuth && cachedBinding === env.SSO_SERVICE) return cachedAuth;
+
   const ssoRpcRaw = env.SSO_SERVICE;
   if (!ssoRpcRaw || typeof ssoRpcRaw !== "object") {
     throw new Error(
@@ -18,13 +25,39 @@ function ensureAuthInitialized(env: LteEnv): void {
     );
   }
 
-  if (_authInitialized) return;
-
   validateBackendEnv(env);
 
   try {
-    initAuth({ ssoRpc: ssoRpcRaw });
-    _authInitialized = true;
+    cachedAuth = createAuth({
+      sso: ssoRpcRaw as unknown as Parameters<typeof createAuth>[0]["sso"],
+      issuer: "sso-api",
+      audience: "sso-client",
+      approvedOrigins: [
+        "https://lte.rareminds.in",
+        "http://localhost:8080",
+        "http://localhost:8789",
+        "http://127.0.0.1:8080",
+        "http://127.0.0.1:8789",
+        "http://localhost",
+        "http://127.0.0.1",
+      ],
+      credentialedCors: {
+        origins: [
+          "https://lte.rareminds.in",
+          "http://localhost:8080",
+          "http://localhost:8789",
+          "http://127.0.0.1:8080",
+          "http://127.0.0.1:8789",
+          "http://localhost",
+          "http://127.0.0.1",
+        ],
+      },
+      csrf: { name: "X-RM-CSRF", value: "1" },
+      cookieMaxAgeSeconds: 604800,
+      ssoRequestTimeoutMs: 5000,
+    });
+    cachedBinding = ssoRpcRaw;
+    return cachedAuth;
   } catch (error) {
     throw new Error(
       `Failed to initialize auth-core: ${error instanceof Error ? error.message : String(error)}`,
@@ -50,24 +83,37 @@ export class AuthError extends Error {
 }
 
 export async function requireAuth(request: Request, env: LteEnv): Promise<AuthUser> {
-  ensureAuthInitialized(env);
+  const auth = getAuthInstance(env);
 
   const token = extractBearerToken(request);
   if (!token) {
     throw new AuthError("Missing bearer token", "UNAUTHORIZED");
   }
 
-  let user: AuthUser;
-  try {
-    user = await verifyJWT(token);
-  } catch {
+  let authedContext: VerifiedAuthContext | null = null;
+
+  const handler = auth.authenticate(
+    auth.requireProduct(["lte"], (_req, context) => {
+      authedContext = context;
+      return Promise.resolve(new Response(null, { status: 200 }));
+    }),
+  );
+
+  const res = await handler(request);
+
+  if (res.status === 401) {
     throw new AuthError("Invalid or expired token", "UNAUTHORIZED");
   }
 
-  if (!user.products.includes("lte")) {
+  if (res.status === 403) {
     throw new AuthError("LTE access is required", "FORBIDDEN");
   }
-  return user;
+
+  if (res.status !== 200 || !authedContext) {
+    throw new AuthError("Invalid or expired token", "UNAUTHORIZED");
+  }
+
+  return (authedContext as VerifiedAuthContext).user;
 }
 
 export function toAuthApiUser(user: AuthUser) {
@@ -75,20 +121,14 @@ export function toAuthApiUser(user: AuthUser) {
     id: user.sub,
     email: user.email,
     org_id: user.org_id,
-    roles: user.roles,
-    products: user.products,
+    roles: [...user.roles],
+    products: [...user.products],
     membership_status: user.membership_status,
     is_email_verified: user.is_email_verified,
-    user_metadata: user.user_metadata ?? {},
+    user_metadata: user.user_metadata ? { ...user.user_metadata } : {},
   };
 }
 
-/**
- * Type-safe accessor for the authenticated user set by _middleware.ts.
- * Returns the full AuthUser from `context.data.user` or null when the
- * middleware hasn't run (should not happen behind _middleware.ts, but
- * the null-check keeps handlers safe if called from a test harness).
- */
 export function getAuthUser(context: { data?: Record<string, unknown> }): AuthUser | null {
   const user = context.data?.["user"];
   if (!user || typeof user !== "object" || !("sub" in user)) return null;

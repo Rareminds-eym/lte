@@ -32,7 +32,6 @@ function renderAuthInitializer(path: string) {
 
 beforeEach(() => {
   useAuthStore.setState({
-    accessToken: null,
     user: null,
     isAuthenticated: false,
     loading: true,
@@ -41,7 +40,6 @@ beforeEach(() => {
     initialize: vi.fn().mockResolvedValue(undefined),
     exchangeCode: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
-    setAccessToken: vi.fn(),
   });
   mockNavigate.mockClear();
   window.history.replaceState({}, "", "/");

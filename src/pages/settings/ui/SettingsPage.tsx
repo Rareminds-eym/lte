@@ -35,6 +35,19 @@ const TABS: TabConfig[] = [
   { id: "danger-zone", label: "Danger Zone", icon: <WarningIcon size={20} />, isDanger: true },
 ];
 
+function getProfileStrengthTier(strength: number) {
+  if (strength >= 100) {
+    return {
+      textColor: "text-success-600",
+      barGradient: "bg-gradient-to-r from-success-500 to-success-400",
+    };
+  }
+  return {
+    textColor: "text-brand-600",
+    barGradient: "bg-gradient-to-r from-brand-600 to-brand-500",
+  };
+}
+
 // ─── Main Settings Page ─────────────────────────────────────────────────────
 
 export const SettingsPage: React.FC = () => {
@@ -314,16 +327,26 @@ export const SettingsPage: React.FC = () => {
 
           {/* Profile Strength */}
           <div className="shrink-0 w-40">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium text-content-secondary">Profile Strength</span>
-              <span className="text-xs font-bold text-success-600">{profile.profileStrength}%</span>
-            </div>
-            <div className="w-full h-2 bg-surface-emphasis rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-success-500 to-success-400"
-                style={{ width: `${profile.profileStrength}%` }}
-              />
-            </div>
+            {(() => {
+              const strength = profile.profileStrength;
+              const { textColor, barGradient } = getProfileStrengthTier(strength);
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-content-secondary">
+                      Profile Strength
+                    </span>
+                    <span className={`text-xs font-bold ${textColor}`}>{strength}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-surface-emphasis rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ease-out ${barGradient}`}
+                      style={{ width: `${strength}%` }}
+                    />
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 

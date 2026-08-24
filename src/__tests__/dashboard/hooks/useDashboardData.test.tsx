@@ -6,6 +6,9 @@ import { useDashboardData } from "@/entities/dashboard";
 import { apiFetch } from "@/shared/api";
 
 vi.mock("@/shared/api", () => ({
+  authClient: {
+    subscribe: vi.fn(() => () => {}),
+  },
   apiFetch: vi.fn(),
 }));
 

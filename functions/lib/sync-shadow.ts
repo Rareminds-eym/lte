@@ -226,6 +226,7 @@ export async function syncSsoShadowData(
     filters: [{ column: "id", op: "eq", value: user.sub }],
     result: "maybeSingle",
   });
+
   if (!existingUser) {
     authLogger.info("[Option 1 Applied] User data not found in LTE DB. Provisioning...", {
       userId: user.sub,
@@ -243,6 +244,7 @@ export async function syncSsoShadowData(
       filters: [{ column: "id", op: "eq", value: subscription.id }],
       result: "maybeSingle",
     });
+
     if (!existingSub) {
       authLogger.info(
         "[Option 1 Applied] Subscription cache not found in LTE DB. Provisioning...",

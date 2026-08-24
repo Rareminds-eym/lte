@@ -48,7 +48,7 @@ jobs:
           git fetch origin "${BASE_REF}"
           git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" \
             -- '*.ts' '*.tsx' '*.css' '*.js' 2>/dev/null \
-            | grep -v node_modules > /tmp/changed_files.txt || true
+            | grep -vE 'node_modules|vendor/' > /tmp/changed_files.txt || true
           echo "count=$(wc -l < /tmp/changed_files.txt)" >> "$GITHUB_OUTPUT"
 
       - name: Validate File Lengths (changed files only)

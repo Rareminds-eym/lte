@@ -41,7 +41,6 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     apiLogger.error("Failed to fetch user capabilities", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }

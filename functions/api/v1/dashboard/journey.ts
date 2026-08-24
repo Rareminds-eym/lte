@@ -92,7 +92,9 @@ async function findOpenLevel(
   const allRows = (rows ?? []) as LevelProgressRow[];
   if (allRows.length === 0) return { started: false };
 
-  const open = allRows.filter((r) => r.status !== "completed");
+  const open = allRows
+    .filter((r) => r.status !== "completed")
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   if (open.length === 0) return { started: true };
 
   const recentModule = await qb.read(recentModuleProgressReadPolicy, {
@@ -125,8 +127,7 @@ async function findOpenLevel(
     }
   }
 
-  const mostRecent = open.reduce((a, b) => ((a.updated_at ?? "") >= (b.updated_at ?? "") ? a : b));
-  return { levelId: mostRecent.level_id, started: true };
+  return { levelId: open[0]?.level_id, started: true };
 }
 
 /** Title of the module's first active artifact question, or null. */
@@ -263,7 +264,6 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     apiLogger.error("Failed to fetch dashboard journey", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }

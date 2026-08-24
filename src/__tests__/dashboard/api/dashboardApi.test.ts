@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchDashboardData, MOCK_DASHBOARD_DATA } from "@/entities/dashboard";
 
 vi.mock("@/shared/api", () => ({
+  authClient: {
+    request: vi.fn(),
+    subscribe: vi.fn(),
+    initialize: vi.fn(),
+    getMe: vi.fn(),
+    logout: vi.fn(),
+  },
   apiFetch: vi.fn(),
 }));
 

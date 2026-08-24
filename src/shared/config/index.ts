@@ -27,5 +27,6 @@ export function getSkillpassportUrl(): string {
   return getClientEnv().VITE_SKILLPASSPORT_URL.replace(/\/+$/, "");
 }
 
+export * from "./auth";
 export * from "./env";
 export * from "./logging";

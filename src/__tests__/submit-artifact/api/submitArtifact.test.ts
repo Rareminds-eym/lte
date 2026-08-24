@@ -3,6 +3,13 @@ import { submitArtifact } from "@/features/submit-artifact";
 import { apiFetch } from "@/shared/api";
 
 vi.mock("@/shared/api", () => ({
+  authClient: {
+    request: vi.fn(),
+    subscribe: vi.fn(),
+    initialize: vi.fn(),
+    getMe: vi.fn(),
+    logout: vi.fn(),
+  },
   apiFetch: vi.fn().mockResolvedValue({
     success: true,
     submission_id: "submission-1",

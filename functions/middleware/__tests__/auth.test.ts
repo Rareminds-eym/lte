@@ -1,12 +1,18 @@
 import type { LteEnv } from "@functions/lib/types";
-import type { AuthUser } from "@rareminds-eym/auth-core";
-import { initAuth, verifyJWT } from "@rareminds-eym/auth-core";
+import type { AuthenticatedHandler, AuthUser, VerifiedAuthContext } from "@rareminds-eym/auth-core";
+import { createAuth } from "@rareminds-eym/auth-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { extractBearerToken, getAuthUser, requireAuth, toAuthApiUser } from "../auth";
+import {
+  extractBearerToken,
+  getAuthUser,
+  requireAuth,
+  resetAuthInstance,
+  toAuthApiUser,
+} from "../auth";
 
 vi.mock("@rareminds-eym/auth-core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@rareminds-eym/auth-core")>();
-  return { ...actual, initAuth: vi.fn(), verifyJWT: vi.fn() };
+  return { ...actual, createAuth: vi.fn() };
 });
 
 const mockUser: AuthUser = {
@@ -35,6 +41,41 @@ const mockEnv: LteEnv = {
   OPENROUTER_API_KEY: "sk-or-test-key",
 };
 
+function setupMockAuth(opts: { authenticateStatus?: number; user?: AuthUser }) {
+  const mockContext: VerifiedAuthContext = {
+    user: opts.user ?? mockUser,
+    verification: "verified",
+    correlationId: "corr-123",
+  };
+
+  const authenticateMock = (handler: AuthenticatedHandler) => async (_req: Request) => {
+    if (opts.authenticateStatus === 401) {
+      return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401 });
+    }
+    return handler(_req, mockContext);
+  };
+
+  const requireProductMock =
+    (allowed: readonly string[], handler: AuthenticatedHandler) =>
+    (req: Request, ctx: VerifiedAuthContext) => {
+      const userProducts = ctx.user.products || [];
+      const hasProduct = allowed.some((p) => userProducts.includes(p));
+      if (!hasProduct) {
+        return new Response(JSON.stringify({ error: "FORBIDDEN_PRODUCT" }), { status: 403 });
+      }
+      return handler(req, ctx);
+    };
+
+  vi.mocked(createAuth).mockReturnValue({
+    authenticate: authenticateMock,
+    requireProduct: requireProductMock,
+    requireActiveMembership: vi.fn(),
+    requireRole: vi.fn(),
+    requireFeature: vi.fn(),
+    handleBrowserRequest: vi.fn(),
+  } as unknown as ReturnType<typeof createAuth>);
+}
+
 describe("extractBearerToken", () => {
   it("returns null when the Authorization header is missing", () => {
     expect(extractBearerToken(new Request("http://localhost"))).toBeNull();
@@ -62,11 +103,12 @@ describe("extractBearerToken", () => {
 
 describe("requireAuth", () => {
   beforeEach(() => {
+    resetAuthInstance();
     vi.restoreAllMocks();
-    vi.mocked(initAuth).mockImplementation(() => undefined);
   });
 
-  it("throws UNAUTHORIZED when no token is present", async () => {
+  it("throws UNAUTHORIZED when no token is present or authenticate fails", async () => {
+    setupMockAuth({ authenticateStatus: 401 });
     await expect(requireAuth(new Request("http://localhost"), mockEnv)).rejects.toMatchObject({
       name: "AuthError",
       code: "UNAUTHORIZED",
@@ -74,7 +116,7 @@ describe("requireAuth", () => {
   });
 
   it("returns the user when the token is valid and lte is a product", async () => {
-    vi.mocked(verifyJWT).mockResolvedValueOnce(mockUser);
+    setupMockAuth({ user: mockUser });
     const request = new Request("http://localhost", {
       headers: { authorization: "Bearer token-123" },
     });
@@ -82,7 +124,7 @@ describe("requireAuth", () => {
   });
 
   it("maps token verification failures to UNAUTHORIZED AuthError", async () => {
-    vi.mocked(verifyJWT).mockRejectedValueOnce(new Error("signature verification failed"));
+    setupMockAuth({ authenticateStatus: 401 });
     const request = new Request("http://localhost", {
       headers: { authorization: "Bearer token-123" },
     });
@@ -93,7 +135,7 @@ describe("requireAuth", () => {
   });
 
   it("throws FORBIDDEN when the user lacks the lte product", async () => {
-    vi.mocked(verifyJWT).mockResolvedValueOnce({ ...mockUser, products: ["other"] });
+    setupMockAuth({ user: { ...mockUser, products: ["other"] } });
     const request = new Request("http://localhost", {
       headers: { authorization: "Bearer token-123" },
     });

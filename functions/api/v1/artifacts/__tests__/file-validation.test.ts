@@ -1,6 +1,6 @@
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
-import * as XLSX from "xlsx/xlsx.mjs";
+import * as XLSX from "../../../../../vendor/sheetjs/xlsx-0.20.3/xlsx.mjs";
 import {
   normalizeFileExtension,
   validateArtifactFileContent,

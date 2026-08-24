@@ -8,6 +8,13 @@ import { Dashboard } from "@/pages/dashboard";
 import { useXpModalStore } from "@/shared/store";
 
 vi.mock("@/shared/api", () => ({
+  authClient: {
+    request: vi.fn(),
+    subscribe: vi.fn(),
+    initialize: vi.fn(),
+    getMe: vi.fn(),
+    logout: vi.fn(),
+  },
   apiFetch: vi.fn(),
 }));
 

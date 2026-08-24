@@ -72,25 +72,31 @@ export const PdfContentViewer: React.FC<ResourceRendererProps> = ({ item }) => {
     let isActive = true;
 
     const renderPage = async () => {
-      const page = await document.getPage(pageNumber);
-      if (!isActive) return;
+      try {
+        const page = await document.getPage(pageNumber);
+        if (!isActive) return;
 
-      const viewport = page.getViewport({ scale: 1.4 });
-      const outputScale = window.devicePixelRatio || 1;
-      const context = canvas.getContext("2d");
-      if (!context) return;
+        const viewport = page.getViewport({ scale: 1.4 });
+        const outputScale = window.devicePixelRatio || 1;
+        const context = canvas.getContext("2d");
+        if (!context) return;
 
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
 
-      await page.render({
-        canvas,
-        canvasContext: context,
-        transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined,
-        viewport,
-      }).promise;
+        await page.render({
+          canvas,
+          canvasContext: context,
+          transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined,
+          viewport,
+        }).promise;
+      } catch (err) {
+        if (!isActive) return;
+        logger.error("Failed to render PDF page on canvas", err instanceof Error ? err : undefined);
+        setStatus("error");
+      }
     };
 
     void renderPage();

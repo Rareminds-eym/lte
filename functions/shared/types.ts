@@ -1,4 +1,4 @@
-import type { AuthUser, MembershipStatus } from "@rareminds-eym/auth-core";
+import type { MembershipStatus } from "@rareminds-eym/auth-core";
 
 export interface R2BucketBinding {
   put(
@@ -22,7 +22,7 @@ export interface QueueSender {
 export interface LteEnv {
   ASSETS: AssetsBinding;
   LTE_SYNC_QUEUE?: QueueSender;
-  SSO_SERVICE: SsoRpcService;
+  SSO_SERVICE: unknown;
   STORAGE_BUCKET: R2BucketBinding;
   R2_PUBLIC_DOMAIN?: string;
   SUPABASE_URL: string;
@@ -31,16 +31,6 @@ export interface LteEnv {
   SKILLPASSPORT_INTERNAL_URL: string;
   SKILLPASSPORT_INTERNAL_SECRET: string;
   OPENROUTER_API_KEY?: string;
-}
-
-export interface PagesContext<Env = LteEnv> {
-  request: Request;
-  env: Env;
-  params: Record<string, string>;
-  waitUntil: (promise: Promise<unknown>) => void;
-  passThroughOnException: () => void;
-  next: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
-  data?: Record<string, unknown>;
 }
 
 export interface SsoSubscriptionSnapshot {
@@ -62,47 +52,14 @@ export interface SsoSubscriptionSnapshot {
   updated_at: string | null;
 }
 
-export interface SsoExchangeResponse {
-  access_token: string;
-  refresh_token: string;
-  user: AuthUser;
-  subscription: SsoSubscriptionSnapshot | null;
-  expires_in: number;
-}
-
-export interface SsoRpcService {
-  getJWKS(): Promise<{ keys: Record<string, unknown>[] }>;
-  getMe(accessToken: string): Promise<Record<string, unknown>>;
-  refreshSession(
-    refreshToken: string,
-    ip?: string,
-    ua?: string,
-  ): Promise<{
-    access_token: string;
-    refresh_token: string;
-  }>;
-  logoutSession(
-    refreshToken: string,
-    ip?: string,
-    ua?: string,
-  ): Promise<{
-    success: boolean;
-  }>;
-  exchangeAuthorizationCode(params: {
-    code: string;
-    state: string;
-    redirectUri: string;
-    targetApp: "lte";
-    ip?: string | null;
-    ua?: string | null;
-  }): Promise<SsoExchangeResponse>;
-  changePassword(params: {
-    current_password: string;
-    new_password: string;
-    access_token: string;
-    ip?: string;
-    ua?: string;
-  }): Promise<{ success: boolean; message?: string }>;
+export interface PagesContext<Env = LteEnv> {
+  request: Request;
+  env: Env;
+  params: Record<string, string>;
+  waitUntil: (promise: Promise<unknown>) => void;
+  passThroughOnException: () => void;
+  next: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
+  data?: Record<string, unknown>;
 }
 
 export interface AuthApiUser {
@@ -127,4 +84,38 @@ export interface ErrorResponse {
   error: { message: string; code?: string; details?: unknown };
   error_string?: string;
   requestId?: string;
+}
+
+export interface SsoExchangeResponse {
+  access_token: string;
+  refresh_token: string;
+  user: {
+    sub: string;
+    email: string;
+    org_id: string;
+    roles: string[];
+    products: string[];
+    membership_status: MembershipStatus;
+    is_email_verified: boolean;
+    user_metadata: Record<string, unknown>;
+  };
+  subscription: SsoSubscriptionSnapshot | null;
+  expires_in?: number;
+}
+
+export interface SsoServiceBinding {
+  getJwks(input: { correlationId: string }): Promise<unknown>;
+  exchangeAuthorizationCode(params: {
+    code: string;
+    state: string;
+    redirectUri: string;
+    targetApp: string;
+    ip?: string;
+    ua?: string;
+  }): Promise<SsoExchangeResponse>;
+  provisionLteAccess(params: {
+    userId: string;
+    orgId: string;
+  }): Promise<{ success: boolean; alreadyProvisioned?: boolean }>;
+  [key: string]: unknown;
 }

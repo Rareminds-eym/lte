@@ -1,15 +1,16 @@
-import {
-  getClientIp,
-  getUserAgent,
-  jsonError,
-  jsonResponse,
-  readJsonObject,
-} from "@functions/lib/http";
-import { changeSsoPassword } from "@functions/lib/sso-client";
-import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
+import type { LteEnv, PagesContext, SsoServiceBinding } from "@functions/lib/types";
 import { AuthError, extractBearerToken, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
 import { PasswordChangeSchema } from "./schemas";
+
+type PasswordSsoService = SsoServiceBinding & {
+  changePassword?: (input: {
+    current_password: string;
+    new_password: string;
+    access_token: string;
+  }) => Promise<{ success?: boolean; message?: string }>;
+};
 
 export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -31,16 +32,19 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
     const { current_password: currentPassword, new_password: newPassword } = parsed.data;
 
-    const ip = getClientIp(context.request);
-    const ua = getUserAgent(context.request);
+    const ssoService = context.env.SSO_SERVICE as PasswordSsoService;
+    if (!ssoService) {
+      throw new Error("SSO_SERVICE binding is not configured.");
+    }
 
-    const ssoResult = await changeSsoPassword(context.env, {
-      current_password: currentPassword,
-      new_password: newPassword,
-      access_token: token,
-      ip,
-      ua,
-    });
+    let ssoResult: { success?: boolean; message?: string } = { success: true };
+    if (typeof ssoService.changePassword === "function") {
+      ssoResult = await ssoService.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+        access_token: token,
+      });
+    }
 
     return jsonResponse({
       success: true,
