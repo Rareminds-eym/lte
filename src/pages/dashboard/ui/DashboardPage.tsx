@@ -16,6 +16,8 @@ const logger = getLogger("DashboardPage");
 
 export const DashboardPage: React.FC = () => {
   const { data, isPending, isError, refetch } = useDashboardData();
+  const queryClient = useQueryClient();
+  const userId = useAuthStore((s) => s.user?.id);
   const activeTrack = useLearningPathStore((s) => s.activeTrack);
   const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
   const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);

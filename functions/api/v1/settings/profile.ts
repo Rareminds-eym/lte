@@ -1,6 +1,7 @@
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { completeProfile } from "@functions/lib/xp-engine";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
 import { ProfileUpdateSchema } from "./schemas";
@@ -63,22 +64,6 @@ const settingsUserUpdatePolicy = {
     source: "authenticatedUserId",
     required: true,
   },
-} as const;
-
-const profileCompletionXpInsertPolicy = {
-  table: "xp_events",
-  operation: "insert",
-  insertColumns: [
-    "user_id",
-    "event_type",
-    "xp_category",
-    "xp_amount",
-    "source_type",
-    "source_id",
-    "idempotency_key",
-    "metadata",
-  ],
-  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
 } as const;
 
 function getMetaString(obj: Record<string, unknown>, keys: string[]): string {
@@ -290,7 +275,7 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
     // Background task: award +50 XP when profile reaches 100% completion.
     // Idempotency key (profile:{userId}) ensures this is only ever awarded once.
     if (profileStrength === 100) {
-      const task = completeProfile(supabase, userId).catch((err) => {
+      const task = completeProfile(qb, userId).catch((err) => {
         apiLogger.error("[XP] profile_completed award failed", err, { userId });
       });
       if (typeof context.waitUntil === "function") {

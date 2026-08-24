@@ -83,16 +83,11 @@ async function findOpenLevel(
   userId: string,
   pathIds: string[],
 ): Promise<{ levelId?: string; moduleId?: string; started: boolean }> {
-  const { data: rows, error: progressError } = await supabase
-    .from("user_capability_level_progress")
-    .select("id, level_id, status, updated_at")
-    .eq("user_id", userId)
-    .in("learning_path_id", pathIds)
-    .order("updated_at", { ascending: false });
-
-  if (progressError) {
-    throw new Error(`Failed to query level progress: ${progressError.message}`);
-  }
+  const rows = (await qb.read(openLevelProgressReadPolicy, {
+    auth: { userId },
+    filters: [{ column: "learning_path_id", op: "in", value: pathIds }],
+    sort: [{ column: "sequence_no", ascending: true }],
+  })) as LevelProgressRow[] | null;
 
   const allRows = (rows ?? []) as LevelProgressRow[];
   if (allRows.length === 0) return { started: false };
@@ -102,21 +97,19 @@ async function findOpenLevel(
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   if (open.length === 0) return { started: true };
 
-  const { data: recentModule, error: moduleError } = await supabase
-    .from("user_module_progress")
-    .select("module_id, user_capability_level_progress_id")
-    .in(
-      "user_capability_level_progress_id",
-      open.map((r) => r.id),
-    )
-    .not("module_status", "in", '("completed","mastered")')
-    .order("last_activity_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (moduleError) {
-    throw new Error(`Failed to query recent module progress: ${moduleError.message}`);
-  }
+  const recentModule = await qb.read(recentModuleProgressReadPolicy, {
+    filters: [
+      {
+        column: "user_capability_level_progress_id",
+        op: "in",
+        value: open.map((r) => r.id),
+      },
+    ],
+    not: [{ column: "module_status", op: "in", value: '("completed","mastered")' }],
+    sort: [{ column: "last_activity_at", ascending: false }],
+    limit: 1,
+    result: "maybeSingle",
+  });
 
   if (recentModule) {
     const row = open.find(

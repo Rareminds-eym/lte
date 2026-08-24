@@ -222,18 +222,10 @@ export async function syncSsoShadowData(
 ): Promise<void> {
   const qb = asQueryGateway(source);
   // 1. Check if user record already exists in LTE DB
-  const { data: existingUser, error: userLookupError } = await supabase
-    .from("users")
-    .select("id")
-    .eq("id", user.sub)
-    .maybeSingle();
-
-  if (userLookupError) {
-    authLogger.error("Failed to check existing user in LTE DB", userLookupError, {
-      userId: user.sub,
-    });
-    throw new Error(`Failed to check existing user: ${userLookupError.message}`);
-  }
+  const existingUser = await qb.read(userReadPolicy, {
+    filters: [{ column: "id", op: "eq", value: user.sub }],
+    result: "maybeSingle",
+  });
 
   if (!existingUser) {
     authLogger.info("[Option 1 Applied] User data not found in LTE DB. Provisioning...", {
@@ -248,18 +240,10 @@ export async function syncSsoShadowData(
 
   // 2. Check if subscription_cache record already exists in LTE DB
   if (subscription) {
-    const { data: existingSub, error: subLookupError } = await supabase
-      .from("subscription_cache")
-      .select("id")
-      .eq("id", subscription.id)
-      .maybeSingle();
-
-    if (subLookupError) {
-      authLogger.error("Failed to check existing subscription cache in LTE DB", subLookupError, {
-        subscriptionId: subscription.id,
-      });
-      throw new Error(`Failed to check existing subscription cache: ${subLookupError.message}`);
-    }
+    const existingSub = await qb.read(subscriptionCacheReadPolicy, {
+      filters: [{ column: "id", op: "eq", value: subscription.id }],
+      result: "maybeSingle",
+    });
 
     if (!existingSub) {
       authLogger.info(

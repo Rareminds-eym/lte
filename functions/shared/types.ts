@@ -22,7 +22,7 @@ export interface QueueSender {
 export interface LteEnv {
   ASSETS: AssetsBinding;
   LTE_SYNC_QUEUE?: QueueSender;
-  SSO_SERVICE: SsoRpcService;
+  SSO_SERVICE: unknown;
   STORAGE_BUCKET: R2BucketBinding;
   R2_PUBLIC_DOMAIN?: string;
   SUPABASE_URL: string;

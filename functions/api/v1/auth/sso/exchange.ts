@@ -1,14 +1,6 @@
-import { createRefreshCookie } from "@functions/lib/cookies";
 import { validateBackendEnv } from "@functions/lib/env";
-import {
-  getClientIp,
-  getUserAgent,
-  jsonError,
-  jsonResponse,
-  readJsonObject,
-} from "@functions/lib/http";
+import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
-import { exchangeAuthorizationCode } from "@functions/lib/sso-client";
 import { syncSsoShadowData } from "@functions/lib/sync-shadow";
 import type {
   AuthSuccessResponse,
@@ -136,11 +128,11 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     headers.set("Set-Cookie", cookieHeader);
 
     try {
-      const supabase = createServiceSupabase(context.env);
-      await syncSsoShadowData(supabase, exchange.user, exchange.subscription);
+      const qb = createServiceQueryGateway(context.env);
+      await syncSsoShadowData(qb, exchange.user, exchange.subscription);
       // Background task: award daily login + streak/consistency/legacy XP.
       // Registered with waitUntil to ensure execution finishes after response is returned.
-      const bgTask = triggerDailyLoginWithEngagement(supabase, exchange.user.sub).catch((err) => {
+      const bgTask = triggerDailyLoginWithEngagement(qb, exchange.user.sub).catch((err) => {
         ssoLogger.error("[XP] daily login engagement failed (exchange)", err, {
           userId: exchange.user.sub,
         });
