@@ -22,7 +22,7 @@
     "react-hot-toast": "2.6.0",
     "react-router-dom": "7.18.1",
     "tailwind-merge": "3.6.0",
-    "wrangler": "4.120.1",
+    "wrangler": "4.125.0",
     "zod": "4.4.3",
     "zustand": "5.0.14"
   },
