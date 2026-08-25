@@ -1,0 +1,9 @@
+# Local development variables template for LTE Cloudflare Pages Functions
+# Copy this file to .dev.vars for local development in Wrangler
+
+SUPABASE_URL=http://127.0.0.1:54341
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+SKILLPASSPORT_INTERNAL_SECRET=your_secret_here_min_32_chars
+
+# OpenRouter AI Engine Configuration
+OPENROUTER_API_KEY=sk-or-v1-your-openrouter-api-key-here

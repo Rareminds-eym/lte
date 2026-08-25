@@ -1,0 +1,6 @@
+# Supabase local development
+.supabase/
+.env.local
+.env.*.local
+node_modules/
+

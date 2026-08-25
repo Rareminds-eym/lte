@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Design Tokens — Single source of truth for all colors in the application.
+   Change values here to rebrand the entire app.
+   ══════════════════════════════════════════════════════════════════════════════ */
+@theme {
+  /* ── Brand (primary blue) ── */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+
+  /* ── Success (green) ── */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+
+  /* ── Warning (amber) ── */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  /* ── Danger (red, for errors / destructive actions) ── */
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  /* ── Surface ── */
+  --color-surface-primary: #ffffff;
+  --color-surface-secondary: #f9fafb;
+  --color-surface-muted: #f3f4f6;
+
+  /* ── Content (text) ── */
+  --color-content-primary: #111827;
+  --color-content-secondary: #6b7280;
+  --color-content-muted: #9ca3af;
+
+  /* ── Border / Line ── */
+  --color-border-default: #e5e7eb;
+  --color-border-subtle: #f3f4f6;
+  --color-line-default: #e5e7eb;
+  --color-line-subtle: #f3f4f6;
+
+  /* ── Extended Neutral / Content Tokens ── */
+  --color-content-heading: #1f2937; /* gray-800 */
+  --color-content-body: #374151; /* gray-700 */
+  --color-content-default: #4b5563; /* gray-600 */
+  --color-content-inverse: #ffffff;
+
+  /* ── Extended Surface Tokens ── */
+  --color-surface-subtle: #f8fafc; /* slate-50 */
+  --color-surface-emphasis: #e5e7eb; /* gray-200 */
+
+  /* ── Extended Border / Line Tokens ── */
+  --color-line-strong: #d1d5db; /* gray-300 */
+
+  /* ── Extended Brand Tokens ── */
+  --color-brand-400: #60a5fa;
+
+  /* ── Extended Success Tokens ── */
+  --color-success-300: #6ee7b7;
+  --color-success-800: #065f46;
+
+  /* ── Status Level Tokens (capability pills) ── */
+  --color-level-developing-bg: #fff4e5;
+  --color-level-developing-text: #b76e00;
+  --color-level-working-bg: #e6f0ff;
+  --color-level-working-text: #0052cc;
+  --color-level-foundation-bg: #ffebeb;
+  --color-level-foundation-text: #bf2600;
+  --color-level-proficient-bg: #e3fcef;
+  --color-level-proficient-text: #006644;
+
+  /* ── Dark Hero Surface Tokens (JourneyHero) ── */
+  --color-surface-dark: #0b1329;
+  --color-surface-dark-card: #111c38;
+  --color-surface-dark-border: #1e293b;
+  --color-surface-hero: #121826;
+  --color-surface-hero-elevated: #334155; /* slate-700 */
+  --color-surface-hero-button: #1e293b; /* slate-800 */
+  --color-content-on-dark: #cbd5e1; /* slate-300 */
+  --color-content-on-dark-muted: #94a3b8; /* slate-400 */
+  --color-content-on-dark-subtle: #64748b; /* slate-500 */
+
+  /* ── Accent Color Tokens ── */
+  --color-accent-purple: #8b5cf6;
+  --color-accent-pink: #ec4899;
+  --color-accent-amber: #f59e0b;
+  --color-accent-cyan: #06b6d4;
+
+  /* ── Accent Orange (streak / priority chips) ── */
+  --color-accent-orange-50: #fff7ed;
+  --color-accent-orange-100: #ffedd5;
+  --color-accent-orange-200: #fed7aa;
+  --color-accent-orange-500: #f97316;
+  --color-accent-orange-600: #ea580c;
+
+  /* ── Accent Purple scale (badges / mentor chips) ── */
+  --color-accent-purple-50: #faf5ff;
+  --color-accent-purple-100: #f3e8ff;
+  --color-accent-purple-200: #e9d5ff;
+  --color-accent-purple-600: #9333ea;
+  --color-accent-purple-700: #7e22ce;
+
+  /* ── Accent Lime (XP chip) ── */
+  --color-accent-lime-100: #ecfccb;
+  --color-accent-lime-200: #d9f99d;
+}
+
+@layer base {
+  html,
+  body {
+    @apply h-full;
+  }
+
+  body {
+    @apply font-sans antialiased text-content-primary bg-surface-secondary overflow-x-hidden;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}

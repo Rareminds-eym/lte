@@ -1,0 +1,40 @@
+import { apiFetch } from "@/shared/api";
+
+export interface SubmissionEvaluationResponse {
+  success: true;
+  evaluation: {
+    id: string;
+    submission_id: string;
+    stage: string;
+    status: string;
+    score: number | null;
+    confidence: number | null;
+    decision: "pass" | "revise_and_resubmit" | "human_review" | null;
+    feedback: string | null;
+    improvements: string | null;
+    completed_at: string | null;
+    rubric_rows: Array<{
+      label: string;
+      score: number;
+      maxScore: number;
+      tone: "success" | "warning" | "error";
+      feedback?: string;
+    }>;
+    calculated_xp: number;
+    debug_telemetry?: unknown;
+  } | null;
+}
+
+export async function getSubmissionEvaluation(
+  submissionId: string,
+  signal?: AbortSignal,
+): Promise<SubmissionEvaluationResponse> {
+  return signal
+    ? apiFetch<SubmissionEvaluationResponse>(
+        `/api/v1/artifacts/submissions/${encodeURIComponent(submissionId)}/evaluation`,
+        { signal },
+      )
+    : apiFetch<SubmissionEvaluationResponse>(
+        `/api/v1/artifacts/submissions/${encodeURIComponent(submissionId)}/evaluation`,
+      );
+}

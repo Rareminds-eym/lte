@@ -1,0 +1,11 @@
+node_modules
+build
+dist
+coverage
+.husky
+package-lock.json
+*.min.js
+*.min.css
+**/*.js
+**/*.jsx
+*.config.js

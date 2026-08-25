@@ -1,0 +1,59 @@
+echo "Running pre-commit checks..."
+
+# Validate file types
+echo "Validating file types..."
+npm run lint:files
+if [ $? -ne 0 ]; then
+  echo "File type validation failed!"
+  exit 1
+fi
+
+# Validate file lengths
+echo "Validating file lengths..."
+npm run lint:lengths
+if [ $? -ne 0 ]; then
+  echo "File length validation failed!"
+  exit 1
+fi
+
+
+# Check for console statements
+echo "File types valid. Checking for console usage..."
+npm run lint:console
+if [ $? -ne 0 ]; then
+  echo "Console statements found (review before commit)"
+fi
+
+# Run Biome linter and formatter
+echo "Running Biome linter and formatter checks..."
+npm run lint:biome
+if [ $? -ne 0 ]; then
+  echo "Biome check failed. Run npm run format:biome to apply safe fixes."
+  exit 1
+fi
+
+# Run ESLint
+echo "Running ESLint..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo "ESLint check failed!"
+  exit 1
+fi
+
+# Run secretlint
+echo "Running secretlint..."
+npm run lint:secrets
+if [ $? -ne 0 ]; then
+  echo "Secretlint detected potential secrets!"
+  exit 1
+fi
+
+# Type check
+echo "Secretlint passed. Running TypeScript type check..."
+npm run typecheck
+if [ $? -ne 0 ]; then
+  echo "Type check failed!"
+  exit 1
+fi
+
+echo "All pre-commit checks passed!"

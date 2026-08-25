@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main, production, dev]
+  pull_request:
+    branches: [main, production, dev]
+
+jobs:
+  lint-and-validate:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Validate File Types
+        run: npm run lint:files
+
+      - name: Detect Console Usage
+        run: npm run lint:console
+
+      - name: Get changed files
+        id: changed
+        run: |
+          BASE_REF="${{ github.base_ref }}"
+          if [ -z "${BASE_REF}" ]; then
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch origin "${BASE_REF}"
+          git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" \
+            -- '*.ts' '*.tsx' '*.css' '*.js' 2>/dev/null \
+            | grep -vE 'node_modules|vendor/' > /tmp/changed_files.txt || true
+          echo "count=$(wc -l < /tmp/changed_files.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate File Lengths (changed files only)
+        if: steps.changed.outputs.count != '0'
+        run: npm run lint:lengths
+
+      - name: Biome CI (changed files only)
+        if: steps.changed.outputs.count != '0'
+        run: |
+          if grep -qE '^(src/.*\.(js|ts|tsx)|functions/.*\.ts|test/.*\.(js|ts))$' /tmp/changed_files.txt; then
+            npx biome ci --changed --since="origin/${{ github.base_ref }}" .
+          else
+            echo "No Biome-covered files changed. Skipping Biome."
+          fi
+
+      - name: ESLint (changed TS/TSX files only)
+        if: steps.changed.outputs.count != '0'
+        run: |
+          if grep -qE '\.(ts|tsx)$' /tmp/changed_files.txt; then
+            grep -E '\.(ts|tsx)$' /tmp/changed_files.txt | tr '\n' '\0' | xargs -0 npx eslint --max-warnings 0
+          else
+            echo "No TS/TSX files changed. Skipping ESLint."
+          fi
+
+      - name: Stylelint (changed CSS files only)
+        if: steps.changed.outputs.count != '0'
+        run: |
+          if grep -qE '\.css$' /tmp/changed_files.txt; then
+            grep -E '\.css$' /tmp/changed_files.txt | tr '\n' '\0' | xargs -0 npx stylelint --max-warnings 0
+          else
+            echo "No CSS files changed. Skipping Stylelint."
+          fi
+
+      - name: Secretlint (changed files only)
+        if: steps.changed.outputs.count != '0'
+        run: |
+          xargs -a /tmp/changed_files.txt \
+            npx secretlint --no-glob --format github
+
+      - name: Type Check
+        run: npm run typecheck
+
+      - name: Run Tests
+        run: npx vitest run --coverage
+
+      - name: Add Coverage to Job Summary
+        if: always()
+        run: node scripts/tools/add-coverage-summary.js
+

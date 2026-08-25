@@ -1,0 +1,2094 @@
+# ============================================================================
+
+# PROJECT ARCHITECTURE AND ENFORCEMENT RULES
+
+# ============================================================================
+
+# This file defines the approved technology stack, directory responsibilities,
+
+# FSD import boundaries, frontend/backend separation, security requirements,
+
+# state-management rules, validation rules, and review standards.
+
+#
+
+# These rules must be followed by developers, AI coding assistants, reviewers,
+
+# CI pipelines, and automated code-generation tools.
+
+# ============================================================================
+
+stack:
+language: typescript
+language_version: "5.5.3"
+strict_mode: true
+
+framework: react
+framework_version: "18.3.1"
+
+bundler: vite
+bundler_version: "5.4.2"
+
+architecture: feature-sliced-design
+
+routing:
+library: react-router-dom
+version: "7.9.4"
+type: spa-client-routing
+
+backend:
+platform: cloudflare-pages-functions
+workers_allowed: false
+deployment_model: serverless-pages-functions
+
+state_management:
+client_state: zustand
+client_state_version: "5.0.8"
+server_state: tanstack-query
+server_state_version: "5.90.3"
+
+database:
+provider: supabase
+version: "2.57.4"
+direct_auth_allowed: false
+allowed_usage:
+- database
+- realtime
+- storage
+
+authentication:
+frontend_client: "@rareminds-eym/auth-client"
+backend_core: "@rareminds-eym/auth-core"
+gateway: "@rareminds-eym/sso-gateway"
+direct_supabase_auth_allowed: false
+
+styling:
+framework: tailwindcss
+version: "4.0.0"
+component_primitives: radix-ui
+animations: framer-motion
+
+forms_and_validation:
+schema_validation: zod
+
+ui:
+charting: recharts
+
+integrations:
+ai: openai
+payments: razorpay
+
+testing:
+runner: vitest
+runner_version: "1.6.1"
+component_testing: react-testing-library
+
+# ============================================================================
+
+# APPROVED PROJECT STRUCTURE
+
+# ============================================================================
+
+structure: |
+lte/
+├── .github/
+│   ├── workflows/
+│   ├── CODEOWNERS
+│   └── ISSUE_TEMPLATE/
+│
+├── .husky/
+├── .vscode/
+├── .npmrc
+│
+├── docs/
+│
+├── public/
+│   └── assets/
+│       ├── icons/
+│       ├── images/
+│       ├── fonts/
+│       └── favicon/
+│
+├── src/
+│   ├── app/
+│   │   ├── layouts/
+│   │   │   ├── MainLayout.tsx
+│   │   │   └── DashboardLayout.tsx
+│   │   ├── providers/
+│   │   ├── router/
+│   │   │   └── guards/
+│   │   └── styles/
+│   │
+│   ├── pages/
+│   ├── widgets/
+│   ├── features/
+│   ├── entities/
+│   ├── shared/
+│   │   ├── api/
+│   │   ├── config/
+│   │   ├── hooks/
+│   │   ├── lib/
+│   │   ├── schemas/
+│   │   ├── store/
+│   │   ├── types/
+│   │   └── ui/
+│   │
+│   └── main.tsx
+│
+├── functions/
+│   ├── middleware/
+│   ├── schemas/
+│   └── shared/
+│
+├── scripts/
+│
+├── .env.example
+├── .gitignore
+├── eslint.config.js
+├── tsconfig.json
+├── vite.config.ts
+├── package.json
+└── README.md
+
+# ============================================================================
+
+# CURRENT SRC STRUCTURE OVERRIDES
+
+# ============================================================================
+
+current_src_structure: |
+  src/
+    app/
+    pages/
+      README.md
+      index.ts
+      home/
+        index.ts
+        ui/
+          HomePage.tsx
+      login/
+        index.ts
+        ui/
+          LoginPage.tsx
+      dashboard/
+        index.ts
+        ui/
+          DashboardPage.tsx
+      courses/
+        index.ts
+        ui/
+          CoursesPage.tsx
+        model/
+          courseFilters.ts
+      course-detail/
+        index.ts
+        ui/
+          CourseDetailPage.tsx
+      level-content/
+        index.ts
+        ui/
+          LevelContentPage.tsx
+          components/
+            ArtifactPanel.tsx
+            StageInfoPanel.tsx
+      level-modules/
+        index.ts
+        ui/
+          LevelModulesPage.tsx
+      not-found/
+        index.ts
+        ui/
+          NotFoundPage.tsx
+      settings/
+        index.ts
+        ui/
+          SettingsPage.tsx
+    widgets/
+    features/
+    entities/
+    shared/
+    __tests__/
+      README.md
+      auth/
+        api/
+        guards/
+        pages/
+        store/
+      courses/
+        components/
+        pages/
+      dashboard/
+        api/
+        hooks/
+        layouts/
+        pages/
+        widgets/
+      level-content/
+        api/
+        pages/
+        widgets/
+      level-modules/
+      features/
+        xp-reward/
+          ui/
+      shared/
+        barrels/
+        config/
+        store/
+        ui/
+      shell/
+        app/
+        errors/
+        layouts/
+        navigation/
+        pages/
+
+# ============================================================================
+
+# FSD LAYER ORDER
+
+# ============================================================================
+
+fsd_layer_order:
+
+* app
+* pages
+* widgets
+* features
+* entities
+* shared
+
+fsd_import_direction: |
+Imports must flow from higher layers to lower layers only.
+
+app      -> pages, widgets, features, entities, shared
+pages    -> widgets, features, entities, shared
+widgets  -> features, entities, shared
+features -> entities, shared
+entities -> shared
+shared   -> shared only
+
+# ============================================================================
+
+# CUSTOM RULES
+
+# ============================================================================
+
+rules:
+
+# --------------------------------------------------------------------------
+
+# PROJECT SPECIFIC CONSTRAINTS (ADDED AS PER REQUEST)
+
+# --------------------------------------------------------------------------
+
+
+* category: backend
+  title: "Endpoint Versioning"
+  severity: critical
+  description: |
+  API endpoints must be versioned. Versioning must be followed for every endpoint (e.g., /api/v1/...).
+
+* category: ui
+  title: "Restricted Loading States"
+  severity: high
+  description: |
+  Only 3 loading states are allowed in the application:
+  1. Page loading
+  2. Window loading
+  3. Page content loading (must use a skeleton)
+  No other custom loaders or spinners are allowed.
+
+* category: styling
+  title: "Tailwind CSS v4 Only"
+  severity: critical
+  description: |
+  Only Tailwind CSS (v4) is allowed for styling.
+  No raw or custom CSS files are allowed (only Tailwind utility classes).
+  One global style file should be used.
+
+* category: styling
+  title: "Global Semantic Design Tokens Only"
+  severity: critical
+  description: |
+  All colors, theme variables, and styling tokens must be configured globally in `@theme` (`src/app/styles/index.css`) or `tailwind.config.ts`.
+  Do not use arbitrary hardcoded hex codes, RGB values, or ad-hoc color utilities directly inside component or page files (e.g. avoid `text-[#2563EB]`, `bg-[#1D4ED8]`, `border-[#E5E7EB]`).
+  Always consume standard semantic design tokens such as `brand-*`, `success-*`, `warning-*`, `surface-*`, `content-*`, and `border-*`.
+
+* category: ui
+  title: "Use shared Image component for all images"
+  severity: high
+  description: |
+    All `<img>` elements must use the shared `Image` component from
+    `@/shared/ui/Image` instead of native `<img>` tags.
+
+    The `Image` component provides:
+
+    * `loading="lazy"` and `decoding="async"` by default
+    * `priority` prop for above-fold images (sets `fetchPriority="high"` +
+      `loading="eager"`)
+    * `aspectRatio` prop for CLS prevention via CSS `aspect-ratio`
+    * `loading="eager"` explicit override for images that need eager loading
+      without high priority
+
+    Usage:
+    * Below-fold images: `<Image src={...} alt={...} aspectRatio="..." />`
+    * Above-fold/LCP images: `<Image src={...} alt={...} priority />`
+    * Avatar/chrome images: `<Image src={...} alt={...} loading="eager" />`
+    * Images with overlay children: `<Image src={...} alt={...} aspectRatio="...">{children}</Image>`
+
+    Never use native `<img>` tags.
+
+    Never add `loading`, `decoding`, or `fetchPriority` attributes manually
+    on the Image component — use `priority` or `loading` prop instead.
+
+    Never lazy-load above-fold images.
+
+
+* category: components
+  title: "Modularized Components"
+  severity: high
+  description: |
+  While creating any components, they must be strictly modularized. Follow the FSD structure and avoid monolithic component files.
+
+* category: exports
+  title: "Public API with index.ts"
+  severity: high
+  description: |
+  Each module/folder (e.g., feature, entity, shared slice) must expose its public API using an `index.ts` file. Do not use deep imports; always import from the module's `index.ts`.
+
+* category: testing
+  title: "Mandatory Test Files"
+  severity: critical
+  description: |
+  Test files must be written for all newly created components, utilities, and endpoints. Code should not be merged without adequate test coverage.
+
+* category: state-management
+  title: "Proper TanStack Query Usage"
+  severity: critical
+  description: |
+  All remote/server state must be managed via TanStack Query.
+  * Do not copy TanStack Query responses/data into Zustand.
+  * Loading, caching, fetching, and pagination states must be handled by TanStack Query.
+  * Use TanStack Query mutations for database/write requests.
+
+* category: state-management
+  title: "Proper Zustand Usage"
+  severity: critical
+  description: |
+  Zustand is strictly for local client-side state only.
+  * Use it for transient UI states, workspace settings, global modal/drawer triggers, or temporary caching.
+  * Avoid placing heavy database/server queries or API cache inside Zustand.
+  * Keep stores small, scoped, and modularized near the FSD feature or entity that owns them. Do not create a single monolithic global store.
+
+* category: validation
+  title: "Proper Zod Usage"
+  severity: critical
+  description: |
+  Zod must be used for runtime validation at all boundaries.
+  * Form validations, API request payloads (body, query parameters, route parameters), and env configurations must be validated using Zod.
+  * Perform validations immediately at the boundary before calling downstream services or running business logic.
+
+* category: validation
+  title: "Immediate Validation of Environment Variables"
+  severity: critical
+  description: |
+  All environment variables (including `.dev.vars` bindings or standard `.env` variables) must be validated immediately on the initial load of the application or module.
+  * If any required variables are missing or misconfigured, the application or serverless function must throw a clear configuration error at startup (initial load) rather than failing silently or causing obscure runtime errors downstream.
+  * Use Zod schemas to parse and validate `process.env`, `import.meta.env`, or Cloudflare Page Function `env` bindings immediately during initialization.
+
+* category: quality
+  title: "No Hardcoded Values"
+  severity: critical
+  description: |
+  Do not hardcode configuration values, API URLs, keys, secrets, constants, or user-facing labels directly in code.
+  * Environment-specific values must be fetched from environment variables or configs.
+  * Core configuration constants should be centralized in config modules (e.g., `shared/config/`).
+  * No secrets, API keys, or database credentials should ever be hardcoded.
+
+# --------------------------------------------------------------------------
+# ERROR HANDLING & RESILIENCE (INDUSTRIAL-GRADE STANDARDS)
+# --------------------------------------------------------------------------
+
+* category: error-handling
+  title: "Strict Prohibition of Empty or Silent Catch Blocks"
+  severity: critical
+  description: |
+  Empty or silent catch blocks (`try {} catch (e) {}` or `catch {}` with no logging or action) are strictly prohibited for all operational, network, storage, SSO, and database I/O operations.
+  * Every operational caught error must be handled or logged via the centralized logger (`logger.error` / `apiLogger.error`).
+  * Swallowing exceptions during external proxying, SSO dispatch, or database queries (e.g. falling through to 404 or returning null without logs) is a rule violation.
+  * Exception: Pure synchronous parsing/validation guards (e.g., `try { return new URL(str); } catch { return null; }` or safe JSON parsing with a known default value) are permitted, provided they have no side effects.
+
+* category: error-handling
+  title: "Sanitized 500 Responses & Opaque Internal Errors (OWASP ASVS)"
+  severity: critical
+  description: |
+  Backend endpoints must NEVER leak raw internal exceptions, database error strings, SQL queries, or schema details in HTTP 500 responses.
+  * When a 500 Internal Server Error occurs, the response body MUST contain a sanitized, safe generic message (e.g. "An unexpected internal error occurred") along with a correlation `requestId`.
+  * The full error stack and driver details must be logged securely server-side only (`apiLogger.error(..., error, { requestId })`).
+
+* category: error-handling
+  title: "Mandatory Inspection of Supabase Database Errors"
+  severity: critical
+  description: |
+  All Supabase client query calls MUST explicitly inspect and handle the returned `error` object (`const { data, error } = await supabase...`).
+  * Destructuring only `const { data }` while ignoring `error` is strictly prohibited.
+  * Database errors must be checked before evaluating `data` length or existence; a failed query must never be silently interpreted as an empty record set (e.g. `!data` or `rows.length === 0`).
+
+* category: error-handling
+  title: "Semantic HTTP Status Code Precision"
+  severity: critical
+  description: |
+  Every backend endpoint must return semantically accurate HTTP status codes:
+  * Client-side errors, missing resource lookups, or validation failures must return 4xx codes (400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Unprocessable Entity, 429 Rate Limited).
+  * Missing resources (e.g. non-existent level, missing active learning track) must NOT be converted to HTTP 500 Internal Server Errors.
+  * Endpoints must NEVER return HTTP 200 OK with `{ success: false }` for failed operations or missing entities.
+
+* category: error-handling
+  title: "Mandatory Outbound Fetch Timeouts"
+  severity: critical
+  description: |
+  All outbound `fetch()` requests across Cloudflare Pages Functions and frontend API clients MUST enforce explicit timeouts using `AbortSignal.timeout(ms)` (except for intentional long-lived streaming connections like SSE).
+  * Backend outbound calls (e.g. upstream asset proxies, third-party AI APIs) must specify bounded timeouts (max 15s to 30s).
+  * Indefinite or untimed `fetch()` calls that risk stalling serverless isolates or client threads are prohibited.
+
+* category: error-handling
+  title: "Distributed Rate Limiting at the Edge"
+  severity: high
+  description: |
+  Security-critical and cost-sensitive edge endpoints (e.g., AI evaluations, readiness calculations, auth exchanges) must not rely solely on in-memory JavaScript `Map`s for rate limiting.
+  * Serverless isolates are ephemeral and distributed across hundreds of edge locations.
+  * Rate limiting must be backed by distributed storage (e.g. Cloudflare KV, D1, Durable Objects) or platform-level rate limiting rules.
+
+* category: error-handling
+  title: "Multi-Table Transactional Integrity"
+  severity: critical
+  description: |
+  Operations that mutate multiple database tables sequentially (e.g. artifact evaluation saving to flows, submissions, and module progress) must maintain transactional integrity.
+  * Wrap multi-table operations in atomic database RPC functions (Supabase stored procedures) or implement explicit compensating rollback sagas to prevent partially committed, corrupt database states.
+
+* category: error-handling
+  title: "Granular UI Error Boundaries & Blast Radius Containment"
+  severity: critical
+  description: |
+  The frontend must not rely exclusively on a single root `<ErrorBoundary>`.
+  * Every route screen, independent widget (e.g., Navigation Drawer, Level Modules Drawer, Stepper Bar), and media viewer (PDF, PPTX, Video) must be wrapped in its own localized `<ErrorBoundary>`.
+  * Sub-component rendering crashes must be isolated with contextual fallback and retry controls without unmounting or crashing the rest of the application.
+
+* category: error-handling
+  title: "Asynchronous Canvas & Media Viewer Protection"
+  severity: critical
+  description: |
+  All asynchronous rendering pipelines (PDF.js canvas render promises, PPTX DOM builders, video element event listeners) must be wrapped in `try/catch` handlers.
+  * Unhandled promise rejections inside `useEffect` or lifecycle hooks are strictly prohibited.
+  * Handlers must check component mount/active lifecycle flags and transition to dedicated error fallback states if rendering fails.
+
+* category: error-handling
+  title: "TanStack Query Error & Retry Policy"
+  severity: high
+  description: |
+  TanStack Query must be configured with resilient error policies:
+  * Queries must NOT retry 4xx client errors (401, 403, 404, 422). Retries must be reserved only for idempotent network dropouts or 5xx server errors.
+  * The global `QueryClient` must configure `QueryCache` and `MutationCache` error listeners for centralized telemetry.
+  * Mutation idempotency keys must be reused across retries of the same logical action and cleared upon successful completion (onSuccess), so failed network attempts do not duplicate actions server-side while new subsequent actions generate fresh keys.
+
+* category: error-handling
+  title: "Preserve Rich Metadata in Frontend ApiError"
+  severity: high
+  description: |
+  The frontend `ApiError` class must preserve and expose structured metadata returned by the backend:
+  * Must store `code`, `details`, and `requestId` in addition to `message` and `status`.
+  * Client hooks and error boundaries must use machine-readable error codes rather than fragile substring matching on error messages.
+
+* category: error-handling
+  title: "Purge Query Cache on User Logout"
+  severity: critical
+  description: |
+  When a user logs out via `authStore.logout()`, `queryClient.clear()` MUST be executed unconditionally.
+  * Never leave sensitive user records, course progress, or profile information in memory after session termination.
+
+* category: error-handling
+  title: "Global Browser Unhandled Exception Telemetry"
+  severity: high
+  description: |
+  The frontend application bootstrap (`src/main.tsx` / `src/app/App.tsx`) must register global `window.onerror` and `window.addEventListener('unhandledrejection')` listeners.
+  * All unhandled browser exceptions and promise rejections must be captured, formatted, and logged to prevent silent UI failures in production.
+
+* category: error-handling
+  title: "Accessible & Non-Destructive UI Error States"
+  severity: medium
+  description: |
+  User-facing error components must prioritize user recovery:
+  * Provide non-destructive retry actions (e.g. calling `refetch()` or resetting the error boundary) rather than forcing full-page reloads (`window.location.reload()`).
+  * Form validation errors must be exposed via accessible inline field states (`aria-invalid="true"`, `aria-describedby`) and typed toast alerts (`toast.error()`), never through generic unstyled popups alone.
+
+* category: error-handling
+  title: "Mandatory ctx.waitUntil for Background Serverless Tasks"
+  severity: critical
+  description: |
+  In Cloudflare Pages Functions, floating asynchronous promises (e.g. fire-and-forget daily logins, XP triggers, streak computations) MUST be passed to `context.waitUntil(promise)`.
+  * Invoking unawaited promises without `waitUntil()` causes the Cloudflare runtime to terminate/freeze the isolate immediately upon returning the HTTP response, silently dropping pending database writes.
+  * Every background promise passed to `waitUntil()` must contain internal `try/catch` error logging to prevent unhandled background rejections.
+
+* category: error-handling
+  title: "Safe Keepalive & Beacon Fetch Error Handling"
+  severity: high
+  description: |
+  Asynchronous analytics, timer flushes, and beacon calls using `fetch(..., { keepalive: true })` or unmounted lifecycle cleanup MUST have attached `.catch()` or `try/catch` handlers.
+  * Never execute floating `void fetch(...)` without error handling during `beforeunload`, `pagehide`, or visibility change events.
+
+* category: error-handling
+  title: "W3C Distributed Trace Context & Correlation Headers"
+  severity: high
+  description: |
+  Requests traversing client, Pages Functions, and backend Service Bindings (e.g. SSO Worker) must propagate W3C Trace Context (`traceparent` header) and consistent correlation `requestId`.
+  * Ensure error logs across microservices share the same correlation ID so distributed transaction failures can be diagnosed without guessing.
+
+* category: naming
+  title: "Naming and Casing Conventions"
+  severity: critical
+  description: |
+    All project files and directories must adhere to the following naming and casing conventions:
+
+    | Item                  | Convention        | Example                                                   |
+    | --------------------- | ----------------- | --------------------------------------------------------- |
+    | FSD layers            | lowercase         | `entities/`, `features/`, `widgets/`, `pages/`, `shared/` |
+    | slices                | kebab-case        | `course-detail/`, `career-paths/`                         |
+    | nested folders        | kebab-case        | `resource-content-viewer/`                                |
+    | standard FSD segments | lowercase         | `ui/`, `model/`, `api/`, `lib/`, `config/`                |
+    | React component files | PascalCase        | `DocxContentViewer.tsx`                                   |
+    | hooks                 | camelCase         | `useCourseProgress.ts`                                    |
+    | utilities             | camelCase         | `formatDuration.ts`                                       |
+    | schemas               | camelCase         | `courseSchema.ts`                                         |
+    | stores                | camelCase         | `courseStore.ts`                                          |
+    | API modules           | camelCase         | `courseApi.ts`                                            |
+    | public API            | lowercase         | `index.ts`                                                |
+    | tests                 | match source file | `DocxContentViewer.test.tsx`                              |
+
+# --------------------------------------------------------------------------
+
+# AUTHENTICATION
+
+# --------------------------------------------------------------------------
+
+* category: authentication
+  title: "Delegate Browser Auth Routes via createSsoGateway in functions/[[path]].ts"
+  severity: critical
+  description: |
+  Browser-facing authentication endpoints (`/api/auth/*` and `/api/v1/auth/*`, excluding `/api/v1/auth/sso/exchange`)
+  must be intercepted in the Cloudflare Pages Functions catch-all handler `functions/[[path]].ts` and delegated
+  to `@rareminds-eym/sso-gateway` via `createSsoGateway`.
+  * Gateway dispatch must use the `env.SSO_SERVICE` Service Binding.
+  * Approved origins must explicitly match the allowed domain whitelist (e.g. `https://lte.rareminds.in`, local dev origins).
+  * Gateway execution errors must be logged with `apiLogger.error` and must NOT be swallowed with empty `catch {}` blocks.
+  * `functions/[[path]].ts` serves as the edge router: delegating auth routes, returning 404 for unhandled `/api/` paths, proxying static assets, and serving `/index.html` for client-side SPA routing.
+
+* category: authentication
+  title: "No direct Supabase Auth usage"
+  severity: critical
+  description: |
+  Never use `supabase.auth.*` anywhere in the frontend.
+
+  Authentication must be handled only through:
+
+  * `@rareminds-eym/auth-client` on the frontend
+  * `@rareminds-eym/auth-core` on the backend
+  * `@rareminds-eym/sso-gateway` on the edge gateway
+
+  Allowed frontend examples:
+
+  * `useAuthStore.getState().login(email, password)`
+  * `ssoClient.signup()`
+  * `ssoClient.fetch()`
+
+  Disallowed examples:
+
+  * `supabase.auth.signInWithPassword()`
+  * `supabase.auth.signUp()`
+  * `supabase.auth.getSession()`
+  * `supabase.auth.refreshSession()`
+
+  Reason:
+  Direct Supabase Auth bypasses the centralized SSO architecture and can
+  create inconsistent sessions, token handling, and authorization behavior.
+
+* category: authentication
+  title: "Use approved authentication middleware"
+  severity: critical
+  description: |
+  Every authenticated Cloudflare Pages Function must use the approved
+  authentication wrapper.
+
+  Approved methods:
+
+  * `withAuth`
+  * middleware provided by `@rareminds-eym/auth-core`
+
+  Never:
+
+  * manually decode JWTs
+  * manually verify JWT signatures
+  * manually parse authentication cookies
+  * manually extract and trust user IDs from request bodies
+  * duplicate authentication logic inside individual endpoints
+
+  Authentication must be handled centrally through backend middleware.
+
+* category: authentication
+  title: "Frontend route guards are not security boundaries"
+  severity: critical
+  description: |
+  Files under `src/app/router/guards/` exist only for user experience and
+  client-side navigation control.
+
+  They may:
+
+  * redirect unauthenticated users
+  * hide restricted routes
+  * redirect users by role
+  * prevent unauthorized UI rendering
+
+  They must not be treated as actual authorization enforcement.
+
+  All permissions must be verified again inside backend middleware.
+
+# --------------------------------------------------------------------------
+
+# FRONTEND AND BACKEND SEPARATION
+
+# --------------------------------------------------------------------------
+
+* category: architecture
+  title: "Strict frontend-backend separation"
+  severity: critical
+  description: |
+  Frontend and backend are separate runtime environments.
+
+  Frontend:
+
+  * `src/`
+
+  Backend:
+
+  * `functions/`
+
+  Frontend code must never import backend code.
+
+  Disallowed:
+
+  * importing from `functions/` inside `src/`
+  * importing middleware into React components
+  * importing backend database helpers into frontend code
+  * importing backend validation logic directly into frontend code
+
+  Backend code must never import frontend code.
+
+  Disallowed:
+
+  * importing React components into Pages Functions
+  * importing frontend Zustand stores into backend functions
+  * importing frontend FSD entities into backend handlers
+
+  Communication must happen only through HTTP APIs.
+
+* category: architecture
+  title: "Use apiClient or ssoClient for backend communication"
+  severity: high
+  description: |
+  Frontend API requests must use the approved API client.
+
+  Approved:
+
+  * `apiGet`
+  * `apiPost`
+  * `apiPut`
+  * `apiPatch`
+  * `apiDelete`
+  * `ssoClient.fetch()`
+
+  Location:
+
+  * `src/shared/api/`
+
+  Plain `fetch()` calls to project backend endpoints are not allowed.
+
+  Reason:
+  Direct fetch calls may bypass:
+
+  * authentication headers
+  * token refresh
+  * organization context
+  * retry logic
+  * standard error handling
+  * request tracing
+  * centralized response parsing
+
+* category: architecture
+  title: "Shared types must not cross runtime boundaries by direct import"
+  severity: high
+  description: |
+  Types must not be imported directly between `src/` and `functions/`.
+
+  Disallowed:
+
+  * frontend importing types from `functions/`
+  * backend importing types from `src/`
+
+  Shared contract types must either:
+
+  * be duplicated intentionally
+  * be generated from an API schema
+  * be extracted to a dedicated package such as `@rareminds-eym/types`
+
+# --------------------------------------------------------------------------
+
+# APP LAYER
+
+# --------------------------------------------------------------------------
+
+* category: fsd
+  title: "app is only for application initialization"
+  severity: high
+  description: |
+  `src/app/` must contain only application-level setup and composition.
+
+  Allowed:
+
+  * layouts
+  * providers
+  * router configuration
+  * route guards
+  * global styles
+  * application bootstrap logic
+
+  Disallowed:
+
+  * business entities
+  * course state
+  * user profile state
+  * form schemas
+  * domain APIs
+  * reusable buttons
+  * feature-specific hooks
+  * domain-specific business logic
+
+  Business state must live in:
+
+  * `features/*/model/`
+  * `entities/*/model/`
+
+* category: fsd
+  title: "No generic security folder under app"
+  severity: high
+  description: |
+  Do not create `src/app/security/` as a generic security dumping ground.
+
+  Frontend route protection belongs in:
+
+  * `src/app/router/guards/`
+
+  Real security enforcement belongs in:
+
+  * `functions/middleware/`
+
+  Client-side code is visible and bypassable and must not be treated as a
+  trusted security boundary.
+
+# --------------------------------------------------------------------------
+
+# PAGES LAYER
+
+# --------------------------------------------------------------------------
+
+* category: fsd
+  title: "Pages contain route-level composition only"
+  severity: high
+  description: |
+  `src/pages/` contains complete route-level screens.
+
+  Pages may:
+
+  * compose widgets
+  * compose features
+  * use entities
+  * use shared utilities
+  * connect route params to page composition
+
+  Pages should not:
+
+  * contain reusable domain logic
+  * define generic UI components
+  * contain direct database access
+  * contain large reusable sections that belong in widgets
+  * own reusable business actions that belong in features
+
+  A page should orchestrate lower layers rather than implement everything
+  directly.
+
+  Required page structure:
+
+  * page slices must use lowercase or kebab-case folders under `src/pages/`
+    such as `home`, `login`, `dashboard`, `courses`, `course-detail`, and
+    `not-found`.
+  * each page slice must expose a public API through `index.ts`.
+  * routed page components must live under the slice `ui/` segment.
+  * page-only state helpers may live under the slice `model/` segment.
+  * flat page files such as `src/pages/Dashboard.tsx`,
+    `src/pages/Courses.tsx`, or `src/pages/LoginPage.tsx` are not allowed.
+
+  Approved examples:
+
+  * `src/pages/dashboard/ui/DashboardPage.tsx`
+  * `src/pages/courses/ui/CoursesPage.tsx`
+  * `src/pages/courses/model/courseFilters.ts`
+  * `src/pages/course-detail/ui/CourseDetailPage.tsx`
+
+  Because this project is Tailwind-only, page-specific `.css` or
+  `.module.css` files are not allowed. Page styling must use Tailwind utility
+  classes and global semantic tokens.
+
+* category: fsd
+  title: "Do not place generic buttons inside pages"
+  severity: medium
+  description: |
+  Generic reusable UI components must not be created inside a page folder.
+
+  Violation:
+
+  * `pages/dashboard/ui/Button.tsx`
+
+  Correct:
+
+  * `shared/ui/button/`
+
+  Exception:
+  A page-specific component may remain inside the page if it is not reused
+  and represents only page composition.
+
+* category: fsd
+  title: "Pages must use FSD slice segments"
+  severity: high
+  description: |
+  Page slices must use FSD-style segments instead of ad-hoc folders.
+
+  Allowed inside a page slice:
+
+  * `ui/`
+  * `model/`
+  * `lib/`
+  * `config/`
+  * `api/` only for page-owned route requests that are not reusable
+
+  Disallowed:
+
+  * `src/pages/components/`
+  * `src/pages/hooks/`
+  * `src/pages/utils/`
+  * importing from another page slice
+  * importing from `src/app`
+
+  Use the slice public API when importing pages:
+
+  * `@/pages/dashboard`
+  * `@/pages/courses`
+  * `@/pages/course-detail`
+
+# --------------------------------------------------------------------------
+
+# WIDGETS LAYER
+
+# --------------------------------------------------------------------------
+
+* category: fsd
+  title: "Widgets represent large reusable UI compositions"
+  severity: high
+  description: |
+  `src/widgets/` is for large, reusable page sections.
+
+  Examples:
+
+  * header
+  * sidebar
+  * dashboard summary section
+  * course list section
+  * navigation panel
+
+  Widgets may compose:
+
+  * features
+  * entities
+  * shared UI
+
+  Widgets must not:
+
+  * contain route definitions
+  * import pages
+  * contain backend logic
+  * become generic component libraries
+
+# --------------------------------------------------------------------------
+
+# FEATURES LAYER
+
+# --------------------------------------------------------------------------
+
+* category: fsd
+  title: "Features represent user actions"
+  severity: high
+  description: |
+  `src/features/` must contain business actions or user interactions.
+
+  Good feature examples:
+
+  * enroll in course
+  * search courses
+  * submit assignment
+  * reset password
+  * upload document
+  * update profile
+  * mark attendance
+
+  Features may contain:
+
+  * api
+  * model
+  * schemas
+  * ui
+  * lib
+  * config
+
+  Features should be named as actions or use cases.
+
+* category: fsd
+  title: "Do not place generic UI components inside features"
+  severity: high
+  description: |
+  Generic reusable UI components must not be created inside a feature.
+
+  Violation:
+
+  * `features/authentication/ui/Button.tsx`
+  * `features/course-search/ui/Input.tsx`
+  * `features/enroll-course/ui/Modal.tsx`
+
+  Correct:
+
+  * `shared/ui/button/`
+  * `shared/ui/input/`
+  * `shared/ui/modal/`
+
+  A component may remain inside a feature only when it is specific to that
+  feature.
+
+  Valid examples:
+
+  * `features/authentication/ui/LoginForm`
+  * `features/enroll-course/ui/EnrollCourseButton`
+  * `features/course-search/ui/CourseSearchField`
+
+  Rule:
+  If the component can be reused without understanding the feature, it
+  belongs in `shared/ui`.
+
+* category: fsd
+  title: "Features must not import other feature slices directly"
+  severity: high
+  description: |
+  One feature should not directly import another feature.
+
+  Violation:
+
+  * `features/course-search` importing `features/enroll-course`
+
+  Correct approach:
+  Compose both features inside a higher layer such as:
+
+  * widgets
+  * pages
+  * app
+
+  Reason:
+  Direct feature-to-feature dependencies create tight coupling and make
+  features difficult to reuse or remove independently.
+
+# --------------------------------------------------------------------------
+
+# ENTITIES LAYER
+
+# --------------------------------------------------------------------------
+
+* category: fsd
+  title: "Entities represent domain concepts"
+  severity: high
+  description: |
+  `src/entities/` must contain business-domain concepts.
+
+  Examples:
+
+  * user
+  * session
+  * course
+  * assignment
+  * assessment
+  * organization
+  * enrollment
+
+  Entities may contain:
+
+  * model
+  * api
+  * schemas
+  * ui
+  * lib
+
+  Entities must not:
+
+  * import features
+  * import widgets
+  * import pages
+  * contain route composition
+  * contain feature-specific action flows
+
+* category: fsd
+  title: "Entity UI must represent the entity"
+  severity: medium
+  description: |
+  Entity UI components must directly represent the domain entity.
+
+  Valid:
+
+  * CourseCard
+  * UserAvatar
+  * AssignmentStatus
+  * OrganizationBadge
+
+  Invalid:
+
+  * LoginForm
+  * EnrollButton
+  * SubmitAssignmentForm
+
+  Action-oriented UI belongs in features.
+
+# --------------------------------------------------------------------------
+
+# SHARED LAYER
+
+# --------------------------------------------------------------------------
+
+* category: fsd
+  title: "Shared must remain business-agnostic"
+  severity: critical
+  description: |
+  `src/shared/` contains generic reusable infrastructure.
+
+  Allowed:
+
+  * API client
+  * generic hooks
+  * generic utilities
+  * environment configuration
+  * common schemas
+  * generic Zustand helpers
+  * shared types
+  * reusable UI components
+
+  Disallowed:
+
+  * course business logic
+  * authentication business rules
+  * enrollment state
+  * user-specific business state
+  * page-specific components
+  * organization-specific permissions
+
+  If code contains domain terminology, it likely does not belong in shared.
+
+* category: fsd
+  title: "shared/ui contains only generic UI components"
+  severity: high
+  description: |
+  `src/shared/ui/` contains reusable, domain-independent UI primitives.
+
+  Examples:
+
+  * Button
+  * Input
+  * Modal
+  * Dialog
+  * Table
+  * Loader
+  * Badge
+  * Tooltip
+  * Select
+  * Card
+
+  Components must not include business behavior.
+
+  Violation:
+
+  * `shared/ui/EnrollCourseButton`
+  * `shared/ui/ApproveLearnerButton`
+  * `shared/ui/SubscriptionUpgradeModal`
+
+  Those belong in feature slices.
+
+* category: fsd
+  title: "shared/config is for reusable frontend configuration only"
+  severity: medium
+  description: |
+  `src/shared/config/` may contain:
+
+  * public environment values
+  * route constants
+  * pagination defaults
+  * application constants
+  * public feature flags
+  * supported file-size limits
+
+  It must not contain:
+
+  * private secrets
+  * service-role keys
+  * private API keys
+  * backend credentials
+  * database connection strings
+
+  Every value under `src/` is potentially visible in the browser.
+
+* category: fsd
+  title: "shared/store contains utilities, not domain state"
+  severity: high
+  description: |
+  `src/shared/store/` may contain:
+
+  * Zustand middleware helpers
+  * persistence adapters
+  * reusable store factories
+  * generic selectors
+  * storage abstractions
+
+  It must not contain:
+
+  * auth session state
+  * user profile state
+  * course state
+  * enrollment state
+  * organization state
+  * subscription state
+
+  Actual state belongs in the owning entity or feature model.
+
+# --------------------------------------------------------------------------
+
+# ZUSTAND
+
+# --------------------------------------------------------------------------
+
+* category: state-management
+  title: "Place Zustand stores near the owning domain"
+  severity: high
+  description: |
+  Zustand stores must live close to the feature or entity that owns them.
+
+  Correct:
+
+  * `entities/session/model/`
+  * `entities/user/model/`
+  * `features/course-search/model/`
+  * `features/enroll-course/model/`
+
+  Incorrect:
+
+  * one large global store
+  * all stores inside `app/store`
+  * all domain state inside `shared/store`
+
+  State must be split by ownership and responsibility.
+
+* category: state-management
+  title: "Do not duplicate TanStack Query data in Zustand"
+  severity: high
+  description: |
+  Remote server data should be managed by TanStack Query.
+
+  Use TanStack Query for:
+
+  * API responses
+  * server caching
+  * loading states
+  * request retries
+  * invalidation
+  * background refresh
+
+  Use Zustand for:
+
+  * client-only state
+  * local workflow state
+  * persistent UI preferences
+  * temporary cross-component state
+
+  Do not copy API response data into Zustand unless there is a clear,
+  documented reason.
+
+# --------------------------------------------------------------------------
+
+# ZOD
+
+# --------------------------------------------------------------------------
+
+* category: validation
+  title: "Use Zod for runtime validation"
+  severity: high
+  description: |
+  TypeScript types do not validate runtime data.
+
+  Zod must be used for:
+
+  * form validation
+  * API request payload validation
+  * query parameter validation
+  * route parameter validation
+  * external API response validation
+  * environment variable validation
+
+* category: validation
+  title: "Place Zod schemas near their ownership"
+  severity: high
+  description: |
+  Feature-specific schemas:
+
+  * `features/*/schemas/`
+
+  Entity-specific schemas:
+
+  * `entities/*/schemas/`
+
+  Generic schemas:
+
+  * `shared/schemas/`
+
+  Backend request schemas:
+
+  * `functions/schemas/`
+
+  Do not place every schema in one central frontend folder when it belongs
+  to a specific feature or entity.
+
+* category: validation
+  title: "Backend validation is mandatory"
+  severity: critical
+  description: |
+  Frontend validation improves user experience but is not a security
+  boundary.
+
+  Every backend endpoint must validate:
+
+  * request body
+  * route params
+  * query params
+  * headers when relevant
+
+  Validation must happen before database or business operations.
+
+# --------------------------------------------------------------------------
+
+# BACKEND FUNCTIONS
+
+# --------------------------------------------------------------------------
+
+* category: backend
+  title: "functions contains backend-only code"
+  severity: critical
+  description: |
+  `functions/` runs in Cloudflare Pages Functions.
+
+  It may contain:
+
+  * API handlers
+  * middleware
+  * backend schemas
+  * backend-only utilities
+  * database clients
+  * authorization checks
+  * payment integration
+  * secure environment access
+
+  It must not contain:
+
+  * React components
+  * frontend hooks
+  * frontend Zustand stores
+  * browser-only code
+  * DOM APIs
+
+* category: backend
+  title: "Use middleware for cross-cutting backend concerns"
+  severity: high
+  description: |
+  `functions/middleware/` must contain reusable backend request protection.
+
+  Examples:
+
+  * authentication
+  * authorization
+  * role checks
+  * permission checks
+  * request validation
+  * CORS
+  * rate limiting
+  * request tracing
+  * centralized error handling
+
+  Endpoints must not reimplement these concerns independently.
+
+* category: backend
+  title: "Do not expose secrets to frontend"
+  severity: critical
+  description: |
+  Secrets must exist only in Cloudflare environment bindings or backend
+  runtime configuration.
+
+  Never expose:
+
+  * Supabase service-role keys
+  * Razorpay secrets
+  * OpenAI private keys
+  * JWT private keys
+  * database credentials
+  * SSO backend secrets
+
+  Never prefix private values with `VITE_`.
+
+# --------------------------------------------------------------------------
+
+# PUBLIC ASSETS
+
+# --------------------------------------------------------------------------
+
+* category: assets
+  title: "Static assets belong in public/assets"
+  severity: medium
+  description: |
+  Static files must be placed under:
+
+  * `public/assets/icons/`
+  * `public/assets/images/`
+  * `public/assets/fonts/`
+  * `public/assets/favicon/`
+
+  Do not duplicate static asset folders under `src/shared/assets/`.
+
+  Assets should be referenced using absolute public paths.
+
+# --------------------------------------------------------------------------
+
+# API DESIGN
+
+# --------------------------------------------------------------------------
+
+* category: api
+  title: "API calls belong near domain ownership"
+  severity: high
+  description: |
+  Generic HTTP infrastructure belongs in:
+
+  * `src/shared/api/`
+
+  Domain API wrappers belong in:
+
+  * `features/*/api/`
+  * `entities/*/api/`
+
+  Example:
+
+  * generic request client -> `shared/api`
+  * fetch course data -> `entities/course/api`
+  * enroll in course -> `features/enroll-course/api`
+
+* category: api
+  title: "Do not call Supabase directly from pages or UI components"
+  severity: critical
+  description: |
+  React pages and components must not perform direct Supabase queries.
+
+  Disallowed:
+
+  * direct `supabase.from()` inside pages
+  * direct database calls inside widgets
+  * direct queries inside shared UI
+  * direct Supabase access inside route guards
+
+  Database access must happen through backend APIs.
+
+# --------------------------------------------------------------------------
+
+# PUBLIC API AND IMPORTS
+
+# --------------------------------------------------------------------------
+
+* category: imports
+  title: "Use slice public APIs"
+  severity: high
+  description: |
+  Every feature, entity, widget, and page slice should expose intended
+  exports through an `index.ts`.
+
+  Preferred:
+
+  * `import { CourseCard } from "@/entities/course"`
+
+  Avoid:
+
+  * `import { CourseCard } from "@/entities/course/ui/CourseCard"`
+
+  Deep imports increase coupling and expose internal implementation details.
+
+* category: imports
+  title: "No upward imports"
+  severity: critical
+  description: |
+  Lower FSD layers must never import higher layers.
+
+  Violations:
+
+  * shared importing entities
+  * entities importing features
+  * features importing widgets
+  * widgets importing pages
+  * pages importing app
+
+  Such imports must fail linting and CI.
+
+* category: imports
+  title: "Use path alias `@/` for project imports"
+  severity: high
+  description: |
+  All imports referencing project code under `src/` must use the `@/` path alias.
+
+  Preferred:
+  * `import { Button } from "@/shared/ui";`
+  * `import { NavigationDrawer } from "@/widgets/NavigationDrawer";`
+
+  Avoid:
+  * `import { Button } from "../../shared/ui/Button";`
+  * relative path navigation (`../../../`) across FSD slices.
+
+* category: imports
+  title: "Type placement by scope and ownership"
+
+  severity: high
+  description: |
+  TypeScript type definitions must be placed based on scope:
+
+  1. Component Props (e.g. ButtonProps, HeaderProps):
+     * Must be co-located with the component (e.g., `Button.tsx`).
+     * Re-exported through the slice's `index.ts`.
+     * Do not dump component props into `src/shared/types/`.
+
+  2. Global Infrastructure Types (e.g. AuthUser, ApiResponse):
+     * Must live in `src/shared/types/` (e.g., `shared/types/auth.ts`).
+
+  3. Domain Entity & Feature Models (e.g. Course, Assignment):
+     * Must live in `entities/<name>/model/types.ts` or `features/<name>/model/types.ts`.
+
+# --------------------------------------------------------------------------
+
+
+# COMPONENT PLACEMENT
+
+# --------------------------------------------------------------------------
+
+* category: components
+  title: "Place components based on responsibility"
+  severity: high
+  description: |
+  Use the following placement rules:
+
+  Generic visual primitive:
+
+  * `shared/ui/`
+
+  Domain representation:
+
+  * `entities/*/ui/`
+
+  User action:
+
+  * `features/*/ui/`
+
+  Large page section:
+
+  * `widgets/*/ui/`
+
+  Complete routed screen:
+
+  * `pages/*/ui/`
+
+  Application-wide layout:
+
+  * `app/layouts/`
+
+* category: components
+  title: "Button placement rule"
+  severity: high
+  description: |
+  Generic Button:
+
+  * `shared/ui/button/`
+
+  Domain display button without business action:
+
+  * generally still use shared Button and configure it through props
+
+  Business-action button:
+
+  * feature UI
+
+  Examples:
+
+  Correct:
+
+  * `shared/ui/button/`
+  * `features/enroll-course/ui/`
+  * `features/delete-course/ui/`
+
+  Incorrect:
+
+  * generic Button inside a feature
+  * EnrollCourseButton inside shared UI
+  * reusable Button inside pages
+
+  Rule:
+  The visual primitive lives in shared.
+  The business action wrapper lives in the feature.
+
+# --------------------------------------------------------------------------
+
+# TESTING
+
+# --------------------------------------------------------------------------
+
+* category: testing
+  title: "Test behavior at the owning layer"
+  severity: medium
+  description: |
+  Shared UI:
+
+  * rendering
+  * accessibility
+  * interaction behavior
+
+  Entities:
+
+  * entity representation
+  * selectors
+  * data transformations
+
+  Features:
+
+  * user actions
+  * validation
+  * state transitions
+  * API interactions
+
+  Pages:
+
+  * composition
+  * route-level behavior
+
+  Backend:
+
+  * authentication
+  * validation
+  * authorization
+  * error responses
+  * database integration
+
+* category: testing
+  title: "Tests must use feature/responsibility folders"
+  severity: high
+  description: |
+  Frontend tests must live under `src/__tests__/` using the approved
+  feature/responsibility structure.
+
+  Approved structure:
+
+  * `src/__tests__/auth/api/`
+  * `src/__tests__/auth/guards/`
+  * `src/__tests__/auth/pages/`
+  * `src/__tests__/auth/store/`
+  * `src/__tests__/courses/components/`
+  * `src/__tests__/courses/pages/`
+  * `src/__tests__/dashboard/api/`
+  * `src/__tests__/dashboard/hooks/`
+  * `src/__tests__/dashboard/layouts/`
+  * `src/__tests__/dashboard/pages/`
+  * `src/__tests__/dashboard/widgets/`
+  * `src/__tests__/shared/barrels/`
+  * `src/__tests__/shared/config/`
+  * `src/__tests__/shared/store/`
+  * `src/__tests__/shared/ui/`
+  * `src/__tests__/shell/app/`
+  * `src/__tests__/shell/errors/`
+  * `src/__tests__/shell/layouts/`
+  * `src/__tests__/shell/navigation/`
+  * `src/__tests__/shell/pages/`
+
+  Test files must not be placed directly under `src/__tests__/`.
+  Test files must not be placed directly under a feature root such as
+  `src/__tests__/dashboard/`.
+
+  Use file extensions by content:
+
+  * `.test.ts` for logic, API, store, config, utility, and barrel tests.
+  * `.test.tsx` for React component, page, layout, guard, widget, provider,
+    and hook tests that use JSX.
+
+  Prefer project aliases such as `@/pages/courses`, `@/shared/ui`, and
+  `@/entities/dashboard`. Do not use deep relative imports across source
+  layers from tests.
+
+# --------------------------------------------------------------------------
+
+# LOGGING AND DEBUGGING
+
+# --------------------------------------------------------------------------
+
+* category: logging
+  title: "No console usage in production branches"
+  severity: critical
+  description: |
+  Console statements must not exist in production branches (main, master, production, prod).
+
+  Disallowed in production branches:
+
+  * console.log()
+  * console.info()
+  * console.warn()
+  * console.error()
+  * console.debug()
+  * console.trace()
+  * console.dir()
+  * console.table()
+
+  Use a proper logging utility instead:
+
+  * `src/shared/lib/logger`
+
+  Allowed in development and staging branches:
+
+  * console.* statements are permitted for debugging
+
+  CI/CD must:
+
+  * block merges to production branches if console statements are detected
+  * allow console statements in feature/* and develop/* branches
+  * remove or replace console statements during production builds
+
+  Example ESLint rule:
+  ```json
+  "no-console": process.env.NODE_ENV === "production" ? "error" : "warn"
+  ```
+
+* category: logging
+  title: "Use proper logging utility"
+  severity: high
+  description: |
+  All logging must go through a centralized logger utility.
+
+  Location:
+
+  * `src/shared/lib/logger` (frontend)
+  * `functions/shared/logger` (backend)
+
+  The logger must:
+
+  * support different log levels (debug, info, warn, error)
+  * automatically disable non-error logs in production
+  * format logs consistently
+  * optionally send logs to external services (Sentry, LogRocket, DataDog)
+  * support structured logging with metadata
+  * sanitize sensitive data automatically
+
+  Frontend usage:
+  ```typescript
+  import { logger } from '@/shared/lib/logger';
+
+  logger.debug('User interaction', { action: 'click', element: 'button' });
+  logger.info('API request completed', { endpoint: '/courses', duration: 120 });
+  logger.warn('Deprecated function used', { function: 'oldMethod' });
+  logger.error('API request failed', { error, endpoint: '/courses' });
+  ```
+
+  Backend usage:
+  ```typescript
+  import { logger } from '../shared/logger';
+
+  logger.info('Request received', { method: req.method, path: req.url });
+  logger.error('Database error', { error: error.message, query });
+  ```
+
+* category: logging
+  title: "Environment-based logging"
+  severity: high
+  description: |
+  Logging behavior must adapt to the environment.
+
+  Production:
+
+  * only error and critical warnings
+  * no debug or info logs
+  * logs sent to monitoring service
+  * no sensitive data in logs
+  * minimal stack traces
+
+  Staging:
+
+  * error, warning, and info logs
+  * debug logs allowed
+  * detailed error traces
+  * request/response logging
+
+  Development:
+
+  * all log levels enabled
+  * console output allowed
+  * detailed stack traces
+  * request/response body logging
+
+  The logger must check `NODE_ENV`, `VITE_ENV`, or `MODE` to determine behavior.
+
+  Implementation:
+  ```typescript
+  const isDevelopment = import.meta.env.DEV;
+  const isProduction = import.meta.env.PROD;
+
+  if (!isProduction) {
+    logger.debug('Development log', data);
+  }
+  ```
+
+* category: logging
+  title: "No sensitive data in logs"
+  severity: critical
+  description: |
+  Never log sensitive information regardless of environment.
+
+  Never log:
+
+  * passwords (plain or hashed)
+  * API keys and secrets
+  * tokens (JWT, session, refresh, CSRF)
+  * credit card numbers or CVV
+  * personal identification numbers
+  * social security numbers
+  * full email addresses in production
+  * database credentials
+  * private keys
+  * authentication headers
+
+  Safe alternatives:
+
+  * log user IDs instead of emails
+  * log masked tokens (first/last 4 characters only)
+  * log error types without sensitive context
+  * sanitize request/response bodies before logging
+  * redact sensitive fields automatically
+
+  Bad:
+  ```typescript
+  logger.info('User login', {
+    email: 'user@example.com',
+    password: 'secret123',
+    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+  });
+  ```
+
+  Good:
+  ```typescript
+  logger.info('User login', {
+    userId: '123',
+    success: true,
+    token: 'eyJh...XVCJ9' // masked
+  });
+  ```
+
+* category: logging
+  title: "Structured logging with context"
+  severity: medium
+  description: |
+  Use structured logging instead of string concatenation or template literals.
+
+  Bad:
+  ```typescript
+  logger.info('User ' + userId + ' enrolled in course ' + courseId);
+  logger.info(`Error: ${error.message}`);
+  console.log('API call failed for ' + endpoint);
+  ```
+
+  Good:
+  ```typescript
+  logger.info('User enrolled in course', { userId, courseId, timestamp: Date.now() });
+  logger.error('API call failed', { endpoint, error: error.message, statusCode });
+  logger.warn('Rate limit approaching', { userId, requestCount, limit });
+  ```
+
+  Benefits:
+
+  * easier to search and filter logs
+  * better integration with log aggregation tools (Elasticsearch, Splunk)
+  * consistent log format
+  * automatic JSON serialization
+  * queryable metadata
+
+* category: logging
+  title: "Remove debugging artifacts before committing"
+  severity: medium
+  description: |
+  Do not commit temporary debugging code.
+
+  Remove before committing:
+
+  * console.log for debugging
+  * debugger statements
+  * commented-out console statements
+  * test console outputs
+  * alert() or confirm() dialogs
+  * temporary console.table() or console.dir()
+
+  Use pre-commit hooks to catch these:
+
+  * Husky
+  * lint-staged
+  * ESLint no-console rule
+
+  Exceptions:
+
+  * intentional error logging through logger utility
+  * production error handlers
+  * critical system warnings
+
+# --------------------------------------------------------------------------
+
+# CODE REVIEW
+
+# --------------------------------------------------------------------------
+
+* category: review
+  title: "Reject ambiguous dumping-ground folders"
+  severity: high
+  description: |
+  Do not create vague folders such as:
+
+  * helpers
+  * common
+  * misc
+  * utils
+  * services
+  * managers
+  * security
+
+  unless their scope is clearly defined.
+
+  Prefer specific ownership:
+
+  * shared/lib/date
+  * shared/api
+  * features/authentication
+  * entities/session
+  * functions/middleware
+
+* category: review
+  title: "Do not create empty architecture for hypothetical future use"
+  severity: medium
+  description: |
+  Do not create unnecessary nested directories before they are needed.
+
+  Create feature and entity slices when actual functionality exists.
+
+  Base architecture should define boundaries without generating large
+  numbers of empty folders.
+
+# ============================================================================
+
+# ARCHITECTURAL DECISION SUMMARY
+
+# ============================================================================
+
+summary:
+frontend:
+root: src
+architecture: feature-sliced-design
+security_boundary: false
+
+backend:
+root: functions
+runtime: cloudflare-pages-functions
+security_boundary: true
+
+state:
+server_state: tanstack-query
+client_state: zustand
+business_state_location:
+- features/*/model
+- entities/*/model
+
+validation:
+library: zod
+frontend_validation: user-experience
+backend_validation: mandatory
+
+assets:
+root: public/assets
+
+primary_rule: |
+  Code must be placed according to ownership and responsibility.
+
+  ```
+  Generic reusable code belongs in shared.
+  Domain objects belong in entities.
+  User actions belong in features.
+  Large compositions belong in widgets.
+  Route screens belong in pages.
+  Application setup belongs in app.
+  Security enforcement belongs in functions.
+  ```
+
+  # ---------------------------------------------------------------------------
+  # LTE-SPECIFIC RULES (added 2026-07-24)
+  # ---------------------------------------------------------------------------
+
+  - category: performance
+    title: "Enforce React.lazy() for all route-level page imports"
+    description: |
+      All main page components exposed from `src/pages/<slice>/index.ts` must be
+      imported dynamically using `React.lazy()` and dynamic `import()`
+      expressions.
+      Lazy declarations must reside at the TOP of `AppRouter.tsx`, outside any
+      Lazy declarations must reside at the TOP of `AppRouter.tsx`, outside any
+      rendering component. Static imports of page components at the router level
+      are a violation — they bloat the initial JS bundle downloaded by every user.
+    severity: high
+
+  - category: performance
+    title: "Suspense fallback must use <PageLoader message='...' />"
+    description: |
+      Every React.lazy() route must be individually wrapped in its own <Suspense> block.
+      The fallback prop MUST use the shared <PageLoader message="[Route-Specific Message]" />
+      component from `@/shared/ui`, passing a descriptive route-specific loading message
+      (e.g. "Loading Dashboard...", "Loading Courses...").
+      Bare string fallbacks (<div>Loading...</div>) or missing Suspense wrappers are violations.
+    severity: high
+
+  - category: styling
+    title: "Strictly enforce mobile-first CSS layout approach"
+    description: |
+      All new components and pages must follow a mobile-first design strategy:
+      1. Base CSS / Tailwind classes must target mobile dimensions by default.
+      2. Tablet and desktop overrides must use progressive responsive prefixes:
+         sm: (640px), md: (768px), lg: (1024px), xl: (1280px).
+      3. All grid or flex containers must default to vertical single-column layouts
+         (`flex-col`, `grid-cols-1`) for mobile and expand to multi-column only at
+         higher breakpoints (e.g. `md:grid-cols-2 lg:grid-cols-3`).
+      Desktop-first patterns (e.g. `max-w-screen-md`) are violations.
+    severity: high
+
+  - category: testing
+    title: "Every new module must have a corresponding unit test file"
+    description: |
+      Every new core module, page component, utility helper, or state store must
+      have a corresponding test file created in the SAME pull request.
+      Naming convention: `[Filename].test.ts` or `[Filename].test.tsx`.
+      Location: under the appropriate `src/__tests__/<feature>/<responsibility>/`
+      folder. Do not place tests directly under `src/__tests__/` or directly
+      under a test feature root.
+      PRs that add new components or utilities without accompanying tests will
+      be blocked from merge.
+    severity: high
+
+  - category: testing
+    title: "Use async queries for lazy route tests"
+    description: |
+      When testing dynamically lazy-loaded routes or components that are rendered
+      inside a <Suspense> block, assertions must use asynchronous Testing Library
+      queries: `await screen.findByTestId(...)` or `await waitFor(...)`.
+      Synchronous `screen.getByTestId()` calls on lazy-loaded elements will throw
+      before Suspense resolves. This is the most common testing bug after introducing
+      React.lazy() — enforce it in every review touching AppRouter or page tests.
+    severity: high
+
+  - category: structure
+    title: "Enforce kebab-casing for directories and camelCasing/PascalCasing for components/files"
+    description: |
+      All folders inside `src/` (e.g. layers, slices, segments, tests, styles) must use lowercase kebab-case naming.
+      React components and source code files must use standard PascalCase or camelCase based on their specific FSD roles
+      (e.g., `CourseCard.tsx`, `AuthInitializer.tsx`, `useDashboardData.ts`).
+      Uppercase or space-separated folder structures are strict rule violations.
+    severity: high
+
+  - category: ui
+    title: "Use unified global Toaster notifications"
+    description: |
+      All user feedback alerts, operation statuses, and auth/network error messages must use the global `toast` system.
+      Always import `toast` from `@/shared/ui` (re-exported from `react-hot-toast`).
+      Mounting local `<Toaster>` components in layouts, pages, features, or widgets is a rule violation. The global
+      `<Toaster />` must remain registered only at the root provider layer (`AppProviders.tsx`).
+    severity: high
+
+  - category: state-management
+    title: "Include authentication state or user ID in query key dependencies"
+    description: |
+      All server-state queries (useQuery) that rely on implicit authentication headers
+      via apiFetch must include the user's ID or authentication status in their queryKey.
+      This ensures that the query cache is partitioned correctly per user and invalidates
+      automatically when the active session changes, preventing cross-user data leakage.
+    severity: high
+
+  - category: state-management
+    title: "Enforce generic type constraints on apiFetch calls"
+    description: |
+      The generic parameter `T` of `apiFetch` must be constrained to `extends unknown = unknown`.
+      Always omit the explicit `<unknown>` generic type parameter in calls to `apiFetch`, allowing
+      TypeScript to infer it from default constraints, or type it to the exact response schema structure.
+    severity: high
+
+  - category: architecture
+    title: "Use typed Service Binding RPC for cross-worker communication"
+    description: |
+      All cross-worker calls (e.g. to sso-worker) must use Cloudflare Workers Service Binding RPC
+      methods (env.SSO_SERVICE.<method>()) rather than direct REST HTTP calls.
+      Method calls must be typed via SsoRpcService interface in functions/shared/types.ts.
+    severity: high
+
+  - category: error-handling
+    title: "Sanitize HTTP 500 error responses and inspect all Supabase query errors"
+    description: |
+      1. Backend 500 responses must never leak raw database/driver strings or internal exceptions to clients;
+         always return a generic message with a correlation requestId and log details server-side.
+      2. All Supabase queries must destructure and handle `error` (never discard `error` or assume null data means empty rows).
+      3. Outbound fetch calls must enforce bounded timeouts with AbortSignal.timeout(ms).
+      4. Avoid in-memory Map rate limiters at the edge; use distributed KV/D1/platform limiters.
+      5. Background tasks in serverless edge must use context.waitUntil() to prevent isolate termination data loss.
+    severity: critical
+
+  - category: error-handling
+    title: "Enforce granular UI Error Boundaries, async render try/catch, and query cache logout purge"
+    description: |
+      1. Every route, independent widget, and media viewer (PDF, PPTX) must have its own localized <ErrorBoundary>.
+      2. All async canvas/media rendering promises must be wrapped in try/catch to eliminate unhandled promise rejections.
+      3. TanStack Query must not retry 4xx errors, and authStore.logout() must unconditionally call queryClient.clear().
+      4. Frontend ApiError must preserve backend `code`, `details`, and `requestId`.
+      5. Application root must register global window.onerror, unhandledrejection handlers, and W3C trace propagation.
+    severity: critical
+
+  - category: authentication
+    title: "Delegate Browser Auth Routes via createSsoGateway in functions/[[path]].ts"
+    description: |
+      1. Browser-facing auth routes (/api/auth/* and /api/v1/auth/*) must be intercepted in functions/[[path]].ts
+         and dispatched via createSsoGateway from @rareminds-eym/sso-gateway using env.SSO_SERVICE.
+      2. Gateway errors must be logged with apiLogger.error and must not be swallowed with empty catch blocks.
+      3. functions/[[path]].ts serves as the single edge router for auth delegation, /api/ 404 fallbacks, and SPA index.html serving.
+    severity: critical
+
+
