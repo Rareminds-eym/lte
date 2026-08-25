@@ -1,8 +1,7 @@
 # Wrangler configuration for LTE Cloudflare Pages Functions.
 # SSO owns auth-code Durable Object storage; LTE consumes SSO through RPC.
 
-pages_build_output_dir = "dist"
-name = "lte-app"
+name = "lte"
 compatibility_date = "2026-06-08"
 compatibility_flags = ["nodejs_compat"]
 
@@ -68,7 +67,7 @@ bucket_name = "lte"
 
 [env.preview.vars]
 ENVIRONMENT = "development"
-SKILLPASSPORT_INTERNAL_URL = "https://skillpassport.pages.dev"
+SKILLPASSPORT_INTERNAL_URL = "https://skillpassport-dev.pages.dev"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 
 [[env.preview.services]]
