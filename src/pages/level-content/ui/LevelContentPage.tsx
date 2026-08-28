@@ -44,7 +44,6 @@ import {
   getPrimaryArtifact,
   getStageSummary,
   LEVEL_CONTENT_UNAVAILABLE_MESSAGE,
-  SCENARIO_COLLAPSE_CHAR_LIMIT,
 } from "./components/levelContentUtils";
 import { ModuleLoadingShell } from "./components/ModuleLoadingShell";
 import { SilentContentTimer } from "./components/SilentContentTimer";
@@ -106,9 +105,6 @@ export const LevelContentPage: React.FC = () => {
   const rawStage = searchParams.get("stage")?.toLowerCase();
   const activeStage: LteStage = isLteStageName(rawStage) ? (rawStage as LteStage) : "engage";
   const routeContentId = searchParams.get("content");
-  const isScenarioOverflowing =
-    (level?.levelProblemStatement.description.length ?? 0) > SCENARIO_COLLAPSE_CHAR_LIMIT;
-
   const handleBackToOverview = () => {
     navigate(getCourseOverviewPath(level?.capabilityCode));
   };
@@ -179,12 +175,10 @@ export const LevelContentPage: React.FC = () => {
   };
 
   const handleToggleModules = () => {
-    setIsModulesOpen((prev) => !prev);
     setMobilePanelOpen((prev) => (prev === "modules" ? null : "modules"));
   };
 
   const handleToggleStageInfo = () => {
-    setIsStageInfoOpen((prev) => !prev);
     setMobilePanelOpen((prev) => (prev === "stageInfo" ? null : "stageInfo"));
   };
 
@@ -693,8 +687,7 @@ export const LevelContentPage: React.FC = () => {
       stageCurriculumReference={activeStageContent.curriculumReference}
       stageSummary={stageSummary}
       previewItems={previewItems}
-      isScenarioExpanded={isScenarioExpanded && isScenarioOverflowing}
-      isScenarioOverflowing={isScenarioOverflowing}
+      isScenarioExpanded={isScenarioExpanded}
       setIsScenarioExpanded={setIsScenarioExpanded}
       formatStageLabel={formatStageLabel}
       renderArtifactPanel={() => (
@@ -855,6 +848,18 @@ export const LevelContentPage: React.FC = () => {
           />
         )}
 
+        {!isModulesOpen && (
+          <button
+            type="button"
+            aria-label="Open modules panel"
+            title="Open modules panel"
+            onClick={() => setIsModulesOpen(true)}
+            className="absolute left-0 top-1/2 z-20 hidden h-12 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-lg border border-l-0 border-line-default bg-surface-primary text-content-secondary shadow-sm transition-colors hover:bg-surface-subtle hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:flex"
+          >
+            <ChevronRightIcon size={16} />
+          </button>
+        )}
+
         <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-surface-secondary">
           <div className="min-h-0 flex-1">{renderMainContent()}</div>
         </div>
@@ -867,7 +872,7 @@ export const LevelContentPage: React.FC = () => {
           >
             <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3 sm:px-4 sm:py-3.5">
               <h2 className="text-[11px] sm:text-xs font-bold tracking-widest text-content-heading uppercase">
-                {rightPanelTitle}
+                {formatStageLabel(activeStage)} Stage
               </h2>
               <div className="flex items-center gap-1">
                 <IconButton
@@ -882,12 +887,24 @@ export const LevelContentPage: React.FC = () => {
                   icon={<CloseIcon size={13} />}
                   size="sm"
                   variant="outline"
-                  onClick={handleToggleStageInfo}
+                  onClick={() => setIsStageInfoOpen(false)}
                 />
               </div>
             </div>
             {renderStageInfoPanel()}
           </aside>
+        )}
+
+        {!isStageInfoOpen && (
+          <button
+            type="button"
+            aria-label="Open stage information panel"
+            title="Open stage information panel"
+            onClick={() => setIsStageInfoOpen(true)}
+            className="absolute right-0 top-1/2 z-20 hidden h-12 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-lg border border-r-0 border-line-default bg-surface-primary text-content-secondary shadow-sm transition-colors hover:bg-surface-subtle hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:flex"
+          >
+            <ChevronLeftIcon size={16} />
+          </button>
         )}
 
         {mobilePanelOpen && (
@@ -910,7 +927,7 @@ export const LevelContentPage: React.FC = () => {
               <aside className="relative z-10 h-full w-[92vw] max-w-[390px] bg-white ml-auto shadow-2xl flex flex-col">
                 <div className="p-4 border-b border-line-subtle flex items-center justify-between">
                   <h2 className="text-xs font-bold tracking-wider text-content-secondary uppercase">
-                    {rightPanelTitle}
+                    {formatStageLabel(activeStage)} Stage
                   </h2>
                   <button
                     type="button"

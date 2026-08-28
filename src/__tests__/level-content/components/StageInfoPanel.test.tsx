@@ -72,9 +72,12 @@ describe("StageInfoPanel", () => {
   it("renders stage, curriculum, and module context details", () => {
     renderPanel();
 
-    expect(screen.getByText("Investigate the incident")).toBeInTheDocument();
+    expect(screen.getByText("Main Problem Statement")).toBeInTheDocument();
+    expect(
+      screen.getByText("A production incident requires a careful evidence review."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Module Problem Statement")).toBeInTheDocument();
-    expect(screen.getByText("Engage Stage")).toBeInTheDocument();
+    expect(screen.getByText("Engage Statement")).toBeInTheDocument();
     expect(screen.getByText("2 content items")).toBeInTheDocument();
     expect(screen.getByText("Basic borrower-file awareness")).toBeInTheDocument();
     expect(
@@ -101,14 +104,12 @@ describe("StageInfoPanel", () => {
   it("toggles overflowing scenario text from both controls", () => {
     const { setIsScenarioExpanded } = renderPanel();
 
-    const problemToggle = screen.getByRole("button", { name: /Investigate the incident/i });
+    const problemToggle = screen.getByRole("button", { name: "Show Full Problem Statement" });
     expect(problemToggle).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(problemToggle);
-    fireEvent.click(screen.getByRole("button", { name: "Read more" }));
 
     expect(setIsScenarioExpanded).toHaveBeenNthCalledWith(1, true);
-    expect(setIsScenarioExpanded).toHaveBeenNthCalledWith(2, true);
   });
 
   it("renders artifact content instead of regular stage support panels", () => {
@@ -148,8 +149,8 @@ describe("StageInfoPanel", () => {
       ],
     });
 
-    expect(screen.getByText("Engage Stage")).toBeInTheDocument();
-    expect(screen.getByText("Curriculum Reference")).toBeInTheDocument();
+    expect(screen.getByText("Engage Statement")).toBeInTheDocument();
+    expect(screen.getByText("Curriculum Statement")).toBeInTheDocument();
     expect(screen.getByText("Course entry and source case pack")).toBeInTheDocument();
     expect(screen.getByText("Evidence IDs: E-M0-01, E-M0-02, E-M0-03")).toBeInTheDocument();
     expect(screen.getByText("Use before handing off to Case Intake Note.")).toBeInTheDocument();

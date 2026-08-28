@@ -133,7 +133,7 @@ export const LevelHeader: React.FC<LevelHeaderProps> = ({
           onClick={onToggleModules}
           title={isModulesOpen ? "Close Left Sidebar" : "Open Left Sidebar"}
           aria-label="Toggle Modules Panel"
-          className="w-8 h-8 rounded-lg border border-line-default bg-surface-primary hover:bg-surface-muted text-content-secondary hover:text-content-primary flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-default bg-surface-primary text-content-secondary shadow-2xs transition-colors hover:bg-surface-muted hover:text-content-primary lg:hidden"
         >
           <PanelLeftIcon isActive={isModulesOpen} />
         </button>
@@ -144,7 +144,7 @@ export const LevelHeader: React.FC<LevelHeaderProps> = ({
           onClick={onToggleStageInfo}
           title={isStageInfoOpen ? "Close Right Sidebar" : "Open Right Sidebar"}
           aria-label="Toggle Stage Info Panel"
-          className="w-8 h-8 rounded-lg border border-line-default bg-surface-primary hover:bg-surface-muted text-content-secondary hover:text-content-primary flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-default bg-surface-primary text-content-secondary shadow-2xs transition-colors hover:bg-surface-muted hover:text-content-primary lg:hidden"
         >
           <PanelRightIcon isActive={isStageInfoOpen} />
         </button>

@@ -6,7 +6,7 @@ import type {
   SubmitArtifactResponse,
 } from "@/features/submit-artifact";
 import { useSubmissionEvaluation } from "@/features/submit-artifact";
-import { Button, LabFlaskIcon, LightningBoltIcon } from "@/shared/ui";
+import { ArtifactGuidanceIcon, ArtifactsIcon, Button, LabFlaskIcon } from "@/shared/ui";
 import { ArtifactFeedbackTab, type SubmittedArtifactAttempt } from "./ArtifactFeedbackTab";
 import { ArtifactSubmitTab } from "./ArtifactSubmitTab";
 
@@ -113,7 +113,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   }
 
   const isPractice = activeArtifact.artifactType === "practice";
-  const ArtifactIcon = isPractice ? LabFlaskIcon : LightningBoltIcon;
+  const artifactHeading = isPractice ? "Practice Artifact" : "Final Artifact";
+  const ArtifactIcon = isPractice ? LabFlaskIcon : ArtifactsIcon;
+  const GuidanceIcon = isPractice ? LabFlaskIcon : ArtifactGuidanceIcon;
   const firstQuestionId = activeArtifact.questions[0]?.id ?? null;
   const activeQuestionId =
     expandedArtifactQuestionId === undefined
@@ -165,28 +167,31 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="space-y-3">
-        <div className="min-w-0">
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-              isPractice ? "bg-warning-50 text-warning-700" : "bg-brand-50 text-brand-600"
+      <div className="rounded-xl border border-line-default bg-white px-2.5 pb-2.5 pt-3.5 shadow-2xs">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-1.5">
+          <h4
+            aria-label={artifactHeading}
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
+              isPractice
+                ? "border-warning-200 bg-warning-50 text-warning-700"
+                : "border-brand-100 bg-brand-50 text-brand-600"
             }`}
           >
-            <ArtifactIcon size={12} />
-            {isPractice ? "Practice" : "Final Artifact"}
-          </span>
-          <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] font-medium text-content-muted">
-            <span className="rounded-md bg-surface-muted px-2 py-0.5">
+            <ArtifactIcon aria-hidden="true" size={12} className="shrink-0" />
+            {artifactHeading}
+          </h4>
+          <div className="flex flex-wrap justify-end gap-1.5 text-[11px] font-medium text-content-secondary">
+            <span className="rounded-full border border-line-default bg-white px-2.5 py-0.5">
               Pass: {activeArtifact.passingScore ?? "-"} / {activeArtifact.totalScore}
             </span>
-            <span className="rounded-md bg-surface-muted px-2 py-0.5">
+            <span className="rounded-full border border-line-default bg-white px-2.5 py-0.5">
               {activeArtifact.questions.length} question
               {activeArtifact.questions.length === 1 ? "" : "s"}
             </span>
           </div>
         </div>
         <div
-          className="flex border-b border-line-subtle"
+          className="mt-3 flex border-b border-line-default"
           role="tablist"
           aria-label="Artifact panel"
         >
@@ -196,7 +201,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             size="sm"
             role="tab"
             aria-selected={visibleArtifactTab === "submit"}
-            className={`relative -mb-px h-9 flex-1 cursor-pointer rounded-none border-0 border-b-2 bg-transparent px-3 py-0 text-[12px] font-bold shadow-none transition hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 ${
+            className={`relative -mb-px h-10 flex-1 cursor-pointer rounded-none border-0 border-b-2 bg-transparent px-3 py-0 text-[13px] font-bold shadow-none transition hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 ${
               visibleArtifactTab === "submit"
                 ? "border-brand-600 text-brand-600"
                 : "border-transparent text-content-muted hover:text-content-primary"
@@ -212,7 +217,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             role="tab"
             aria-selected={visibleArtifactTab === "feedback"}
             disabled={!hasSubmittedArtifact}
-            className={`relative -mb-px inline-flex h-9 flex-1 cursor-pointer items-center justify-center gap-1 rounded-none border-0 border-b-2 bg-transparent px-3 py-0 text-[12px] font-bold shadow-none transition hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent ${
+            className={`relative -mb-px inline-flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-none border-0 border-b-2 bg-transparent px-3 py-0 text-[13px] font-bold shadow-none transition hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent ${
               visibleArtifactTab === "feedback"
                 ? "border-brand-600 text-brand-600"
                 : "border-transparent text-content-muted hover:text-content-primary"
@@ -231,6 +236,17 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             </span>
           </Button>
         </div>
+
+        {visibleArtifactTab === "submit" ? (
+          <div className="mt-3 flex items-center gap-2.5 rounded-md border-l-4 border-l-brand-600 bg-brand-50 px-3 py-2.5 text-[13px] font-semibold leading-relaxed text-brand-700">
+            <GuidanceIcon size={20} className="shrink-0 text-brand-700" />
+            <span>
+              {isPractice
+                ? "Complete this practice artifact to understand the concepts."
+                : "Build and submit your final evaluated artifact."}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {visibleArtifactTab === "feedback" ? (
