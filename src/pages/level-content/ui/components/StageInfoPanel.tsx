@@ -37,7 +37,6 @@ interface StageInfoPanelProps {
   stageSummary: string;
   previewItems: EContentItem[];
   isScenarioExpanded: boolean;
-  isScenarioOverflowing?: boolean;
   setIsScenarioExpanded: (expanded: boolean) => void;
   formatStageLabel: (stage: LteStage) => string;
   renderArtifactPanel: () => React.ReactNode;

@@ -57,7 +57,6 @@ const renderPanel = (overrides: Record<string, unknown> = {}) => {
         ] as unknown as Parameters<typeof StageInfoPanel>[0]["previewItems"]
       }
       isScenarioExpanded={false}
-      isScenarioOverflowing
       setIsScenarioExpanded={setIsScenarioExpanded}
       formatStageLabel={(stage) => `${stage.charAt(0).toUpperCase()}${stage.slice(1)}`}
       renderArtifactPanel={() => <section>Artifact requirements</section>}
@@ -127,7 +126,6 @@ describe("StageInfoPanel", () => {
       previewItems: [{ id: "item-1", title: "Solo" }] as unknown as Parameters<
         typeof StageInfoPanel
       >[0]["previewItems"],
-      isScenarioOverflowing: false,
       stageCurriculumReference: null,
       stageModuleContext: null,
     });
