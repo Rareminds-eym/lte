@@ -23,6 +23,7 @@ import {
   MessageSquareIcon,
   TargetIcon,
   TextField,
+  toast,
 } from "@/shared/ui";
 
 interface StageInfoPanelProps {
@@ -127,7 +128,11 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
               title="Copy main problem statement"
               className="h-9 w-9 shrink-0 rounded-lg border-0 bg-transparent p-0 !text-brand-200 shadow-none hover:bg-white/10 hover:!text-white"
               onClick={() => {
-                void navigator.clipboard.writeText(level.levelProblemStatement.description);
+                void navigator.clipboard
+                  .writeText(level.levelProblemStatement.description)
+                  .catch(() => {
+                    toast.error("Unable to copy problem statement.");
+                  });
               }}
             >
               <CopyIcon size={20} className="h-5 w-5" />
