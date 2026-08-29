@@ -5,7 +5,7 @@
   "type": "module",
   "dependencies": {
     "@file-viewer/pptx": "2.2.4",
-    "@rareminds-eym/auth-client": "2.0.0",
+    "@rareminds-eym/auth-client": "2.1.0",
     "@rareminds-eym/auth-core": "3.0.0",
     "@rareminds-eym/identity-client": "1.0.0",
     "@rareminds-eym/sso-gateway": "1.0.0",
