@@ -27,6 +27,17 @@ const levelTwoModules = [
   { id: "m3", level_id: "lvl-2", module_no: 2, title: "M3" },
 ];
 const allModules = [...levelOneModules, ...levelTwoModules];
+const levelOneSkills = [
+  { level_id: "lvl-1", skill_id: "sk-1" },
+  { level_id: "lvl-1", skill_id: "sk-2" },
+];
+const levelTwoSkills = [{ level_id: "lvl-2", skill_id: "sk-3" }];
+const allLevelSkills = [...levelOneSkills, ...levelTwoSkills];
+const skillsRows = [
+  { id: "sk-1", code: "A1", name: "Alpha Skill", description: "First" },
+  { id: "sk-2", code: "A2", name: "Beta Skill", description: "Second" },
+  { id: "sk-3", code: "B1", name: "Gamma Skill", description: "Third" },
+];
 
 async function decompress(bytes: Uint8Array): Promise<unknown> {
   const stream = new Blob([bytes as BlobPart])
@@ -42,15 +53,23 @@ interface DecompressedEvent {
     lteCourseId: string;
     courseTitle: string;
     lteCourseCode?: string;
-    levels?: { status: string }[];
+    levels?: { status: string; skills?: LevelSkill[] }[];
     status: string;
     completedModules: number;
     totalModules: number;
     durationHours: number;
     resumeUrl: string;
     earnedSkills: string[];
+    earnedSkillsDetail?: LevelSkill[];
     completedAt: string;
   };
+}
+
+interface LevelSkill {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
 }
 
 describe("emitStageCompletedEvent", () => {
@@ -93,10 +112,10 @@ describe("emitStageCompletedEvent", () => {
       totalModules: 0,
       durationHours: 2,
       resumeUrl: "/my-courses/lvl-2",
-      earnedSkills: ["LTE Course lvl-2"],
     });
     expect(event.payload.lteCourseCode).toBeUndefined();
     expect(event.payload.levels).toBeUndefined();
+    expect(event.payload.earnedSkills).toBeUndefined();
     expect(typeof event.payload.completedAt).toBe("string");
   });
 
@@ -116,6 +135,12 @@ describe("emitStageCompletedEvent", () => {
       modules: mockChain({
         thenVal: ok(allModules),
       }),
+      level_skills: mockChain({
+        thenVal: ok(allLevelSkills),
+      }),
+      skills: mockChain({
+        thenVal: ok(skillsRows),
+      }),
     });
     const env = { LTE_SYNC_QUEUE: { send } };
 
@@ -133,7 +158,8 @@ describe("emitStageCompletedEvent", () => {
       totalModules: 3,
       durationHours: 2,
       resumeUrl: "/my-courses/LTE-PRO",
-      earnedSkills: ["LTE Pro"],
+      // lvl-1 is completed -> its real skills flow into earnedSkills (not the course title)
+      earnedSkills: ["Alpha Skill", "Beta Skill"],
     });
     expect(event.payload.levels).toEqual([
       {
@@ -145,6 +171,10 @@ describe("emitStageCompletedEvent", () => {
         totalModules: 1,
         completedModules: 1,
         modules: [{ id: "m1", title: "M1", status: "completed", completionPercentage: 100 }],
+        skills: [
+          { id: "sk-1", code: "A1", name: "Alpha Skill", description: "First", level: 1 },
+          { id: "sk-2", code: "A2", name: "Beta Skill", description: "Second", level: 1 },
+        ],
       },
       {
         id: "lvl-2",
@@ -159,6 +189,11 @@ describe("emitStageCompletedEvent", () => {
           { id: "m3", title: "M3", status: "completed", completionPercentage: 100 },
         ],
       },
+    ]);
+    // module_completed events carry skill detail for completed levels
+    expect(event.payload.earnedSkillsDetail).toEqual([
+      { id: "sk-1", code: "A1", name: "Alpha Skill", description: "First", level: 1 },
+      { id: "sk-2", code: "A2", name: "Beta Skill", description: "Second", level: 1 },
     ]);
   });
 
@@ -179,6 +214,12 @@ describe("emitStageCompletedEvent", () => {
       modules: mockChain({
         thenVal: ok(allModules),
       }),
+      level_skills: mockChain({
+        thenVal: ok(allLevelSkills),
+      }),
+      skills: mockChain({
+        thenVal: ok(skillsRows),
+      }),
     });
     const env = { LTE_SYNC_QUEUE: { send } };
 
@@ -189,6 +230,11 @@ describe("emitStageCompletedEvent", () => {
     expect(event.type).toBe("lte.level_completed");
     expect(event.payload.status).toBe("completed");
     expect(event.payload.levels?.every((l) => l.status === "completed")).toBe(true);
+    expect(event.payload.earnedSkillsDetail).toEqual([
+      { id: "sk-1", code: "A1", name: "Alpha Skill", description: "First", level: 1 },
+      { id: "sk-2", code: "A2", name: "Beta Skill", description: "Second", level: 1 },
+      { id: "sk-3", code: "B1", name: "Gamma Skill", description: "Third", level: 2 },
+    ]);
   });
 
   it("falls back to sending JSON when the bytes send fails", async () => {

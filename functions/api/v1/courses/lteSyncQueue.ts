@@ -28,6 +28,7 @@ interface ModuleProgressRow {
 interface LevelRow {
   id: string;
   level_code: string;
+  level_id: string;
   title?: string | null;
 }
 
@@ -36,6 +37,18 @@ interface ModuleRow {
   level_id: string;
   module_no: number;
   title: string;
+}
+
+interface LevelSkillRow {
+  level_id: string;
+  skill_id: string;
+}
+
+interface SkillRow {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
 }
 
 type LevelStatus = "completed" | "in_progress" | "not_started";
@@ -47,6 +60,14 @@ interface LevelModulePayload {
   completionPercentage: number;
 }
 
+interface LevelSkillPayload {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  level?: number;
+}
+
 interface LevelPayload {
   id: string;
   code: string;
@@ -56,6 +77,7 @@ interface LevelPayload {
   totalModules: number;
   completedModules: number;
   modules: LevelModulePayload[];
+  skills?: LevelSkillPayload[];
 }
 
 interface CourseSnapshot {
@@ -66,6 +88,7 @@ interface CourseSnapshot {
   isCourseCompleted: boolean;
   completedModules: number;
   totalModules: number;
+  earnedSkillsDetail?: LevelSkillPayload[];
 }
 
 interface EmitStageCompletedEventInput {
@@ -94,8 +117,15 @@ const capabilitySummaryReadPolicy = {
 const capabilityLevelsReadPolicy = {
   table: "levels",
   operation: "read",
-  columns: ["id", "capability_id", "level_code", "title", "duration_minutes"],
+  columns: ["id", "capability_id", "level_code", "title", "duration_minutes", "level_id"],
   filters: ["capability_id"],
+} as const;
+
+const levelScaleReadPolicy = {
+  table: "level_scale",
+  operation: "read",
+  columns: ["id", "level_no"],
+  filters: ["id"],
 } as const;
 
 const modulesByLevelsReadPolicy = {
@@ -103,6 +133,20 @@ const modulesByLevelsReadPolicy = {
   operation: "read",
   columns: ["id", "level_id", "module_no", "title"],
   filters: ["level_id"],
+} as const;
+
+const levelSkillsByLevelReadPolicy = {
+  table: "level_skills",
+  operation: "read",
+  columns: ["level_id", "skill_id"],
+  filters: ["level_id"],
+} as const;
+
+const skillsByIdReadPolicy = {
+  table: "skills",
+  operation: "read",
+  columns: ["id", "code", "name", "description"],
+  filters: ["id"],
 } as const;
 
 const allUserLevelsProgressReadPolicy = {
@@ -191,6 +235,48 @@ async function buildCourseSnapshot(
         else modulesByLevel.set(mod.level_id, [mod]);
       }
 
+      const rawLevelSkills = (await qb.read(levelSkillsByLevelReadPolicy, {
+        filters: [{ column: "level_id", op: "in", value: sortedLevels.map((l) => l.id) }],
+      })) as LevelSkillRow[] | null;
+
+      const skillById = new Map<string, SkillRow>();
+      if (rawLevelSkills && rawLevelSkills.length > 0) {
+        const skillIds = [...new Set(rawLevelSkills.map((ls) => ls.skill_id))];
+        const rawSkills = (await qb.read(skillsByIdReadPolicy, {
+          filters: [{ column: "id", op: "in", value: skillIds }],
+        })) as SkillRow[] | null;
+        for (const skill of rawSkills ?? []) skillById.set(skill.id, skill);
+      }
+
+      const scaleIds = [...new Set(sortedLevels.map((l) => l.level_id).filter(Boolean))];
+      const rawScaleRes =
+        scaleIds.length > 0
+          ? ((await qb.read(levelScaleReadPolicy, {
+              filters: [{ column: "id", op: "in", value: scaleIds }],
+            })) as Array<{ id: string; level_no: number }> | null)
+          : null;
+      const scaleNoMap = new Map((rawScaleRes ?? []).map((s) => [s.id, s.level_no]));
+      const levelNoMap = new Map(
+        sortedLevels.map((l, index) => [l.id, scaleNoMap.get(l.level_id) ?? index + 1]),
+      );
+
+      const skillsByLevel = new Map<string, LevelSkillPayload[]>();
+      for (const ls of rawLevelSkills ?? []) {
+        const skill = skillById.get(ls.skill_id);
+        if (!skill) continue;
+        const levelNum = levelNoMap.get(ls.level_id) ?? 1;
+        const payloadItem: LevelSkillPayload = {
+          id: skill.id,
+          code: skill.code,
+          name: skill.name,
+          description: skill.description,
+          level: levelNum,
+        };
+        const levelSkills = skillsByLevel.get(ls.level_id);
+        if (levelSkills) levelSkills.push(payloadItem);
+        else skillsByLevel.set(ls.level_id, [payloadItem]);
+      }
+
       let i = 0;
       for (const lvl of sortedLevels) {
         const rawMods = modulesByLevel.get(lvl.id) ?? null;
@@ -258,6 +344,7 @@ async function buildCourseSnapshot(
           totalModules: totalCount,
           completedModules: completedCount,
           modules,
+          ...(levelStatus === "completed" ? { skills: skillsByLevel.get(lvl.id) ?? [] } : {}),
         });
         i++;
       }
@@ -277,6 +364,17 @@ async function buildCourseSnapshot(
     ? levels.reduce((sum, l) => sum + l.totalModules, 0)
     : resolvedTotalModules;
 
+  let earnedSkillsDetail: LevelSkillPayload[] | undefined;
+  const skillsById = new Map<string, LevelSkillPayload>();
+  for (const lvl of levels ?? []) {
+    if (lvl.status === "completed") {
+      for (const skill of lvl.skills ?? []) skillsById.set(skill.id, skill);
+    }
+  }
+  if (skillsById.size > 0) {
+    earnedSkillsDetail = [...skillsById.values()].sort((a, b) => a.code.localeCompare(b.code));
+  }
+
   return {
     lteCourseId,
     courseTitle,
@@ -285,6 +383,7 @@ async function buildCourseSnapshot(
     isCourseCompleted,
     completedModules,
     totalModules,
+    ...(earnedSkillsDetail ? { earnedSkillsDetail } : {}),
   };
 }
 
@@ -300,6 +399,18 @@ export async function emitStageCompletedEvent(
     const snapshot = await buildCourseSnapshot(qb, input);
     const resumeUrl = `/my-courses/${snapshot.lteCourseCode || snapshot.lteCourseId}`;
 
+    // earnedSkills carries the REAL skill names of every completed level in the
+    // snapshot (deduped, ordered). Never fall back to the course title as a
+    // pseudo-skill — that caused SkillPassport to insert the title as a skill.
+    const earnedSkillNames = [
+      ...new Set(
+        (snapshot.levels ?? [])
+          .filter((l) => l.status === "completed")
+          .flatMap((l) => l.skills ?? [])
+          .map((s) => s.name),
+      ),
+    ];
+
     const eventMessage = {
       type: snapshot.isCourseCompleted ? "lte.level_completed" : "lte.module_completed",
       payload: {
@@ -313,7 +424,8 @@ export async function emitStageCompletedEvent(
         totalModules: snapshot.totalModules,
         durationHours: Math.round((input.durationSeconds ?? 0) / 3600),
         resumeUrl,
-        earnedSkills: [snapshot.courseTitle],
+        ...(earnedSkillNames.length > 0 ? { earnedSkills: earnedSkillNames } : {}),
+        ...(snapshot.earnedSkillsDetail ? { earnedSkillsDetail: snapshot.earnedSkillsDetail } : {}),
         completedAt: new Date().toISOString(),
       },
     };
