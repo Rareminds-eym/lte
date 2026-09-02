@@ -30,13 +30,16 @@ export const shouldRetryQuery = (failureCount: number, error: unknown): boolean 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
-      logger.error(`Query Failed [${JSON.stringify(query.queryKey)}]`, error);
+      logger.error(
+        `Query Failed [${JSON.stringify(query.queryKey.map((v) => (typeof v === "string" && /^[0-9a-f-]{20,}$/i.test(v) ? "[redacted]" : v)))}]`,
+        error,
+      );
     },
   }),
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
       logger.error(
-        `Mutation Failed [${mutation.options.mutationKey ? JSON.stringify(mutation.options.mutationKey) : "unnamed"}]`,
+        `Mutation Failed [${mutation.options.mutationKey ? JSON.stringify((mutation.options.mutationKey as unknown[]).map((v) => (typeof v === "string" && /^[0-9a-f-]{20,}$/i.test(v) ? "[redacted]" : v))) : "unnamed"}]`,
         error,
       );
     },
@@ -44,8 +47,18 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
       retry: shouldRetryQuery,
+      retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 4000),
+      networkMode: "offlineFirst" as const,
+      throwOnError: false,
+      structuralSharing: true,
+    },
+    mutations: {
+      retry: false,
     },
   },
 });

@@ -1,0 +1,5 @@
+-- DEPRECATED: DML moved to seed; DDL comment only
+-- Publish all modules — original DML deprecated; see supabase/seed/*/seed_publish_modules.sql
+-- UPDATE public.modules
+-- SET is_published = true
+-- WHERE is_published IS NOT true;

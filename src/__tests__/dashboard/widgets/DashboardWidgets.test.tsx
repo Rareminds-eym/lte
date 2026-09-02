@@ -43,17 +43,140 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   };
 });
 
+const samplePriorities = {
+  currentXp: 120,
+  goalXp: 150,
+  items: [
+    {
+      id: "pri-1",
+      title: "Submit your API latency root-cause analysis",
+      subtitle: "Milestone 3 • Artifact Submission",
+      duration: "25 min",
+      xpReward: 35,
+      type: "green" as const,
+    },
+    {
+      id: "pri-2",
+      title: "Review Visual Hierarchy before the challenge",
+      subtitle: "Module 3 • Concept Refresher",
+      duration: "15 min",
+      xpReward: 15,
+      type: "purple" as const,
+    },
+    {
+      id: "pri-3",
+      title: "Attempt Knowledge Check",
+      subtitle: "Quick Check • 5 Questions",
+      duration: "10 min",
+      xpReward: 10,
+      type: "amber" as const,
+    },
+  ],
+};
+
+const sampleGaps = [
+  {
+    id: "cap-1",
+    capability: "Systems Thinking",
+    currentLevel: "Developing" as const,
+    targetLevel: "Proficient" as const,
+  },
+  {
+    id: "cap-2",
+    capability: "API Design",
+    currentLevel: "Working Knowledge" as const,
+    targetLevel: "Proficient" as const,
+  },
+  {
+    id: "cap-3",
+    capability: "Debugging",
+    currentLevel: "Developing" as const,
+    targetLevel: "Proficient" as const,
+  },
+  {
+    id: "cap-4",
+    capability: "Database Design",
+    currentLevel: "Foundation" as const,
+    targetLevel: "Proficient" as const,
+  },
+  {
+    id: "cap-5",
+    capability: "Communication",
+    currentLevel: "Proficient" as const,
+    targetLevel: "Proficient" as const,
+  },
+];
+
+const sampleFeedback = {
+  upcoming: [
+    {
+      id: "up-1",
+      title: "Mock Interview Session",
+      subtitle: "Round 2 • Systems & Architecture",
+      tag: "Tomorrow 4:00 PM",
+      type: "education" as const,
+    },
+    {
+      id: "up-2",
+      title: "Portfolio Review",
+      subtitle: "Submit work for mentor feedback",
+      tag: "Fri, Jul 19",
+      type: "portfolio" as const,
+    },
+  ],
+  recentFeedback: [
+    {
+      id: "fb-1",
+      title: "Mock Interview #3 Result",
+      subtitle: "High in communication, needs work in design",
+      daysAgo: "2d",
+      type: "interview" as const,
+    },
+    {
+      id: "fb-2",
+      title: "AI Mentor Weekly Review",
+      subtitle: "Strong progress. Continue on API module.",
+      daysAgo: "5d",
+      type: "ai-mentor" as const,
+    },
+  ],
+};
+
+const sampleAchievements = {
+  unlockedCount: 18,
+  shownCount: 4,
+  items: [
+    {
+      id: "ach-1",
+      title: "First Project",
+      subtitle: "Artifact submitted",
+      iconType: "project" as const,
+    },
+    { id: "ach-2", title: "7-Day Streak", subtitle: "Consistency", iconType: "streak" as const },
+    { id: "ach-3", title: "API Mastery", subtitle: "All API modules", iconType: "api" as const },
+    {
+      id: "ach-4",
+      title: "System Architect",
+      subtitle: "5 design modules",
+      iconType: "architect" as const,
+    },
+  ],
+  nextMilestoneTitle: "Next Milestone",
+  nextMilestoneDescription: "Complete 2 more system design modules to unlock System Architect",
+  nextMilestoneProgressPercentage: 60,
+};
+
 describe("Dashboard Widgets", () => {
   it("renders CareerTargetBanner with readiness stats and gamification metrics", () => {
     render(<CareerTargetBanner data={MOCK_DASHBOARD_DATA.careerTarget} />);
     expect(screen.getByText("Career Target")).toBeInTheDocument();
     expect(screen.getByText("Backend Engineer")).toBeInTheDocument();
-    expect(screen.getByText("45%")).toBeInTheDocument();
-    expect(screen.getByText("3 Strengths")).toBeInTheDocument();
-    expect(screen.getByText("4 Capability Gaps")).toBeInTheDocument();
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByText("0 Strengths")).toBeInTheDocument();
+    expect(screen.getByText("0 Capability Gaps")).toBeInTheDocument();
     expect(screen.getByText("1,240")).toBeInTheDocument();
     expect(screen.getByText("7 Days")).toBeInTheDocument();
-    expect(screen.getByText("18")).toBeInTheDocument();
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders JourneyHero with progress percentage and action buttons", () => {
@@ -93,7 +216,7 @@ describe("Dashboard Widgets", () => {
   });
 
   it("renders TodaysPriorities with daily XP goal and task list", () => {
-    render(<TodaysPriorities data={MOCK_DASHBOARD_DATA.priorities} />);
+    render(<TodaysPriorities data={samplePriorities} />);
     expect(screen.getByText("Today's Priorities")).toBeInTheDocument();
     expect(screen.getByText("120 / 150 XP")).toBeInTheDocument();
     expect(screen.getByText("Submit your API latency root-cause analysis")).toBeInTheDocument();
@@ -102,7 +225,7 @@ describe("Dashboard Widgets", () => {
   });
 
   it("renders CapabilityGapMap with 5 capabilities and level pills", () => {
-    render(<CapabilityGapMap data={MOCK_DASHBOARD_DATA.capabilityGaps} />);
+    render(<CapabilityGapMap data={sampleGaps} />);
     expect(screen.getByText("Capability Gap Map")).toBeInTheDocument();
     expect(screen.getByText("Systems Thinking")).toBeInTheDocument();
     expect(screen.getByText("API Design")).toBeInTheDocument();
@@ -113,7 +236,7 @@ describe("Dashboard Widgets", () => {
   });
 
   it("renders UpcomingFeedback with upcoming sessions and recent reviews", () => {
-    render(<UpcomingFeedback data={MOCK_DASHBOARD_DATA.upcomingFeedback} />);
+    render(<UpcomingFeedback data={sampleFeedback} />);
     expect(screen.getByText("Upcoming & Feedback")).toBeInTheDocument();
     expect(screen.getByText("UPCOMING")).toBeInTheDocument();
     expect(screen.getByText("Mock Interview Session")).toBeInTheDocument();
@@ -173,12 +296,24 @@ describe("Dashboard Widgets", () => {
   });
 
   it("renders Achievements with 2x2 grid and milestone progress", () => {
-    render(<Achievements data={MOCK_DASHBOARD_DATA.achievements} />);
+    render(<Achievements data={sampleAchievements} />);
     expect(screen.getByText("Achievements")).toBeInTheDocument();
     expect(screen.getByText("First Project")).toBeInTheDocument();
     expect(screen.getByText("7-Day Streak")).toBeInTheDocument();
     expect(screen.getByText("API Mastery")).toBeInTheDocument();
     expect(screen.getByText("System Architect")).toBeInTheDocument();
     expect(screen.getByText("Next Milestone")).toBeInTheDocument();
+  });
+
+  it("renders UpcomingFeedback empty state when no data", () => {
+    render(<UpcomingFeedback data={null} />);
+    expect(screen.getByText("No upcoming sessions.")).toBeInTheDocument();
+    expect(screen.getByText("No recent feedback.")).toBeInTheDocument();
+  });
+
+  it("renders TodaysPriorities empty when no items", () => {
+    render(<TodaysPriorities data={{ currentXp: 0, goalXp: 150, items: [] }} />);
+    expect(screen.getByText("Today's Priorities")).toBeInTheDocument();
+    expect(screen.getByText("0 / 150 XP")).toBeInTheDocument();
   });
 });

@@ -126,7 +126,7 @@ export interface DashboardData {
   journeyState: JourneyState;
   priorities: TodaysPrioritiesData;
   capabilityGaps: CapabilityGapItem[];
-  upcomingFeedback: UpcomingFeedbackData;
+  upcomingFeedback: UpcomingFeedbackData | null;
   careerPaths: RecommendedCareerPathsData;
   achievements: AchievementsData;
   todayEvents?: TodayXpEvent[];

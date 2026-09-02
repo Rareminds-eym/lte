@@ -9,13 +9,13 @@ import { apiLogger } from "../shared/logger";
 export const XP_AMOUNTS: Record<string, number> = {
   stage_completed: 1,
   practice_artifact_accepted: 2,
-  practice_artifact_failed: 1,
+  practice_artifact_failed: 0, // PRD 11.2: 0 XP on fail
   final_artifact_accepted_1: 20,
   final_artifact_accepted_2: 15,
   final_artifact_accepted_3: 10,
-  final_artifact_failed: 1, // +1 per attempt
+  final_artifact_failed: 0, // PRD 536: 0 XP on fail
   manual_eval_accepted: 5, // fallback evaluation pass / manual reviewer accept
-  fallback_eval_failed: 1,
+  fallback_eval_failed: 0, // PRD 536: 0 XP on fail
   course_completed_on_time: 10,
   fast_track_capability: 15,
   capstone_completed: 0, // Configured/Passed custom
@@ -31,17 +31,17 @@ export const XP_AMOUNTS: Record<string, number> = {
   promotional_xp: 0, // Custom/Configured
 };
 
-// Event to category mapping (TRD-DB-007)
+// Event to category mapping (TRD-DB-007) — failures are engagement per TRD PD-006 but 0 XP per PRD 536
 export const XP_CATEGORIES: Record<string, "evidence" | "engagement"> = {
   stage_completed: "evidence",
   practice_artifact_accepted: "evidence",
-  practice_artifact_failed: "evidence",
+  practice_artifact_failed: "engagement",
   final_artifact_accepted_1: "evidence",
   final_artifact_accepted_2: "evidence",
   final_artifact_accepted_3: "evidence",
-  final_artifact_failed: "evidence",
+  final_artifact_failed: "engagement",
   manual_eval_accepted: "evidence",
-  fallback_eval_failed: "evidence",
+  fallback_eval_failed: "engagement",
   course_completed_on_time: "evidence",
   fast_track_capability: "evidence",
   capstone_completed: "evidence",

@@ -98,7 +98,7 @@ describe("XP Engine Core logic", () => {
       expect(result.evidenceXpAwarded).toBe(10);
     });
 
-    it("should award +1 Evidence XP for failed final artifacts", async () => {
+    it("should award 0 XP for failed final artifacts (PRD 536)", async () => {
       // Mock evaluation flow lookup (decision: 'fail')
       mockSingle.mockReturnValueOnce({
         data: { decision: "fail", evaluated_by: null },
@@ -126,7 +126,7 @@ describe("XP Engine Core logic", () => {
 
       expect(result.success).toBe(true);
       expect(result.evidenceXpAwarded).toBe(0);
-      expect(result.engagementXpAwarded).toBe(1);
+      expect(result.engagementXpAwarded).toBe(0);
     });
 
     it("should award +5 manual review engagement XP for human reviews on passes", async () => {
@@ -195,7 +195,7 @@ describe("XP Engine Core logic", () => {
       );
     });
 
-    it("should award +1 engagement XP for failed practice artifacts", async () => {
+    it("should award 0 XP for failed practice artifacts (PRD 536)", async () => {
       mockSingle.mockReturnValueOnce({
         data: { decision: "fail", evaluated_by: null },
         error: null,
@@ -221,13 +221,13 @@ describe("XP Engine Core logic", () => {
       const result = await evaluateArtifact(mockSupabase, "sub-1");
 
       expect(result.success).toBe(true);
-      expect(result.engagementXpAwarded).toBe(1);
+      expect(result.engagementXpAwarded).toBe(0);
       expect(mockInsert).toHaveBeenCalledWith(
         expect.objectContaining({ event_type: "practice_artifact_failed" }),
       );
     });
 
-    it("should award +1 engagement XP for returned final artifacts", async () => {
+    it("should award 0 XP for returned final artifacts (PRD 536)", async () => {
       mockSingle.mockReturnValueOnce({
         data: { decision: "return", evaluated_by: null },
         error: null,
@@ -253,7 +253,7 @@ describe("XP Engine Core logic", () => {
       const result = await evaluateArtifact(mockSupabase, "sub-1");
 
       expect(result.success).toBe(true);
-      expect(result.engagementXpAwarded).toBe(1);
+      expect(result.engagementXpAwarded).toBe(0);
       expect(mockInsert).toHaveBeenCalledWith(
         expect.objectContaining({ event_type: "final_artifact_failed" }),
       );
@@ -388,7 +388,7 @@ describe("XP Engine Core logic", () => {
       expect(result.xpAwarded).toBe(5);
     });
 
-    it("should award +1 Evidence XP for fallback evaluation failures (fallback_eval_failed)", async () => {
+    it("should award 0 XP for fallback evaluation failures (PRD 536)", async () => {
       mockSingle.mockReturnValueOnce({
         data: { decision: "fail", evaluated_by: "reviewer-1" },
         error: null,
@@ -404,7 +404,7 @@ describe("XP Engine Core logic", () => {
       const result = await evaluateFallback(mockSupabase, "sub-1");
 
       expect(result.success).toBe(true);
-      expect(result.xpAwarded).toBe(1);
+      expect(result.xpAwarded).toBe(0);
     });
 
     it("should throw when the evaluation flow is missing", async () => {

@@ -12,7 +12,9 @@ export const useDashboardData = () => {
   return useQuery<DashboardData>({
     queryKey: [...DASHBOARD_QUERY_KEY, userId],
     queryFn: ({ signal }) => fetchDashboardData(signal),
+    enabled: !!userId,
     staleTime: 1000 * 60 * 2, // 2 minutes cache policy
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false, // matches global policy, avoiding focus-refetching
   });
 };

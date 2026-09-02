@@ -1,4 +1,4 @@
-import { METRIC, metrics } from "@functions/lib/artifact-evaluator";
+import { METRIC, metrics } from "@functions/lib/artifact-evaluator/metrics";
 import type { LteEnv } from "@functions/lib/types";
 import {
   DEFAULT_OPENROUTER_SITE_NAME,

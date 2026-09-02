@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { LteEnv } from "./types";
 
 const backendEnvSchema = z.object({
+  ENVIRONMENT: z.string().optional(),
   SSO_SERVICE: z.any().refine((val) => val !== undefined && val !== null, {
     message: "SSO_SERVICE service binding is required",
   }),

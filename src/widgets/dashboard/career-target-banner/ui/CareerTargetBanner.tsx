@@ -58,7 +58,7 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
                 />
               </svg>
               <span className="absolute text-base font-extrabold text-content-primary">
-                {data.readinessPercentage}%
+                {data.readinessPercentage ? `${data.readinessPercentage}%` : "—"}
               </span>
             </div>
 
@@ -95,7 +95,7 @@ export const CareerTargetBanner: React.FC<CareerTargetBannerProps> = ({ data }) 
                 {item.label}
               </span>
               <span className="px-4 py-1.5 bg-surface-secondary text-content-primary text-xs font-extrabold rounded-xl shadow-2xs">
-                {item.value}
+                {item.value || "—"}
               </span>
             </div>
           ))}

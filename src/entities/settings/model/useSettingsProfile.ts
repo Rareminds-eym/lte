@@ -24,7 +24,9 @@ export const useSettingsProfile = () => {
   return useQuery<SettingsProfile>({
     queryKey: settingsProfileQueryKey(userId),
     queryFn: ({ signal }) => fetchSettingsProfile(signal),
-    staleTime: 1000 * 60 * 5, // 5 min cache
+    enabled: !!userId,
+    staleTime: 60 * 1000,
+    gcTime: 2 * 60 * 1000, // kiosk PII: 2m retention (was 10m)
   });
 };
 

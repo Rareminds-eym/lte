@@ -1,22 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "@/entities/session";
 import { fetchLevelDetails, fetchLevelModuleDetails } from "../api";
 
 export const LEVEL_CONTENT_QUERY_KEY = "levelContent";
 export const LEVEL_MODULE_DETAILS_QUERY_KEY = "levelModuleDetails";
 
 export const getLevelContentQueryKey = (
+  userId?: string,
   levelId?: string,
   moduleNo?: number,
   capabilityCode?: string,
-) => [LEVEL_CONTENT_QUERY_KEY, levelId, moduleNo, capabilityCode] as const;
+) => [LEVEL_CONTENT_QUERY_KEY, userId, levelId, moduleNo, capabilityCode] as const;
 
 export const useLevelContentData = (
   levelId?: string,
   moduleNo?: number,
   capabilityCode?: string,
 ) => {
+  const userId = useAuthStore((s) => s.user?.id);
   return useQuery({
-    queryKey: getLevelContentQueryKey(levelId, moduleNo, capabilityCode),
+    queryKey: getLevelContentQueryKey(userId, levelId, moduleNo, capabilityCode),
     queryFn: async ({ signal }) => {
       if (!levelId || moduleNo === undefined || !Number.isInteger(moduleNo)) {
         throw new Error("Level id and module number are required.");
@@ -29,17 +32,22 @@ export const useLevelContentData = (
 
       return { level, module };
     },
-    enabled: Boolean(levelId) && Number.isInteger(moduleNo),
-    staleTime: 1000 * 60 * 5,
+    enabled: !!userId && Boolean(levelId) && Number.isInteger(moduleNo),
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 };
 
-export const getLevelModuleDetailsQueryKey = (levelId?: string, moduleNo?: number) =>
-  [LEVEL_MODULE_DETAILS_QUERY_KEY, levelId, moduleNo] as const;
+export const getLevelModuleDetailsQueryKey = (
+  userId?: string,
+  levelId?: string,
+  moduleNo?: number,
+) => [LEVEL_MODULE_DETAILS_QUERY_KEY, userId, levelId, moduleNo] as const;
 
 export const useLevelModuleDetails = (levelId?: string, moduleNo?: number) => {
+  const userId = useAuthStore((s) => s.user?.id);
   return useQuery({
-    queryKey: getLevelModuleDetailsQueryKey(levelId, moduleNo),
+    queryKey: getLevelModuleDetailsQueryKey(userId, levelId, moduleNo),
     queryFn: async ({ signal }) => {
       if (!levelId || moduleNo === undefined || !Number.isInteger(moduleNo)) {
         throw new Error("Level id and module number are required.");
@@ -47,26 +55,32 @@ export const useLevelModuleDetails = (levelId?: string, moduleNo?: number) => {
 
       return fetchLevelModuleDetails(levelId, moduleNo, signal);
     },
-    enabled: Boolean(levelId) && Number.isInteger(moduleNo),
-    staleTime: 1000 * 60 * 5,
+    enabled: !!userId && Boolean(levelId) && Number.isInteger(moduleNo),
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 };
 
 export const LEVEL_DETAILS_QUERY_KEY = "levelDetails";
 
-export const getLevelDetailsQueryKey = (levelId?: string, capabilityCode?: string) =>
-  [LEVEL_DETAILS_QUERY_KEY, levelId, capabilityCode] as const;
+export const getLevelDetailsQueryKey = (
+  userId?: string,
+  levelId?: string,
+  capabilityCode?: string,
+) => [LEVEL_DETAILS_QUERY_KEY, userId, levelId, capabilityCode] as const;
 
 export const useLevelDetails = (levelId?: string, capabilityCode?: string) => {
+  const userId = useAuthStore((s) => s.user?.id);
   return useQuery({
-    queryKey: getLevelDetailsQueryKey(levelId, capabilityCode),
+    queryKey: getLevelDetailsQueryKey(userId, levelId, capabilityCode),
     queryFn: async ({ signal }) => {
       if (!levelId) {
         throw new Error("Level id is required.");
       }
       return fetchLevelDetails(levelId, capabilityCode, signal);
     },
-    enabled: Boolean(levelId),
-    staleTime: 1000 * 60 * 5,
+    enabled: !!userId && Boolean(levelId),
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 };

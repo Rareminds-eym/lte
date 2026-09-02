@@ -7,9 +7,9 @@
     "@file-viewer/pptx": "2.2.4",
     "@rareminds-eym/auth-client": "2.1.0",
     "@rareminds-eym/auth-core": "3.0.0",
+    "@rareminds-eym/entitlements": "1.0.0",
     "@rareminds-eym/identity-client": "1.0.0",
     "@rareminds-eym/sso-gateway": "1.0.0",
-    "@rareminds-eym/entitlements": "1.0.0",
     "@supabase/supabase-js": "2.110.2",
     "@tanstack/react-query": "5.101.2",
     "docx-preview": "0.4.0",
@@ -22,7 +22,6 @@
     "react-hot-toast": "2.6.0",
     "react-router-dom": "7.18.1",
     "tailwind-merge": "3.6.0",
-    "wrangler": "4.120.1",
     "zod": "4.4.3",
     "zustand": "5.0.14"
   },
@@ -71,7 +70,7 @@
     "setup:husky": "node scripts/tools/setup-husky-cross-platform.js",
     "ci": "npm run lint:files && npm run lint:console && npm run lint:lengths && npm run lint:biome && npm run lint:secrets && npm run lint && npm run typecheck && vitest run",
     "workers:dev": "npm run workers:sso",
-    "pages:dev": "wrangler pages dev dist --compatibility-date=2026-06-08 --port=8789 --service SSO_SERVICE=sso-api#SsoWorker",
+    "pages:dev": "wrangler pages dev dist --compatibility-date=2026-09-01 --port=8789 --service SSO_SERVICE=sso-api#SsoWorker",
     "pages:build": "npm run build"
   },
   "engines": {
@@ -123,6 +122,8 @@
     "vite": "8.1.5",
     "vite-plugin-svgr": "4.5.0",
     "vite-tsconfig-paths": "6.1.1",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "workerd": "1.20260901.1",
+    "wrangler": "4.127.1"
   }
 }

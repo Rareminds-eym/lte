@@ -111,6 +111,10 @@ export const ArtifactSubmitTab: React.FC<ArtifactSubmitTabProps> = ({
       },
       {
         onSuccess: (response) => {
+          if (response.duplicate) {
+            toast("Already submitted");
+            return;
+          }
           setFileResponses({});
           onSubmitted(response);
           toast.success(isPractice ? "Practice work saved." : "Artifact submitted.");

@@ -171,8 +171,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     apiLogger.error("Failed to fetch dashboard XP", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }
 
@@ -181,8 +180,14 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
   try {
     const user = await requireAuth(context.request, context.env);
     const body = (await context.request.json()) as { eventIds?: string[] };
-    if (!body.eventIds || !Array.isArray(body.eventIds)) {
-      return jsonError("Invalid request body", 400, {
+    if (
+      !body.eventIds ||
+      !Array.isArray(body.eventIds) ||
+      body.eventIds.length === 0 ||
+      body.eventIds.length > 100 ||
+      !body.eventIds.every((id) => typeof id === "string" && id.length > 0 && id.length <= 100)
+    ) {
+      return jsonError("Invalid request body: eventIds must be array[1..100] of strings", 400, {
         code: "VALIDATION_ERROR",
         requestId,
       });
@@ -205,7 +210,6 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
     }
 
     apiLogger.error("Failed to mark XP events as shown", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }

@@ -1,6 +1,15 @@
 export type QueryGatewayOperation = "read" | "insert" | "update" | "delete" | "upsert" | "rpc";
 
-export type QueryFilterOperator = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in" | "ilike";
+export type QueryFilterOperator =
+  | "eq"
+  | "neq"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "in"
+  | "ilike"
+  | "is";
 
 export interface QueryGatewayAuth {
   userId?: string;
@@ -142,6 +151,7 @@ export interface SupabaseQueryChain<T = unknown> extends PromiseLike<SupabaseQue
   lte(column: string, value: unknown): SupabaseQueryChain<T>;
   in(column: string, values: readonly unknown[]): SupabaseQueryChain<T>;
   ilike(column: string, pattern: string): SupabaseQueryChain<T>;
+  is(column: string, value: unknown): SupabaseQueryChain<T>;
   order(column: string, options: { ascending: boolean }): SupabaseQueryChain<T>;
   range(from: number, to: number): SupabaseQueryChain<T>;
   limit(count: number): SupabaseQueryChain<T>;

@@ -12,7 +12,7 @@ const formatClock = (seconds: number) => {
 
 export const VideoContentViewer: React.FC<ResourceRendererProps> = ({ item }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -100,9 +100,8 @@ export const VideoContentViewer: React.FC<ResourceRendererProps> = ({ item }) =>
   const controlsAreVisible = showControls || !isPlaying;
 
   return (
-    <div
+    <section
       ref={wrapperRef}
-      role="application"
       aria-label="Video player"
       className="relative flex h-full w-full items-center justify-center overflow-hidden bg-content-primary"
       onMouseLeave={() => {
@@ -241,6 +240,6 @@ export const VideoContentViewer: React.FC<ResourceRendererProps> = ({ item }) =>
           </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 };

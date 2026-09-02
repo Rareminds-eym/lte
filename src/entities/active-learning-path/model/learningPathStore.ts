@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getLogger } from "@/shared";
+import { queryClient } from "@/shared/lib/queryClient";
 import type { ActiveTrackDetail } from "@/shared/types/auth";
 import { activateLearningTrack, fetchActiveLearningPath } from "../api/learningPathApi";
 
@@ -66,6 +67,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   switchActiveTrack: async (trackId: string) => {
     const userId = get().userId;
     if (!userId) return;
+    await queryClient.cancelQueries();
     logger.info("switchActiveTrack triggered", { trackId, userId });
     set({ activeLearningPathLoading: true, error: null });
     try {
@@ -73,6 +75,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       const result = await fetchActiveLearningPath();
       if (get().userId !== userId) {
         logger.info("switchActiveTrack user changed during fetch, ignoring result");
+        set({ activeLearningPathLoading: false });
         return;
       }
       set({
@@ -84,6 +87,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     } catch (error) {
       if (get().userId !== userId) {
         logger.info("switchActiveTrack user changed during fetch error, ignoring error");
+        set({ activeLearningPathLoading: false });
         return;
       }
       const message =

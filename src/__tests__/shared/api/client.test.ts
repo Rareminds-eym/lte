@@ -24,7 +24,10 @@ describe("apiFetch (authenticated path via authClient.request)", () => {
     (authClient.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okJson({ id: 7 }));
 
     await expect(apiFetch("/api/v1/dashboard/journey")).resolves.toEqual({ id: 7 });
-    expect(authClient.request).toHaveBeenCalledWith("/api/v1/dashboard/journey", {});
+    expect(authClient.request).toHaveBeenCalledWith(
+      "/api/v1/dashboard/journey",
+      expect.objectContaining({ signal: expect.any(Object) }),
+    );
   });
 
   it("preserves code/details/requestId from nested error bodies in ApiError", async () => {

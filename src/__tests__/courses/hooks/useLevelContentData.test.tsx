@@ -19,6 +19,7 @@ import {
   useLevelDetails,
   useLevelModuleDetails,
 } from "@/entities/course/model/useLevelContentData";
+import { useAuthStore } from "@/entities/session";
 
 function createWrapper(queryClient: QueryClient) {
   return ({ children }: { children: ReactNode }) => (
@@ -27,6 +28,25 @@ function createWrapper(queryClient: QueryClient) {
 }
 
 describe("useLevelContentData hooks", () => {
+  beforeEach(() => {
+    useAuthStore.setState({
+      user: {
+        id: "test-user",
+        email: "test@rareminds.com",
+        org_id: "org-1",
+        roles: ["learner"],
+        products: ["lte"],
+        membership_status: "active",
+        is_email_verified: true,
+        user_metadata: {},
+      },
+      isAuthenticated: true,
+      loading: false,
+      initialized: true,
+      error: null,
+    } as never);
+  });
+
   it("useLevelContentData registers and fetches level content data", async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     mockFetchLevelDetails.mockResolvedValue({ id: "lvl-1" });
@@ -54,7 +74,7 @@ describe("useLevelContentData hooks", () => {
     // Manually run queryFn via fetchQuery
     await expect(
       queryClient.fetchQuery({
-        queryKey: getLevelContentQueryKey(undefined, undefined, undefined),
+        queryKey: getLevelContentQueryKey("test-user", undefined, undefined, undefined),
       }),
     ).rejects.toThrow("Level id and module number are required.");
   });
@@ -80,7 +100,7 @@ describe("useLevelContentData hooks", () => {
 
     await expect(
       queryClient.fetchQuery({
-        queryKey: getLevelModuleDetailsQueryKey(undefined, undefined),
+        queryKey: getLevelModuleDetailsQueryKey("test-user", undefined, undefined),
       }),
     ).rejects.toThrow("Level id and module number are required.");
   });
@@ -106,7 +126,7 @@ describe("useLevelContentData hooks", () => {
 
     await expect(
       queryClient.fetchQuery({
-        queryKey: getLevelDetailsQueryKey(undefined, undefined),
+        queryKey: getLevelDetailsQueryKey("test-user", undefined, undefined),
       }),
     ).rejects.toThrow("Level id is required.");
   });

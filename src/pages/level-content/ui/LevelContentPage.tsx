@@ -15,6 +15,7 @@ import {
   useUpdateStageProgress,
 } from "@/entities/course";
 import { DASHBOARD_QUERY_KEY } from "@/entities/dashboard";
+import { useAuthStore } from "@/entities/session";
 import { useXpModalStore } from "@/shared/store";
 import {
   Button,
@@ -68,7 +69,8 @@ export const LevelContentPage: React.FC = () => {
   const contentViewerRef = useRef<HTMLDivElement>(null);
   const addEvent = useXpModalStore((s) => s.addEvent);
 
-  const [totalXpAmount, setTotalXpAmount] = useState(0);
+  const userId = useAuthStore((s) => s.user?.id);
+  const [, setTotalXpAmount] = useState(0);
   const [optimisticCompletedStages, setOptimisticCompletedStages] = useState<LteStage[]>([]);
   const [submittedArtifactIds, setSubmittedArtifactIds] = useState<string[]>([]);
 
@@ -91,12 +93,15 @@ export const LevelContentPage: React.FC = () => {
     [level, levelModule],
   );
 
-  if (levelModule?.id !== prevModuleId) {
-    setPrevModuleId(levelModule?.id);
-    setOptimisticCompletedStages([]);
-    setSubmittedArtifactIds([]);
-    setIsScenarioExpanded(false);
-  }
+  useEffect(() => {
+    if (levelModule?.id && levelModule.id !== prevModuleId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing derived state on module change (reset optimistic state for new module) is intentional
+      setPrevModuleId(levelModule.id);
+      setOptimisticCompletedStages([]);
+      setSubmittedArtifactIds([]);
+      setIsScenarioExpanded(false);
+    }
+  }, [levelModule?.id, prevModuleId]);
   const nextModuleNoForPrefetch = Number.isInteger(moduleNumber) ? moduleNumber + 1 : undefined;
   const nextModuleExistsForPrefetch = Boolean(
     nextModuleNoForPrefetch &&
@@ -123,14 +128,15 @@ export const LevelContentPage: React.FC = () => {
   }, [levelId, moduleNumber, startModule]);
 
   useEffect(() => {
-    if (!levelId || !nextModuleNoForPrefetch || !nextModuleExistsForPrefetch) return;
+    if (!userId || !levelId || !nextModuleNoForPrefetch || !nextModuleExistsForPrefetch) return;
 
     void queryClient.prefetchQuery({
-      queryKey: getLevelModuleDetailsQueryKey(levelId, nextModuleNoForPrefetch),
-      queryFn: () => fetchLevelModuleDetails(levelId, nextModuleNoForPrefetch),
-      staleTime: 1000 * 60 * 5,
+      queryKey: getLevelModuleDetailsQueryKey(userId, levelId, nextModuleNoForPrefetch),
+      queryFn: ({ signal }) => fetchLevelModuleDetails(levelId, nextModuleNoForPrefetch, signal),
+      staleTime: 60 * 1000,
+      gcTime: 10 * 60 * 1000,
     });
-  }, [levelId, nextModuleExistsForPrefetch, nextModuleNoForPrefetch, queryClient]);
+  }, [userId, levelId, nextModuleExistsForPrefetch, nextModuleNoForPrefetch, queryClient]);
 
   const levelModuleForSync = data?.module;
   const activeStageContentForSync = levelModuleForSync?.stages.find(
@@ -143,7 +149,9 @@ export const LevelContentPage: React.FC = () => {
     null;
 
   useEffect(() => {
-    if (levelId && Number.isInteger(moduleNumber) && selectedContentForSync?.id) {
+    if (!levelId || !Number.isInteger(moduleNumber) || !selectedContentForSync?.id) return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    const timer = setTimeout(() => {
       updateStage({
         levelId,
         moduleNo: moduleNumber,
@@ -151,7 +159,8 @@ export const LevelContentPage: React.FC = () => {
         stageName: activeStage,
         status: "in_progress",
       });
-    }
+    }, 800);
+    return () => clearTimeout(timer);
   }, [levelId, moduleNumber, selectedContentForSync?.id, activeStage, updateStage]);
 
   const handleStageSelect = (stage: LteStage) => {
@@ -706,14 +715,17 @@ export const LevelContentPage: React.FC = () => {
           expandedArtifactQuestionId={expandedArtifactQuestionId}
           setExpandedArtifactQuestionId={setExpandedArtifactQuestionId}
           onXpEarned={(xpAmount, eventType) => {
-            setTotalXpAmount((prev) => prev + xpAmount);
-            addEvent({
-              id: crypto.randomUUID(),
-              xpAmount: xpAmount,
-              totalXp: totalXpAmount + xpAmount,
-              eventType: eventType,
-              xpCategory: "evidence",
-              onClose: () => triggerNavigationTransition("artifact_submit", null, null),
+            setTotalXpAmount((prev) => {
+              const next = prev + xpAmount;
+              addEvent({
+                id: crypto.randomUUID(),
+                xpAmount,
+                totalXp: next,
+                eventType,
+                xpCategory: "evidence",
+                onClose: () => triggerNavigationTransition("artifact_submit", null, null),
+              });
+              return next;
             });
           }}
           onArtifactSubmitted={(artifactId) => {

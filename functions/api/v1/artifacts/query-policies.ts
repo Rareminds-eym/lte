@@ -99,8 +99,9 @@ export const artifactSubmissionDemotePolicy = {
   table: "artifact_submissions",
   operation: "update",
   updateColumns: ["is_latest", "updated_at"],
-  filters: ["id"],
+  filters: ["id", "user_id"],
   requireFilter: true,
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
 } as const;
 
 export const artifactSubmissionInsertPolicy = {

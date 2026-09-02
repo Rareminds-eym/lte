@@ -2,8 +2,16 @@
 # SSO owns auth-code Durable Object storage; LTE consumes SSO through RPC.
 
 name = "lte"
-compatibility_date = "2026-06-08"
+compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+logs.head_sampling_rate = 1
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 0.1
 
 # ============================================================================
 # LOCAL DEV
@@ -32,7 +40,7 @@ binding = "STORAGE_BUCKET"
 bucket_name = "lte"
 
 [vars]
-ENVIRONMENT = "production"
+ENVIRONMENT = "development"
 SSO_WORKER_LOCAL_URL = "http://localhost:8787"
 COOKIE_DOMAIN = ".rareminds.in"
 SKILLPASSPORT_INTERNAL_URL = "http://localhost:8788"

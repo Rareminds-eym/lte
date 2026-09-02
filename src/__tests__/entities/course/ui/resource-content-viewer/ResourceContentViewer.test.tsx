@@ -97,8 +97,8 @@ describe("ResourceContentViewer & Media players", () => {
     const fullscreenBtn = screen.getByLabelText("Open video fullscreen");
     fireEvent.click(fullscreenBtn);
 
-    // Mouse hover/leave
-    const player = screen.getByRole("application");
+    // Mouse hover/leave — viewer no longer uses role=application (a11y fix)
+    const player = screen.getByLabelText("Video player");
     fireEvent.mouseLeave(player);
     fireEvent.mouseMove(player);
 

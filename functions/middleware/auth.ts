@@ -28,29 +28,34 @@ export function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
   validateBackendEnv(env);
 
   try {
+    const isProd = env.ENVIRONMENT === "production";
     cachedAuth = createAuth({
       sso: ssoRpcRaw as unknown as Parameters<typeof createAuth>[0]["sso"],
       issuer: "sso-api",
       audience: "sso-client",
-      approvedOrigins: [
-        "https://lte.rareminds.in",
-        "http://localhost:8080",
-        "http://localhost:8789",
-        "http://127.0.0.1:8080",
-        "http://127.0.0.1:8789",
-        "http://localhost",
-        "http://127.0.0.1",
-      ],
+      approvedOrigins: isProd
+        ? ["https://lte.rareminds.in"]
+        : [
+            "https://lte.rareminds.in",
+            "http://localhost:8080",
+            "http://localhost:8789",
+            "http://127.0.0.1:8080",
+            "http://127.0.0.1:8789",
+            "http://localhost",
+            "http://127.0.0.1",
+          ],
       credentialedCors: {
-        origins: [
-          "https://lte.rareminds.in",
-          "http://localhost:8080",
-          "http://localhost:8789",
-          "http://127.0.0.1:8080",
-          "http://127.0.0.1:8789",
-          "http://localhost",
-          "http://127.0.0.1",
-        ],
+        origins: isProd
+          ? ["https://lte.rareminds.in"]
+          : [
+              "https://lte.rareminds.in",
+              "http://localhost:8080",
+              "http://localhost:8789",
+              "http://127.0.0.1:8080",
+              "http://127.0.0.1:8789",
+              "http://localhost",
+              "http://127.0.0.1",
+            ],
       },
       csrf: { name: "X-RM-CSRF", value: "1" },
       cookieMaxAgeSeconds: 604800,

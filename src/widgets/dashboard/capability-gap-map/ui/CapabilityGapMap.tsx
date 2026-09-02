@@ -33,35 +33,43 @@ export const CapabilityGapMap: React.FC<CapabilityGapMapProps> = ({ data }) => {
         </a>
       }
     >
-      {/* Table / List Header */}
-      <div className="grid grid-cols-3 text-xs font-extrabold text-content-muted uppercase tracking-wider pb-3 border-b border-line-subtle mb-3 pt-1">
-        <span>Capability</span>
-        <span className="text-center">Current Level</span>
-        <span className="text-center">Target Level</span>
-      </div>
-
-      {/* Rows */}
-      <div className="space-y-4">
-        {data.map((item) => (
-          <div key={item.id} className="grid grid-cols-3 items-center">
-            <span className="text-sm font-bold text-content-primary">{item.capability}</span>
-            <div className="text-center">
-              <span
-                className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${LEVEL_BADGES[item.currentLevel]}`}
-              >
-                {item.currentLevel}
-              </span>
-            </div>
-            <div className="text-center">
-              <span
-                className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${LEVEL_BADGES[item.targetLevel]}`}
-              >
-                {item.targetLevel}
-              </span>
-            </div>
+      {data.length === 0 ? (
+        <p className="text-sm text-content-muted text-center py-8">
+          No gaps assessed — complete 3-track assessment
+        </p>
+      ) : (
+        <>
+          {/* Table / List Header */}
+          <div className="grid grid-cols-3 text-xs font-extrabold text-content-muted uppercase tracking-wider pb-3 border-b border-line-subtle mb-3 pt-1">
+            <span>Capability</span>
+            <span className="text-center">Current Level</span>
+            <span className="text-center">Target Level</span>
           </div>
-        ))}
-      </div>
+
+          {/* Rows */}
+          <div className="space-y-4">
+            {data.map((item) => (
+              <div key={item.id} className="grid grid-cols-3 items-center">
+                <span className="text-sm font-bold text-content-primary">{item.capability}</span>
+                <div className="text-center">
+                  <span
+                    className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${LEVEL_BADGES[item.currentLevel]}`}
+                  >
+                    {item.currentLevel}
+                  </span>
+                </div>
+                <div className="text-center">
+                  <span
+                    className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${LEVEL_BADGES[item.targetLevel]}`}
+                  >
+                    {item.targetLevel}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </WidgetCard>
   );
 };

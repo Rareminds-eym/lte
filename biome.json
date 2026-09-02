@@ -26,7 +26,12 @@
     "includes": ["**", "!test/**"],
     "rules": {
       "a11y": {
-        "useButtonType": "warn"
+        "useButtonType": "warn",
+        "useValidAriaProps": "error",
+        "useValidAriaRole": "error",
+        "useValidAriaValues": "error",
+        "useAriaPropsForRole": "error",
+        "noNoninteractiveElementToInteractiveRole": "error"
       },
       "complexity": {
         "noCommaOperator": "warn",

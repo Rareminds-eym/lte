@@ -100,8 +100,12 @@ function validateFilters(
   filters: readonly QueryGatewayFilter[],
   allowedColumns: readonly string[] | undefined,
 ): void {
+  const allowedOps = ["eq", "neq", "gt", "gte", "lt", "lte", "in", "is", "ilike"] as const;
   for (const filter of filters) {
     assertAllowedColumn(filter.column, allowedColumns, "Filter");
+    if (!(allowedOps as readonly string[]).includes(filter.op)) {
+      throw new QueryGatewayError(`Operator not allowed: ${filter.op}`, "OPERATOR_NOT_ALLOWED");
+    }
   }
 }
 
@@ -203,7 +207,7 @@ function buildReadQuery(
   });
 
   if (options.limit !== undefined) {
-    query = query.limit(Math.max(options.limit, 1));
+    query = query.limit(Math.min(Math.max(options.limit, 1), 100));
   }
 
   if (options.result === "single") {

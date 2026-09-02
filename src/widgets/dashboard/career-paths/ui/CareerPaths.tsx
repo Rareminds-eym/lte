@@ -47,7 +47,9 @@ export const CareerPaths: React.FC<CareerPathsProps> = ({ data }) => {
     if (trackId === selectedTrack?.id) return;
     try {
       await switchActiveTrack(trackId);
-      await queryClient.invalidateQueries();
+      await queryClient.invalidateQueries({ queryKey: ["userCourses"] });
+      await queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
       toast.success(`Switched active track to ${title}`);
     } catch {
       toast.error("Failed to switch learning track");

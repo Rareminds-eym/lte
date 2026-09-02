@@ -42,7 +42,7 @@ This project uses Codecov for code coverage reporting and tracking. Coverage rep
 
 The workflow is already configured to:
 
-- Run tests with coverage on Node 20.x
+- Run tests with coverage on Node 22.x
 - Upload coverage to Codecov
 - Upload coverage artifacts to GitHub
 - Fail CI if coverage upload fails

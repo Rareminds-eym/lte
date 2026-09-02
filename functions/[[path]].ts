@@ -13,23 +13,29 @@ let cachedBinding: unknown = null;
 
 function getSsoGateway(env: LteEnv): ReturnType<typeof createSsoGateway> {
   if (cachedGateway && cachedBinding === env.SSO_SERVICE) return cachedGateway;
+  const isProd = (env as unknown as Record<string, unknown>)["ENVIRONMENT"] === "production";
+  const prodOrigins = ["https://lte.rareminds.in"];
+  const devOrigins = [
+    "https://lte.rareminds.in",
+    "http://localhost:8080",
+    "http://localhost:8789",
+    "http://127.0.0.1:8080",
+    "http://127.0.0.1:8789",
+    "http://localhost",
+    "http://127.0.0.1",
+  ];
   cachedGateway = createSsoGateway({
     sso: env.SSO_SERVICE as unknown as Parameters<typeof createSsoGateway>[0]["sso"],
     issuer: "sso-api",
     audience: "sso-client",
-    approvedOrigins: [
-      "https://lte.rareminds.in",
-      "http://localhost:8080",
-      "http://localhost:8789",
-      "http://127.0.0.1:8080",
-      "http://127.0.0.1:8789",
-      "http://localhost",
-      "http://127.0.0.1",
-    ],
+    approvedOrigins: isProd ? prodOrigins : devOrigins,
+    credentialedCors: {
+      origins: isProd ? prodOrigins : devOrigins,
+    },
     csrf: { name: "X-RM-CSRF", value: "1" },
     cookieMaxAgeSeconds: 604800,
     ssoRequestTimeoutMs: 5000,
-  });
+  } as unknown as Parameters<typeof createSsoGateway>[0]);
   cachedBinding = env.SSO_SERVICE;
   return cachedGateway;
 }

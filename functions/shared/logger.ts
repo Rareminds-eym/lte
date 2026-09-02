@@ -38,6 +38,14 @@ export class FunctionLogger {
   }
 
   debug(message: string, metadata?: LogMetadata): void {
+    // prod filters debug — JSON structure preserved via formatMessage
+    if ((globalThis as unknown as Record<string, unknown>)["__LTE_LOG_LEVEL__"] === "prod") return;
+    if (
+      typeof process !== "undefined" &&
+      (process as unknown as { env?: Record<string, unknown> }).env?.["ENVIRONMENT"] ===
+        "production"
+    )
+      return;
     globalThis.console.debug(this.formatMessage("debug", message, metadata));
   }
 
@@ -56,10 +64,6 @@ export class FunctionLogger {
         : metadata;
 
     globalThis.console.error(this.formatMessage("error", message, errorMeta));
-
-    if (error instanceof Error && error.stack) {
-      globalThis.console.error(error.stack);
-    }
   }
 }
 

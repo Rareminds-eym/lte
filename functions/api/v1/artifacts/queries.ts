@@ -216,6 +216,7 @@ async function createSubmissionAttempt(
     if (latest) {
       try {
         await qb.update(artifactSubmissionDemotePolicy, {
+          auth: { userId },
           data: { is_latest: false, updated_at: new Date().toISOString() },
           filters: [{ column: "id", op: "eq", value: latest.id }],
         });

@@ -38,6 +38,8 @@ export function applyFilter<T>(
         );
       }
       return query.in(filter.column, filter.value);
+    case "is":
+      return query.is(filter.column, filter.value);
     default:
       throw new QueryGatewayError("Unsupported filter operator", "UNSUPPORTED_FILTER_OPERATOR");
   }

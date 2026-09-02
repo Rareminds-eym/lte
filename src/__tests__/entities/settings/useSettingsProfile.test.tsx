@@ -13,6 +13,7 @@ vi.mock("@/entities/settings/api/settingsApi", () => ({
   executeAccountAction: vi.fn(),
 }));
 
+import { useAuthStore } from "@/entities/session";
 import { useSettingsProfile, useUpdateProfile } from "@/entities/settings";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -45,6 +46,22 @@ describe("useSettingsProfile", () => {
     mockFetchSettingsProfile.mockReset();
     mockUpdateSettingsProfile.mockReset();
     queryClient.clear();
+    useAuthStore.setState({
+      user: {
+        id: "test-user",
+        email: "test@rareminds.com",
+        org_id: "org-1",
+        roles: ["learner"],
+        products: ["lte"],
+        membership_status: "active",
+        is_email_verified: true,
+        user_metadata: {},
+      },
+      isAuthenticated: true,
+      loading: false,
+      initialized: true,
+      error: null,
+    } as never);
   });
 
   it("fetches the profile on mount", async () => {
@@ -75,6 +92,6 @@ describe("useUpdateProfile", () => {
     result.current.update.mutate({ fullName: "Jane Smith" });
 
     await waitFor(() => expect(result.current.update.isSuccess).toBe(true));
-    expect(queryClient.getQueryData(["settingsProfile", undefined])).toEqual(updated);
+    expect(queryClient.getQueryData(["settingsProfile", "test-user"])).toEqual(updated);
   });
 });

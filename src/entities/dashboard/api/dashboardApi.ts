@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { getLogger } from "@/shared";
 import { apiFetch } from "@/shared/api";
 import {
@@ -9,23 +10,21 @@ import type { DashboardData } from "../model/types";
 
 const logger = getLogger("dashboardApi");
 
-// Static base payload for dashboard sections that have no backend endpoint
-// yet; also doubles as the widget-test fixture (not barrel-exported).
-// Live data (XP totals, journey) is always overwritten from the API; failures
-// surface honest zeroes/null, never fabricated numbers.
+// Static base payload — live data (XP totals, journey, streak) is overwritten
+// from the API; sections without endpoints surface honest empty/null, never fabricated numbers.
 export const MOCK_DASHBOARD_DATA: DashboardData = {
   careerTarget: {
-    title: "Backend Engineer",
-    readinessPercentage: 45,
-    strengthsCount: 3,
-    capabilityGapsCount: 4,
-    domain: "Backend Engineering",
-    industry: "IT & Software",
-    level: "Undergrad • Foundation",
+    title: "Backend Engineer", // test fixture only
+    readinessPercentage: 0,
+    strengthsCount: 0,
+    capabilityGapsCount: 0,
+    domain: "",
+    industry: "",
+    level: "",
     xp: 1240,
     xpThisWeek: 120,
     streakDays: 7,
-    badgesCount: 18,
+    badgesCount: 0,
   },
   journey: {
     title: "Debugging API Latency Issues",
@@ -43,99 +42,10 @@ export const MOCK_DASHBOARD_DATA: DashboardData = {
   priorities: {
     currentXp: 120,
     goalXp: 150,
-    items: [
-      {
-        id: "pri-1",
-        title: "Submit your API latency root-cause analysis",
-        subtitle: "Milestone 3 • Artifact Submission",
-        duration: "25 min",
-        xpReward: 35,
-        type: "green",
-      },
-      {
-        id: "pri-2",
-        title: "Review Visual Hierarchy before the challenge",
-        subtitle: "Module 3 • Concept Refresher",
-        duration: "15 min",
-        xpReward: 15,
-        type: "purple",
-      },
-      {
-        id: "pri-3",
-        title: "Attempt Knowledge Check",
-        subtitle: "Quick Check • 5 Questions",
-        duration: "10 min",
-        xpReward: 10,
-        type: "amber",
-      },
-    ],
+    items: [],
   },
-  capabilityGaps: [
-    {
-      id: "cap-1",
-      capability: "Systems Thinking",
-      currentLevel: "Developing",
-      targetLevel: "Proficient",
-    },
-    {
-      id: "cap-2",
-      capability: "API Design",
-      currentLevel: "Working Knowledge",
-      targetLevel: "Proficient",
-    },
-    {
-      id: "cap-3",
-      capability: "Debugging",
-      currentLevel: "Developing",
-      targetLevel: "Proficient",
-    },
-    {
-      id: "cap-4",
-      capability: "Database Design",
-      currentLevel: "Foundation",
-      targetLevel: "Proficient",
-    },
-    {
-      id: "cap-5",
-      capability: "Communication",
-      currentLevel: "Proficient",
-      targetLevel: "Proficient",
-    },
-  ],
-  upcomingFeedback: {
-    upcoming: [
-      {
-        id: "up-1",
-        title: "Mock Interview Session",
-        subtitle: "Round 2 • Systems & Architecture",
-        tag: "Tomorrow 4:00 PM",
-        type: "education",
-      },
-      {
-        id: "up-2",
-        title: "Portfolio Review",
-        subtitle: "Submit work for mentor feedback",
-        tag: "Fri, Jul 19",
-        type: "portfolio",
-      },
-    ],
-    recentFeedback: [
-      {
-        id: "fb-1",
-        title: "Mock Interview #3 Result",
-        subtitle: "High in communication, needs work in design",
-        daysAgo: "2d",
-        type: "interview",
-      },
-      {
-        id: "fb-2",
-        title: "AI Mentor Weekly Review",
-        subtitle: "Strong progress. Continue on API module.",
-        daysAgo: "5d",
-        type: "ai-mentor",
-      },
-    ],
-  },
+  capabilityGaps: [],
+  upcomingFeedback: null,
   careerPaths: {
     activeTrackTitle: "",
     matchPercentage: 0,
@@ -148,37 +58,12 @@ export const MOCK_DASHBOARD_DATA: DashboardData = {
     tracks: [],
   },
   achievements: {
-    unlockedCount: 18,
-    shownCount: 4,
-    items: [
-      {
-        id: "ach-1",
-        title: "First Project",
-        subtitle: "Artifact submitted",
-        iconType: "project",
-      },
-      {
-        id: "ach-2",
-        title: "7-Day Streak",
-        subtitle: "Consistency",
-        iconType: "streak",
-      },
-      {
-        id: "ach-3",
-        title: "API Mastery",
-        subtitle: "All API modules",
-        iconType: "api",
-      },
-      {
-        id: "ach-4",
-        title: "System Architect",
-        subtitle: "5 design modules",
-        iconType: "architect",
-      },
-    ],
-    nextMilestoneTitle: "Next Milestone",
-    nextMilestoneDescription: "Complete 2 more system design modules to unlock System Architect",
-    nextMilestoneProgressPercentage: 60,
+    unlockedCount: 0,
+    shownCount: 0,
+    items: [],
+    nextMilestoneTitle: "",
+    nextMilestoneDescription: "",
+    nextMilestoneProgressPercentage: 0,
   },
 };
 
@@ -216,6 +101,29 @@ export const fetchDashboardData = async (signal?: AbortSignal): Promise<Dashboar
   }
 
   const base = { ...MOCK_DASHBOARD_DATA };
+  // Honest empty when no real data — never fabricated mock
+  base.careerTarget = {
+    ...base.careerTarget,
+    readinessPercentage: 0,
+    strengthsCount: 0,
+    capabilityGapsCount: 0,
+    badgesCount: 0,
+    domain: "",
+    industry: "",
+    level: "",
+  };
+  base.capabilityGaps = [];
+  base.priorities = { ...base.priorities, items: [] };
+  base.achievements = {
+    ...base.achievements,
+    items: [],
+    unlockedCount: 0,
+    shownCount: 0,
+    nextMilestoneTitle: "",
+    nextMilestoneDescription: "",
+    nextMilestoneProgressPercentage: 0,
+  };
+  base.upcomingFeedback = null;
 
   const parsedXp =
     xpResult.status === "fulfilled" ? DashboardXpResponseSchema.safeParse(xpResult.value) : null;
@@ -259,3 +167,38 @@ export const fetchDashboardData = async (signal?: AbortSignal): Promise<Dashboar
   }
   return base;
 };
+
+// --- Readiness ---
+export interface ReadinessResponse {
+  score: number;
+  band: string;
+  lastCalculated?: string;
+  currentRole?: { name: string; domain: string; family: string } | null;
+  components: {
+    courseCompletion: { value: number; weight: number };
+    artifactCompletion: { value: number; weight: number };
+    aiAverageScore: { value: number; weight: number };
+    xpAchievement: { value: number; weight: number };
+    profileCompletion: { value: number; weight: number };
+  };
+  missingEvidence: string[];
+  configWarnings: string[];
+  improvementActions?: string[];
+}
+
+export const fetchReadiness = (signal?: AbortSignal): Promise<ReadinessResponse> =>
+  apiFetch<ReadinessResponse>("/api/v1/readiness", { signal });
+
+/** @deprecated use readinessQueryKey(userId) — bare key leaks across users */
+export const READINESS_QUERY_KEY = ["readiness"] as const;
+export const readinessQueryKey = (userId?: string) => ["readiness", userId] as const;
+
+export const useReadiness = (userId?: string, enabled = true) =>
+  useQuery({
+    queryKey: readinessQueryKey(userId),
+    queryFn: ({ signal }) => fetchReadiness(signal),
+    enabled: !!userId && enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+  });

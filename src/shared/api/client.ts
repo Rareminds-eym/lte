@@ -101,9 +101,10 @@ async function throwForErrorResponse(response: Response, path: string): Promise<
 async function apiRequest(path: string, options: ApiFetchOptions = {}): Promise<Response> {
   logger.info(`Request: ${options.method || "GET"} ${path}`);
 
+  const { signal: timeoutSignal, done } = withTimeoutSignal(options.signal);
   let response: Response;
   try {
-    response = await authClient.request(path, options);
+    response = await authClient.request(path, { ...options, signal: timeoutSignal });
   } catch (error) {
     // In unit test environments where authClient is uninitialized or session is absent,
     // fall back to direct fetch so mocked tests continue to work transparently.
@@ -130,6 +131,8 @@ async function apiRequest(path: string, options: ApiFetchOptions = {}): Promise<
       logger.error(`Network Error: ${path} — ${errMsg}`);
       throw error instanceof Error ? error : new Error(errMsg);
     }
+  } finally {
+    done();
   }
 
   if (!response.ok) {

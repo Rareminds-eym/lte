@@ -29,7 +29,7 @@ export const useCapabilityLevels = (capabilityCode: string) => {
     // userId partitions the cache per user so an account switch without a full
     // logout can never serve the previous learner's levels.
     queryKey: ["capabilityLevels", userId, capabilityCode],
-    queryFn: () => fetchCapabilityLevels(capabilityCode),
+    queryFn: ({ signal }) => fetchCapabilityLevels(capabilityCode, signal),
     enabled: Boolean(capabilityCode) && hasAuth && learningPathReady,
     staleTime: 1000 * 60 * 5,
     retry: (failureCount, error) => {

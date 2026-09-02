@@ -6,16 +6,16 @@ This guide covers various deployment options for the LMS application.
 
 - [Prerequisites](#prerequisites)
 - [Environment Variables](#environment-variables)
-- [Docker Deployment](#docker-deployment)
-- [Cloud Platforms](#cloud-platforms)
-- [Static Hosting](#static-hosting)
+- [Local Database](#local-database)
+- [Cloudflare Pages (Primary)](#cloudflare-pages-primary--lte)
 - [CI/CD](#cicd)
 
 ## Prerequisites
 
-- Node.js >= 18.0.0
-- npm >= 9.0.0
-- Docker (for containerized deployment)
+- Node.js >= 22.0.0
+- npm >= 10.0.0
+- Wrangler >= 4.x (`npm i -g wrangler` or `npx wrangler`)
+- Supabase CLI (for `db:reset:dev`)
 
 ## Environment Variables
 
@@ -67,143 +67,35 @@ docker stop lms-app
 docker rm lms-app
 ```
 
-## Cloud Platforms
+## Local Database
 
-### Vercel
-
-1. Install Vercel CLI:
+Reset dev seed data before building (Supabase):
 
 ```bash
-npm install -g vercel
+npm run db:reset:dev
 ```
 
-2. Deploy:
+## Cloudflare Pages (Primary — LTE)
+
+LTE deploys on Cloudflare Pages with Functions (`functions/`). Build output is `dist/` (Vite `outDir: "dist"`), not `build/`.
 
 ```bash
-vercel
-```
+# 1. Reset dev data (local Supabase)
+npm run db:reset:dev
 
-3. For production:
-
-```bash
-vercel --prod
-```
-
-### Netlify
-
-1. Install Netlify CLI:
-
-```bash
-npm install -g netlify-cli
-```
-
-2. Build the app:
-
-```bash
+# 2. Build
 npm run build
+
+# 3. Deploy to Cloudflare Pages
+npx wrangler pages deploy dist --branch=main
+# preview
+npx wrangler pages deploy dist --branch=preview
 ```
 
-3. Deploy:
+Local Pages dev:
 
 ```bash
-netlify deploy --prod --dir=build
-```
-
-### AWS (S3 + CloudFront)
-
-1. Build the app:
-
-```bash
-npm run build
-```
-
-2. Install AWS CLI and configure credentials
-
-3. Sync to S3:
-
-```bash
-aws s3 sync build/ s3://your-bucket-name --delete
-```
-
-4. Invalidate CloudFront cache:
-
-```bash
-aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
-```
-
-### Heroku
-
-1. Create a `static.json` file:
-
-```json
-{
-  "root": "build/",
-  "routes": {
-    "/**": "index.html"
-  }
-}
-```
-
-2. Add Node.js buildpack:
-
-```bash
-heroku buildpacks:set heroku/nodejs
-```
-
-3. Deploy:
-
-```bash
-git push heroku main
-```
-
-### Google Cloud Platform (Firebase)
-
-1. Install Firebase CLI:
-
-```bash
-npm install -g firebase-tools
-```
-
-2. Login and initialize:
-
-```bash
-firebase login
-firebase init
-```
-
-3. Build and deploy:
-
-```bash
-npm run build
-firebase deploy
-```
-
-## Static Hosting
-
-### GitHub Pages
-
-1. Install gh-pages:
-
-```bash
-npm install --save-dev gh-pages
-```
-
-2. Add to package.json:
-
-```json
-{
-  "homepage": "https://yourusername.github.io/lms",
-  "scripts": {
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
-  }
-}
-```
-
-3. Deploy:
-
-```bash
-npm run deploy
+npm run pages:dev  # wrangler pages dev dist --compatibility-date=2026-09-01
 ```
 
 ## CI/CD
@@ -225,8 +117,11 @@ Add deployment step to `.github/workflows/ci.yml`:
 - name: Deploy to Production
   if: github.ref == 'refs/heads/main'
   run: |
-    # Add your deployment commands here
-    npm run deploy
+    npm run build && npx wrangler pages deploy dist --branch=main
+- name: Deploy Preview
+  if: github.ref != 'refs/heads/main'
+  run: |
+    npm run build && npx wrangler pages deploy dist --branch=preview
 ```
 
 ## Performance Optimization
@@ -278,12 +173,15 @@ Configure analytics in your environment variables:
 
 ## Health Checks
 
-The Docker deployment includes a health check endpoint at `/health`.
+LTE exposes a versioned health endpoint:
 
-For other deployments, ensure your hosting platform can check:
+```bash
+curl -s https://<pages-domain>/api/v1/health | jq
+# expected: { "status": "ok" }
+```
 
-- HTTP 200 response from root path
-- Application loads without errors
+- HTTP 200 from `/api/v1/health` indicates the Pages Functions are reachable.
+- Application loads without errors.
 
 ## Rollback Strategy
 

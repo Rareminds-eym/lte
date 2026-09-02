@@ -10,16 +10,14 @@ This directory contains the Supabase database configuration for the LTE (Learner
 
 ## Port Configuration
 
-The following ports are configured for local development:
+The following ports are configured for local development (from `config.toml:11`):
 
 | Service | Port | Purpose |
 |---------|------|---------|
-| API | 54321 | REST API endpoint |
-| Database | 54322 | PostgreSQL connection |
-| Studio | 54323 | Supabase Studio UI |
-| Inbucket (SMTP) | 54324-54326 | Email testing |
-| Realtime | 54327 | WebSocket connections |
-| Vector | 54328 | Vector database |
+| API | 54341 | REST API endpoint |
+| Database | 54347 | PostgreSQL connection |
+| Studio | 54343 | Supabase Studio UI |
+| Inbucket (SMTP) | 54344 | Email testing |
 
 ## Usage
 
@@ -69,16 +67,21 @@ supabase db reset --linked --sql-paths "./seed/production/*.sql"
 ```
 
 ### View Studio
-Open http://127.0.0.1:54323 in your browser
+Open http://127.0.0.1:54343 in your browser
 
 ## Database Schema
 
-The schema includes the following tables:
+The schema includes 30 tables (migrations `20260716092555` … `20260812093636`):
 
-- **users** — User accounts (learners, instructors, admins)
-- **courses** — Course content and metadata
-- **lessons** — Individual lessons within courses
-- **enrollments** — User course enrollments and progress
-- **progress** — Detailed lesson completion tracking
+- **capabilities, levels, level_scale, skills, level_skills** — Learning catalog core
+- **roles, role_capability_sequence** — Role shadow + capability ordering
+- **modules, modules_content, e_content** — 6E module stages + content items
+- **module_artifacts, artifact_questions, artifact_templates** — Artifact definitions
+- **users, user_profiles, subscription_cache** — Identity + profile
+- **learning_tracks, learning_paths, learning_track_evidence** — Learner path assignment
+- **user_capabilities, user_capability_level_progress, user_module_progress, user_stage_progress** — Progress tracking
+- **artifact_submissions, artifact_submission_answers, artifact_submission_files, artifact_evaluation_flows** — Submissions + evaluation
+- **skill_gap, profile_snapshot** — Gap analysis + snapshots
+- **xp_events** — Evidence / engagement XP ledger
 
-All tables have Row Level Security (RLS) enabled for secure data access.
+RLS intentionally off — via service_role + gateway (verifications/2026-08-10 H2, plan 2026-09-01).

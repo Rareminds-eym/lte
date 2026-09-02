@@ -125,16 +125,18 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     const qb = createServiceQueryGateway(context.env);
 
-    // 1. Fetch active learning path and join with roles
-    const path = (await qb.read(activeReadinessPathReadPolicy, {
+    // 1. Fetch active learning path and join with roles — handle multiple is_latest paths (one per role)
+    const paths = (await qb.read(activeReadinessPathReadPolicy, {
       auth: { userId },
       filters: [{ column: "is_latest", op: "eq", value: true }],
-      result: "maybeSingle",
-    })) as {
+      sort: [{ column: "updated_at", ascending: false }],
+      limit: 1,
+    })) as Array<{
       id: string;
       updated_at: string;
       roles?: Record<string, unknown> | Array<Record<string, unknown>>;
-    } | null;
+    }> | null;
+    const path = Array.isArray(paths) && paths.length > 0 ? paths[0] : null;
 
     if (!path) {
       return jsonError("No active learning path found", 404, {
@@ -465,7 +467,6 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     apiLogger.error("Failed to construct readiness display data", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Internal server error", 500, { code: "SERVER_ERROR", requestId });
   }
 }

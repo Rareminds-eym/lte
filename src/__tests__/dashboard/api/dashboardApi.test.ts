@@ -108,12 +108,13 @@ describe("dashboardApi", () => {
     expect(data.careerTarget.readinessPercentage).toBeLessThanOrEqual(100);
 
     expect(data.journey).toBeNull();
-    expect(data.priorities.items.length).toBeGreaterThan(0);
-    expect(data.capabilityGaps.length).toBeGreaterThan(0);
-    expect(data.upcomingFeedback.upcoming.length).toBeGreaterThan(0);
-    expect(data.upcomingFeedback.recentFeedback.length).toBeGreaterThan(0);
+    // Honest empty when no real data — never fabricated mock
+    expect(data.priorities.items).toHaveLength(0);
+    expect(data.capabilityGaps).toHaveLength(0);
+    expect(data.upcomingFeedback).toBeNull();
     expect(data.careerPaths.tracks).toHaveLength(0);
-    expect(data.achievements.items).toHaveLength(data.achievements.shownCount);
+    expect(data.achievements.items).toHaveLength(0);
+    expect(data.achievements.shownCount).toBe(0);
   });
 
   it("keeps priority item types within the allowed union", async () => {

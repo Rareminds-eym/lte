@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { XpModalProvider } from "@/app/providers/XpModalProvider";
 import { useLearningPathStore } from "@/entities/active-learning-path";
+import { useAuthStore } from "@/entities/session";
 import { Dashboard } from "@/pages/dashboard";
 import { useXpModalStore } from "@/shared/store";
 
@@ -32,6 +33,22 @@ const createTestQueryClient = () =>
 describe("Dashboard Page", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    useAuthStore.setState({
+      user: {
+        id: "test-user",
+        email: "test@rareminds.com",
+        org_id: "org-1",
+        roles: ["learner"],
+        products: ["lte"],
+        membership_status: "active",
+        is_email_verified: true,
+        user_metadata: {},
+      },
+      isAuthenticated: true,
+      loading: false,
+      initialized: true,
+      error: null,
+    });
     useLearningPathStore.setState({
       activeTrack: {
         learningTrackId: "lt-1",
@@ -111,6 +128,21 @@ describe("Dashboard Page", () => {
           },
         });
       }
+      if (url.includes("/api/v1/readiness")) {
+        return Promise.resolve({
+          score: 45,
+          band: "Learning in Progress",
+          components: {
+            courseCompletion: { value: 60, weight: 30 },
+            artifactCompletion: { value: 40, weight: 25 },
+            aiAverageScore: { value: 50, weight: 25 },
+            xpAchievement: { value: 30, weight: 10 },
+            profileCompletion: { value: 66, weight: 10 },
+          },
+          missingEvidence: [],
+          configWarnings: [],
+        });
+      }
       return Promise.reject(new Error(`Unhandled apiFetch: ${url}`));
     });
   });
@@ -171,6 +203,21 @@ describe("Dashboard Page", () => {
           success: true,
           state: "active",
           data: null,
+        });
+      }
+      if (url.includes("/api/v1/readiness")) {
+        return Promise.resolve({
+          score: 45,
+          band: "Learning in Progress",
+          components: {
+            courseCompletion: { value: 60, weight: 30 },
+            artifactCompletion: { value: 40, weight: 25 },
+            aiAverageScore: { value: 50, weight: 25 },
+            xpAchievement: { value: 30, weight: 10 },
+            profileCompletion: { value: 66, weight: 10 },
+          },
+          missingEvidence: [],
+          configWarnings: [],
         });
       }
       return Promise.reject(new Error(`Unhandled apiFetch: ${url}`));

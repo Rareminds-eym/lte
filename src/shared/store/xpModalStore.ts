@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getLogger } from "@/shared";
+import { getLogger } from "@/shared/config/logging";
 
 const logger = getLogger("xpModalStore");
 

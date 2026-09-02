@@ -3,6 +3,7 @@ import type React from "react";
 import { useEffect } from "react";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { DASHBOARD_QUERY_KEY, useDashboardData } from "@/entities/dashboard";
+import { useReadiness } from "@/entities/dashboard/api/dashboardApi";
 import { useAuthStore } from "@/entities/session";
 import { getLogger } from "@/shared";
 import { apiFetch } from "@/shared/api";
@@ -80,6 +81,12 @@ export const DashboardPage: React.FC = () => {
     }
   }, [data?.todayEvents, data?.careerTarget.xp, addEvent, shownEventIds, queryClient, userId]);
 
+  // Readiness: must be called before any early return (rules of hooks)
+  const { data: readiness } = useReadiness(
+    userId,
+    !needsAssessment && !!data && !isPending && !isError,
+  );
+
   // Loading state: use the structured DashboardSkeleton to prevent layout shift on initial load only
   if ((isPending && !data) || (activeLearningPathLoading && !data)) {
     return <DashboardSkeleton />;
@@ -118,9 +125,7 @@ export const DashboardPage: React.FC = () => {
             ...data.careerTarget,
             title: firstRole?.roleName || activeTrack.track,
             readinessPercentage:
-              firstRole?.readinessScore !== undefined
-                ? firstRole.readinessScore
-                : activeTrack.matchScore,
+              readiness?.score ?? firstRole?.readinessScore ?? activeTrack.matchScore,
             domain: firstRole?.domain || data.careerTarget.domain,
             industry:
               typeof firstRole?.metadata?.["industry"] === "string"
@@ -151,5 +156,70 @@ export const DashboardPage: React.FC = () => {
         }
       : data;
 
-  return <DashboardContent data={mergedData || data} />;
+  return (
+    <div className="space-y-6">
+      <DashboardContent data={mergedData || data} />
+      {readiness && (
+        <section
+          aria-label="Readiness report"
+          className="rounded-2xl border border-line-default bg-surface-primary p-6 shadow-xs max-w-[1440px] mx-auto"
+        >
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="text-sm font-bold text-content-primary">
+              Readiness: {readiness.score}% — {readiness.band}
+            </div>
+            {readiness.currentRole && (
+              <div className="text-xs font-medium text-content-secondary">
+                Role: {readiness.currentRole?.name ?? "—"}
+              </div>
+            )}
+            {readiness.lastCalculated && (
+              <div className="text-xs text-content-muted">
+                Last calculated: {new Date(readiness.lastCalculated).toLocaleDateString()}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2 text-xs">
+              {Object.entries(readiness.components).map(([k, v]) => (
+                <span
+                  key={k}
+                  className="inline-flex items-center gap-1 rounded-full bg-surface-secondary px-3 py-1 font-medium text-content-secondary"
+                >
+                  {k}: {v.value}% <span className="text-content-muted">· w{v.weight}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+          {readiness.missingEvidence?.length > 0 && (
+            <div className="mt-4">
+              <div className="text-xs font-semibold text-content-secondary">
+                Missing evidence (top 3)
+              </div>
+              <ul className="mt-1 list-disc pl-5 text-xs text-content-body">
+                {readiness.missingEvidence.slice(0, 3).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {readiness.configWarnings?.length > 0 && (
+            <div className="mt-3 text-xs text-warning-600">
+              {readiness.configWarnings.map((w) => (
+                <div key={w}>⚠ {w}</div>
+              ))}
+            </div>
+          )}
+          {readiness.improvementActions && readiness.improvementActions.length > 0 && (
+            <div className="mt-4">
+              <div className="text-xs font-semibold text-content-secondary">Next steps</div>
+              <ul className="mt-1 list-disc pl-5 text-xs text-content-body">
+                {readiness.improvementActions.slice(0, 3).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
 };

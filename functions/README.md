@@ -1,7 +1,7 @@
 # Backend Functions (Serverless/Cloud Functions)
 
 ## Description
-The **functions** folder contains serverless backend functions (AWS Lambda, Firebase Functions, Netlify Functions, etc.) that handle server-side logic, API endpoints, and business operations. These functions are organized by domain and purpose, providing a clean separation between frontend and backend concerns.
+The **functions** folder contains Cloudflare Pages Functions (`functions/api/**`) that handle server-side logic, API endpoints, and business operations on the Cloudflare Workers runtime. These functions are organized by domain and purpose, providing a clean separation between frontend and backend concerns. See `functions/lib/env.ts` for the validated `LteEnv` bindings.
 
 ## Purpose
 - Implement backend API endpoints and business logic
@@ -175,63 +175,37 @@ functions/
 
 ## Environment Variables
 
-Required environment variables:
+Required environment variables (validated in `functions/lib/env.ts`):
 
 ```env
-# Database
-DATABASE_URL=postgresql://user:password@host:port/database
+# Supabase (service_role — gateway enforces ownership, RLS intentionally off)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Authentication
-JWT_SECRET=your-secret-key
-JWT_EXPIRY=24h
+# Cloudflare Bindings
+SSO_SERVICE=service binding to sso-auth Worker
+STORAGE_BUCKET=R2 bucket binding
+R2_PUBLIC_DOMAIN=https://r2-public.your-domain.com  # optional
 
-# AWS/Storage
-AWS_ACCESS_KEY_ID=your-key
-AWS_SECRET_ACCESS_KEY=your-secret
-AWS_REGION=us-east-1
-S3_BUCKET=your-bucket
+# SkillPassport internal
+SKILLPASSPORT_INTERNAL_URL=https://skillpassport.internal
+SKILLPASSPORT_INTERNAL_SECRET=at-least-32-chars-secret
 
-# Email
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-password
-EMAIL_FROM=noreply@yourdomain.com
+# AI
+OPENROUTER_API_KEY=sk-or-v1-...
 
-# Frontend
-FRONTEND_URL=http://localhost:3000
-
-# Other
-NODE_ENV=development
+# Optional
+COOKIE_DOMAIN=.your-domain.com
 ```
 
 ## Deployment
 
-### Platform-Specific Notes
+### Platform — Cloudflare Pages Functions
 
-**AWS Lambda**:
-- Configure API Gateway
-- Set memory and timeout limits
-- Use Lambda layers for dependencies
-- Enable CloudWatch logging
-
-**Firebase Functions**:
-- Use Firebase CLI for deployment
-- Configure regions
-- Set runtime options (memory, timeout)
-- Use Firebase emulator for testing
-
-**Netlify Functions**:
-- Functions go in `netlify/functions/`
-- Auto-deploys with Git
-- Environment variables in Netlify dashboard
-- Limited execution time (10s for free tier)
-
-**Vercel Functions**:
-- Functions go in `api/` folder
-- Serverless function format
-- Environment variables in Vercel dashboard
-- Edge functions for better performance
+- Deploy via `wrangler pages deploy` or Cloudflare Pages Git integration
+- Bindings configured in `wrangler.toml` (`SSO_SERVICE`, `STORAGE_BUCKET`)
+- Secrets via `wrangler secret put SUPABASE_SERVICE_ROLE_KEY` etc. (never commit)
+- Observability via `wrangler.toml` `[observability]` + `functions/shared/logger.ts` JSON logs
 
 ## Related Documentation
 - [Architecture Documentation](../docs/ARCHITECTURE.md)

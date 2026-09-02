@@ -93,7 +93,12 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
     let exchangeRequest = exchangeRequestsRef.current.get(exchangeKey);
 
     if (!exchangeRequest) {
-      logger.info("Starting code exchange…", callbackParams);
+      logger.info("Starting code exchange…", {
+        hasCode: !!callbackParams.code,
+        hasState: !!callbackParams.state,
+        redirectUri: callbackParams.redirectUri,
+        targetNext: callbackParams.targetNext,
+      });
       exchangeRequest = exchangeCode(callbackParams).catch((error: unknown) => {
         exchangeRequestsRef.current.delete(exchangeKey);
         throw error;

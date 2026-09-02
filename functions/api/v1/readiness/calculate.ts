@@ -65,12 +65,14 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
 
     const qb = createServiceQueryGateway(context.env);
 
-    // Fetch the user's latest active learning path
-    const path = (await qb.read(latestLearningPathReadPolicy, {
+    // Fetch the user's latest active learning path — handle multiple is_latest paths (one per role)
+    const paths = (await qb.read(latestLearningPathReadPolicy, {
       auth: { userId },
       filters: [{ column: "is_latest", op: "eq", value: true }],
-      result: "maybeSingle",
-    })) as { id: string } | null;
+      sort: [{ column: "updated_at", ascending: false }],
+      limit: 1,
+    })) as Array<{ id: string }> | null;
+    const path = Array.isArray(paths) && paths.length > 0 ? paths[0] : null;
 
     if (!path) {
       return jsonError("No active learning path found for this user", 404, {
