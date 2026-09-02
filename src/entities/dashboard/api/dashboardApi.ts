@@ -10,37 +10,26 @@ import type { DashboardData } from "../model/types";
 
 const logger = getLogger("dashboardApi");
 
-// Static base payload — live data (XP totals, journey, streak) is overwritten
-// from the API; sections without endpoints surface honest empty/null, never fabricated numbers.
+// Default base payload — live data (XP totals, journey, streak) is populated from the API;
+// sections without live endpoints surface honest empty/null states.
 export const MOCK_DASHBOARD_DATA: DashboardData = {
   careerTarget: {
-    title: "Backend Engineer", // test fixture only
+    title: "Backend Engineer", // test fixture fallback
     readinessPercentage: 0,
     strengthsCount: 0,
     capabilityGapsCount: 0,
     domain: "",
     industry: "",
     level: "",
-    xp: 1240,
-    xpThisWeek: 120,
-    streakDays: 7,
+    xp: 0,
+    xpThisWeek: 0,
+    streakDays: 0,
     badgesCount: 0,
   },
-  journey: {
-    title: "Debugging API Latency Issues",
-    moduleInfo: "Module 3 of 7",
-    capability: "Systems Thinking",
-    output: "Root-cause analysis artifact",
-    whyItMatters: "Essential for backend performance & reliability",
-    progressPercentage: 60,
-    completedCount: 4,
-    inProgressCount: 1,
-    remainingCount: 2,
-    timeRemaining: "~18 min remaining",
-  },
-  journeyState: "active",
+  journey: null,
+  journeyState: "no_track",
   priorities: {
-    currentXp: 120,
+    currentXp: 0,
     goalXp: 150,
     items: [],
   },
@@ -67,11 +56,7 @@ export const MOCK_DASHBOARD_DATA: DashboardData = {
   },
 };
 
-const localMidnight = (date: Date): Date => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
+const localMidnight = (d: Date): Date => new Date(new Date(d).setHours(0, 0, 0, 0));
 
 export const fetchDashboardData = async (signal?: AbortSignal): Promise<DashboardData> => {
   const now = new Date();
@@ -100,30 +85,12 @@ export const fetchDashboardData = async (signal?: AbortSignal): Promise<Dashboar
     throw abortError.reason;
   }
 
-  const base = { ...MOCK_DASHBOARD_DATA };
-  // Honest empty when no real data — never fabricated mock
-  base.careerTarget = {
-    ...base.careerTarget,
-    readinessPercentage: 0,
-    strengthsCount: 0,
-    capabilityGapsCount: 0,
-    badgesCount: 0,
-    domain: "",
-    industry: "",
-    level: "",
+  const base: DashboardData = {
+    ...MOCK_DASHBOARD_DATA,
+    careerTarget: { ...MOCK_DASHBOARD_DATA.careerTarget },
+    priorities: { ...MOCK_DASHBOARD_DATA.priorities },
+    achievements: { ...MOCK_DASHBOARD_DATA.achievements },
   };
-  base.capabilityGaps = [];
-  base.priorities = { ...base.priorities, items: [] };
-  base.achievements = {
-    ...base.achievements,
-    items: [],
-    unlockedCount: 0,
-    shownCount: 0,
-    nextMilestoneTitle: "",
-    nextMilestoneDescription: "",
-    nextMilestoneProgressPercentage: 0,
-  };
-  base.upcomingFeedback = null;
 
   const parsedXp =
     xpResult.status === "fulfilled" ? DashboardXpResponseSchema.safeParse(xpResult.value) : null;

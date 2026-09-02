@@ -85,7 +85,7 @@ describe("Readiness API Endpoints", () => {
       const mockSupabase = {
         from: vi.fn().mockImplementation((table: string) => {
           if (table === "learning_paths") {
-            return chainable({ id: "path-1", role_id: "role-1", role_readiness_percentage: 75 });
+            return chainable([{ id: "path-1", role_id: "role-1", role_readiness_percentage: 75 }]);
           }
           if (table === "user_capability_level_progress") {
             return chainable([{ level_id: "lvl-1" }]);
@@ -143,17 +143,19 @@ describe("Readiness API Endpoints", () => {
       const mockSupabase = {
         from: vi.fn().mockImplementation((table: string) => {
           if (table === "learning_paths") {
-            return chainable({
-              id: "path-1",
-              role_readiness_percentage: 75,
-              updated_at: new Date().toISOString(),
-              role_id: "role-1",
-              roles: {
-                role_name: "Frontend Engineer",
-                role_family_name: "Eng",
-                domain_name: "Frontend",
+            return chainable([
+              {
+                id: "path-1",
+                role_readiness_percentage: 75,
+                updated_at: new Date().toISOString(),
+                role_id: "role-1",
+                roles: {
+                  role_name: "Frontend Engineer",
+                  role_family_name: "Eng",
+                  domain_name: "Frontend",
+                },
               },
-            });
+            ]);
           }
           if (table === "user_capability_level_progress") {
             return chainable([{ level_id: "lvl-1" }]);

@@ -11,21 +11,25 @@ export interface ApiFetchOptions extends RequestInit {
 // Outbound requests must be bounded so a hung upstream cannot stall the tab.
 const REQUEST_TIMEOUT_MS = 15_000;
 
-function withTimeoutSignal(signal?: AbortSignal | null): { signal: AbortSignal; done: () => void } {
+function createTimeoutSignal(ms: number, parentSignal?: AbortSignal | null): AbortSignal {
   const controller = new AbortController();
-  const timer = setTimeout(
-    () => controller.abort(new DOMException("Timeout", "AbortError")),
-    REQUEST_TIMEOUT_MS,
-  );
-  const abort = () => controller.abort();
-  signal?.addEventListener("abort", abort);
-  return {
-    signal: controller.signal,
-    done: () => {
+  const timer = setTimeout(() => controller.abort(new DOMException("Timeout", "AbortError")), ms);
+  if (parentSignal) {
+    if (parentSignal.aborted) {
       clearTimeout(timer);
-      signal?.removeEventListener("abort", abort);
-    },
-  };
+      controller.abort(parentSignal.reason);
+    } else {
+      parentSignal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          controller.abort(parentSignal.reason);
+        },
+        { once: true },
+      );
+    }
+  }
+  return controller.signal;
 }
 
 /** Parses an error response body and throws a rich ApiError. Shared by all request paths. */
@@ -101,7 +105,7 @@ async function throwForErrorResponse(response: Response, path: string): Promise<
 async function apiRequest(path: string, options: ApiFetchOptions = {}): Promise<Response> {
   logger.info(`Request: ${options.method || "GET"} ${path}`);
 
-  const { signal: timeoutSignal, done } = withTimeoutSignal(options.signal);
+  const timeoutSignal = createTimeoutSignal(REQUEST_TIMEOUT_MS, options.signal);
   let response: Response;
   try {
     response = await authClient.request(path, { ...options, signal: timeoutSignal });
@@ -131,8 +135,6 @@ async function apiRequest(path: string, options: ApiFetchOptions = {}): Promise<
       logger.error(`Network Error: ${path} — ${errMsg}`);
       throw error instanceof Error ? error : new Error(errMsg);
     }
-  } finally {
-    done();
   }
 
   if (!response.ok) {
@@ -157,7 +159,7 @@ export async function apiPreAuthFetch<T = unknown>(
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const { signal, done } = withTimeoutSignal(options.signal ?? null);
+  const signal = createTimeoutSignal(REQUEST_TIMEOUT_MS, options.signal);
 
   let response: Response;
   try {
@@ -167,8 +169,6 @@ export async function apiPreAuthFetch<T = unknown>(
       `Pre-auth Network Error: ${path} — ${error instanceof Error ? error.message : "unknown"}`,
     );
     throw error instanceof Error ? error : new Error("Network request failed");
-  } finally {
-    done();
   }
 
   if (!response.ok) {

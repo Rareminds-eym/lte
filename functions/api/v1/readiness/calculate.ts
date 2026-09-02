@@ -13,8 +13,9 @@ let lastPruneTime = Date.now();
 const latestLearningPathReadPolicy = {
   table: "learning_paths",
   operation: "read",
-  columns: ["id"],
+  columns: ["id", "updated_at"],
   filters: ["user_id", "is_latest"],
+  sorts: ["updated_at"],
   ownership: { column: "user_id", source: "authenticatedUserId", required: true },
 } as const;
 

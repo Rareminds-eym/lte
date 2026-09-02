@@ -166,6 +166,22 @@ const sampleAchievements = {
   nextMilestoneProgressPercentage: 60,
 };
 
+const sampleJourney = {
+  title: "Debugging API Latency Issues",
+  moduleInfo: "Module 3 of 7",
+  capability: "Systems Thinking",
+  output: "Root-cause analysis artifact",
+  whyItMatters: "Essential for backend performance & reliability",
+  progressPercentage: 60,
+  completedCount: 4,
+  inProgressCount: 1,
+  remainingCount: 2,
+  timeRemaining: "~18 min remaining",
+  levelId: "lvl-1",
+  moduleNo: 3,
+  capabilityCode: "SYS-001",
+};
+
 describe("Dashboard Widgets", () => {
   it("renders CareerTargetBanner with readiness stats and gamification metrics", () => {
     render(<CareerTargetBanner data={MOCK_DASHBOARD_DATA.careerTarget} />);
@@ -174,15 +190,13 @@ describe("Dashboard Widgets", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
     expect(screen.getByText("0 Strengths")).toBeInTheDocument();
     expect(screen.getByText("0 Capability Gaps")).toBeInTheDocument();
-    expect(screen.getByText("1,240")).toBeInTheDocument();
-    expect(screen.getByText("7 Days")).toBeInTheDocument();
-    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("0 Days")).toBeInTheDocument();
   });
 
   it("renders JourneyHero with progress percentage and action buttons", () => {
     render(
       <MemoryRouter>
-        <JourneyHero data={MOCK_DASHBOARD_DATA.journey} state={MOCK_DASHBOARD_DATA.journeyState} />
+        <JourneyHero data={sampleJourney} state="active" />
       </MemoryRouter>,
     );
     expect(screen.getByText("CONTINUE YOUR JOURNEY")).toBeInTheDocument();

@@ -24,13 +24,14 @@ function getSsoGateway(env: LteEnv): ReturnType<typeof createSsoGateway> {
     "http://localhost",
     "http://127.0.0.1",
   ];
+  const allowedOrigins = isProd ? prodOrigins : devOrigins;
   cachedGateway = createSsoGateway({
     sso: env.SSO_SERVICE as unknown as Parameters<typeof createSsoGateway>[0]["sso"],
     issuer: "sso-api",
     audience: "sso-client",
-    approvedOrigins: isProd ? prodOrigins : devOrigins,
+    approvedOrigins: allowedOrigins,
     credentialedCors: {
-      origins: isProd ? prodOrigins : devOrigins,
+      origins: allowedOrigins,
     },
     csrf: { name: "X-RM-CSRF", value: "1" },
     cookieMaxAgeSeconds: 604800,

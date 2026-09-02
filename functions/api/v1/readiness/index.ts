@@ -36,6 +36,7 @@ const activeReadinessPathReadPolicy = {
     )
   `,
   filters: ["user_id", "is_latest"],
+  sorts: ["updated_at"],
   ownership: { column: "user_id", source: "authenticatedUserId", required: true },
 } as const;
 

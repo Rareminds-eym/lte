@@ -161,6 +161,7 @@ export const DashboardPage: React.FC = () => {
       <DashboardContent data={mergedData || data} />
       {readiness && (
         <section
+          id="readiness-report"
           aria-label="Readiness report"
           className="rounded-2xl border border-line-default bg-surface-primary p-6 shadow-xs max-w-[1440px] mx-auto"
         >
