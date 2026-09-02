@@ -25,19 +25,19 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
       onClick={onClick}
       aria-expanded={isOpen}
       aria-haspopup="menu"
-      className={`flex items-center gap-2.5 p-1 rounded-2xl hover:bg-surface-muted transition-colors cursor-pointer text-left border-none bg-transparent ${className}`}
+      className={`flex items-center gap-2 p-1 rounded-xl hover:bg-surface-muted transition-colors cursor-pointer text-left border-none bg-transparent ${className}`}
     >
       {/* Avatar Circle */}
       {avatarUrl ? (
         <Image
           src={avatarUrl}
           alt={name}
-          className="w-9 h-9 rounded-full object-cover shrink-0 shadow-xs"
+          className="w-8 h-8 rounded-full object-cover shrink-0 shadow-xs"
           loading="eager"
         />
       ) : (
-        <div className="w-9 h-9 rounded-full bg-brand-600 flex items-center justify-center shrink-0 shadow-xs text-white">
-          <UserIcon size={18} />
+        <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center shrink-0 shadow-xs text-white">
+          <UserIcon size={16} />
         </div>
       )}
 

@@ -108,7 +108,7 @@ export const LevelHeader: React.FC<LevelHeaderProps> = ({
 
   return (
     <div
-      className={`h-12 md:h-14 bg-surface-primary border-b border-line-subtle px-3 md:px-6 flex items-center justify-between shrink-0 select-none ${className}`}
+      className={`h-11 md:h-12 bg-surface-primary border-b border-line-subtle px-3 md:px-5 flex items-center justify-between shrink-0 select-none ${className}`}
     >
       {/* Left Navigation Breadcrumb */}
       <Breadcrumb
@@ -133,7 +133,7 @@ export const LevelHeader: React.FC<LevelHeaderProps> = ({
           onClick={onToggleModules}
           title={isModulesOpen ? "Close Left Sidebar" : "Open Left Sidebar"}
           aria-label="Toggle Modules Panel"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-default bg-surface-primary text-content-secondary shadow-2xs transition-colors hover:bg-surface-muted hover:text-content-primary lg:hidden"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-line-default bg-surface-primary text-content-secondary shadow-2xs transition-colors hover:bg-surface-muted hover:text-content-primary lg:hidden"
         >
           <PanelLeftIcon isActive={isModulesOpen} />
         </button>
@@ -144,7 +144,7 @@ export const LevelHeader: React.FC<LevelHeaderProps> = ({
           onClick={onToggleStageInfo}
           title={isStageInfoOpen ? "Close Right Sidebar" : "Open Right Sidebar"}
           aria-label="Toggle Stage Info Panel"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-default bg-surface-primary text-content-secondary shadow-2xs transition-colors hover:bg-surface-muted hover:text-content-primary lg:hidden"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-line-default bg-surface-primary text-content-secondary shadow-2xs transition-colors hover:bg-surface-muted hover:text-content-primary lg:hidden"
         >
           <PanelRightIcon isActive={isStageInfoOpen} />
         </button>
@@ -155,14 +155,14 @@ export const LevelHeader: React.FC<LevelHeaderProps> = ({
           title="More options"
           aria-label="More options"
           aria-expanded={isMenuOpen}
-          className="w-8 h-8 rounded-lg border border-line-default bg-surface-primary hover:bg-surface-muted text-content-secondary hover:text-content-primary flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+          className="w-7 h-7 rounded-lg border border-line-default bg-surface-primary hover:bg-surface-muted text-content-secondary hover:text-content-primary flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
         >
-          <DotsVerticalIcon size={15} />
+          <DotsVerticalIcon size={14} />
         </button>
 
         {/* Dropdown Menu */}
         {isMenuOpen && (
-          <div className="absolute right-0 top-10 w-52 bg-surface-primary border border-line-default rounded-xl shadow-lg p-1.5 z-50">
+          <div className="absolute right-0 top-9 w-52 bg-surface-primary border border-line-default rounded-xl shadow-lg p-1.5 z-50">
             <button
               type="button"
               onClick={handleShare}

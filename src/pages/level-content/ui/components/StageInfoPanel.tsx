@@ -111,12 +111,12 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-surface-primary px-3.5 pb-3.5 text-content-body">
       {/* Level problem card */}
       <div className="sticky top-0 z-20 -mx-3.5 bg-surface-primary px-3.5 pb-4 pt-3.5 shadow-[0_6px_12px_-10px_rgba(15,23,42,0.14)]">
-        <div className="rounded-xl border border-brand-700 bg-brand-800 p-4 text-white shadow-lg">
+        <div className="rounded-2xl border border-brand-700 bg-brand-800 p-4 text-white shadow-md">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
-              <BookIcon size={16} className="h-4 w-4 text-white" />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/15">
+              <BookIcon size={15} className="h-4 w-4 text-white" />
             </span>
-            <h3 className="min-w-0 flex-1 text-[13px] font-bold uppercase leading-snug text-white">
+            <h3 className="min-w-0 flex-1 text-[13px] font-bold uppercase leading-snug text-white tracking-wide">
               Main Problem Statement
             </h3>
             <Button
@@ -125,7 +125,7 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
               size="sm"
               aria-label="Copy main problem statement"
               title="Copy main problem statement"
-              className="h-9 w-9 shrink-0 rounded-lg border-0 bg-transparent p-0 !text-brand-200 shadow-none hover:bg-white/10 hover:!text-white"
+              className="h-9 w-9 shrink-0 rounded-lg border-0 bg-transparent p-0 !text-brand-200 shadow-none hover:bg-white/10 hover:!text-white flex items-center justify-center"
               onClick={() => {
                 void navigator.clipboard
                   .writeText(level.levelProblemStatement.description)
@@ -134,7 +134,7 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
                   });
               }}
             >
-              <CopyIcon size={20} className="h-5 w-5" />
+              <CopyIcon size={20} className="h-4 w-4" />
             </Button>
           </div>
 
@@ -152,7 +152,7 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
             type="button"
             variant="ghost"
             size="sm"
-            className="mt-3 flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none border-0 border-t border-dashed border-white/25 bg-transparent px-0 pt-2.5 text-[13px] font-semibold !text-brand-200 shadow-none hover:bg-transparent hover:!text-white"
+            className="mt-3 flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none border-0 border-t border-dashed border-white/20 bg-transparent px-0 pt-2.5 text-[12px] font-semibold !text-brand-200 shadow-none hover:bg-transparent hover:!text-white"
             aria-expanded={isScenarioExpanded}
             onClick={() => setIsScenarioExpanded(!isScenarioExpanded)}
           >
@@ -171,22 +171,22 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
       {!activeArtifactType && stageModuleContext && (
         <details
           open
-          className="group rounded-xl border border-warning-100 bg-warning-50 p-4 shadow-2xs"
+          className="group rounded-2xl border border-warning-200 bg-warning-50 p-4 shadow-2xs"
         >
-          <summary className="flex cursor-pointer list-none items-center gap-3 text-warning-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 [&::-webkit-details-marker]:hidden">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning-100">
-              <DocumentIcon size={18} className="text-warning-600" />
+          <summary className="flex cursor-pointer list-none items-center gap-3 text-warning-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 [&::-webkit-details-marker]:hidden">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning-100">
+              <DocumentIcon size={16} className="text-warning-700" />
             </span>
-            <span className="min-w-0 flex-1 text-[13px] font-bold uppercase leading-snug">
+            <span className="min-w-0 flex-1 text-[13px] font-bold uppercase leading-snug tracking-wide">
               Module Context
             </span>
             <ChevronRightIcon
               size={16}
-              className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-90"
+              className="h-4 w-4 shrink-0 text-warning-700 transition-transform duration-200 group-open:rotate-90"
             />
           </summary>
 
-          <div className="pt-4">
+          <div className="pt-3.5">
             <p className="text-[13px] leading-relaxed text-content-heading">{stageModuleContext}</p>
           </div>
         </details>
@@ -194,12 +194,15 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
 
       {/* Module Problem Statement Card */}
       {levelModule.moduleProblemStatement && (
-        <details open className="group rounded-xl border border-success-100 bg-success-50 p-4">
+        <details
+          open
+          className="group rounded-2xl border border-success-200 bg-success-50 p-4 shadow-2xs"
+        >
           <summary className="flex cursor-pointer list-none items-center gap-3 text-success-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 [&::-webkit-details-marker]:hidden">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success-100">
-              <TargetIcon size={18} className="text-success-800" />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success-100">
+              <TargetIcon size={16} className="text-success-800" />
             </span>
-            <span className="min-w-0 flex-1 text-[13px] font-bold uppercase leading-snug">
+            <span className="min-w-0 flex-1 text-[13px] font-bold uppercase leading-snug tracking-wide">
               Module Problem Statement
             </span>
             <ChevronRightIcon
@@ -207,7 +210,7 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
               className="h-4 w-4 shrink-0 text-success-700 transition-transform duration-200 group-open:rotate-90"
             />
           </summary>
-          <p className="pt-4 text-[13px] leading-relaxed text-content-heading">
+          <p className="pt-3.5 text-[13px] leading-relaxed text-content-heading">
             {levelModule.moduleProblemStatement}
           </p>
         </details>
@@ -219,13 +222,13 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
       {!activeArtifactType ? (
         <details
           open
-          className="group rounded-xl border border-line-default bg-surface-subtle p-4 shadow-2xs"
+          className="group rounded-2xl border border-line-default bg-surface-subtle p-4 shadow-2xs"
         >
           <summary className="flex cursor-pointer list-none items-center gap-3 text-brand-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 [&::-webkit-details-marker]:hidden">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50">
-              <LightningBoltIcon size={18} className="text-brand-800" />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50">
+              <LightningBoltIcon size={16} className="text-brand-800" />
             </span>
-            <span className="min-w-0 flex-1 text-[13px] font-bold uppercase leading-snug">
+            <span className="min-w-0 flex-1 text-[13px] font-bold uppercase leading-snug tracking-wide">
               {formatStageLabel(activeStage)} Statement
             </span>
             <ChevronRightIcon
