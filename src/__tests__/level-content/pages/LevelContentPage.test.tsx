@@ -769,6 +769,7 @@ describe("LevelContentPage", () => {
     // Close stage info right-panel check
     const closeInfoBtn = screen.getByLabelText("Close stage info");
     fireEvent.click(closeInfoBtn);
+    expect(screen.getByLabelText("Open stage information panel")).toBeInTheDocument();
   });
 
   it("shows an error state when the API fails", () => {
