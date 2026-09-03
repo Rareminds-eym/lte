@@ -834,14 +834,14 @@ export const LevelContentPage: React.FC = () => {
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-surface-secondary">
-      <LevelHeader
-        levelTitle={level.title}
-        activeStage={activeStage}
-        isModulesOpen={isModulesOpen}
-        isStageInfoOpen={isStageInfoOpen}
-        onBackClick={handleBackToOverview}
-        onOverviewClick={handleBackToOverview}
-        onToggleModules={handleToggleModules}
+        <LevelHeader
+          levelTitle={level.title}
+          activeStage={activeStage}
+          isModulesOpen={mobilePanelOpen === "modules"}
+          isStageInfoOpen={mobilePanelOpen === "stageInfo"}
+          onBackClick={handleBackToOverview}
+          onOverviewClick={handleBackToOverview}
+          onToggleModules={handleToggleModules}
         onToggleStageInfo={handleToggleStageInfo}
       />
 
@@ -940,7 +940,7 @@ export const LevelContentPage: React.FC = () => {
                 modules={moduleDrawerItems}
                 onSelectModule={handleModuleSelect}
                 onClose={() => setMobilePanelOpen(null)}
-                className="relative z-10 w-72 h-full shadow-2xl"
+                className="relative z-10 w-72 h-full rounded-none shadow-2xl"
               />
             ) : (
               <aside className="relative z-10 h-full w-[92vw] max-w-[390px] bg-white ml-auto shadow-2xl flex flex-col">
