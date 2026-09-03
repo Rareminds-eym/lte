@@ -749,10 +749,6 @@ describe("LevelContentPage", () => {
     const expandInfoBtn = screen.getByLabelText("Expand stage info");
     fireEvent.click(expandInfoBtn);
 
-    // Close stage info right-panel check
-    const closeInfoBtn = screen.getByLabelText("Close stage info");
-    fireEvent.click(closeInfoBtn);
-
     // Toggling artifact panel question accordion
     const questionBtn = screen.getByText("Practice Question");
     fireEvent.click(questionBtn);
@@ -769,6 +765,11 @@ describe("LevelContentPage", () => {
     );
 
     fireEvent.click(questionBtn);
+
+    // Close stage info right-panel check
+    const closeInfoBtn = screen.getByLabelText("Close stage info");
+    fireEvent.click(closeInfoBtn);
+    expect(screen.getByLabelText("Open stage information panel")).toBeInTheDocument();
   });
 
   it("shows an error state when the API fails", () => {

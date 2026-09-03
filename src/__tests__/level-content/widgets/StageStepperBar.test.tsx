@@ -18,21 +18,48 @@ describe("StageStepperBar Widget", () => {
 
     const exploreLabel = screen.getByText("Explore");
     const exploreButton = screen.getByRole("button", { name: /explore/i });
-    const exploreIcon = exploreButton.querySelector("svg");
+    const activePulse = exploreButton.querySelector(".animate-ping");
 
     expect(exploreLabel).toHaveClass("text-brand-600");
-    expect(exploreIcon).toHaveClass("text-brand-600");
+    expect(exploreButton).toHaveClass("text-brand-600");
+    expect(activePulse).toHaveClass("bg-warning-500/50");
   });
 
-  it("keeps a completed active stage green", () => {
+  it("keeps the current-stage indicator when the active stage is completed", () => {
     render(<StageStepperBar activeStage="engage" completedStages={["engage"]} />);
 
     const engageButton = screen.getByRole("button", { name: /engage/i });
     const engageLabel = screen.getByText("Engage");
 
-    expect(engageButton).toHaveClass("border-success-500");
-    expect(engageLabel).toHaveClass("text-success-600");
-    expect(engageLabel).not.toHaveClass("text-brand-600");
+    expect(screen.getByRole("progressbar", { name: /engage progress/i })).toHaveAttribute(
+      "aria-valuenow",
+      "100",
+    );
+    expect(engageLabel).toHaveClass("text-brand-600");
+    expect(engageButton.querySelector(".animate-ping")).toBeInTheDocument();
+  });
+
+  it("renders partial stage progress values", () => {
+    render(<StageStepperBar activeStage="explain" stageProgress={{ explain: 50 }} />);
+
+    expect(screen.getByRole("progressbar", { name: /explain progress/i })).toHaveAttribute(
+      "aria-valuenow",
+      "50",
+    );
+  });
+
+  it("does not render progress tracks for locked stages", () => {
+    render(
+      <StageStepperBar
+        activeStage="express"
+        stageProgress={{ empower: 25 }}
+        isStageDisabled={(stage) => stage === "empower"}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("progressbar", { name: /empower progress/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("triggers onStageSelect when a stage step is clicked", () => {

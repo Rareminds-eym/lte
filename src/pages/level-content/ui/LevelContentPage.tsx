@@ -44,7 +44,6 @@ import {
   getPrimaryArtifact,
   getStageSummary,
   LEVEL_CONTENT_UNAVAILABLE_MESSAGE,
-  SCENARIO_COLLAPSE_CHAR_LIMIT,
 } from "./components/levelContentUtils";
 import { ModuleLoadingShell } from "./components/ModuleLoadingShell";
 import { SilentContentTimer } from "./components/SilentContentTimer";
@@ -106,9 +105,6 @@ export const LevelContentPage: React.FC = () => {
   const rawStage = searchParams.get("stage")?.toLowerCase();
   const activeStage: LteStage = isLteStageName(rawStage) ? (rawStage as LteStage) : "engage";
   const routeContentId = searchParams.get("content");
-  const isScenarioOverflowing =
-    (level?.levelProblemStatement.description.length ?? 0) > SCENARIO_COLLAPSE_CHAR_LIMIT;
-
   const handleBackToOverview = () => {
     navigate(getCourseOverviewPath(level?.capabilityCode));
   };
@@ -179,12 +175,10 @@ export const LevelContentPage: React.FC = () => {
   };
 
   const handleToggleModules = () => {
-    setIsModulesOpen((prev) => !prev);
     setMobilePanelOpen((prev) => (prev === "modules" ? null : "modules"));
   };
 
   const handleToggleStageInfo = () => {
-    setIsStageInfoOpen((prev) => !prev);
     setMobilePanelOpen((prev) => (prev === "stageInfo" ? null : "stageInfo"));
   };
 
@@ -408,6 +402,21 @@ export const LevelContentPage: React.FC = () => {
   const selectedContentIndex = selectedContent
     ? previewItems.findIndex((item) => item.id === selectedContent.id)
     : -1;
+  const activeStageProgress =
+    selectedContentIndex >= 0 && previewItems.length > 0
+      ? Math.round(((selectedContentIndex + 1) / previewItems.length) * 100)
+      : 0;
+  const stageProgress = navigableStages.reduce<Partial<Record<LteStage, number>>>(
+    (progressByStage, stage) => {
+      progressByStage[stage] = completedStageSet.has(stage)
+        ? 100
+        : stage === activeStage
+          ? activeStageProgress
+          : 0;
+      return progressByStage;
+    },
+    {},
+  );
   const nextContent =
     selectedContentIndex >= 0 ? (previewItems[selectedContentIndex + 1] ?? null) : null;
   const activeArtifact = getPrimaryArtifact(activeStageContent.artifacts);
@@ -625,37 +634,38 @@ export const LevelContentPage: React.FC = () => {
     activeStageHasUnsubmittedFinalArtifact && !nextContent;
 
   const renderStageNavigationBar = () => (
-    <div className="sticky bottom-0 z-20 grid min-h-[76px] shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 border-t border-line-default bg-surface-primary px-6 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.05)] sm:h-14 sm:min-h-14 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-4 sm:py-0">
+    <div className="sticky bottom-0 z-20 flex shrink-0 items-center justify-between border-t border-line-subtle bg-surface-primary px-5 py-3 sm:px-6">
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="h-12 w-full justify-center justify-self-stretch px-3 text-sm text-content-muted sm:h-auto sm:w-auto sm:justify-self-start sm:text-xs"
+        className="!rounded-full h-8 sm:h-9 px-4 sm:px-5 border border-line-default bg-surface-primary text-content-muted hover:text-content-primary hover:bg-surface-subtle text-xs font-medium gap-1.5 shadow-none transition-colors"
         disabled={!previousStage || isStageLocked(previousStage)}
-        icon={<ChevronLeftIcon size={16} />}
+        icon={<ChevronLeftIcon size={14} className="text-content-muted" />}
         onClick={() => handleStageNavigation(previousStage)}
       >
-        Previous
+        <span>Previous</span>
       </Button>
 
-      <div className="hidden items-center justify-self-center gap-1.5 sm:flex">
+      <div className="hidden items-center justify-center gap-1.5 sm:flex">
         {navigableStages.map((stage) => {
           const isCompleted = completedStageSet.has(stage);
           const isLocked = isStageLocked(stage);
+          const isActive = stage === activeStage;
           return (
             <button
               key={stage}
               type="button"
               aria-label={`Go to ${formatStageLabel(stage)} stage`}
               disabled={isLocked}
-              className={`h-2 rounded-full transition-all ${
-                stage === activeStage
-                  ? "w-6 bg-brand-600"
+              className={`h-1.5 rounded-full transition-all duration-200 ${
+                isActive
+                  ? "w-8 bg-brand-600"
                   : isCompleted
-                    ? "w-6 bg-success-500"
+                    ? "w-7 bg-success-500"
                     : isLocked
-                      ? "w-2 bg-line-subtle opacity-50 cursor-not-allowed"
-                      : "w-2 bg-line-strong"
+                      ? "w-6 bg-line-subtle opacity-50 cursor-not-allowed"
+                      : "w-6 bg-line-default hover:bg-line-strong cursor-pointer"
               }`}
               onClick={() => handleStageNavigation(stage)}
             />
@@ -666,16 +676,16 @@ export const LevelContentPage: React.FC = () => {
       <Button
         type="button"
         size="sm"
-        className="h-12 w-full justify-center justify-self-stretch px-3 text-sm sm:h-auto sm:w-auto sm:justify-self-end sm:text-xs"
+        className="!rounded-full h-8 sm:h-9 px-5 sm:px-6 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white text-xs font-semibold gap-1.5 shadow-none transition-all flex items-center"
         onClick={handlePrimaryNext}
         disabled={isUpdateStagePending || isPrimaryNextBlockedByFinalArtifact}
       >
-        <span className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap text-center leading-tight sm:gap-2">
+        <span className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap text-center leading-tight">
           {primaryNextLabel}
           {primaryNextLabel === "Complete Course" || primaryNextLabel === "Finish Course" ? (
-            <CheckIcon size={16} />
+            <CheckIcon size={14} />
           ) : (
-            <ChevronRightIcon size={16} />
+            <ChevronRightIcon size={14} />
           )}
         </span>
       </Button>
@@ -693,8 +703,7 @@ export const LevelContentPage: React.FC = () => {
       stageCurriculumReference={activeStageContent.curriculumReference}
       stageSummary={stageSummary}
       previewItems={previewItems}
-      isScenarioExpanded={isScenarioExpanded && isScenarioOverflowing}
-      isScenarioOverflowing={isScenarioOverflowing}
+      isScenarioExpanded={isScenarioExpanded}
       setIsScenarioExpanded={setIsScenarioExpanded}
       formatStageLabel={formatStageLabel}
       renderArtifactPanel={() => (
@@ -828,8 +837,8 @@ export const LevelContentPage: React.FC = () => {
       <LevelHeader
         levelTitle={level.title}
         activeStage={activeStage}
-        isModulesOpen={isModulesOpen}
-        isStageInfoOpen={isStageInfoOpen}
+        isModulesOpen={mobilePanelOpen === "modules"}
+        isStageInfoOpen={mobilePanelOpen === "stageInfo"}
         onBackClick={handleBackToOverview}
         onOverviewClick={handleBackToOverview}
         onToggleModules={handleToggleModules}
@@ -839,35 +848,48 @@ export const LevelContentPage: React.FC = () => {
       <StageStepperBar
         activeStage={activeStage}
         completedStages={completedStages}
+        stageProgress={stageProgress}
         stageOverrides={stageStepperOverrides}
         isStageDisabled={isStageLocked}
         onStageSelect={handleStageNavigation}
       />
 
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden p-2.5 sm:p-3 gap-2.5 sm:gap-3 bg-surface-secondary">
         {isModulesOpen && (
           <ModulesDrawer
             activeModuleNo={moduleNumber}
             modules={moduleDrawerItems}
             onSelectModule={handleModuleSelect}
             onClose={() => setIsModulesOpen(false)}
-            className="hidden lg:flex"
+            className="hidden lg:flex rounded-2xl border border-line-default bg-surface-primary shadow-xs"
           />
         )}
 
-        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-surface-secondary">
+        {!isModulesOpen && (
+          <button
+            type="button"
+            aria-label="Open modules panel"
+            title="Open modules panel"
+            onClick={() => setIsModulesOpen(true)}
+            className="absolute left-3 top-1/2 z-20 hidden h-12 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-xl border border-l-0 border-line-default bg-surface-primary text-content-secondary shadow-sm transition-colors hover:bg-surface-subtle hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:flex"
+          >
+            <ChevronRightIcon size={16} />
+          </button>
+        )}
+
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line-default bg-surface-primary shadow-xs">
           <div className="min-h-0 flex-1">{renderMainContent()}</div>
         </div>
 
         {isStageInfoOpen && (
           <aside
-            className={`hidden min-h-0 shrink-0 flex-col overflow-hidden border-l border-border-default/80 bg-white font-sans select-none transition-all duration-200 lg:flex ${
+            className={`hidden min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-line-default bg-surface-primary font-sans select-none shadow-xs transition-all duration-200 lg:flex ${
               isStageInfoExpanded ? "w-[540px] max-w-[72vw]" : "w-[360px]"
             }`}
           >
-            <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3 sm:px-4 sm:py-3.5">
+            <div className="flex items-center justify-between border-b border-line-subtle px-4 py-3 sm:px-4 sm:py-3.5">
               <h2 className="text-[11px] sm:text-xs font-bold tracking-widest text-content-heading uppercase">
-                {rightPanelTitle}
+                {formatStageLabel(activeStage)} STAGE
               </h2>
               <div className="flex items-center gap-1">
                 <IconButton
@@ -875,6 +897,7 @@ export const LevelContentPage: React.FC = () => {
                   icon={<ExpandIcon size={13} />}
                   size="sm"
                   variant="outline"
+                  className="h-7 w-7 rounded-xl border-line-default/80"
                   onClick={handleExpandStageInfo}
                 />
                 <IconButton
@@ -882,12 +905,25 @@ export const LevelContentPage: React.FC = () => {
                   icon={<CloseIcon size={13} />}
                   size="sm"
                   variant="outline"
-                  onClick={handleToggleStageInfo}
+                  className="h-7 w-7 rounded-xl border-line-default/80"
+                  onClick={() => setIsStageInfoOpen(false)}
                 />
               </div>
             </div>
             {renderStageInfoPanel()}
           </aside>
+        )}
+
+        {!isStageInfoOpen && (
+          <button
+            type="button"
+            aria-label="Open stage information panel"
+            title="Open stage information panel"
+            onClick={() => setIsStageInfoOpen(true)}
+            className="absolute right-3 top-1/2 z-20 hidden h-12 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-xl border border-r-0 border-line-default bg-surface-primary text-content-secondary shadow-sm transition-colors hover:bg-surface-subtle hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:flex"
+          >
+            <ChevronLeftIcon size={16} />
+          </button>
         )}
 
         {mobilePanelOpen && (
@@ -904,13 +940,13 @@ export const LevelContentPage: React.FC = () => {
                 modules={moduleDrawerItems}
                 onSelectModule={handleModuleSelect}
                 onClose={() => setMobilePanelOpen(null)}
-                className="relative z-10 w-72 h-full shadow-2xl"
+                className="relative z-10 w-72 h-full rounded-none shadow-2xl"
               />
             ) : (
               <aside className="relative z-10 h-full w-[92vw] max-w-[390px] bg-white ml-auto shadow-2xl flex flex-col">
                 <div className="p-4 border-b border-line-subtle flex items-center justify-between">
                   <h2 className="text-xs font-bold tracking-wider text-content-secondary uppercase">
-                    {rightPanelTitle}
+                    {formatStageLabel(activeStage)} Stage
                   </h2>
                   <button
                     type="button"

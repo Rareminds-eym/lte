@@ -14,9 +14,9 @@ import {
   DocumentIcon,
   DownloadIcon,
   IconButton,
-  LightbulbIcon,
-  LightningBoltIcon,
+  InfoCircleIcon,
   toast,
+  UploadIcon,
 } from "@/shared/ui";
 
 interface ArtifactSubmitTabProps {
@@ -124,21 +124,6 @@ export const ArtifactSubmitTab: React.FC<ArtifactSubmitTabProps> = ({
 
   return (
     <div className="flex flex-col gap-3" role="tabpanel">
-      {isPractice ? (
-        <div className="flex items-start gap-2 rounded-lg border-l-4 border-l-brand-600 bg-brand-50 px-3 py-2 text-[12px] font-semibold leading-relaxed text-brand-700">
-          <LightbulbIcon size={14} className="mt-0.5 shrink-0" />
-          <span>
-            This is a practice artifact. Complete it to understand the concepts - no evaluation or
-            scoring.
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-start gap-2 rounded-lg border-l-4 border-l-brand-600 bg-brand-50 px-3 py-2 text-[12px] font-semibold leading-relaxed text-brand-700">
-          <LightningBoltIcon size={14} className="mt-0.5 shrink-0" />
-          <span>Build and submit your final evaluated artifact.</span>
-        </div>
-      )}
-
       {activeArtifact.questions.map((question) => {
         const requiredFields = getInstructionValue(question.instructions, "required_fields");
         const instructions = getInstructionValue(question.instructions, "instructions");
@@ -194,8 +179,8 @@ export const ArtifactSubmitTab: React.FC<ArtifactSubmitTabProps> = ({
                 </p>
 
                 {requiredFields || instructions ? (
-                  <div className="flex min-w-0 items-start gap-2 rounded-md bg-surface-muted px-3 py-2 text-[12px] leading-relaxed text-content-secondary">
-                    <LightbulbIcon size={13} className="mt-0.5 shrink-0 text-brand-600" />
+                  <div className="flex min-w-0 items-start gap-3 rounded-lg border border-line-default bg-surface-subtle p-3 text-[13px] leading-5 text-content-default">
+                    <InfoCircleIcon size={18} className="mt-0.5 shrink-0 text-brand-500" />
                     <span className="min-w-0 break-words">{requiredFields ?? instructions}</span>
                   </div>
                 ) : null}
@@ -276,56 +261,59 @@ export const ArtifactSubmitTab: React.FC<ArtifactSubmitTabProps> = ({
                         }))
                       }
                     />
-                    <div className="block rounded-2xl border border-line-subtle bg-surface-muted p-4">
-                      {selectedFile ? (
-                        <div className="flex min-h-32 items-center justify-center rounded-xl border-2 border-dashed border-line-default bg-surface-primary px-4 py-7">
-                          <div className="flex w-full items-center justify-between gap-3 rounded-xl border border-line-default bg-surface-primary p-3 shadow-xs">
-                            <div className="flex min-w-0 flex-1 items-center gap-3">
-                              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                                <DocumentIcon size={20} />
+                    {selectedFile ? (
+                      <div className="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-line-default bg-surface-subtle p-4">
+                        <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-line-default bg-white p-3 shadow-xs">
+                          <div className="flex min-w-0 flex-1 items-center gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                              <DocumentIcon size={20} />
+                            </span>
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <span
+                                className="truncate text-[13px] font-semibold text-content-primary"
+                                title={selectedFile.name}
+                              >
+                                {selectedFile.name}
                               </span>
-                              <div className="flex min-w-0 flex-1 flex-col">
-                                <span
-                                  className="truncate text-[13px] font-semibold text-content-primary"
-                                  title={selectedFile.name}
-                                >
-                                  {selectedFile.name}
-                                </span>
-                                <span className="text-[11px] font-medium text-content-muted">
-                                  {(selectedFile.size / 1024).toFixed(1)} KB
-                                </span>
-                              </div>
+                              <span className="text-[11px] font-medium text-content-muted">
+                                {(selectedFile.size / 1024).toFixed(1)} KB
+                              </span>
                             </div>
-                            <IconButton
-                              type="button"
-                              aria-label="Remove selected file"
-                              icon={<CloseIcon size={16} />}
-                              size="sm"
-                              variant="outline"
-                              className="shrink-0 rounded-lg text-content-muted hover:bg-surface-secondary hover:text-content-secondary"
-                              onClick={() => {
-                                setFileResponses((current) => ({
-                                  ...current,
-                                  [question.id]: null,
-                                }));
-                                const input = document.getElementById(fileInputId);
-                                if (input instanceof HTMLInputElement) input.value = "";
-                              }}
-                            />
                           </div>
+                          <IconButton
+                            type="button"
+                            aria-label="Remove selected file"
+                            icon={<CloseIcon size={16} />}
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0 rounded-lg text-content-muted hover:bg-surface-secondary hover:text-content-secondary"
+                            onClick={() => {
+                              setFileResponses((current) => ({
+                                ...current,
+                                [question.id]: null,
+                              }));
+                              const input = document.getElementById(fileInputId);
+                              if (input instanceof HTMLInputElement) input.value = "";
+                            }}
+                          />
                         </div>
-                      ) : (
-                        <label
-                          htmlFor={fileInputId}
-                          className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-line-default bg-surface-primary px-4 py-7 text-center transition hover:border-line-strong"
-                        >
-                          <DownloadIcon size={26} className="text-content-muted stroke-[1.25]" />
-                          <span className="mt-2.5 max-w-full truncate text-[14px] font-medium text-content-primary">
-                            {getUploadPrompt(question)}
-                          </span>
-                        </label>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <label
+                        htmlFor={fileInputId}
+                        className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-line-default bg-surface-subtle px-4 py-6 text-center transition hover:border-brand-200 hover:bg-brand-50/40"
+                      >
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-line-default bg-white text-content-secondary shadow-xs">
+                          <UploadIcon size={24} className="stroke-[1.75]" />
+                        </span>
+                        <span className="mt-3 max-w-full truncate text-[13px] font-semibold text-content-primary">
+                          {getUploadPrompt(question)}
+                        </span>
+                        <span className="mt-1 text-[12px] text-content-muted">
+                          Click to browse or drag &amp; drop
+                        </span>
+                      </label>
+                    )}
                   </div>
                 ) : null}
               </div>
