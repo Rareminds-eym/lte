@@ -834,14 +834,14 @@ export const LevelContentPage: React.FC = () => {
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-surface-secondary">
-        <LevelHeader
-          levelTitle={level.title}
-          activeStage={activeStage}
-          isModulesOpen={mobilePanelOpen === "modules"}
-          isStageInfoOpen={mobilePanelOpen === "stageInfo"}
-          onBackClick={handleBackToOverview}
-          onOverviewClick={handleBackToOverview}
-          onToggleModules={handleToggleModules}
+      <LevelHeader
+        levelTitle={level.title}
+        activeStage={activeStage}
+        isModulesOpen={mobilePanelOpen === "modules"}
+        isStageInfoOpen={mobilePanelOpen === "stageInfo"}
+        onBackClick={handleBackToOverview}
+        onOverviewClick={handleBackToOverview}
+        onToggleModules={handleToggleModules}
         onToggleStageInfo={handleToggleStageInfo}
       />
 
