@@ -1,5 +1,5 @@
 import type {
-  CurrentSessionLogoutResult,
+  AllSessionsLogoutResult,
   IdentityDTO,
   SessionOutcome,
   WorkflowOutcome,
@@ -14,6 +14,7 @@ vi.mock("@/shared/api/authClient", () => ({
     initialize: vi.fn(),
     getMe: vi.fn(),
     logout: vi.fn(),
+    logoutAllSessions: vi.fn(),
     subscribe: vi.fn().mockReturnValue(() => undefined),
   },
 }));
@@ -146,12 +147,13 @@ describe("authStore", () => {
         user: mockAuthUser,
         isAuthenticated: true,
       });
-      vi.mocked(authClient.logout).mockResolvedValueOnce({
-        outcome: "current_session_revoked",
-      } as unknown as CurrentSessionLogoutResult);
+      vi.mocked(authClient.logoutAllSessions).mockResolvedValueOnce({
+        outcome: "all_sessions_revoked",
+      } as unknown as AllSessionsLogoutResult);
 
       await useAuthStore.getState().logout();
 
+      expect(authClient.logoutAllSessions).toHaveBeenCalledWith({ confirm: true });
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
     });
@@ -161,7 +163,7 @@ describe("authStore", () => {
         user: mockAuthUser,
         isAuthenticated: true,
       });
-      vi.mocked(authClient.logout).mockRejectedValueOnce(new Error("API down"));
+      vi.mocked(authClient.logoutAllSessions).mockRejectedValueOnce(new Error("API down"));
 
       await useAuthStore.getState().logout();
 
