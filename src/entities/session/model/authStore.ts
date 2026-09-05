@@ -161,11 +161,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
-      await authClient.logout();
+      await authClient.logoutAllSessions({ confirm: true });
     } catch (error) {
       // Local cleanup must proceed regardless; still record that the server
-      // may not have terminated the session.
-      logger.warn("Logout transport failed; local state cleared anyway", {
+      // may not have terminated all sessions.
+      logger.warn("Global logout transport failed; local state cleared anyway", {
         message: error instanceof Error ? error.message : String(error),
       });
     } finally {
