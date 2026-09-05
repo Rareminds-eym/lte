@@ -37,7 +37,7 @@ describe("StartAssessmentButton", () => {
     fireEvent.click(button);
 
     const expectedRedirect =
-      "https://skillpassport.test/assessment?source=lte&target_app=lte&redirect_uri=" +
+      "https://skillpassport.test/learner/assessment/test?source=lte&target_app=lte&redirect_uri=" +
       encodeURIComponent("http://localhost:8080/my-courses");
 
     expect(window.location.href).toBe(expectedRedirect);
