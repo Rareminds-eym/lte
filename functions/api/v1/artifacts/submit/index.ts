@@ -217,6 +217,11 @@ export async function onRequestPost(context: PagesContext<LteEnv>): Promise<Resp
       filesByQuestionId,
       idempotencyKey,
     );
+    // Durable pending: return 202 with job reference, not 200 completed. The worker
+    // will complete the evaluation asynchronously; the client polls getExecutionStatus.
+    if ((result as unknown as { evaluation_status?: string }).evaluation_status === "pending") {
+      return jsonResponse({ success: true, ...result }, { status: 202 });
+    }
     return jsonResponse({ success: true, ...result });
   } catch (error) {
     if (error instanceof ArtifactSubmissionError) {

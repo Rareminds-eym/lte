@@ -6,6 +6,8 @@ import {
   processAndSaveArtifactEvaluation,
   sanitizeContentDispositionFilename,
 } from "@functions/lib/artifact-evaluator";
+import { applyEvaluationProposal } from "@functions/services/artifacts/applyEvaluation";
+import { requestGradeSubmission } from "@functions/services/artifacts/evaluationJobs";
 import {
   asQueryGateway,
   QueryGatewayDatabaseError,
@@ -549,14 +551,86 @@ export async function submitArtifactSubmission(
       attemptNo: submission.attempt_no,
     });
 
-    evalResult = await processAndSaveArtifactEvaluation(
-      source,
-      env,
-      submission.id,
-      evalInput,
+    // RPC cutover 2026-09-15: evaluation via ai-worker grade-submission (move, not new logic)
+    const workerResult = await requestGradeSubmission(env as unknown as Record<string, unknown> as never, {
+      submissionId: submission.id,
       userId,
+      evalInput: evalInput as unknown as never,
+      requestId: crypto.randomUUID(),
+    });
+    // Durable acceptance: queued job must not trigger rollback or fallback XP.
+    // The submission stays "submitted" with evaluation_status pending; LTE will
+    // poll getExecutionStatus and apply the proposal on completion. This avoids
+    // the P0 rollback-while-worker-continues failure.
+    if (workerResult.ok && "pending" in workerResult && workerResult.pending) {
+      return {
+        submission_id: submission.id,
+        attempt_no: submission.attempt_no,
+        version_label: submission.version_label ?? `v${submission.attempt_no}`,
+        submitted_at: submission.submitted_at,
+        status: "submitted" as const,
+        evaluation_status: "pending" as const,
+        duplicate: false,
+        evaluation: undefined,
+        files: uploadedFiles,
+        executionId: workerResult.executionId,
+        workflowId: (workerResult as { workflowId?: string }).workflowId,
+      } as unknown as ArtifactSubmissionResult;
+    }
+    let proposal;
+    if (workerResult.ok) {
+      const p = (workerResult as { proposal: unknown }).proposal as Record<string, unknown>;
+      proposal = {
+        decision: p["decision"] as never,
+        overallScore: p["overallScore"] as number,
+        passingScore: p["passingScore"] as number,
+        feedback: p["feedback"] as string,
+        singleImprovementPoint: p["singleImprovementPoint"] as string,
+        rubricRows: p["rubricRows"] as never,
+        stage1SubmissionCheck: p["stage1SubmissionCheck"] as never,
+        stage2CriticalFailures: p["stage2CriticalFailures"] as never,
+        modelUsed: p["modelUsed"] as string,
+        provider: p["provider"] as never,
+        confidence: p["confidence"] as number,
+        calculatedXp: p["calculatedXp"] as number,
+        requiresManualReview: p["requiresManualReview"] as boolean,
+        evaluationSource: p["evaluationSource"] as never,
+        eventType: p["eventType"] as string | undefined,
+        debugTelemetry: p["debugTelemetry"] as never,
+      };
+    } else {
+      proposal = {
+        decision: "human_review" as const,
+        overallScore: 0,
+        passingScore: evalInput.passingScore,
+        feedback: "AI evaluation is unavailable; a human reviewer must evaluate this submission.",
+        singleImprovementPoint: "",
+        rubricRows: [] as never,
+        stage1SubmissionCheck: { isSubmissionComplete: false, missingElements: [(workerResult as { error: { message: string } }).error.message] } as never,
+        stage2CriticalFailures: [] as never,
+        modelUsed: "fallback",
+        provider: "fallback" as const,
+        confidence: 0,
+        calculatedXp: 0,
+        requiresManualReview: true,
+        evaluationSource: "fallback" as const,
+        eventType: undefined,
+        debugTelemetry: null as never,
+      };
+    }
+    const { awardXp } = await import("@functions/lib/xp-engine");
+    const applied = await applyEvaluationProposal(source, awardXp as never, {
+      submissionId: submission.id,
       moduleProgressId,
-    );
+      userId,
+      artifactId: input.artifact_id,
+      artifactType: evalInput.artifactType,
+      attemptNo: submission.attempt_no,
+      currentAttemptNo: submission.attempt_no,
+      expectedAttemptNo: submission.attempt_no,
+      proposal: proposal as never,
+    });
+    evalResult = applied.evalResult as never;
   } catch (error) {
     // P0-2: roll back the partial attempt (the row cascade-deletes its
     // answers, files and evaluation flows) so a retried idempotency key

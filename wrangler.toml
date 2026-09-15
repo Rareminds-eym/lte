@@ -23,6 +23,12 @@ binding = "SSO_SERVICE"
 service = "sso-api"
 entrypoint = "SsoWorker"
 
+# Cutover-ready (no callers yet): typed RPC to ai-worker for artifact evaluation.
+[[services]]
+binding = "AI_SERVICE"
+service = "ai-api"
+entrypoint = "AiService"
+
 [[queues.producers]]
 queue = "lte-db-sync-queue"
 binding = "LTE_SYNC_QUEUE"
@@ -53,6 +59,11 @@ binding = "SSO_SERVICE"
 service = "sso-api"
 entrypoint = "SsoWorker"
 
+[[env.production.services]]
+binding = "AI_SERVICE"
+service = "ai-api"
+entrypoint = "AiService"
+
 [[env.production.queues.producers]]
 queue = "lte-db-sync-queue"
 binding = "LTE_SYNC_QUEUE"
@@ -74,6 +85,11 @@ R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 binding = "SSO_SERVICE"
 service = "sso-api-dev"
 entrypoint = "SsoWorker"
+
+[[env.preview.services]]
+binding = "AI_SERVICE"
+service = "ai-api"
+entrypoint = "AiService"
 
 [[env.preview.queues.producers]]
 queue = "lte-db-sync-queue-dev"

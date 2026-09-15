@@ -1,6 +1,10 @@
 import { asQueryGateway, type QueryGatewaySource } from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
 import {
+  applyEvaluationProposal,
+  toEvaluationProposal,
+} from "@functions/services/artifacts/applyEvaluation";
+import {
   callOpenRouterAI,
   DEFAULT_OPENROUTER_MODEL,
   type OpenRouterChatRequest,
@@ -32,7 +36,7 @@ function calculateArtifactXp(isPass: boolean, isPractice: boolean, attemptNo: nu
   return attemptNo === 1 ? 20 : attemptNo === 2 ? 15 : 10;
 }
 
-const evaluationFlowUpsertPolicy = {
+export const evaluationFlowUpsertPolicy = {
   table: "artifact_evaluation_flows",
   operation: "upsert",
   upsertColumns: [
@@ -54,7 +58,7 @@ const evaluationFlowUpsertPolicy = {
   onConflict: "submission_id,stage",
 } as const;
 
-const artifactSubmissionStatusUpdatePolicy = {
+export const artifactSubmissionStatusUpdatePolicy = {
   table: "artifact_submissions",
   operation: "update",
   updateColumns: ["status", "sealed_at", "updated_at"],
@@ -62,7 +66,7 @@ const artifactSubmissionStatusUpdatePolicy = {
   requireFilter: true,
 } as const;
 
-const artifactModuleProgressUpdatePolicy = {
+export const artifactModuleProgressUpdatePolicy = {
   table: "user_module_progress",
   operation: "update",
   updateColumns: ["artifact_approval_status", "updated_at", "artifact_submitted", "module_status"],
@@ -662,165 +666,28 @@ export async function processAndSaveArtifactEvaluation(
 ): Promise<AIEvaluationResult> {
   const qb = asQueryGateway(source);
   const evaluated = await evaluateArtifactSubmission(env, input, submissionId);
-  const evalContext = {
-    submissionId,
-    artifactId: input.artifactId,
-    attemptNo: input.attemptNo,
-  };
-
-  // P0-1 hard guarantee: no matter which path produced a fallback result
-  // (missing key, LLM failure, unreadable file), it can never pass or award XP.
-  const evalResult: AIEvaluationResult =
-    evaluated.provider === "fallback"
-      ? {
-          ...evaluated,
-          overallScore: 0,
-          decision: "human_review",
-          calculatedXp: 0,
-          requiresManualReview: true,
-          evaluationSource: "fallback",
-          feedback: "AI evaluation is unavailable; a human reviewer must evaluate this submission.",
-        }
-      : evaluated;
-  if (evalResult.decision === "human_review") metrics.inc(METRIC.HUMAN_REVIEW);
-  const now = new Date().toISOString();
-
-  const overallStatus =
-    evalResult.decision === "pass"
-      ? "accepted"
-      : evalResult.decision === "human_review"
-        ? "human_review"
-        : "resubmission_required";
-
-  // Compute eventType early so it gets persisted correctly in the database flow row
-  let eventType: string | undefined;
-  if (evalResult.decision !== "human_review") {
-    eventType =
-      input.artifactType === "practice"
-        ? evalResult.decision === "pass"
-          ? "practice_artifact_accepted"
-          : "practice_artifact_failed"
-        : evalResult.decision === "pass"
-          ? `final_artifact_accepted_${Math.min(3, input.attemptNo)}`
-          : "final_artifact_failed";
-    evalResult.eventType = eventType;
-  }
-
-  // P1-3: the raw prompt/response are never persisted (learner content +
-  // model output); telemetry keeps latency/charCounts/model for observability.
-  const debugTelemetry = evalResult.debugTelemetry
-    ? { ...evalResult.debugTelemetry, rawPromptContent: null, rawResponseContent: null }
-    : null;
-
-  // 1. Update artifact_evaluation_flows table
-  try {
-    await qb.upsert(evaluationFlowUpsertPolicy, {
-      submission_id: submissionId,
-      stage: "ai",
-      stage_order: 1,
-      status: "completed",
-      score: evalResult.overallScore,
-      decision: evalResult.decision,
-      feedback: evalResult.feedback,
-      improvements: evalResult.singleImprovementPoint,
-      overall_status: overallStatus,
-      is_current_stage: true,
-      progression_triggered: evalResult.decision === "pass",
-      completed_at: now,
-      metadata: {
-        rubric_rows: evalResult.rubricRows,
-        stage1_submission_check: evalResult.stage1SubmissionCheck,
-        stage2_critical_failures: evalResult.stage2CriticalFailures,
-        model_used: evalResult.modelUsed,
-        provider: evalResult.provider,
-        confidence: evalResult.confidence,
-        calculated_xp: evalResult.calculatedXp,
-        event_type: evalResult.eventType,
-        attempt_no: input.attemptNo,
-        requires_manual_review: evalResult.requiresManualReview,
-        evaluation_source: evalResult.evaluationSource,
-        debug_telemetry: debugTelemetry,
-      },
-      updated_at: now,
-    });
-  } catch (flowError) {
-    apiLogger.error("Failed to save artifact evaluation flow", flowError, evalContext);
-    throw new Error(
-      `Failed to save artifact evaluation flow (submission ${submissionId}): ${
-        flowError instanceof Error ? flowError.message : "Unknown error"
-      }`,
-    );
-  }
-
-  // 2. Update artifact_submissions table status
-  try {
-    await qb.update(artifactSubmissionStatusUpdatePolicy, {
-      data: {
-        status: overallStatus,
-        sealed_at: evalResult.decision === "pass" ? now : null,
-        updated_at: now,
-      },
-      filters: [{ column: "id", op: "eq", value: submissionId }],
-    });
-  } catch (subError) {
-    apiLogger.error("Failed to update submission status", subError, evalContext);
-    throw new Error(
-      `Failed to update submission status (submission ${submissionId}): ${
-        subError instanceof Error ? subError.message : "Unknown error"
-      }`,
-    );
-  }
-
-  // 3. Update user_module_progress in single payload
-  const progressPayload: Record<string, unknown> = {
-    artifact_approval_status: evalResult.decision === "pass" ? "approved" : overallStatus,
-    updated_at: now,
-    ...(evalResult.decision === "pass" && { artifact_submitted: true }),
-    ...(evalResult.decision === "pass" &&
-      input.artifactType !== "practice" && { module_status: "mastered" }),
-  };
-
-  try {
-    await qb.update(artifactModuleProgressUpdatePolicy, {
-      data: progressPayload,
-      filters: [{ column: "id", op: "eq", value: moduleProgressId }],
-    });
-  } catch (progressError) {
-    apiLogger.error("Failed to update module progress", progressError, evalContext);
-    throw new Error(
-      `Failed to update module progress (submission ${submissionId}): ${
-        progressError instanceof Error ? progressError.message : "Unknown error"
-      }`,
-    );
-  }
-
-  // 4. Award AI-determined XP via xp-engine (human_review is neutral: no
-  // failure event, no engagement XP - a pending review is not a failure).
-  // XP insert failures must not surface as a 500 to the learner after the
-  // evaluation is already persisted - log and let the idempotent upsert retry.
-  if (eventType) {
-    try {
-      await awardXp(
+  const { evalResult } = await applyEvaluationProposal(
+    source,
+    (xpUserId, eventType, score, attemptNo, provider, calculatedXp) =>
+      awardXp(
         qb,
-        userId,
+        xpUserId,
         eventType,
         "artifact_submissions",
         submissionId,
-        {
-          score: evalResult.overallScore,
-          attempt_no: input.attemptNo,
-          provider: evalResult.provider,
-        },
-        evalResult.calculatedXp,
-      );
-    } catch (error) {
-      apiLogger.error(`Failed to award artifact XP (${eventType})`, error, {
-        submissionId,
-        artifactId: input.artifactId,
-        attemptNo: input.attemptNo,
-      });
-    }
-  }
+        { score, attempt_no: attemptNo, provider },
+        calculatedXp,
+      ),
+    {
+      submissionId,
+      moduleProgressId,
+      userId,
+      artifactId: input.artifactId,
+      artifactType: input.artifactType,
+      attemptNo: input.attemptNo,
+      proposal: toEvaluationProposal(evaluated),
+    },
+  );
 
   return evalResult;
 }
