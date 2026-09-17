@@ -35,45 +35,14 @@ CREATE INDEX idx_lte_catalog_uploads_created_by ON public.lte_catalog_uploads(cr
 CREATE INDEX idx_lte_catalog_uploads_created_at ON public.lte_catalog_uploads(created_at DESC);
 CREATE INDEX idx_lte_catalog_uploads_snapshot_hash ON public.lte_catalog_uploads(snapshot_hash);
 
--- Enable RLS
-ALTER TABLE public.lte_catalog_uploads ENABLE ROW LEVEL SECURITY;
+-- RLS is intentionally disabled for this table because the LTE app uses the
+-- service-role key for server-side access and does not rely on Supabase row-level
+-- security policies for course upload workflows.
+ALTER TABLE public.lte_catalog_uploads DISABLE ROW LEVEL SECURITY;
 
--- RLS policies must use JWT claims because user profiles and admin roles live in
--- the separate SSO database. Server-side LTE API calls use the service-role key
--- and therefore bypass these policies after authenticating the SSO request.
-CREATE POLICY "Users can view own uploads"
-  ON public.lte_catalog_uploads
-  FOR SELECT
-  USING (
-    auth.uid() = created_by
-    OR COALESCE(
-      auth.jwt()->>'role',
-      auth.jwt()->'app_metadata'->>'role',
-      auth.jwt()->'user_metadata'->>'role'
-    ) IN ('admin', 'super_admin', 'platform_admin')
-  );
-
-CREATE POLICY "Admins can insert uploads"
-  ON public.lte_catalog_uploads
-  FOR INSERT
-  WITH CHECK (
-    COALESCE(
-      auth.jwt()->>'role',
-      auth.jwt()->'app_metadata'->>'role',
-      auth.jwt()->'user_metadata'->>'role'
-    ) IN ('admin', 'super_admin', 'platform_admin')
-  );
-
-CREATE POLICY "Admins can update uploads"
-  ON public.lte_catalog_uploads
-  FOR UPDATE
-  USING (
-    COALESCE(
-      auth.jwt()->>'role',
-      auth.jwt()->'app_metadata'->>'role',
-      auth.jwt()->'user_metadata'->>'role'
-    ) IN ('admin', 'super_admin', 'platform_admin')
-  );
+DROP POLICY IF EXISTS "Users can view own uploads" ON public.lte_catalog_uploads;
+DROP POLICY IF EXISTS "Admins can insert uploads" ON public.lte_catalog_uploads;
+DROP POLICY IF EXISTS "Admins can update uploads" ON public.lte_catalog_uploads;
 
 -- Trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_lte_catalog_uploads_updated_at()
