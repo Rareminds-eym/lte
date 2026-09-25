@@ -61,6 +61,20 @@ export default defineConfig({
 		strictPort: true,
 		open: true,
 		allowedHosts: ["localhost", "127.0.0.1"],
+		watch: {
+			// Exclude large non-source dirs so Vite doesn't exhaust the
+			// OS inotify file-watcher limit (ENOSPC: too many watchers).
+			ignored: [
+				'**/node_modules/**',
+				'**/.git/**',
+				'**/dist/**',
+				'**/.wrangler/**',
+				'**/vendor/**',
+				'**/seed/**',
+				'**/scripts/**',
+				'**/*.py',
+			],
+		},
 		proxy: {
 			"/api": {
 				target: "http://127.0.0.1:8789",
