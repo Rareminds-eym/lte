@@ -20,6 +20,8 @@ export const DashboardPage: React.FC = () => {
   const userId = useAuthStore((s) => s.user?.id);
   const activeTrack = useLearningPathStore((s) => s.activeTrack);
   const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
+  const learningPathError = useLearningPathStore((s) => s.error);
+  const retryLearningPath = useLearningPathStore((s) => s.fetchAndSetActiveLearningPath);
   const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
 
   const addEvent = useXpModalStore((s) => s.addEvent);
@@ -100,6 +102,24 @@ export const DashboardPage: React.FC = () => {
             Retry Loading Dashboard
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (learningPathError) {
+    return (
+      <div className="p-8 text-center max-w-lg mx-auto my-12" role="alert">
+        <h2 className="text-lg font-bold mb-2">Unable to load your learning path</h2>
+        <p className="text-sm mb-4">
+          We could not load your assessment recommendations. Please try again.
+        </p>
+        <Button
+          type="button"
+          disabled={activeLearningPathLoading || !userId}
+          onClick={() => userId && void retryLearningPath(userId)}
+        >
+          Retry Loading Learning Path
+        </Button>
       </div>
     );
   }

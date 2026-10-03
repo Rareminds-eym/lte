@@ -1,4 +1,5 @@
 import type React from "react";
+import { Link } from "react-router-dom";
 import type { UpcomingFeedbackData } from "@/entities/dashboard";
 import { WidgetCard } from "@/shared/ui";
 import {
@@ -20,20 +21,28 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
       title="Upcoming & Feedback"
       infoTooltip="Upcoming events info"
       icon={<GoodFeedbackIcon size={18} className="text-content-primary shrink-0" />}
-      action={{
-        label: "View calendar",
-        href: "#calendar",
-      }}
     >
       <div className="space-y-5">
+        {data.error && (
+          <p role="alert" className="text-sm text-content-secondary">
+            {data.error}
+          </p>
+        )}
         {/* Section 1: UPCOMING */}
         <div>
           <div className="text-xs font-extrabold text-content-muted uppercase tracking-wider mb-3">
             UPCOMING
           </div>
           <div className="space-y-4">
+            {!data.error && !data.upcoming.length && (
+              <p className="text-sm text-content-secondary">No staff reviews pending.</p>
+            )}
             {data.upcoming.map((item) => (
-              <div key={item.id} className="flex items-center justify-between group cursor-pointer">
+              <Link
+                key={item.id}
+                to={item.href ?? "/my-courses"}
+                className="flex items-center justify-between group cursor-pointer"
+              >
                 <div className="flex items-start gap-3.5 min-w-0 pr-2">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
@@ -61,7 +70,7 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                 <span className="px-3 py-1 bg-surface-secondary text-content-secondary text-xs font-semibold rounded-full shrink-0 shadow-2xs">
                   {item.tag}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -75,8 +84,15 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
             RECENT FEEDBACK
           </div>
           <div className="space-y-4">
+            {!data.error && !data.recentFeedback.length && (
+              <p className="text-sm text-content-secondary">No staff feedback yet.</p>
+            )}
             {data.recentFeedback.map((item) => (
-              <div key={item.id} className="flex items-center justify-between group cursor-pointer">
+              <Link
+                key={item.id}
+                to={item.href ?? "/my-courses"}
+                className="flex items-center justify-between group cursor-pointer"
+              >
                 <div className="flex items-start gap-3.5 min-w-0 pr-2">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
@@ -105,7 +121,7 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                   <CalendarIcon size={14} />
                   <span>{item.daysAgo}</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

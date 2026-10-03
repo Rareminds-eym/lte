@@ -57,8 +57,8 @@ export interface ActiveLearningPathResult {
   needsAssessment: boolean;
 }
 
-export async function fetchActiveLearningPath(): Promise<ActiveLearningPathResult> {
-  const raw = await apiFetch("/api/v1/learning-paths/active", {
+export async function fetchActiveLearningPath(refresh = false): Promise<ActiveLearningPathResult> {
+  const raw = await apiFetch(`/api/v1/learning-paths/active${refresh ? "?refresh=true" : ""}`, {
     method: "GET",
   });
 

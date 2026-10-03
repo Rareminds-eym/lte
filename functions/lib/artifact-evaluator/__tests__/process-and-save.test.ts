@@ -1,3 +1,8 @@
+import {
+  ensureAndAssignReview,
+  getReviewScope,
+  requiresFollowupReview,
+} from "@functions/lib/human-review/service";
 import { createQueryGateway, type QueryGateway } from "@functions/lib/query-gateway";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +19,12 @@ vi.mock("../../ai-engine/openrouter", () => ({
 
 vi.mock("../../xp-engine", () => ({
   awardXp: vi.fn().mockResolvedValue({ success: true, xpAwarded: 0, alreadyAwarded: false }),
+}));
+
+vi.mock("@functions/lib/human-review/service", () => ({
+  getReviewScope: vi.fn(),
+  requiresFollowupReview: vi.fn(),
+  ensureAndAssignReview: vi.fn(),
 }));
 
 interface QueryResult {
@@ -111,6 +122,9 @@ function aiResponse(decision: "pass" | "revise_and_resubmit", confidence: number
 
 describe("processAndSaveArtifactEvaluation", () => {
   beforeEach(() => {
+    vi.mocked(getReviewScope).mockResolvedValue(null);
+    vi.mocked(requiresFollowupReview).mockResolvedValue(false);
+
     vi.mocked(callOpenRouterAI).mockReset();
     vi.mocked(awardXp).mockReset();
     vi.mocked(awardXp).mockResolvedValue({ success: true, xpAwarded: 0, alreadyAwarded: false });
@@ -363,5 +377,65 @@ describe("processAndSaveArtifactEvaluation", () => {
     expect(result.decision).toBe("pass");
     expect(flows.upsert).toHaveBeenCalled();
     expect(submissions.update).toHaveBeenCalled();
+  });
+});
+
+describe("required staff review policy", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requiresFollowupReview).mockResolvedValue(false);
+    vi.mocked(getReviewScope).mockResolvedValue(null);
+    vi.mocked(callOpenRouterAI).mockResolvedValue(aiResponse("pass", 75));
+  });
+  const scope = {
+    scopeId: "00000000-0000-4000-8000-000000000001",
+    organizationId: "00000000-0000-4000-8000-000000000002",
+    scopeType: "school_class" as const,
+    enabled: true,
+    slaDays: 3,
+    timeZone: "Asia/Kolkata",
+    loadCap: 10,
+    threshold: 80,
+    reviewerIds: [],
+  };
+  const evaluate = (enabled = "true") =>
+    processAndSaveArtifactEvaluation(
+      createGateway({}),
+      { OPENROUTER_API_KEY: "test", HUMAN_REVIEW_AVAILABLE: "true", HUMAN_REVIEW_ENABLED: enabled },
+      "submission-1",
+      makeInput(),
+      "learner-1",
+      "progress-1",
+    );
+  it("requires follow-up staff approval even when new assignment creation is disabled", async () => {
+    vi.mocked(requiresFollowupReview).mockResolvedValue(true);
+    const result = await evaluate("false");
+    expect(result.decision).toBe("human_review");
+    expect(result.calculatedXp).toBe(0);
+    expect(awardXp).not.toHaveBeenCalled();
+    expect(ensureAndAssignReview).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "submission-1",
+      "learner-1",
+      "human_revision_followup",
+    );
+  });
+  it("applies scope thresholds on the 0–100 scale", async () => {
+    vi.mocked(getReviewScope).mockResolvedValue(scope);
+    expect((await evaluate()).decision).toBe("human_review");
+    expect(awardXp).not.toHaveBeenCalled();
+  });
+  it("preserves AI-only acceptance when this scope has not opted in", async () => {
+    vi.mocked(getReviewScope).mockResolvedValue({ ...scope, enabled: false });
+    expect((await evaluate()).decision).toBe("pass");
+    expect(awardXp).toHaveBeenCalled();
+  });
+  it("does not accept or award XP when policy authority is unavailable", async () => {
+    vi.mocked(getReviewScope).mockRejectedValue(new Error("scope authority unavailable"));
+    const result = await evaluate();
+    expect(result.decision).toBe("human_review");
+    expect(result.calculatedXp).toBe(0);
+    expect(awardXp).not.toHaveBeenCalled();
   });
 });

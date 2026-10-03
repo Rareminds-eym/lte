@@ -1,3 +1,8 @@
+import {
+  ensureAndAssignReview,
+  getReviewScope,
+  requiresFollowupReview,
+} from "@functions/lib/human-review/service";
 import { asQueryGateway, type QueryGatewaySource } from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
 import {
@@ -474,10 +479,11 @@ export async function evaluateArtifactSubmission(
   env: Pick<LteEnv, "OPENROUTER_API_KEY">,
   input: ArtifactEvaluationInput,
   submissionId?: string,
+  confidenceThreshold?: number,
 ): Promise<AIEvaluationResult> {
   const startedAt = performance.now();
   try {
-    return await evaluateArtifactSubmissionCore(env, input, submissionId);
+    return await evaluateArtifactSubmissionCore(env, input, submissionId, confidenceThreshold);
   } finally {
     metrics.observe(METRIC.EVALUATION_DURATION, Math.round(performance.now() - startedAt));
   }
@@ -487,6 +493,7 @@ async function evaluateArtifactSubmissionCore(
   env: Pick<LteEnv, "OPENROUTER_API_KEY">,
   input: ArtifactEvaluationInput,
   submissionId?: string,
+  confidenceThreshold?: number,
 ): Promise<AIEvaluationResult> {
   const passingScore = input.passingScore ?? 60;
   const modelToUse = EVALUATION_MODEL;
@@ -558,6 +565,7 @@ async function evaluateArtifactSubmissionCore(
     const validatedDecision = enforceValidatedDecision({
       llmDecision: parsed.decision,
       confidence: parsed.confidence,
+      confidenceThreshold,
       evidenceFailed,
       hasCriticalFailure,
       hasSubparCriterion,
@@ -654,14 +662,34 @@ async function evaluateArtifactSubmissionCore(
 
 export async function processAndSaveArtifactEvaluation(
   source: QueryGatewaySource,
-  env: Pick<LteEnv, "OPENROUTER_API_KEY">,
+  env: Pick<LteEnv, "OPENROUTER_API_KEY"> & Partial<LteEnv>,
   submissionId: string,
   input: ArtifactEvaluationInput,
   userId: string,
   moduleProgressId: string,
 ): Promise<AIEvaluationResult> {
   const qb = asQueryGateway(source);
-  const evaluated = await evaluateArtifactSubmission(env, input, submissionId);
+  let confidenceThreshold: number | undefined;
+  let staffReviewRequired = false;
+  let reviewReason = "low_confidence";
+  if (env.HUMAN_REVIEW_AVAILABLE === "true") {
+    try {
+      staffReviewRequired = await requiresFollowupReview(qb, submissionId);
+      if (staffReviewRequired) reviewReason = "human_revision_followup";
+      if (env.HUMAN_REVIEW_ENABLED === "true") {
+        const scope = await getReviewScope(env as LteEnv, userId);
+        if (scope?.enabled) confidenceThreshold = scope.threshold;
+      }
+    } catch (error) {
+      // An unavailable authority cannot prove that AI acceptance is permitted.
+      staffReviewRequired = true;
+      reviewReason = "review_policy_unavailable";
+      apiLogger.error("Review policy unavailable; preserving submission for staff review", error, {
+        submissionId,
+      });
+    }
+  }
+  const evaluated = await evaluateArtifactSubmission(env, input, submissionId, confidenceThreshold);
   const evalContext = {
     submissionId,
     artifactId: input.artifactId,
@@ -670,7 +698,7 @@ export async function processAndSaveArtifactEvaluation(
 
   // P0-1 hard guarantee: no matter which path produced a fallback result
   // (missing key, LLM failure, unreadable file), it can never pass or award XP.
-  const evalResult: AIEvaluationResult =
+  let evalResult: AIEvaluationResult =
     evaluated.provider === "fallback"
       ? {
           ...evaluated,
@@ -682,6 +710,15 @@ export async function processAndSaveArtifactEvaluation(
           feedback: "AI evaluation is unavailable; a human reviewer must evaluate this submission.",
         }
       : evaluated;
+  if (staffReviewRequired) {
+    evalResult = {
+      ...evalResult,
+      decision: "human_review",
+      calculatedXp: 0,
+      requiresManualReview: true,
+      feedback: "Your artifact is awaiting staff review. AI results are reference feedback.",
+    };
+  }
   if (evalResult.decision === "human_review") metrics.inc(METRIC.HUMAN_REVIEW);
   const now = new Date().toISOString();
 
@@ -728,6 +765,16 @@ export async function processAndSaveArtifactEvaluation(
       progression_triggered: evalResult.decision === "pass",
       completed_at: now,
       metadata: {
+        ...(staffReviewRequired
+          ? {
+              ai_reference: {
+                decision: evaluated.decision,
+                score: evaluated.overallScore,
+                feedback: evaluated.feedback,
+                confidence: evaluated.confidence,
+              },
+            }
+          : {}),
         rubric_rows: evalResult.rubricRows,
         stage1_submission_check: evalResult.stage1SubmissionCheck,
         stage2_critical_failures: evalResult.stage2CriticalFailures,
@@ -822,5 +869,26 @@ export async function processAndSaveArtifactEvaluation(
     }
   }
 
+  if (env.HUMAN_REVIEW_AVAILABLE === "true" && evalResult.decision === "human_review") {
+    // Grading persistence succeeded. Reconciliation repairs assignment outages;
+    // never roll back the submitted artifact for a downstream service failure.
+    try {
+      await ensureAndAssignReview(
+        qb,
+        env as LteEnv,
+        submissionId,
+        userId,
+        staffReviewRequired
+          ? reviewReason
+          : !evalResult.stage1SubmissionCheck.isAssessable
+            ? "unassessable_evidence"
+            : evalResult.provider === "fallback"
+              ? "evaluation_unavailable"
+              : "low_confidence",
+      );
+    } catch (error) {
+      apiLogger.error("Human review assignment requires reconciliation", error, { submissionId });
+    }
+  }
   return evalResult;
 }

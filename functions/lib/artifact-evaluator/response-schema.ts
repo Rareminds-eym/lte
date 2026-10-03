@@ -142,11 +142,13 @@ export function enforceValidatedDecision(params: {
   hasCriticalFailure: boolean;
   hasSubparCriterion: boolean;
   isAssessable: boolean;
+  confidenceThreshold?: number;
 }): LteDecisionResult {
   let decision = params.llmDecision;
   if (params.hasSubparCriterion) decision = "revise_and_resubmit";
   if (params.hasCriticalFailure) decision = "revise_and_resubmit";
-  if (params.confidence < MIN_AI_CONFIDENCE) decision = "human_review";
+  if (params.confidence < (params.confidenceThreshold ?? MIN_AI_CONFIDENCE))
+    decision = "human_review";
   if (!params.isAssessable) decision = "human_review";
   if (params.evidenceFailed) decision = "revise_and_resubmit";
   return decision;

@@ -1,6 +1,19 @@
 import { apiFetch } from "@/shared/api";
 
+export interface EvaluationStage {
+  stage: string;
+  status: string;
+  score: number | null;
+  decision: string | null;
+  feedback: string | null;
+  improvements: string | null;
+  completed_at: string | null;
+  evaluated_by: string | null;
+  due_by?: string | null;
+}
+
 export interface SubmissionEvaluationResponse {
+  stages?: EvaluationStage[];
   success: true;
   evaluation: {
     id: string;

@@ -1,6 +1,7 @@
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import { resolveActiveTrack } from "@functions/lib/learner-track";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
+import { syncSsoShadowData } from "@functions/lib/sync-shadow";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
@@ -12,7 +13,12 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     const userId = user.sub;
 
     const qb = createServiceQueryGateway(context.env);
-    const { data, needsAssessment } = await resolveActiveTrack(qb, context.env, userId);
+    // A valid SSO session can survive a local database restore. Provision the
+    // missing user before importing tracks that reference public.users.
+    await syncSsoShadowData(qb, user, null);
+    const { data, needsAssessment } = await resolveActiveTrack(qb, context.env, userId, {
+      refresh: new URL(context.request.url).searchParams.get("refresh") === "true",
+    });
 
     return jsonResponse({
       success: true,
@@ -28,7 +34,9 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     }
 
     apiLogger.error("Failed to resolve active learning path", error, { requestId });
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonError(message, 500, { code: "SERVER_ERROR", requestId });
+    return jsonError("Unable to load your learning path. Please try again.", 503, {
+      code: "LEARNING_PATH_UNAVAILABLE",
+      requestId,
+    });
   }
 }

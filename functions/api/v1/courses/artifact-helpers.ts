@@ -6,6 +6,7 @@ import type {
   Lte6eStage,
   ModuleArtifact,
   ModuleArtifactQuestion,
+  ModuleArtifactSubmission,
   ModuleArtifactSubmittedFile,
 } from "./types";
 
@@ -92,6 +93,7 @@ export async function getSubmittedFilesByArtifactId(
   source: QueryGatewaySource,
   userId: string | undefined,
   artifactIds: string[],
+  attemptsByArtifactId?: Map<string, ModuleArtifactSubmission[]>,
 ): Promise<Map<string, ModuleArtifactSubmittedFile[]>> {
   const submittedFilesByArtifactId = new Map<string, ModuleArtifactSubmittedFile[]>();
 
@@ -103,13 +105,29 @@ export async function getSubmittedFilesByArtifactId(
   const data = (await qb.read(submittedFilesByArtifactReadPolicy, {
     auth: { userId },
     filters: [
-      { column: "status", op: "in", value: ["submitted", "resubmission_required", "human_review"] },
+      {
+        column: "status",
+        op: "in",
+        value: ["submitted", "resubmission_required", "human_review", "accepted"],
+      },
       { column: "artifact_id", op: "in", value: artifactIds },
     ],
     sort: [{ column: "attempt_no", ascending: false }],
   })) as ArtifactSubmissionRow[] | null;
 
   for (const submission of data ?? []) {
+    if (attemptsByArtifactId) {
+      attemptsByArtifactId.set(submission.artifact_id, [
+        ...(attemptsByArtifactId.get(submission.artifact_id) ?? []),
+        {
+          submissionId: submission.id,
+          attemptNo: submission.attempt_no,
+          versionLabel: submission.version_label ?? `v${submission.attempt_no}`,
+          isLatest: submission.is_latest,
+          submittedAt: submission.submitted_at,
+        },
+      ]);
+    }
     const files = (submission.artifact_submission_files || []).map((file) => ({
       id: file.id,
       submissionId: submission.id,
@@ -137,6 +155,7 @@ export async function getSubmittedFilesByArtifactId(
 export function mapArtifactRow(
   artifact: ArtifactRow,
   submittedFilesByArtifactId: Map<string, ModuleArtifactSubmittedFile[]>,
+  attemptsByArtifactId?: Map<string, ModuleArtifactSubmission[]>,
 ): ModuleArtifact {
   const questions: ModuleArtifactQuestion[] = (artifact.artifact_questions || [])
     .sort((a, b) => a.question_order - b.question_order)
@@ -170,6 +189,7 @@ export function mapArtifactRow(
     questions,
     templates,
     submittedFiles: submittedFilesByArtifactId.get(artifact.id) ?? [],
+    submittedAttempts: attemptsByArtifactId?.get(artifact.id) ?? [],
     isActive: artifact.is_active,
   };
 }

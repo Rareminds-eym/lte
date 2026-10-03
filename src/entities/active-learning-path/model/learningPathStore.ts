@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getLogger } from "@/shared";
+import { queryClient } from "@/shared/lib/queryClient";
 import type { ActiveTrackDetail } from "@/shared/types/auth";
 import { activateLearningTrack, fetchActiveLearningPath } from "../api/learningPathApi";
 
@@ -27,7 +28,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     logger.info("fetchAndSetActiveLearningPath triggered", { userId });
     set({ activeLearningPathLoading: true, error: null, userId });
     try {
-      const result = await fetchActiveLearningPath();
+      const result = await fetchActiveLearningPath(true);
       if (get().userId !== userId) {
         logger.info("fetchAndSetActiveLearningPath user changed during fetch, ignoring result");
         return;
@@ -37,6 +38,12 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         needsAssessment: result.needsAssessment,
         activeLearningPathLoading: false,
       });
+      // Earlier requests can have cached empty results before recovery completed.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["dashboardData", userId] }),
+        queryClient.invalidateQueries({ queryKey: ["userCourses", userId] }),
+        queryClient.invalidateQueries({ queryKey: ["capabilityLevels", userId] }),
+      ]);
       logger.info("fetchAndSetActiveLearningPath succeeded", {
         hasPath: !!result.data,
         needsAssessment: result.needsAssessment,

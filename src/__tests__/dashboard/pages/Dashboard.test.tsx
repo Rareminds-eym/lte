@@ -1,11 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { XpModalProvider } from "@/app/providers/XpModalProvider";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import { Dashboard } from "@/pages/dashboard";
 import { useXpModalStore } from "@/shared/store";
+
+vi.mock("@/entities/session", () => ({
+  useAuthStore: (selector: (state: { user: { id: string } }) => unknown) =>
+    selector({ user: { id: "learner-1" } }),
+}));
 
 vi.mock("@/shared/api", () => ({
   authClient: {
@@ -30,6 +35,28 @@ const createTestQueryClient = () =>
   });
 
 describe("Dashboard Page", () => {
+  it("shows a retry for a learning-path failure instead of Take Assessment", async () => {
+    const originalRetry = useLearningPathStore.getState().fetchAndSetActiveLearningPath;
+    const retry = vi.fn();
+    useLearningPathStore.setState({
+      error: "Unavailable",
+      activeTrack: null,
+      fetchAndSetActiveLearningPath: retry,
+    });
+    render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <MemoryRouter>
+          <Dashboard />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const button = await screen.findByRole("button", { name: "Retry Loading Learning Path" });
+    expect(screen.queryByText("Take Assessment")).not.toBeInTheDocument();
+    fireEvent.click(button);
+    expect(retry).toHaveBeenCalledWith("learner-1");
+    useLearningPathStore.setState({ fetchAndSetActiveLearningPath: originalRetry });
+  });
+
   beforeEach(() => {
     vi.restoreAllMocks();
     useLearningPathStore.setState({
@@ -73,6 +100,7 @@ describe("Dashboard Page", () => {
           },
         ],
       },
+      error: null,
       needsAssessment: false,
       activeLearningPathLoading: false,
     });
@@ -85,6 +113,8 @@ describe("Dashboard Page", () => {
           todayXp: 20,
         });
       }
+      if (url.includes("/api/v1/dashboard/feedback"))
+        return Promise.resolve({ success: true, upcoming: [], recentFeedback: [] });
       if (url.includes("/api/v1/dashboard/streak")) {
         return Promise.resolve({
           success: true,
@@ -160,6 +190,8 @@ describe("Dashboard Page", () => {
           ],
         });
       }
+      if (url.includes("/api/v1/dashboard/feedback"))
+        return Promise.resolve({ success: true, upcoming: [], recentFeedback: [] });
       if (url.includes("/api/v1/dashboard/streak")) {
         return Promise.resolve({
           success: true,

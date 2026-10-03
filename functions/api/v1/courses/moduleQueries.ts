@@ -13,6 +13,7 @@ import {
 import type {
   EContentItem,
   ModuleArtifact,
+  ModuleArtifactSubmission,
   ModuleContentRow,
   ModuleRow,
   ModuleStageContent,
@@ -256,7 +257,13 @@ export async function getModuleDetails(
     .flatMap((mc) => mc.module_artifacts || [])
     .filter((artifact) => artifact.is_active)
     .map((artifact) => artifact.id);
-  const submittedFilesByArtifactId = await getSubmittedFilesByArtifactId(qb, userId, artifactIds);
+  const attemptsByArtifactId = new Map<string, ModuleArtifactSubmission[]>();
+  const submittedFilesByArtifactId = await getSubmittedFilesByArtifactId(
+    qb,
+    userId,
+    artifactIds,
+    attemptsByArtifactId,
+  );
 
   const rawStagesMap = new Map<string, ModuleStageContent>();
 
@@ -281,7 +288,7 @@ export async function getModuleDetails(
 
       const artifacts: ModuleArtifact[] = (mc.module_artifacts || [])
         .filter((art) => art.is_active === true)
-        .map((art) => mapArtifactRow(art, submittedFilesByArtifactId));
+        .map((art) => mapArtifactRow(art, submittedFilesByArtifactId, attemptsByArtifactId));
       const artifactType = artifacts.reduce<"practice" | "final" | null>(
         (current, artifact) => pickArtifactType(current, artifact.artifactType),
         artifactTypeByStage.get(mc.stage_name) ?? null,

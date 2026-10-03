@@ -2,6 +2,7 @@ import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useLearningPathStore } from "@/entities/active-learning-path";
 import * as learningPathApi from "@/entities/active-learning-path/api/learningPathApi";
+import { queryClient } from "@/shared/lib/queryClient";
 
 vi.mock("@/entities/active-learning-path/api/learningPathApi", () => ({
   fetchActiveLearningPath: vi.fn(),
@@ -19,6 +20,7 @@ describe("learningPathStore", () => {
       error: null,
     });
     vi.clearAllMocks();
+    vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue();
   });
 
   describe("fetchAndSetActiveLearningPath", () => {
@@ -44,6 +46,13 @@ describe("learningPathStore", () => {
 
       await useLearningPathStore.getState().fetchAndSetActiveLearningPath(testUserId);
 
+      expect(learningPathApi.fetchActiveLearningPath).toHaveBeenCalledWith(true);
+      expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["userCourses", testUserId],
+      });
+      expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["dashboardData", testUserId],
+      });
       expect(useLearningPathStore.getState().activeTrack).toEqual(mockTrack);
       expect(useLearningPathStore.getState().needsAssessment).toBe(false);
       expect(useLearningPathStore.getState().activeLearningPathLoading).toBe(false);

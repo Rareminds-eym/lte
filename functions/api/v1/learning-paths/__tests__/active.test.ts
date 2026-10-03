@@ -1,4 +1,5 @@
 import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
+import { callSkill } from "@functions/lib/skill-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
@@ -16,7 +17,10 @@ vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
   return { ...actual, createServiceQueryGateway: vi.fn() };
 });
 
+vi.mock("@functions/lib/skill-gateway", () => ({ callSkill: vi.fn() }));
+
 interface Chainable extends Record<string, unknown> {
+  upsert: ReturnType<typeof vi.fn>;
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
@@ -31,6 +35,7 @@ interface Chainable extends Record<string, unknown> {
 
 function chainable(resolveVal: unknown = null, errorVal: unknown = null) {
   const chain: Chainable = {
+    upsert: vi.fn().mockImplementation(() => chain),
     select: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
     order: vi.fn().mockImplementation(() => chain),
@@ -63,6 +68,7 @@ describe("GET /api/v1/learning-paths/active", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(callSkill).mockResolvedValue({ found: false });
   });
 
   function gatewayFromSupabase(mockSupabase: { from: ReturnType<typeof vi.fn> }) {
@@ -82,8 +88,9 @@ describe("GET /api/v1/learning-paths/active", () => {
 
   it("returns null data when no active path", async () => {
     vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
+    const userChain = chainable(null);
     const mockSupabase = {
-      from: vi.fn().mockReturnValue(chainable(null)),
+      from: vi.fn((table: string) => (table === "users" ? userChain : chainable(null))),
     };
     vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromSupabase(mockSupabase));
     const response = await onRequestGet({
@@ -93,6 +100,48 @@ describe("GET /api/v1/learning-paths/active", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.data).toBeNull();
+    expect(body.needsAssessment).toBe(true);
+    expect(userChain.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ id: mockUser.sub, email: mockUser.email }),
+      expect.objectContaining({ onConflict: "id" }),
+    );
+  });
+
+  it("returns a retryable error when the assessment gateway fails", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
+    vi.mocked(callSkill).mockRejectedValueOnce(new Error("private upstream details"));
+    const userChain = chainable({ id: mockUser.sub });
+    const mockSupabase = {
+      from: vi.fn((table: string) => (table === "users" ? userChain : chainable(null))),
+    };
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromSupabase(mockSupabase));
+    const response = await onRequestGet({
+      request: new Request("http://localhost"),
+      env: {} as LteEnv,
+    } as PagesContext<LteEnv>);
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(JSON.stringify(body)).not.toContain("private upstream details");
+    expect(body.needsAssessment).toBeUndefined();
+    expect(userChain.upsert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {},
+    { found: true, tracks: [] },
+  ])("does not ask for an assessment on an invalid gateway response %j", async (payload) => {
+    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
+    vi.mocked(callSkill).mockResolvedValueOnce(payload);
+    const mockSupabase = {
+      from: vi.fn((table: string) => chainable(table === "users" ? { id: mockUser.sub } : null)),
+    };
+    vi.mocked(createServiceQueryGateway).mockReturnValueOnce(gatewayFromSupabase(mockSupabase));
+    const response = await onRequestGet({
+      request: new Request("http://localhost"),
+      env: {} as LteEnv,
+    } as PagesContext<LteEnv>);
+    expect(response.status).toBe(503);
+    expect((await response.json()).needsAssessment).toBeUndefined();
   });
 
   it("returns active path data when one exists", async () => {

@@ -1,8 +1,10 @@
+import { syncManagedCatalog } from "@functions/lib/catalog-sync";
 import { createQueryGateway } from "@functions/lib/query-gateway";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import {
   deactivateOtherTracks,
+  ensureShadowRole,
   getActiveLearningTrack,
   syncUserCapabilities,
   upsertLearningPath,
@@ -11,6 +13,8 @@ import {
 import { callSkill } from "../../lib/skill-gateway";
 import type { LteEnv } from "../../lib/types";
 import { resolveActiveTrack } from "../learner-track";
+
+vi.mock("@functions/lib/catalog-sync", () => ({ syncManagedCatalog: vi.fn() }));
 
 vi.mock("@functions/lib/skill-gateway", () => ({
   callSkill: vi.fn(),
@@ -22,6 +26,7 @@ vi.mock("@functions/api/v1/learning-paths/queries", () => ({
   upsertLearningPath: vi.fn(),
   upsertLearningTrack: vi.fn(),
   deactivateOtherTracks: vi.fn(),
+  ensureShadowRole: vi.fn(),
 }));
 
 describe("Learner Track Resolution (3-layer logic)", () => {
@@ -41,6 +46,9 @@ describe("Learner Track Resolution (3-layer logic)", () => {
         roleId: "role-1",
         roleName: "Backend Engineer",
         learningPathId: "lp-1",
+        readinessScore: 0,
+        status: "not_started" as const,
+        updatedAt: null,
       },
     ],
     tracks: [],
@@ -55,6 +63,82 @@ describe("Learner Track Resolution (3-layer logic)", () => {
   function gatewayFromSupabase(mockSupabase: SupabaseClient) {
     return createQueryGateway(mockSupabase);
   }
+
+  it("repairs a partial import on refresh and preserves the selected track", async () => {
+    const local = { ...mockPath, track: "Medium" };
+    vi.mocked(getActiveLearningTrack).mockResolvedValue(local);
+    vi.mocked(callSkill).mockResolvedValue({
+      found: true,
+      tracks: ["High", "Medium", "Explore"].map((name) => ({
+        attemptId: "attempt-1",
+        roleId: `role-${name}`,
+        roleName: name,
+        trackName: name,
+        fit: name,
+        matchScore: 80,
+        whyItFits: "Fit",
+      })),
+    });
+    vi.mocked(upsertLearningTrack).mockImplementation(
+      async (_source, params) => `track-${params.track}`,
+    );
+    vi.mocked(upsertLearningPath).mockImplementation(
+      async (_source, params) => `path-${params.roleId}`,
+    );
+    vi.mocked(syncUserCapabilities).mockRejectedValueOnce(new Error("Interrupted course recovery"));
+    const gateway = gatewayFromSupabase({} as SupabaseClient);
+    await expect(resolveActiveTrack(gateway, env, userId, { refresh: true })).rejects.toThrow(
+      "Interrupted course recovery",
+    );
+    const result = await resolveActiveTrack(gateway, env, userId, { refresh: true });
+    expect(result.data).toEqual(local);
+    expect(callSkill).toHaveBeenCalledTimes(2);
+    expect(upsertLearningPath).toHaveBeenCalledTimes(6);
+    for (const name of ["High", "Medium", "Explore"]) {
+      expect(syncUserCapabilities).toHaveBeenCalledWith(expect.anything(), {
+        userId,
+        learningPathId: `path-role-${name}`,
+        roleId: `role-${name}`,
+      });
+      expect(upsertLearningTrack).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          track: name,
+          isActive: name === "Medium",
+        }),
+      );
+    }
+  });
+
+  it("does not change learner tracks when managed catalogue recovery fails", async () => {
+    vi.mocked(getActiveLearningTrack).mockResolvedValue(null);
+    vi.mocked(callSkill).mockResolvedValue({
+      found: true,
+      tracks: [
+        {
+          attemptId: "attempt",
+          roleId: userId,
+          roleName: "Role",
+          trackName: "Track",
+          fit: "High",
+          matchScore: 90,
+          whyItFits: "Fit",
+        },
+      ],
+    });
+    vi.mocked(syncManagedCatalog).mockRejectedValueOnce(new Error("Catalogue unavailable"));
+    await expect(
+      resolveActiveTrack(gatewayFromSupabase({} as SupabaseClient), env, userId, { refresh: true }),
+    ).rejects.toThrow("Catalogue unavailable");
+    expect(syncManagedCatalog).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      [userId],
+      userId,
+    );
+    expect(deactivateOtherTracks).not.toHaveBeenCalled();
+    expect(upsertLearningTrack).not.toHaveBeenCalled();
+  });
 
   describe("Layer 1: LTE Local Cache", () => {
     it("should return the local active track if it already exists", async () => {
@@ -196,10 +280,60 @@ describe("Learner Track Resolution (3-layer logic)", () => {
         roleId: "role-123",
         metadata: {},
       });
+      expect(ensureShadowRole).toHaveBeenCalledWith(expect.anything(), {
+        id: "role-123",
+        roleName: "Aerostructure documentation assistant",
+        roleFamilyName: "Aerostructure Engineering Support",
+        domainName: "General",
+      });
       expect(syncUserCapabilities).toHaveBeenCalledWith(expect.anything(), {
         userId,
         learningPathId: "lp-1",
         roleId: "role-123",
+      });
+    });
+
+    it("gracefully continues track resolution when managed catalogue source is unconfigured", async () => {
+      (getActiveLearningTrack as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(mockPath);
+
+      (callSkill as Mock).mockResolvedValue({
+        found: true,
+        track: {
+          attemptId: "att-123",
+          roleId: "role-123",
+          roleName: "Securities Operations Associate",
+          trackName: "BFSI Track",
+          fit: "High",
+          matchScore: 90,
+          whyItFits: "Good fit",
+          industry: "BFSI",
+        },
+      });
+      (upsertLearningTrack as Mock).mockResolvedValue("lt-1");
+      (upsertLearningPath as Mock).mockResolvedValue("lp-1");
+
+      const catErr = new Error("Managed catalogue source is not configured");
+      (catErr as unknown as { code: string }).code = "CATALOGUE_UNAVAILABLE";
+      vi.mocked(syncManagedCatalog).mockRejectedValueOnce(catErr);
+
+      const result = await resolveActiveTrack(
+        gatewayFromSupabase({} as SupabaseClient),
+        env,
+        userId,
+      );
+
+      expect(result).toEqual({ data: mockPath, needsAssessment: false });
+      expect(ensureShadowRole).toHaveBeenCalledWith(expect.anything(), {
+        id: "role-123",
+        roleName: "Securities Operations Associate",
+        roleFamilyName: "BFSI Track",
+        domainName: "BFSI",
+      });
+      expect(upsertLearningPath).toHaveBeenCalledWith(expect.anything(), {
+        userId,
+        trackId: "lt-1",
+        roleId: "role-123",
+        metadata: { industry: "BFSI" },
       });
     });
 
@@ -306,12 +440,12 @@ describe("Learner Track Resolution (3-layer logic)", () => {
       });
 
       expect(upsertLearningPath).toHaveBeenCalledTimes(3);
-      expect(syncUserCapabilities).toHaveBeenCalledTimes(1); // Only synced for primary track
+      expect(syncUserCapabilities).toHaveBeenCalledTimes(3); // All recommended tracks
     });
   });
 
-  describe("Layer 3: Graceful Degraded Mode (Gateway Error Fallback)", () => {
-    it("should fallback to needsAssessment: true if gateway fails", async () => {
+  describe("Gateway failure handling", () => {
+    it("should propagate gateway failure without requesting another assessment", async () => {
       (getActiveLearningTrack as Mock).mockResolvedValueOnce(null);
 
       const mockSupabase = {
@@ -330,9 +464,9 @@ describe("Learner Track Resolution (3-layer logic)", () => {
 
       (callSkill as Mock).mockRejectedValue(new Error("Timeout calling gateway."));
 
-      const result = await resolveActiveTrack(gatewayFromSupabase(mockSupabase), env, userId);
-
-      expect(result).toEqual({ data: null, needsAssessment: true });
+      await expect(
+        resolveActiveTrack(gatewayFromSupabase(mockSupabase), env, userId),
+      ).rejects.toThrow("Timeout calling gateway.");
     });
   });
 
@@ -551,8 +685,9 @@ describe("Learner Track Resolution (3-layer logic)", () => {
         }),
       } as unknown as SupabaseClient;
 
-      const result = await resolveActiveTrack(gatewayFromSupabase(mockSupabase), env, userId);
-      expect(result).toEqual({ data: null, needsAssessment: true });
+      await expect(
+        resolveActiveTrack(gatewayFromSupabase(mockSupabase), env, userId),
+      ).rejects.toThrow("No roles available in LTE catalog");
     });
   });
 });

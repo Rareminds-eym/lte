@@ -100,7 +100,10 @@ export async function callSkill<T = unknown>(
   ]);
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GATEWAY_TIMEOUT_MS);
+  const timer = setTimeout(
+    () => controller.abort(),
+    action === "catalogue:get" ? 30000 : GATEWAY_TIMEOUT_MS,
+  );
   let response: Response;
   try {
     response = await fetch(`${baseUrl}/api/internal/lte/v1`, {

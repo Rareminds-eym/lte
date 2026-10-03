@@ -113,7 +113,11 @@ describe("Dashboard Widgets", () => {
   });
 
   it("renders UpcomingFeedback with upcoming sessions and recent reviews", () => {
-    render(<UpcomingFeedback data={MOCK_DASHBOARD_DATA.upcomingFeedback} />);
+    render(
+      <MemoryRouter>
+        <UpcomingFeedback data={MOCK_DASHBOARD_DATA.upcomingFeedback} />
+      </MemoryRouter>,
+    );
     expect(screen.getByText("Upcoming & Feedback")).toBeInTheDocument();
     expect(screen.getByText("UPCOMING")).toBeInTheDocument();
     expect(screen.getByText("Mock Interview Session")).toBeInTheDocument();

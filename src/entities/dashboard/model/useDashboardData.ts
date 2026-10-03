@@ -12,6 +12,11 @@ export const useDashboardData = () => {
   return useQuery<DashboardData>({
     queryKey: [...DASHBOARD_QUERY_KEY, userId],
     queryFn: ({ signal }) => fetchDashboardData(signal),
+    enabled: Boolean(userId),
+    refetchOnReconnect: true,
+    refetchInterval: (query) =>
+      query.state.data?.upcomingFeedback.upcoming.length ? 30_000 : false,
+    refetchIntervalInBackground: false,
     staleTime: 1000 * 60 * 2, // 2 minutes cache policy
     refetchOnWindowFocus: false, // matches global policy, avoiding focus-refetching
   });

@@ -55,6 +55,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [submittedFilesByArtifactId, setSubmittedFilesByArtifactId] = useState<
     Record<string, ModuleArtifactSubmittedFile[]>
   >({});
+  const [localAttempts, setLocalAttempts] = useState<Record<string, SubmittedArtifactAttempt[]>>(
+    {},
+  );
   const [activeArtifactTab, setActiveArtifactTab] = useState<"submit" | "feedback">("submit");
   const [activeFeedbackAttemptNo, setActiveFeedbackAttemptNo] = useState<number | null>(null);
 
@@ -70,16 +73,31 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const submittedAttempts = useMemo<SubmittedArtifactAttempt[]>(() => {
     const attemptsByNo = new Map<number, SubmittedArtifactAttempt>();
 
+    const savedAttempts = activeArtifact?.submittedAttempts ?? [];
+    const unsyncedAttempts = activeArtifact ? (localAttempts[activeArtifact.id] ?? []) : [];
+    const latestLocal = unsyncedAttempts[0]?.attemptNo;
+    for (const attempt of [...savedAttempts, ...unsyncedAttempts]) {
+      attemptsByNo.set(attempt.attemptNo, {
+        ...attempt,
+        isLatest: latestLocal === undefined ? attempt.isLatest : attempt.attemptNo === latestLocal,
+        files: [],
+      });
+    }
+
     for (const file of submittedFileVersions) {
       const existing = attemptsByNo.get(file.attemptNo);
       if (existing) {
         existing.files.push(file);
-        existing.isLatest = existing.isLatest || file.isLatest;
+        existing.isLatest =
+          latestLocal === undefined
+            ? existing.isLatest || file.isLatest
+            : existing.attemptNo === latestLocal;
         existing.submittedAt = existing.submittedAt ?? file.submittedAt ?? file.uploadedAt;
         continue;
       }
 
       attemptsByNo.set(file.attemptNo, {
+        submissionId: file.submissionId,
         attemptNo: file.attemptNo,
         versionLabel: file.versionLabel,
         isLatest: file.isLatest,
@@ -89,14 +107,15 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     }
 
     return [...attemptsByNo.values()].sort((a, b) => b.attemptNo - a.attemptNo);
-  }, [submittedFileVersions]);
+  }, [submittedFileVersions, activeArtifact, localAttempts]);
 
   const selectedAttempt =
     submittedAttempts.find(
       (attempt) =>
         attempt.attemptNo === (activeFeedbackAttemptNo ?? submittedAttempts[0]?.attemptNo),
     ) ?? null;
-  const selectedSubmissionId = selectedAttempt?.files[0]?.submissionId;
+  const selectedSubmissionId =
+    selectedAttempt?.submissionId ?? selectedAttempt?.files[0]?.submissionId;
   const { data: storedEvaluation, isFetching: isStoredEvaluationFetching } =
     useSubmissionEvaluation(selectedSubmissionId);
   const latestEvaluation = toAttemptEvaluation(storedEvaluation?.evaluation ?? null);
@@ -149,6 +168,22 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       [activeArtifact.id]: [
         ...(current[activeArtifact.id] ?? []).map((file) => ({ ...file, isLatest: false })),
         ...submittedFiles,
+      ],
+    }));
+    setLocalAttempts((current) => ({
+      ...current,
+      [activeArtifact.id]: [
+        {
+          submissionId: response.submission_id,
+          attemptNo: response.attempt_no,
+          versionLabel: response.version_label,
+          isLatest: true,
+          submittedAt,
+          files: [],
+        },
+        ...(current[activeArtifact.id] ?? []).filter(
+          (attempt) => attempt.attemptNo !== response.attempt_no,
+        ),
       ],
     }));
     setActiveFeedbackAttemptNo(response.attempt_no);
@@ -256,6 +291,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           isPanelExpanded={isPanelExpanded}
           onSelectAttempt={setActiveFeedbackAttemptNo}
           latestEvaluation={latestEvaluation}
+          stages={storedEvaluation?.stages}
           isEvaluationLoading={isStoredEvaluationFetching}
         />
       ) : null}

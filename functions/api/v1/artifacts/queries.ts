@@ -6,6 +6,7 @@ import {
   processAndSaveArtifactEvaluation,
   sanitizeContentDispositionFilename,
 } from "@functions/lib/artifact-evaluator";
+import { readStaffRubricRows } from "@functions/lib/human-review/scores";
 import {
   asQueryGateway,
   QueryGatewayDatabaseError,
@@ -213,6 +214,13 @@ async function createSubmissionAttempt(
       );
     }
 
+    if (latest?.status === "human_review") {
+      throw new ArtifactSubmissionError(
+        "This artifact is awaiting staff review.",
+        409,
+        "REVIEW_PENDING",
+      );
+    }
     if (latest) {
       try {
         await qb.update(artifactSubmissionDemotePolicy, {
@@ -220,6 +228,12 @@ async function createSubmissionAttempt(
           filters: [{ column: "id", op: "eq", value: latest.id }],
         });
       } catch (error) {
+        if (/REVIEW_PENDING/.test(dbMessage(error)))
+          throw new ArtifactSubmissionError(
+            "This artifact is awaiting staff review.",
+            409,
+            "REVIEW_PENDING",
+          );
         throw new Error(
           `Failed to update previous artifact submission (submission ${latest.id}, artifact ${artifactId}): ${dbMessage(error)}`,
         );
@@ -260,6 +274,13 @@ async function createSubmissionAttempt(
       return { submission: data, duplicate: false };
     }
 
+    if (/REVIEW_PENDING|SUBMISSION_ALREADY_ACCEPTED/.test(error?.message ?? "")) {
+      throw new ArtifactSubmissionError(
+        "This artifact cannot accept another attempt while reviewed or sealed.",
+        409,
+        "REVIEW_CONFLICT",
+      );
+    }
     if (error?.code === "23505") {
       // P0-2 race: a concurrent request with the same idempotency key won the
       // insert between the early lookup and this insert - return its row.
@@ -701,7 +722,10 @@ async function buildDuplicateSubmissionResponse(
       confidence: (meta?.["confidence"] as number | null) ?? 0,
       decision:
         (currentFlow.decision as "pass" | "revise_and_resubmit" | "human_review") ?? "human_review",
-      rubric_rows: (meta?.["rubric_rows"] as unknown[]) ?? [],
+      rubric_rows:
+        currentFlow.stage === "staff_review"
+          ? await readStaffRubricRows(qb, submission.id, userId)
+          : ((meta?.["rubric_rows"] as unknown[]) ?? []),
       feedback: currentFlow.feedback ?? "",
       improvements: currentFlow.improvements ?? "",
       calculated_xp: (meta?.["calculated_xp"] as number) ?? 0,
@@ -961,5 +985,14 @@ export async function getSubmissionEvaluationFlow(
   const { data: flow, error } = await fetchCurrentEvaluationFlow(qb, submissionId);
 
   if (error) throw new Error(`Failed to fetch evaluation flow: ${error.message}`);
+  if (flow?.stage === "staff_review") {
+    return {
+      ...flow,
+      metadata: {
+        ...(flow.metadata as Record<string, unknown> | null),
+        rubric_rows: await readStaffRubricRows(qb, submissionId, userId),
+      },
+    };
+  }
   return flow;
 }

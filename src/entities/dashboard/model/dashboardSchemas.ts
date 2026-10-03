@@ -44,3 +44,27 @@ export const DashboardJourneyResponseSchema = z.object({
     })
     .nullable(),
 });
+
+export const DashboardFeedbackResponseSchema = z.object({
+  success: z.literal(true),
+  upcoming: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      subtitle: z.string(),
+      tag: z.string(),
+      type: z.literal("staff-review"),
+      href: z.string().regex(/^\/my-courses\//),
+    }),
+  ),
+  recentFeedback: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      subtitle: z.string(),
+      daysAgo: z.string(),
+      type: z.literal("staff-review"),
+      href: z.string().regex(/^\/my-courses\//),
+    }),
+  ),
+});

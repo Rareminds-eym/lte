@@ -5,6 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDashboardData } from "@/entities/dashboard";
 import { apiFetch } from "@/shared/api";
 
+vi.mock("@/entities/session", () => ({
+  useAuthStore: (selector: (state: { user: { id: string } }) => unknown) =>
+    selector({ user: { id: "learner-1" } }),
+}));
+
 vi.mock("@/shared/api", () => ({
   authClient: {
     subscribe: vi.fn(() => () => {}),
@@ -26,7 +31,8 @@ describe("useDashboardData", () => {
     vi.mocked(apiFetch)
       .mockResolvedValueOnce({ success: true, totalXp: 1240, xpThisWeek: 120, todayXp: 120 })
       .mockResolvedValueOnce({ success: true, streakDays: 7 })
-      .mockResolvedValueOnce({ success: true, data: null, state: "active" });
+      .mockResolvedValueOnce({ success: true, data: null, state: "active" })
+      .mockResolvedValueOnce({ success: true, upcoming: [], recentFeedback: [] });
   });
 
   it("fetches and returns dashboard data via TanStack Query", async () => {
@@ -36,5 +42,6 @@ describe("useDashboardData", () => {
 
     expect(result.current.data?.careerTarget.title).toBe("Backend Engineer");
     expect(result.current.data?.achievements.unlockedCount).toBe(18);
+    expect(result.current.data?.upcomingFeedback).toEqual({ upcoming: [], recentFeedback: [] });
   });
 });

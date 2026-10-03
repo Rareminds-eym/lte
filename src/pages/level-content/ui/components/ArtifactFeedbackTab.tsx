@@ -1,6 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 import type { ModuleArtifactSubmittedFile } from "@/entities/course";
+import type { EvaluationStage } from "@/features/submit-artifact";
 import { downloadArtifactFile } from "@/features/submit-artifact";
 import {
   ArtifactsIcon,
@@ -13,6 +14,7 @@ import {
 } from "@/shared/ui";
 
 export interface SubmittedArtifactAttempt {
+  submissionId?: string;
   attemptNo: number;
   versionLabel: string;
   isLatest: boolean;
@@ -42,6 +44,7 @@ interface ArtifactFeedbackTabProps {
   isPanelExpanded: boolean;
   onSelectAttempt: (attemptNo: number) => void;
   latestEvaluation?: SubmittedArtifactAttempt["evaluation"];
+  stages?: EvaluationStage[];
   isEvaluationLoading?: boolean;
 }
 
@@ -80,9 +83,9 @@ const getRubricToneClasses = (row: RubricRow) => {
 export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
   submittedAttempts,
   activeFeedbackAttemptNo,
-  isPanelExpanded,
   onSelectAttempt,
   latestEvaluation,
+  stages,
   isEvaluationLoading = false,
 }) => {
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
@@ -179,41 +182,59 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
             <p className="text-[11px] font-medium text-content-muted">
               {formatSubmittedDate(selectedAttempt?.submittedAt)}
             </p>
-            <p className="text-[11px] font-medium text-content-muted">Evaluator: OpenRouter AI</p>
+            <p className="text-[11px] font-medium text-content-muted">
+              Evaluator:{" "}
+              {stages?.some(
+                (stage) => stage.stage === "staff_review" && stage.status === "completed",
+              )
+                ? "Staff review"
+                : "AI review"}
+            </p>
           </div>
         </div>
       </div>
 
-      <div
-        className={`flex items-center rounded-xl border border-line-default bg-surface-primary px-3 py-2 text-[11px] font-bold transition-all duration-300 ${isPanelExpanded ? "flex-nowrap gap-2" : "flex-wrap gap-x-3 gap-y-2"}`}
+      <ol
+        aria-label="Review stages"
+        className="flex flex-wrap gap-3 rounded-xl border border-line-default bg-surface-primary p-3 text-xs"
       >
-        <span
-          className={`inline-flex items-center gap-1.5 text-success-700 transition-all duration-300 ${isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"}`}
-        >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success-50 transition-transform duration-300 hover:scale-105">
-            <CheckIcon size={12} />
-          </span>
-          AI Review
-        </span>
-        {isPanelExpanded ? (
-          <span className="h-px min-w-8 flex-1 bg-success-500 transition-all duration-300" />
-        ) : null}
-        <span
-          className={`inline-flex items-center gap-1.5 text-brand-600 transition-all duration-300 ${isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"}`}
-        >
-          <span className="h-5 w-5 rounded-full border border-line-default bg-brand-50" />
-          Staff Review
-        </span>
-        {isPanelExpanded ? (
-          <span className="h-px min-w-8 flex-1 bg-line-subtle transition-all duration-300" />
-        ) : null}
-        <span
-          className={`inline-flex items-center gap-1.5 text-content-muted transition-all duration-300 ${isPanelExpanded ? "shrink-0" : "min-w-[104px] flex-1"}`}
-        >
-          <span className="h-5 w-5 rounded-full border border-line-default" />
-          Industry Review
-        </span>
-      </div>
+        {(stages?.length
+          ? stages
+          : [{ stage: "ai", status: evaluationData ? "completed" : "pending" }]
+        ).map((stage) => (
+          <li key={stage.stage} className="flex items-center gap-2">
+            {stage.status === "completed" ? (
+              <CheckIcon size={14} />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="h-3 w-3 rounded-full border border-line-default"
+              />
+            )}
+            <span>{stage.stage === "ai" ? "AI review" : "Staff review"}</span>
+            <span className="text-content-secondary">
+              {stage.status === "unassigned"
+                ? "Awaiting reviewer"
+                : stage.status.replaceAll("_", " ")}
+            </span>
+          </li>
+        ))}
+      </ol>
+      {stages
+        ?.filter(
+          (stage) =>
+            stage.stage === "ai" &&
+            stage.feedback &&
+            stages.some((item) => item.stage === "staff_review" && item.status === "completed"),
+        )
+        .map((stage) => (
+          <details key={stage.stage} className="rounded-xl border border-line-default p-3 text-xs">
+            <summary className="cursor-pointer font-semibold">
+              Earlier AI feedback (reference)
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap">{stage.feedback}</p>
+          </details>
+        ))}
 
       {submittedFileList.length > 0 ? (
         <div className="rounded-xl border border-line-default bg-surface-primary p-3.5">
