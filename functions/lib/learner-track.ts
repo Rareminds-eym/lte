@@ -119,7 +119,11 @@ export async function resolveActiveTrack(
         limit: 1,
         result: "maybeSingle",
       })) as { id: string } | null;
-  } catch {
+  } catch (error) {
+    logger.warn("Inactive track lookup failed, proceeding to gateway", {
+      userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     inactiveTrack = null;
   }
 
@@ -135,8 +139,13 @@ export async function resolveActiveTrack(
       if (refreshed) {
         return { data: refreshed, needsAssessment: false };
       }
-    } catch {
+    } catch (error) {
       // Fall through to SkillPassport lookup.
+      logger.warn("Inactive track reactivation failed, falling through to gateway", {
+        userId,
+        trackId: inactiveTrack.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -148,7 +157,7 @@ export async function resolveActiveTrack(
     if (parsed.data.found && !parsed.data.tracks?.length && !parsed.data.track) {
       throw new Error("Assessment found without learning tracks");
     }
-    if (parsed.success && parsed.data.found) {
+    if (parsed.data.found) {
       const tracks = parsed.data.tracks?.length
         ? parsed.data.tracks
         : parsed.data.track

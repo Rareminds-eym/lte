@@ -25,6 +25,8 @@ export class GatewayCallError extends Error {
 }
 
 const GATEWAY_TIMEOUT_MS = 2000;
+/** catalogue:get imports an entire role catalogue — allow 30s for large payloads. */
+const CATALOGUE_TIMEOUT_MS = 30_000;
 const encoder = new TextEncoder();
 
 function b64urlEncode(bytes: Uint8Array): string {
@@ -102,7 +104,7 @@ export async function callSkill<T = unknown>(
   const controller = new AbortController();
   const timer = setTimeout(
     () => controller.abort(),
-    action === "catalogue:get" ? 30000 : GATEWAY_TIMEOUT_MS,
+    action === "catalogue:get" ? CATALOGUE_TIMEOUT_MS : GATEWAY_TIMEOUT_MS,
   );
   let response: Response;
   try {

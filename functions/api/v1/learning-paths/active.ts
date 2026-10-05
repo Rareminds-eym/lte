@@ -5,6 +5,9 @@ import { syncSsoShadowData } from "@functions/lib/sync-shadow";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
+import { z } from "zod";
+
+const refreshParam = z.enum(["true", "false"]).optional().default("false");
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -16,8 +19,11 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
     // A valid SSO session can survive a local database restore. Provision the
     // missing user before importing tracks that reference public.users.
     await syncSsoShadowData(qb, user, null);
+    const refresh = refreshParam.parse(
+      new URL(context.request.url).searchParams.get("refresh") ?? undefined,
+    );
     const { data, needsAssessment } = await resolveActiveTrack(qb, context.env, userId, {
-      refresh: new URL(context.request.url).searchParams.get("refresh") === "true",
+      refresh: refresh === "true",
     });
 
     return jsonResponse({

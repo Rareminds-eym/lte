@@ -26,13 +26,15 @@ describe("review completion boundary", () => {
   });
   it("rejects duplicate criteria, unknown criteria, missing evidence and critical-failure passes", () => {
     const duplicate = command();
-    duplicate.criteria[1] = duplicate.criteria[0]!;
+    const firstCriterion = duplicate.criteria[0];
+    if (firstCriterion) duplicate.criteria[1] = firstCriterion;
     expect(completionSchema.safeParse(duplicate).success).toBe(false);
     expect(completionSchema.safeParse({ ...command(), hasCriticalFailure: true }).success).toBe(
       false,
     );
     const missing = command();
-    missing.criteria[0]!.evidence = " ";
+    const firstMissingCriterion = missing.criteria[0];
+    if (firstMissingCriterion) firstMissingCriterion.evidence = " ";
     expect(completionSchema.safeParse(missing).success).toBe(false);
     const unknown = {
       ...command(),
@@ -48,7 +50,8 @@ describe("review completion boundary", () => {
     Number.POSITIVE_INFINITY,
   ])("rejects invalid criterion score %s", (score) => {
     const invalid = command();
-    invalid.criteria[0]!.score = score;
+    const firstCriterion = invalid.criteria[0];
+    if (firstCriterion) firstCriterion.score = score;
     expect(completionSchema.safeParse(invalid).success).toBe(false);
   });
   it("requires actionable feedback for revision", () => {

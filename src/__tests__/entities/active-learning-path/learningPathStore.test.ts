@@ -46,13 +46,9 @@ describe("learningPathStore", () => {
 
       await useLearningPathStore.getState().fetchAndSetActiveLearningPath(testUserId);
 
-      expect(learningPathApi.fetchActiveLearningPath).toHaveBeenCalledWith(true);
-      expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["userCourses", testUserId],
-      });
-      expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["dashboardData", testUserId],
-      });
+      expect(learningPathApi.fetchActiveLearningPath).toHaveBeenCalledWith(false);
+      // Query cache invalidation only fires on explicit refresh — not on default boot path.
+      expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
       expect(useLearningPathStore.getState().activeTrack).toEqual(mockTrack);
       expect(useLearningPathStore.getState().needsAssessment).toBe(false);
       expect(useLearningPathStore.getState().activeLearningPathLoading).toBe(false);

@@ -54,7 +54,7 @@ export const DashboardFeedbackResponseSchema = z.object({
       subtitle: z.string(),
       tag: z.string(),
       type: z.literal("staff-review"),
-      href: z.string().regex(/^\/my-courses\//),
+      href: z.string().startsWith("/"),
     }),
   ),
   recentFeedback: z.array(
@@ -64,7 +64,7 @@ export const DashboardFeedbackResponseSchema = z.object({
       subtitle: z.string(),
       daysAgo: z.string(),
       type: z.literal("staff-review"),
-      href: z.string().regex(/^\/my-courses\//),
+      href: z.string().startsWith("/"),
     }),
   ),
 });

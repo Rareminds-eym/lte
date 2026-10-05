@@ -53,7 +53,7 @@ describe("Dashboard Page", () => {
     const button = await screen.findByRole("button", { name: "Retry Loading Learning Path" });
     expect(screen.queryByText("Take Assessment")).not.toBeInTheDocument();
     fireEvent.click(button);
-    expect(retry).toHaveBeenCalledWith("learner-1");
+    expect(retry).toHaveBeenCalledWith("learner-1", { refresh: true });
     useLearningPathStore.setState({ fetchAndSetActiveLearningPath: originalRetry });
   });
 

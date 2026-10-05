@@ -65,7 +65,6 @@ const renderTab = (
     <ArtifactFeedbackTab
       submittedAttempts={overrides.attempts ?? [createAttempt(1, baseEvaluation)]}
       activeFeedbackAttemptNo={overrides.activeFeedbackAttemptNo ?? 1}
-      isPanelExpanded={false}
       onSelectAttempt={onSelectAttempt}
       latestEvaluation={overrides.latestEvaluation}
       isEvaluationLoading={overrides.isEvaluationLoading ?? false}

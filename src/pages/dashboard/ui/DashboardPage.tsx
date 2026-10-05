@@ -116,7 +116,7 @@ export const DashboardPage: React.FC = () => {
         <Button
           type="button"
           disabled={activeLearningPathLoading || !userId}
-          onClick={() => userId && void retryLearningPath(userId)}
+          onClick={() => userId && void retryLearningPath(userId, { refresh: true })}
         >
           Retry Loading Learning Path
         </Button>

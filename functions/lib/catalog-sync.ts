@@ -1,7 +1,10 @@
 import { z } from "zod";
+import { createLogger } from "../shared/logger";
 import type { QueryGateway } from "./query-gateway";
 import { callSkill } from "./skill-gateway";
 import type { LteEnv } from "./types";
+
+const logger = createLogger("catalog-sync");
 
 const tableNames = [
   "roles",
@@ -58,6 +61,10 @@ export async function syncManagedCatalog(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes("missing_managed_catalog_roles") || message.includes("schema cache")) {
+      logger.warn("Managed catalogue RPC unavailable — migration may not be applied yet", {
+        roleIds: ids,
+        error: message,
+      });
       return;
     }
     throw error;

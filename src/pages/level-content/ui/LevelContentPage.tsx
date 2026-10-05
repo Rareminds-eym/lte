@@ -711,7 +711,6 @@ export const LevelContentPage: React.FC = () => {
           activeArtifact={activeArtifact}
           activeArtifactType={activeArtifactType}
           rightPanelTitle={rightPanelTitle}
-          isPanelExpanded={isStageInfoExpanded}
           expandedArtifactQuestionId={expandedArtifactQuestionId}
           setExpandedArtifactQuestionId={setExpandedArtifactQuestionId}
           onXpEarned={(xpAmount, eventType) => {

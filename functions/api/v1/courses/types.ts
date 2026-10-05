@@ -61,6 +61,7 @@ export interface ModuleArtifactSubmittedFile {
   uploadedAt: string | null;
 }
 
+/** Mirrors src/entities/course/model/levelContentTypes.ts#ModuleArtifactSubmission */
 export interface ModuleArtifactSubmission {
   submissionId: string;
   attemptNo: number;

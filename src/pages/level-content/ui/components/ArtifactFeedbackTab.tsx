@@ -41,7 +41,6 @@ export interface SubmittedArtifactAttempt {
 interface ArtifactFeedbackTabProps {
   submittedAttempts: SubmittedArtifactAttempt[];
   activeFeedbackAttemptNo: number | null;
-  isPanelExpanded: boolean;
   onSelectAttempt: (attemptNo: number) => void;
   latestEvaluation?: SubmittedArtifactAttempt["evaluation"];
   stages?: EvaluationStage[];

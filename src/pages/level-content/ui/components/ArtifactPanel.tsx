@@ -1,5 +1,5 @@
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ModuleArtifact, ModuleArtifactSubmittedFile } from "@/entities/course";
 import type {
   SubmissionEvaluationResponse,
@@ -14,7 +14,6 @@ interface ArtifactPanelProps {
   activeArtifact: ModuleArtifact | null | undefined;
   activeArtifactType: "practice" | "final" | null;
   rightPanelTitle: string;
-  isPanelExpanded?: boolean;
   expandedArtifactQuestionId: string | null | undefined;
   setExpandedArtifactQuestionId: React.Dispatch<React.SetStateAction<string | null | undefined>>;
   onXpEarned?: (xpAmount: number, eventType: string) => void;
@@ -46,7 +45,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   activeArtifact,
   activeArtifactType,
   rightPanelTitle,
-  isPanelExpanded = false,
   expandedArtifactQuestionId,
   setExpandedArtifactQuestionId,
   onXpEarned,
@@ -58,6 +56,18 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [localAttempts, setLocalAttempts] = useState<Record<string, SubmittedArtifactAttempt[]>>(
     {},
   );
+
+  // Reconcile optimistic local attempts once the server returns updated data.
+  const serverAttemptCount = activeArtifact?.submittedAttempts?.length ?? 0;
+  const activeArtifactId = activeArtifact?.id;
+  useEffect(() => {
+    if (!activeArtifactId || !serverAttemptCount) return;
+    setLocalAttempts((prev) => {
+      if (!prev[activeArtifactId]?.length) return prev;
+      const { [activeArtifactId]: _, ...rest } = prev;
+      return rest;
+    });
+  }, [activeArtifactId, serverAttemptCount]);
   const [activeArtifactTab, setActiveArtifactTab] = useState<"submit" | "feedback">("submit");
   const [activeFeedbackAttemptNo, setActiveFeedbackAttemptNo] = useState<number | null>(null);
 
@@ -288,7 +298,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         <ArtifactFeedbackTab
           submittedAttempts={submittedAttempts}
           activeFeedbackAttemptNo={activeFeedbackAttemptNo}
-          isPanelExpanded={isPanelExpanded}
           onSelectAttempt={setActiveFeedbackAttemptNo}
           latestEvaluation={latestEvaluation}
           stages={storedEvaluation?.stages}

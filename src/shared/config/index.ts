@@ -30,3 +30,4 @@ export function getSkillpassportUrl(): string {
 export * from "./auth";
 export * from "./env";
 export * from "./logging";
+export * from "./polling";

@@ -12,7 +12,7 @@ interface LearningPathState {
   activeLearningPathLoading: boolean;
   needsAssessment: boolean;
   error: string | null;
-  fetchAndSetActiveLearningPath: (userId: string) => Promise<void>;
+  fetchAndSetActiveLearningPath: (userId: string, options?: { refresh?: boolean }) => Promise<void>;
   switchActiveTrack: (trackId: string) => Promise<void>;
   clearActiveLearningPath: () => void;
 }
@@ -24,11 +24,12 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   needsAssessment: false,
   error: null,
 
-  fetchAndSetActiveLearningPath: async (userId: string) => {
-    logger.info("fetchAndSetActiveLearningPath triggered", { userId });
+  fetchAndSetActiveLearningPath: async (userId: string, options?: { refresh?: boolean }) => {
+    const refresh = options?.refresh ?? false;
+    logger.info("fetchAndSetActiveLearningPath triggered", { userId, refresh });
     set({ activeLearningPathLoading: true, error: null, userId });
     try {
-      const result = await fetchActiveLearningPath(true);
+      const result = await fetchActiveLearningPath(refresh);
       if (get().userId !== userId) {
         logger.info("fetchAndSetActiveLearningPath user changed during fetch, ignoring result");
         return;
@@ -38,12 +39,15 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         needsAssessment: result.needsAssessment,
         activeLearningPathLoading: false,
       });
-      // Earlier requests can have cached empty results before recovery completed.
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["dashboardData", userId] }),
-        queryClient.invalidateQueries({ queryKey: ["userCourses", userId] }),
-        queryClient.invalidateQueries({ queryKey: ["capabilityLevels", userId] }),
-      ]);
+      // After an explicit refresh, earlier requests may have cached empty results
+      // before recovery completed. Invalidate stale query caches.
+      if (refresh) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["dashboardData", userId] }),
+          queryClient.invalidateQueries({ queryKey: ["userCourses", userId] }),
+          queryClient.invalidateQueries({ queryKey: ["capabilityLevels", userId] }),
+        ]);
+      }
       logger.info("fetchAndSetActiveLearningPath succeeded", {
         hasPath: !!result.data,
         needsAssessment: result.needsAssessment,

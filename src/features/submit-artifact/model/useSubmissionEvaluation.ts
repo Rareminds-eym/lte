@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useAuthStore } from "@/entities/session";
+import { REVIEW_POLLING_INTERVAL_MS } from "@/shared/config";
 import { getSubmissionEvaluation } from "../api";
 
 /**
@@ -26,7 +27,7 @@ export const useSubmissionEvaluation = (submissionId: string | undefined) => {
         response?.stages?.some((stage) =>
           ["unassigned", "pending", "in_progress"].includes(stage.status),
         );
-      return pending ? 30_000 : false;
+      return pending ? REVIEW_POLLING_INTERVAL_MS : false;
     },
     refetchIntervalInBackground: false,
   });
