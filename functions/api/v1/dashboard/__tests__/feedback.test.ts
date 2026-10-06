@@ -24,26 +24,13 @@ vi.mock("@functions/middleware", () => ({
 const makeContext = (overrides: Partial<LteEnv> = {}) =>
   ({
     request: new Request("https://test.io/api/v1/dashboard/feedback"),
-    env: {
-      HUMAN_REVIEW_AVAILABLE: "true",
-      ...overrides,
-    },
+    env: { ...overrides },
   }) as unknown as PagesContext<LteEnv>;
 
 describe("dashboard/feedback.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue({ sub: id(1) });
-  });
-
-  it("returns empty arrays when HUMAN_REVIEW_AVAILABLE is not true", async () => {
-    const ctx = makeContext({ HUMAN_REVIEW_AVAILABLE: "false" });
-    const response = await onRequestGet(ctx);
-    const body = (await response.json()) as Record<string, unknown>;
-    expect(body["success"]).toBe(true);
-    expect(body["upcoming"]).toEqual([]);
-    expect(body["recentFeedback"]).toEqual([]);
-    expect(read).not.toHaveBeenCalled();
   });
 
   it("returns empty arrays when no reviews exist", async () => {

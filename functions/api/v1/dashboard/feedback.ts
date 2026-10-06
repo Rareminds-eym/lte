@@ -10,9 +10,6 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
   const requestId = crypto.randomUUID();
   try {
     const user = await requireAuth(context.request, context.env);
-    if (context.env.HUMAN_REVIEW_AVAILABLE !== "true") {
-      return jsonResponse({ success: true, upcoming: [], recentFeedback: [] });
-    }
     const qb = createServiceQueryGateway(context.env);
     const ownedPolicy = {
       ...assignmentPolicy,

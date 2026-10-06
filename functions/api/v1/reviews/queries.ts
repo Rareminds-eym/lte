@@ -1,5 +1,8 @@
 import type { ReviewAssignment } from "@functions/lib/human-review/service";
-import { projectEvaluationReference } from "@functions/lib/human-review/stages";
+import {
+  isHumanOnlyPlaceholder,
+  projectEvaluationReference,
+} from "@functions/lib/human-review/stages";
 import type { QueryGateway } from "@functions/lib/query-gateway";
 
 export async function getReviewDetail(qb: QueryGateway, review: ReviewAssignment) {
@@ -88,7 +91,10 @@ export async function getReviewDetail(qb: QueryGateway, review: ReviewAssignment
     questions,
     answers,
     files,
-    evaluations: (evaluations as Array<Record<string, unknown>>).map(projectEvaluationReference),
+    // A human-review-only scope has no AI result; hide its placeholder row.
+    evaluations: (evaluations as Array<Record<string, unknown>>)
+      .filter((row) => !isHumanOnlyPlaceholder(row))
+      .map(projectEvaluationReference),
     learner,
     templates,
   };

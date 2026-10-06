@@ -44,4 +44,27 @@ describe("educator evaluation reference", () => {
       },
     ]);
   });
+
+  it("does not show educators a fake AI result for a human-review-only submission", async () => {
+    const read = vi.fn(async (policy: { table: string }) => {
+      if (policy.table === "artifact_submissions") return { artifact_id: "artifact" };
+      if (policy.table === "users") return { first_name: "Learner" };
+      if (policy.table === "artifact_evaluation_flows")
+        return [
+          {
+            stage: "ai",
+            decision: "human_review",
+            score: 0,
+            feedback: "Your artifact is awaiting staff review.",
+            metadata: { evaluation_source: "human_only", provider: "none" },
+          },
+        ];
+      return [];
+    });
+    const result = await getReviewDetail(
+      { read } as unknown as QueryGateway,
+      { submission_id: "submission", learner_id: "learner" } as ReviewAssignment,
+    );
+    expect(result.evaluations).toEqual([]);
+  });
 });

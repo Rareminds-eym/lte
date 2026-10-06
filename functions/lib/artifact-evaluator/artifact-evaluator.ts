@@ -1,5 +1,6 @@
 import {
   ensureAndAssignReview,
+  getReviewPolicy,
   getReviewScope,
   requiresFollowupReview,
 } from "@functions/lib/human-review/service";
@@ -137,6 +138,43 @@ export function generateFallbackEvaluation(input: ArtifactEvaluationInput): AIEv
       validatedDecision: "human_review",
       stage1Check,
       stage2Failures,
+    }),
+  };
+}
+
+/**
+ * Result used when the institution chose human-review-only (or the policy
+ * authority is unavailable, so AI use cannot be proven permitted). No evaluator
+ * runs and no learner content leaves the platform; the submission waits,
+ * XP-neutral, for a human reviewer.
+ */
+export function generateHumanOnlyEvaluation(input: ArtifactEvaluationInput): AIEvaluationResult {
+  const base = generateFallbackEvaluation(input);
+  const stage1Check: SubmissionCheckResult = {
+    isAssessable: true,
+    notes: "AI evaluation was not run; this submission is routed to a human reviewer.",
+  };
+  return {
+    ...base,
+    stage1SubmissionCheck: stage1Check,
+    rubricRows: base.rubricRows.map((row) => ({
+      ...row,
+      evidence: "Not evaluated; awaiting human review.",
+      feedback: `Human review required for ${String(row.label).toLowerCase()}.`,
+    })),
+    feedback: "Your artifact is awaiting staff review.",
+    singleImprovementPoint: "Wait for a staff reviewer to evaluate this artifact.",
+    modelUsed: "human-review-only",
+    provider: "none",
+    evaluationSource: "human_only",
+    debugTelemetry: buildTelemetry(input, {
+      provider: "none",
+      modelUsed: "human-review-only",
+      calculatedXp: 0,
+      confidence: 0,
+      validatedDecision: "human_review",
+      stage1Check,
+      stage2Failures: { hasFailure: false, failuresFound: [] },
     }),
   };
 }
@@ -672,24 +710,42 @@ export async function processAndSaveArtifactEvaluation(
   let confidenceThreshold: number | undefined;
   let staffReviewRequired = false;
   let reviewReason = "low_confidence";
-  if (env.HUMAN_REVIEW_AVAILABLE === "true") {
-    try {
-      staffReviewRequired = await requiresFollowupReview(qb, submissionId);
-      if (staffReviewRequired) reviewReason = "human_revision_followup";
-      if (env.HUMAN_REVIEW_ENABLED === "true") {
-        const scope = await getReviewScope(env as LteEnv, userId);
-        if (scope?.enabled) confidenceThreshold = scope.threshold;
-      }
-    } catch (error) {
-      // An unavailable authority cannot prove that AI acceptance is permitted.
+  // True when the institution chose human-review-only: no AI call is made.
+  let aiSkipped = false;
+  // The administrator's organisation-wide choice decides how this work is
+  // evaluated, whatever the course, class or program. If it cannot be read we
+  // refuse to evaluate rather than guess: guessing "AI" could send a human-only
+  // institution's work to the model, and guessing "human" would strand learners
+  // of institutions that never opted in. The caller rolls the submission back,
+  // so the learner can simply retry.
+  try {
+    staffReviewRequired = await requiresFollowupReview(qb, submissionId);
+    if (staffReviewRequired) reviewReason = "human_revision_followup";
+    const [policy, scope] = await Promise.allSettled([
+      getReviewPolicy(env as LteEnv, userId),
+      getReviewScope(env as LteEnv, userId),
+    ]);
+    if (policy.status === "rejected") throw policy.reason;
+    if (policy.value.evaluationMode === "human_only") {
+      // The scope only supplies the AI confidence threshold, which is moot here.
+      aiSkipped = true;
+      if (!staffReviewRequired) reviewReason = "human_only_scope";
       staffReviewRequired = true;
-      reviewReason = "review_policy_unavailable";
-      apiLogger.error("Review policy unavailable; preserving submission for staff review", error, {
-        submissionId,
-      });
+    } else {
+      if (scope.status === "rejected") throw scope.reason;
+      if (scope.value) confidenceThreshold = scope.value.threshold;
     }
+  } catch (error) {
+    apiLogger.error("Review policy unavailable; submission not evaluated", error, {
+      submissionId,
+    });
+    throw new Error("Review policy is temporarily unavailable. Please try submitting again.", {
+      cause: error,
+    });
   }
-  const evaluated = await evaluateArtifactSubmission(env, input, submissionId, confidenceThreshold);
+  const evaluated = aiSkipped
+    ? generateHumanOnlyEvaluation(input)
+    : await evaluateArtifactSubmission(env, input, submissionId, confidenceThreshold);
   const evalContext = {
     submissionId,
     artifactId: input.artifactId,
@@ -716,7 +772,9 @@ export async function processAndSaveArtifactEvaluation(
       decision: "human_review",
       calculatedXp: 0,
       requiresManualReview: true,
-      feedback: "Your artifact is awaiting staff review. AI results are reference feedback.",
+      feedback: aiSkipped
+        ? "Your artifact is awaiting staff review."
+        : "Your artifact is awaiting staff review. AI results are reference feedback.",
     };
   }
   if (evalResult.decision === "human_review") metrics.inc(METRIC.HUMAN_REVIEW);
@@ -765,7 +823,7 @@ export async function processAndSaveArtifactEvaluation(
       progression_triggered: evalResult.decision === "pass",
       completed_at: now,
       metadata: {
-        ...(staffReviewRequired
+        ...(staffReviewRequired && !aiSkipped
           ? {
               ai_reference: {
                 decision: evaluated.decision,
@@ -869,7 +927,7 @@ export async function processAndSaveArtifactEvaluation(
     }
   }
 
-  if (env.HUMAN_REVIEW_AVAILABLE === "true" && evalResult.decision === "human_review") {
+  if (evalResult.decision === "human_review") {
     // Grading persistence succeeded. Reconciliation repairs assignment outages;
     // never roll back the submitted artifact for a downstream service failure.
     try {

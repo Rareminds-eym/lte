@@ -29,7 +29,6 @@ const scope = {
   scopeId: id(6),
   scopeType: "college_program",
   organizationId: id(7),
-  enabled: false,
   slaDays: 3,
   timeZone: "Asia/Kolkata",
   loadCap: 10,
@@ -47,8 +46,6 @@ const recovered = {
   version: 4,
 };
 const env = {
-  HUMAN_REVIEW_AVAILABLE: "true",
-  HUMAN_REVIEW_ENABLED: "false",
   LTE_SYNC_QUEUE: { send: vi.fn() },
 } as unknown as LteEnv;
 const qb = mock as unknown as QueryGateway;
@@ -68,7 +65,7 @@ describe("academic scope recovery", () => {
       return [];
     });
   });
-  it("moves an existing review to the authoritative destination backlog even with assignment disabled", async () => {
+  it("moves an existing review to the authoritative destination backlog when the destination has no eligible reviewer", async () => {
     expect(await ensureAndAssignReview(qb, env, id(2), id(3), "scope_reconciliation")).toEqual(
       recovered,
     );
@@ -89,11 +86,11 @@ describe("academic scope recovery", () => {
       expect.objectContaining({ args: expect.objectContaining({ p_candidates: [] }) }),
     );
   });
-  it("checks existing work during a pause without backfilling new assignments", async () => {
+  it("checks existing work and also backfills unassigned work in the same run", async () => {
     await dispatchReviewWork(env);
     const functions = mock.rpc.mock.calls.map(([policy]) => policy.functionName);
     expect(functions).toContain("reconcile_artifact_review_scope");
-    expect(functions).not.toContain("claim_review_reconciliation");
+    expect(functions).toContain("claim_review_reconciliation");
   });
   it("leaves a matching active scope and its reviewer unchanged", async () => {
     vi.mocked(callSkill).mockResolvedValue({ ...scope, scopeId: id(5), scopeType: "school_class" });

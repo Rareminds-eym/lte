@@ -27,17 +27,8 @@ const memberships = vi.fn();
 const env = {
   SSO_SERVICE: { getUserById: identity, getUserMemberships: memberships },
 } as unknown as LteEnv;
-const scope = () => ({
-  scopeId: id(5),
-  scopeType: "school_class",
-  organizationId: id(6),
-  enabled: false,
-  slaDays: 3,
-  timeZone: "Asia/Kolkata",
-  loadCap: 10,
-  threshold: 60,
-  reviewerIds: [id(4)],
-});
+// Answer of SkillPassport's review:reviewer-check for an eligible educator.
+const check = () => ({ organizationId: id(6), scopeId: id(5), scopeType: "school_class" });
 const read = vi.fn();
 const qb = { read } as unknown as QueryGateway;
 
@@ -45,7 +36,7 @@ describe("live review authorization", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     read.mockResolvedValue(assignment);
-    vi.mocked(callSkill).mockResolvedValue(scope());
+    vi.mocked(callSkill).mockResolvedValue(check());
     identity.mockResolvedValue({
       email: "reviewer@example.test",
       is_blocked: false,
@@ -72,14 +63,33 @@ describe("live review authorization", () => {
     await expect(requireAssignment(qb, env, id(1), id(9))).rejects.toMatchObject({ status: 404 });
     expect(callSkill).not.toHaveBeenCalled();
   });
+  it("asks SkillPassport whether this educator may review this learner's work", async () => {
+    await requireAssignment(qb, env, id(1), id(4));
+    expect(callSkill).toHaveBeenCalledWith(
+      env,
+      "review:reviewer-check",
+      { reviewerId: id(4) },
+      id(3),
+    );
+  });
   it.each([
-    { ...scope(), reviewerIds: [] },
-    { ...scope(), scopeId: id(99) },
-    { ...scope(), scopeType: "college_program" },
-    null,
-  ])("denies revoked or changed academic eligibility", async (value) => {
+    ["not an active educator of the learner's organization", null],
+    ["learner moved to another class", { ...check(), scopeId: id(99) }],
+    ["learner moved to another kind of scope", { ...check(), scopeType: "college_program" }],
+    ["learner no longer has a class or program", { ...check(), scopeId: null, scopeType: null }],
+  ])("denies when the %s", async (_name, value) => {
     vi.mocked(callSkill).mockResolvedValue(value);
     await expect(requireAssignment(qb, env, id(1), id(4))).rejects.toMatchObject({ status: 404 });
+  });
+  it("lets an educator the administrator assigned to a learner with no class or program review it", async () => {
+    read.mockResolvedValue({ ...assignment, scope_id: null, scope_type: null });
+    vi.mocked(callSkill).mockResolvedValue({ ...check(), scopeId: null, scopeType: null });
+    expect(await requireAssignment(qb, env, id(1), id(4))).toMatchObject({ scope_id: null });
+  });
+  it("does not need the educator to be in the class reviewer pool, only in the organization", async () => {
+    // reviewer-check reports eligibility by organization; the pool is irrelevant to access.
+    vi.mocked(callSkill).mockResolvedValue(check());
+    await expect(requireAssignment(qb, env, id(1), id(4))).resolves.toBeDefined();
   });
   it("denies a blocked SSO account even while its local assignment exists", async () => {
     identity.mockResolvedValue({

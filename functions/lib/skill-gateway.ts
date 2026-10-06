@@ -27,6 +27,14 @@ export class GatewayCallError extends Error {
 const GATEWAY_TIMEOUT_MS = 2000;
 /** catalogue:get imports an entire role catalogue — allow 30s for large payloads. */
 const CATALOGUE_TIMEOUT_MS = 30_000;
+/** review:org-directory lists an organisation's learners and educators (administrator screens only). */
+const DIRECTORY_TIMEOUT_MS = 10_000;
+const timeoutFor = (action: string) =>
+  action === "catalogue:get"
+    ? CATALOGUE_TIMEOUT_MS
+    : action === "review:org-directory"
+      ? DIRECTORY_TIMEOUT_MS
+      : GATEWAY_TIMEOUT_MS;
 const encoder = new TextEncoder();
 
 function b64urlEncode(bytes: Uint8Array): string {
@@ -102,10 +110,7 @@ export async function callSkill<T = unknown>(
   ]);
 
   const controller = new AbortController();
-  const timer = setTimeout(
-    () => controller.abort(),
-    action === "catalogue:get" ? CATALOGUE_TIMEOUT_MS : GATEWAY_TIMEOUT_MS,
-  );
+  const timer = setTimeout(() => controller.abort(), timeoutFor(action));
   let response: Response;
   try {
     response = await fetch(`${baseUrl}/api/internal/lte/v1`, {

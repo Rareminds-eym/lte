@@ -8,8 +8,6 @@ tsconfig = "tsconfig.json"
 crons = ["*/5 * * * *"]
 
 [vars]
-HUMAN_REVIEW_AVAILABLE = "false"
-HUMAN_REVIEW_ENABLED = "false"
 SKILLPASSPORT_INTERNAL_URL = "https://skillpassport.rareminds.in"
 
 [[services]]
@@ -25,5 +23,6 @@ queue = "lte-db-sync-queue"
 enabled = true
 
 # Required secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-# SKILLPASSPORT_INTERNAL_SECRET. Enable availability only after LTE migrations,
-# and assignment only after SkillPassport scope configuration and consumer deploy.
+# SKILLPASSPORT_INTERNAL_SECRET. There is no global on/off flag: each
+# class/program is controlled by its administrator in SkillPassport. Deploy order:
+# LTE and SkillPassport migrations, then the queue consumer, then this worker and LTE.

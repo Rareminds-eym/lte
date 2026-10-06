@@ -61,7 +61,19 @@ export async function getEvaluationStages(
       due_by: review?.due_by ?? null,
     });
   }
-  return stages.map(projectEvaluationReference);
+  // A human-review-only scope never ran the AI. Its placeholder "ai" row must
+  // not be shown to the learner as a completed AI review.
+  return stages.filter((stage) => !isHumanOnlyPlaceholder(stage)).map(projectEvaluationReference);
+}
+
+export function isHumanOnlyPlaceholder(stage: Record<string, unknown>) {
+  const metadata = stage["metadata"];
+  return (
+    stage["stage"] === "ai" &&
+    !!metadata &&
+    typeof metadata === "object" &&
+    (metadata as Record<string, unknown>)["evaluation_source"] === "human_only"
+  );
 }
 
 /** Expose only reference fields, never evaluator metadata or internal telemetry. */

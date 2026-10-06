@@ -9,10 +9,10 @@ import {
   startSchema,
 } from "@functions/lib/human-review/contracts";
 import {
-  adminBacklog,
-  adminReview,
-  adminScopes,
-  reassignReview,
+  adminOverview,
+  adminReviewDetail,
+  assignReview,
+  REVIEW_VIEWS,
 } from "@functions/lib/human-review/operations";
 import {
   assertActiveReviewer,
@@ -134,46 +134,26 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
       return jsonResponse({ success: true, items, nextCursor, hasMore: nextCursor !== null });
     }
     if (parts[0] === "operations") {
-      if (parts.length === 2 && parts[1] === "scopes" && method === "GET")
-        return jsonResponse({ scopes: await adminScopes(context.env, user.sub) });
-      if (parts.length === 1 && method === "GET")
-        return jsonResponse(
-          await adminBacklog(
-            qb,
-            context.env,
-            user.sub,
-            z.uuid().parse(url.searchParams.get("scopeId")),
-            z.coerce
-              .number()
-              .int()
-              .min(1)
-              .max(1000)
-              .parse(url.searchParams.get("page") ?? 1),
-          ),
-        );
-      const reviewId = z.uuid().parse(parts[1]);
-      if (parts.length === 2 && method === "GET") {
-        const { review, scope } = await adminReview(qb, context.env, user.sub, reviewId);
-        const candidates = [];
-        for (let offset = 0; offset < scope.reviewerIds.length; offset += 10) {
-          const batch = await Promise.all(
-            scope.reviewerIds.slice(offset, offset + 10).map(async (id) => {
-              try {
-                const identity = await assertActiveReviewer(context.env, id, scope.organizationId);
-                return { id, label: identity.email };
-              } catch (error) {
-                if (error instanceof ReviewError) return null;
-                throw error;
-              }
-            }),
-          );
-          candidates.push(...batch.filter((row) => row !== null));
-        }
-        return jsonResponse({ review, candidates });
+      if (parts.length === 2 && parts[1] === "overview" && method === "GET") {
+        const query = z
+          .object({
+            view: z.enum(REVIEW_VIEWS).default("all"),
+            q: z.string().trim().max(100).default(""),
+            page: z.coerce.number().int().min(1).max(1000).default(1),
+          })
+          .parse({
+            view: url.searchParams.get("view") ?? undefined,
+            q: url.searchParams.get("q") ?? undefined,
+            page: url.searchParams.get("page") ?? undefined,
+          });
+        return jsonResponse(await adminOverview(qb, context.env, user.sub, query));
       }
+      const reviewId = z.uuid().parse(parts[1]);
+      if (parts.length === 2 && method === "GET")
+        return jsonResponse(await adminReviewDetail(qb, context.env, user.sub, reviewId));
       if (parts.length === 3 && parts[2] === "reassign" && method === "POST")
         return jsonResponse({
-          review: await reassignReview(
+          review: await assignReview(
             qb,
             context.env,
             user.sub,

@@ -34,10 +34,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     return jsonResponse({
       success: true,
-      stages:
-        context.env.HUMAN_REVIEW_AVAILABLE === "true"
-          ? await getEvaluationStages(qb, validSubmissionId, user.sub)
-          : [],
+      stages: await getEvaluationStages(qb, validSubmissionId, user.sub),
       evaluation: flow
         ? {
             id: flow.id,

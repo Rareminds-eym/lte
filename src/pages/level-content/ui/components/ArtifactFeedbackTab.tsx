@@ -95,16 +95,25 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
   const submittedFileList = selectedAttempt?.files ?? [];
 
   const evaluationData = selectedAttempt?.evaluation ?? latestEvaluation;
-  const selectedScore = evaluationData?.overall_score;
+  // Human-review-only scope: the server exposes a staff stage but no AI stage,
+  // so the placeholder zero scores are not results and must not be shown.
+  const staffReviewCompleted =
+    stages?.some((stage) => stage.stage === "staff_review" && stage.status === "completed") ??
+    false;
+  const awaitingStaffOnly =
+    !!stages?.length && !stages.some((stage) => stage.stage === "ai") && !staffReviewCompleted;
+  const selectedScore = awaitingStaffOnly ? undefined : evaluationData?.overall_score;
   const decisionMeta: DecisionMeta | null = evaluationData
     ? (DECISION_META[evaluationData.decision] ?? DECISION_META.human_review)
     : null;
-  const rubricList = evaluationData?.rubric_rows ?? [];
+  const rubricList = awaitingStaffOnly ? [] : (evaluationData?.rubric_rows ?? []);
   const feedbackText = evaluationData?.feedback ?? "";
-  const improvementsText = evaluationData?.improvements ?? "";
-  const statusLabel = isEvaluationLoading
-    ? "Evaluation in progress…"
-    : "Evaluation not available for this attempt.";
+  const improvementsText = awaitingStaffOnly ? "" : (evaluationData?.improvements ?? "");
+  const statusLabel = awaitingStaffOnly
+    ? "Awaiting staff review. Scores appear here once a reviewer has evaluated your artifact."
+    : isEvaluationLoading
+      ? "Evaluation in progress…"
+      : "Evaluation not available for this attempt.";
 
   const handleDownload = async (
     file: Pick<ModuleArtifactSubmittedFile, "id" | "fileName" | "downloadUrl">,
@@ -133,8 +142,10 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
         {submittedAttempts.map((attempt) => {
           const isSelected = attempt.attemptNo === selectedAttempt?.attemptNo;
           const attemptScore =
-            attempt.evaluation?.overall_score ??
-            (attempt.attemptNo === selectedAttempt?.attemptNo ? selectedScore : null);
+            isSelected && awaitingStaffOnly
+              ? null
+              : (attempt.evaluation?.overall_score ??
+                (attempt.attemptNo === selectedAttempt?.attemptNo ? selectedScore : null));
           return (
             <Button
               key={attempt.attemptNo}
@@ -182,12 +193,7 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
               {formatSubmittedDate(selectedAttempt?.submittedAt)}
             </p>
             <p className="text-[11px] font-medium text-content-muted">
-              Evaluator:{" "}
-              {stages?.some(
-                (stage) => stage.stage === "staff_review" && stage.status === "completed",
-              )
-                ? "Staff review"
-                : "AI review"}
+              Evaluator: {staffReviewCompleted || awaitingStaffOnly ? "Staff review" : "AI review"}
             </p>
           </div>
         </div>

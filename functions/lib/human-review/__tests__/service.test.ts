@@ -38,7 +38,6 @@ const makeScope = (overrides = {}) => ({
   scopeId: id(5),
   scopeType: "school_class",
   organizationId: id(6),
-  enabled: true,
   slaDays: 3,
   timeZone: "Asia/Kolkata",
   loadCap: 10,
@@ -50,8 +49,6 @@ const makeScope = (overrides = {}) => ({
 const identity = vi.fn();
 const memberships = vi.fn();
 const env = {
-  HUMAN_REVIEW_AVAILABLE: "true",
-  HUMAN_REVIEW_ENABLED: "true",
   SSO_SERVICE: { getUserById: identity, getUserMemberships: memberships },
   LTE_SYNC_QUEUE: { send: vi.fn() },
 } as unknown as LteEnv;
@@ -173,10 +170,10 @@ describe("service.ts", () => {
       expect(result.status).toBe("pending");
     });
 
-    it("assigns with empty candidates when scope is disabled", async () => {
+    it("assigns with empty candidates when the scope has no eligible reviewers", async () => {
       const assignment = makeAssignment();
       rpc.mockResolvedValueOnce(assignment);
-      vi.mocked(callSkill).mockResolvedValue(makeScope({ enabled: false }));
+      vi.mocked(callSkill).mockResolvedValue(makeScope({ reviewerIds: [] }));
       rpc.mockResolvedValueOnce(makeAssignment({ status: "unassigned" }));
 
       await ensureAndAssignReview(qb, env, id(2), id(3), "test");

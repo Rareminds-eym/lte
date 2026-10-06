@@ -13,9 +13,7 @@ const outboxSchema = z.array(
   }),
 );
 export async function dispatchReviewWork(env: LteEnv) {
-  if (env.HUMAN_REVIEW_AVAILABLE !== "true") return;
   const qb = createServiceQueryGateway(env);
-  // Existing assignments must remain recoverable while new assignments are paused.
   const scopeChecks = z
     .array(assignmentSchema)
     .parse(await reviewRpc(qb, "claim_review_scope_checks", { p_limit: 25 }));
@@ -32,22 +30,20 @@ export async function dispatchReviewWork(env: LteEnv) {
       apiLogger.error("Review scope reconciliation failed", error, { reviewId: assignment.id });
     }
   }
-  if (env.HUMAN_REVIEW_ENABLED === "true") {
-    const assignments = z
-      .array(assignmentSchema)
-      .parse(await reviewRpc(qb, "claim_review_reconciliation", { p_limit: 25 }));
-    for (const assignment of assignments) {
-      try {
-        await ensureAndAssignReview(
-          qb,
-          env,
-          assignment.submission_id,
-          assignment.learner_id,
-          "reconciliation",
-        );
-      } catch (error) {
-        apiLogger.error("Review reconciliation failed", error, { reviewId: assignment.id });
-      }
+  const assignments = z
+    .array(assignmentSchema)
+    .parse(await reviewRpc(qb, "claim_review_reconciliation", { p_limit: 25 }));
+  for (const assignment of assignments) {
+    try {
+      await ensureAndAssignReview(
+        qb,
+        env,
+        assignment.submission_id,
+        assignment.learner_id,
+        "reconciliation",
+      );
+    } catch (error) {
+      apiLogger.error("Review reconciliation failed", error, { reviewId: assignment.id });
     }
   }
   await reviewRpc(qb, "schedule_review_deadlines", { p_limit: 100 });

@@ -14,6 +14,10 @@ vi.mock("../queries", async (importOriginal) => {
 });
 
 vi.mock("@functions/lib/query-gateway", () => ({ createServiceQueryGateway: vi.fn() }));
+const { getEvaluationStagesMock } = vi.hoisted(() => ({ getEvaluationStagesMock: vi.fn() }));
+vi.mock("@functions/lib/human-review/stages", () => ({
+  getEvaluationStages: getEvaluationStagesMock,
+}));
 
 const SUBMISSION_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -66,6 +70,22 @@ describe("GET /api/v1/artifacts/submissions/[id]/evaluation", () => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
     vi.mocked(createServiceQueryGateway).mockReturnValue(mockGateway);
+    getEvaluationStagesMock.mockResolvedValue([]);
+  });
+
+  it("returns review stages with no environment flag set", async () => {
+    getEvaluationStagesMock.mockResolvedValue([
+      { stage: "staff_review", status: "pending", score: null },
+    ]);
+    getSubmissionEvaluationFlowMock.mockResolvedValue(flow);
+    const response = await onRequestGet(createContext({ id: SUBMISSION_ID }));
+    const body = (await response.json()) as { stages: unknown[] };
+    expect(body.stages).toEqual([{ stage: "staff_review", status: "pending", score: null }]);
+    expect(getEvaluationStagesMock).toHaveBeenCalledWith(
+      expect.anything(),
+      SUBMISSION_ID,
+      "user-1",
+    );
   });
 
   it("returns 400 when the submission id route param is missing", async () => {

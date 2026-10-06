@@ -2,7 +2,12 @@ import type { QueryGateway } from "@functions/lib/query-gateway";
 import { callSkill } from "@functions/lib/skill-gateway";
 import type { LteEnv } from "@functions/lib/types";
 import { z } from "zod";
-import { type ReviewScope, reviewScopeSchema } from "./contracts";
+import {
+  type ReviewPolicy,
+  type ReviewScope,
+  reviewPolicySchema,
+  reviewScopeSchema,
+} from "./contracts";
 
 export class ReviewError extends Error {
   constructor(
@@ -87,6 +92,11 @@ export async function getReviewScope(env: LteEnv, learnerId: string): Promise<Re
   return value === null ? null : reviewScopeSchema.parse(value);
 }
 
+/** Organisation-wide AI/human choice for this learner (school or college). */
+export async function getReviewPolicy(env: LteEnv, learnerId: string): Promise<ReviewPolicy> {
+  return reviewPolicySchema.parse(await callSkill(env, "review:policy", {}, learnerId));
+}
+
 interface ReviewIdentityAuthority {
   getUserById(
     id: string,
@@ -133,22 +143,36 @@ export async function requireAssignment(
   return assignment;
 }
 
-/** Both academic eligibility and the membership in that institution must remain active. */
+const reviewerCheckSchema = z
+  .object({
+    organizationId: z.uuid(),
+    scopeId: z.uuid().nullable(),
+    scopeType: z.enum(["college_program", "school_class"]).nullable(),
+  })
+  .nullable();
+
+/**
+ * A reviewer keeps access only while they are an active educator of the
+ * learner's own organisation (an administrator may assign anyone there, with or
+ * without a class/program), still hold an active membership in it, and, when the
+ * review is tied to a class/program, the learner has not moved to another one.
+ */
 export async function assertAssignmentScope(
   env: LteEnv,
   assignment: ReviewAssignment,
   actorId: string,
 ) {
-  const scope = await getReviewScope(env, assignment.learner_id);
+  const check = reviewerCheckSchema.parse(
+    await callSkill(env, "review:reviewer-check", { reviewerId: actorId }, assignment.learner_id),
+  );
   if (
-    !scope ||
-    scope.scopeId !== assignment.scope_id ||
-    scope.scopeType !== assignment.scope_type ||
-    !scope.reviewerIds.includes(actorId)
+    !check ||
+    (assignment.scope_id !== null &&
+      (check.scopeId !== assignment.scope_id || check.scopeType !== assignment.scope_type))
   ) {
     throw new ReviewError("Review not found", 404, "REVIEW_NOT_FOUND");
   }
-  await assertActiveReviewer(env, actorId, scope.organizationId);
+  await assertActiveReviewer(env, actorId, check.organizationId);
 }
 
 export async function ensureAndAssignReview(
@@ -179,7 +203,7 @@ export async function ensureAndAssignReview(
     );
   }
   if (assignment.status !== "unassigned") return assignment;
-  if (!scope.enabled || env.HUMAN_REVIEW_ENABLED !== "true" || !scope.reviewerIds.length) {
+  if (!scope.reviewerIds.length) {
     return assignmentSchema.parse(
       await reviewRpc(qb, "assign_artifact_review", {
         p_review_id: assignment.id,

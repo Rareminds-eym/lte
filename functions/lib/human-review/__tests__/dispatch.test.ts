@@ -29,8 +29,6 @@ const makeAssignment = (overrides = {}) => ({
 
 const makeEnv = (overrides = {}) =>
   ({
-    HUMAN_REVIEW_AVAILABLE: "true",
-    HUMAN_REVIEW_ENABLED: "true",
     LTE_SYNC_QUEUE: { send: vi.fn() },
     SSO_SERVICE: {
       getUserById: vi.fn().mockResolvedValue({
@@ -52,7 +50,6 @@ describe("dispatch.ts", () => {
       scopeId: id(5),
       scopeType: "school_class",
       organizationId: id(6),
-      enabled: true,
       slaDays: 3,
       timeZone: "Asia/Kolkata",
       loadCap: 10,
@@ -61,34 +58,10 @@ describe("dispatch.ts", () => {
     });
   });
 
-  it("skips all work when HUMAN_REVIEW_AVAILABLE is not true", async () => {
-    await dispatchReviewWork(makeEnv({ HUMAN_REVIEW_AVAILABLE: "false" }));
-    expect(mock.rpc).not.toHaveBeenCalled();
-  });
-
-  it("runs scope reconciliation even when HUMAN_REVIEW_ENABLED is false", async () => {
+  it("checks existing scopes, then reconciles unassigned work, with no global switch", async () => {
     const assignment = makeAssignment();
     mock.rpc.mockImplementation(async (policy: { functionName: string }) => {
       if (policy.functionName === "claim_review_scope_checks") return [assignment];
-      if (policy.functionName === "ensure_artifact_review") return assignment;
-      if (policy.functionName === "assign_artifact_review") return assignment;
-      if (policy.functionName === "schedule_review_deadlines") return null;
-      if (policy.functionName === "claim_review_outbox") return [];
-      return [];
-    });
-    mock.read.mockResolvedValue([{ id: id(4), status: "active" }]);
-
-    await dispatchReviewWork(makeEnv({ HUMAN_REVIEW_ENABLED: "false" }));
-
-    const functions = mock.rpc.mock.calls.map(([policy]) => policy.functionName);
-    expect(functions).toContain("claim_review_scope_checks");
-    expect(functions).not.toContain("claim_review_reconciliation");
-  });
-
-  it("runs full reconciliation when HUMAN_REVIEW_ENABLED is true", async () => {
-    const assignment = makeAssignment();
-    mock.rpc.mockImplementation(async (policy: { functionName: string }) => {
-      if (policy.functionName === "claim_review_scope_checks") return [];
       if (policy.functionName === "claim_review_reconciliation") return [assignment];
       if (policy.functionName === "ensure_artifact_review") return assignment;
       if (policy.functionName === "assign_artifact_review") return assignment;
@@ -101,6 +74,7 @@ describe("dispatch.ts", () => {
     await dispatchReviewWork(makeEnv());
 
     const functions = mock.rpc.mock.calls.map(([policy]) => policy.functionName);
+    expect(functions).toContain("claim_review_scope_checks");
     expect(functions).toContain("claim_review_reconciliation");
   });
 

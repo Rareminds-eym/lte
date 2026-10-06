@@ -1,5 +1,6 @@
 import {
   ensureAndAssignReview,
+  getReviewPolicy,
   getReviewScope,
   requiresFollowupReview,
 } from "@functions/lib/human-review/service";
@@ -22,6 +23,7 @@ vi.mock("../../xp-engine", () => ({
 }));
 
 vi.mock("@functions/lib/human-review/service", () => ({
+  getReviewPolicy: vi.fn(),
   getReviewScope: vi.fn(),
   requiresFollowupReview: vi.fn(),
   ensureAndAssignReview: vi.fn(),
@@ -119,6 +121,13 @@ function aiResponse(decision: "pass" | "revise_and_resubmit", confidence: number
     singleImprovementPoint: "None.",
   });
 }
+
+beforeEach(() => {
+  // Default: no follow-up review, no scope, AI-first organization.
+  vi.mocked(requiresFollowupReview).mockResolvedValue(false);
+  vi.mocked(getReviewScope).mockResolvedValue(null);
+  vi.mocked(getReviewPolicy).mockResolvedValue({ evaluationMode: "ai_first" });
+});
 
 describe("processAndSaveArtifactEvaluation", () => {
   beforeEach(() => {
@@ -385,31 +394,31 @@ describe("required staff review policy", () => {
     vi.clearAllMocks();
     vi.mocked(requiresFollowupReview).mockResolvedValue(false);
     vi.mocked(getReviewScope).mockResolvedValue(null);
+    vi.mocked(getReviewPolicy).mockResolvedValue({ evaluationMode: "ai_first" });
     vi.mocked(callOpenRouterAI).mockResolvedValue(aiResponse("pass", 75));
   });
   const scope = {
     scopeId: "00000000-0000-4000-8000-000000000001",
     organizationId: "00000000-0000-4000-8000-000000000002",
     scopeType: "school_class" as const,
-    enabled: true,
     slaDays: 3,
     timeZone: "Asia/Kolkata",
     loadCap: 10,
     threshold: 80,
     reviewerIds: [],
   };
-  const evaluate = (enabled = "true") =>
+  const evaluate = () =>
     processAndSaveArtifactEvaluation(
       createGateway({}),
-      { OPENROUTER_API_KEY: "test", HUMAN_REVIEW_AVAILABLE: "true", HUMAN_REVIEW_ENABLED: enabled },
+      { OPENROUTER_API_KEY: "test" },
       "submission-1",
       makeInput(),
       "learner-1",
       "progress-1",
     );
-  it("requires follow-up staff approval even when new assignment creation is disabled", async () => {
+  it("requires follow-up staff approval regardless of the scope setting", async () => {
     vi.mocked(requiresFollowupReview).mockResolvedValue(true);
-    const result = await evaluate("false");
+    const result = await evaluate();
     expect(result.decision).toBe("human_review");
     expect(result.calculatedXp).toBe(0);
     expect(awardXp).not.toHaveBeenCalled();
@@ -426,16 +435,57 @@ describe("required staff review policy", () => {
     expect((await evaluate()).decision).toBe("human_review");
     expect(awardXp).not.toHaveBeenCalled();
   });
-  it("preserves AI-only acceptance when this scope has not opted in", async () => {
-    vi.mocked(getReviewScope).mockResolvedValue({ ...scope, enabled: false });
+  it("an AI-first organization keeps AI acceptance when confidence meets the scope threshold", async () => {
+    vi.mocked(getReviewScope).mockResolvedValue({ ...scope, threshold: 70 });
     expect((await evaluate()).decision).toBe("pass");
     expect(awardXp).toHaveBeenCalled();
   });
-  it("does not accept or award XP when policy authority is unavailable", async () => {
+  it("refuses to evaluate when the policy authority is unavailable, so the learner can retry", async () => {
+    vi.mocked(getReviewPolicy).mockRejectedValue(new Error("policy authority unavailable"));
+    await expect(evaluate()).rejects.toThrow(/temporarily unavailable/);
+    // Nothing is guessed: no AI call, no XP, no half-saved review.
+    expect(callOpenRouterAI).not.toHaveBeenCalled();
+    expect(awardXp).not.toHaveBeenCalled();
+    expect(ensureAndAssignReview).not.toHaveBeenCalled();
+  });
+  it("refuses to evaluate an AI-first organization when its scope settings cannot be read", async () => {
     vi.mocked(getReviewScope).mockRejectedValue(new Error("scope authority unavailable"));
+    await expect(evaluate()).rejects.toThrow(/temporarily unavailable/);
+    expect(callOpenRouterAI).not.toHaveBeenCalled();
+  });
+  it("refuses to evaluate when the follow-up check cannot be made", async () => {
+    vi.mocked(requiresFollowupReview).mockRejectedValue(new Error("db down"));
+    await expect(evaluate()).rejects.toThrow(/temporarily unavailable/);
+    expect(callOpenRouterAI).not.toHaveBeenCalled();
+  });
+  it("never calls the AI and routes straight to staff when the organization is human-review-only", async () => {
+    vi.mocked(getReviewPolicy).mockResolvedValue({ evaluationMode: "human_only" });
     const result = await evaluate();
+    expect(callOpenRouterAI).not.toHaveBeenCalled();
     expect(result.decision).toBe("human_review");
+    expect(result.provider).toBe("none");
+    expect(result.evaluationSource).toBe("human_only");
     expect(result.calculatedXp).toBe(0);
     expect(awardXp).not.toHaveBeenCalled();
+    expect(ensureAndAssignReview).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "submission-1",
+      "learner-1",
+      "human_only_scope",
+    );
+  });
+  it("is human-only for the whole organization even when the learner has no resolvable class or program", async () => {
+    vi.mocked(getReviewPolicy).mockResolvedValue({ evaluationMode: "human_only" });
+    vi.mocked(getReviewScope).mockResolvedValue(null);
+    const result = await evaluate();
+    expect(callOpenRouterAI).not.toHaveBeenCalled();
+    expect(result.evaluationSource).toBe("human_only");
+  });
+  it("does not need the class/program scope at all for a human-only organization", async () => {
+    vi.mocked(getReviewPolicy).mockResolvedValue({ evaluationMode: "human_only" });
+    vi.mocked(getReviewScope).mockRejectedValue(new Error("scope lookup failed"));
+    expect((await evaluate()).evaluationSource).toBe("human_only");
+    expect(callOpenRouterAI).not.toHaveBeenCalled();
   });
 });

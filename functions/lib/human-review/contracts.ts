@@ -76,7 +76,6 @@ export const reviewScopeSchema = z.object({
   scopeId: z.uuid(),
   organizationId: z.uuid(),
   scopeType: z.enum(["college_program", "school_class"]),
-  enabled: z.boolean(),
   slaDays: z.number().int().min(1).max(30),
   timeZone: z.string().min(1).max(100),
   loadCap: z.number().int().min(1).max(100),
@@ -84,6 +83,9 @@ export const reviewScopeSchema = z.object({
   reviewerIds: z.array(z.uuid()).max(100),
 });
 export type ReviewScope = z.infer<typeof reviewScopeSchema>;
+/** The administrator's organisation-wide choice of how work is evaluated. */
+export const reviewPolicySchema = z.object({ evaluationMode: z.enum(["ai_first", "human_only"]) });
+export type ReviewPolicy = z.infer<typeof reviewPolicySchema>;
 
 export function normalizeCompletion(command: CompletionCommand) {
   const criteria = REVIEW_CRITERIA.map((criterion) => {

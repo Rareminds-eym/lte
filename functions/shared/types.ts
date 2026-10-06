@@ -22,8 +22,6 @@ export interface QueueSender {
 export interface LteEnv {
   ASSETS: AssetsBinding;
   LTE_SYNC_QUEUE?: QueueSender;
-  HUMAN_REVIEW_ENABLED?: string;
-  HUMAN_REVIEW_AVAILABLE?: string;
   SSO_SERVICE: unknown;
   STORAGE_BUCKET: R2BucketBinding;
   R2_PUBLIC_DOMAIN?: string;

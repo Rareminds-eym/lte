@@ -17,6 +17,26 @@ describe("learner review stage projection", () => {
       expect.objectContaining({ stage: "staff_review", status: "unassigned", evaluated_by: null }),
     );
   });
+  it("hides the placeholder AI row for human-review-only scopes but keeps the staff stage", async () => {
+    const read = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          stage: "ai",
+          status: "completed",
+          decision: "human_review",
+          feedback: "Your artifact is awaiting staff review.",
+          metadata: { evaluation_source: "human_only" },
+        },
+      ])
+      .mockResolvedValueOnce({ status: "pending", reviewer_id: "reviewer", due_by: null });
+    const stages = await getEvaluationStages(
+      { read } as unknown as QueryGateway,
+      "submission",
+      "learner",
+    );
+    expect(stages.map((stage) => stage["stage"])).toEqual(["staff_review"]);
+  });
   it("preserves AI reference feedback without leaking internal metadata", async () => {
     const read = vi
       .fn()
