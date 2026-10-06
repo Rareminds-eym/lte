@@ -12,6 +12,14 @@ const outboxSchema = z.array(
     payload: z.record(z.string(), z.unknown()),
   }),
 );
+/**
+ * One pass of review maintenance: scope re-checks, reconciliation of unassigned
+ * reviews, deadline events, and outbox delivery to LTE_SYNC_QUEUE.
+ *
+ * NOTE: nothing currently calls this. The cron Worker that ran it was removed,
+ * so outbox events, reconciliation and deadline reminders do not run until a
+ * runner is added.
+ */
 export async function dispatchReviewWork(env: LteEnv) {
   const qb = createServiceQueryGateway(env);
   const scopeChecks = z

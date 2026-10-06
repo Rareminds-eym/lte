@@ -286,7 +286,9 @@ Safe via `=== "true"` coercion, but doesn't follow the project pattern where all
 
 ---
 
-### MED-6 · `review-worker/index.ts` uses relative imports and lives outside approved structure
+### MED-6 · `review-worker/index.ts` uses relative imports and lives outside approved structure (RESOLVED: worker removed)
+
+> Update 2026-10-06: `review-worker/index.ts` and `wrangler.reviews.toml` were removed from the branch, so this item no longer applies. The links below are kept as plain text for history.
 
 ```typescript
 import { dispatchReviewWork } from '../functions/lib/human-review/dispatch';
@@ -296,7 +298,7 @@ Uses `../functions/` relative imports instead of the `@functions/` path alias. T
 
 **Fix**: Either update `.codereview.yml` to include `review-worker/`, or move the entry point into `functions/workers/review/`.
 
-**Location**: [`review-worker/index.ts`](review-worker/index.ts), [`wrangler.reviews.toml`](wrangler.reviews.toml)
+**Location**: `review-worker/index.ts`, `wrangler.reviews.toml` (both removed)
 
 ---
 
@@ -392,7 +394,7 @@ The branch includes 8 SQL migrations under `supabase/migrations/`. Key findings:
 | 🟢 Medium | MED-1 | Add `logger.warn` for `schema cache` early return in `catalog-sync.ts` | Trivial |
 | 🟢 Medium | MED-2 | Add optimistic state reconciliation for `localAttempts` in `ArtifactPanel` | Small |
 | 🟢 Medium | MED-5 | Zod-validate `refresh` query param in `active.ts` | Trivial |
-| 🟢 Medium | MED-6 | Update `.codereview.yml` structure to include `review-worker/` | Trivial |
+| ✅ Resolved | MED-6 | ~~Update `.codereview.yml` structure to include `review-worker/`~~ (worker removed) | n/a |
 
 ---
 
@@ -451,8 +453,8 @@ The branch includes 8 SQL migrations under `supabase/migrations/`. Key findings:
 
 | File | Verdict |
 |------|---------|
-| [`review-worker/index.ts`](review-worker/index.ts) | ⚠️ Relative imports, outside approved structure (MED-6) |
-| [`wrangler.reviews.toml`](wrangler.reviews.toml) | ✅ Safe defaults (`HUMAN_REVIEW_AVAILABLE=false`) |
+| `review-worker/index.ts` | Removed from the branch (MED-6 resolved) |
+| `wrangler.reviews.toml` | Removed from the branch |
 | [`docs/MANAGED_CATALOG_SYNC.md`](docs/MANAGED_CATALOG_SYNC.md) | ✅ |
 | 8 SQL migrations | ✅ Strong security model |
 | [`supabase/tests/human_review.sql`](supabase/tests/human_review.sql) | ✅ Excellent PGTap coverage |
