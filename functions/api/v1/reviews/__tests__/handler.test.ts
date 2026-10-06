@@ -16,7 +16,7 @@ const identity = vi.fn();
 const memberships = vi.fn();
 vi.mock("@functions/middleware", () => ({
   getAuthUser: () => ({ sub: "00000000-0000-4000-8000-000000000001" }),
-  rateLimiter: { check: () => ({ allowed: true, retryAfterMs: 0 }) },
+  checkDistributedRateLimit: async () => ({ allowed: true, retryAfterMs: 0 }),
   rateLimitErrorResponse: (_id: string, _ms: number) =>
     new Response(JSON.stringify({ code: "RATE_LIMITED" }), { status: 429 }),
 }));
@@ -111,6 +111,36 @@ describe("reviews/[[path]].ts handler", () => {
       expect(response.status).toBe(503);
       const body = (await response.json()) as { error: { code: string } };
       expect(body.error.code).toBe("REVIEW_UNAVAILABLE");
+    });
+
+    it.each([
+      id(1),
+      "queue",
+      "stats",
+    ])("returns a sanitized 503 for malformed database results on %s", async (path) => {
+      read.mockResolvedValue(path === "stats" ? [{}] : {});
+      rpc.mockResolvedValue([{}]);
+      const response = await onRequest(makeContext(`/api/v1/reviews/${path}`));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({
+        success: false,
+        error: { code: "REVIEW_UNAVAILABLE", message: "Review service unavailable" },
+        requestId: expect.any(String),
+      });
+    });
+
+    it("returns a sanitized 503 for a malformed reviewer authority response", async () => {
+      const { callSkill } = await import("@functions/lib/skill-gateway");
+      read.mockResolvedValue(makeAssignment());
+      vi.mocked(callSkill).mockResolvedValue({ organizationId: "invalid" });
+      const response = await onRequest(makeContext(`/api/v1/reviews/${id(1)}`));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({
+        success: false,
+        error: { code: "REVIEW_UNAVAILABLE", message: "Review service unavailable" },
+        requestId: expect.any(String),
+      });
+      expect(rpc).not.toHaveBeenCalled();
     });
   });
 

@@ -6,7 +6,7 @@ import {
   processAndSaveArtifactEvaluation,
   sanitizeContentDispositionFilename,
 } from "@functions/lib/artifact-evaluator";
-import { readStaffRubricRows } from "@functions/lib/human-review/scores";
+import { readStaffRubricRows } from "@functions/lib/human-review";
 import {
   asQueryGateway,
   QueryGatewayDatabaseError,

@@ -18,7 +18,6 @@ export const useSubmissionEvaluation = (submissionId: string | undefined) => {
     queryFn: ({ signal }) => getSubmissionEvaluation(submissionId as string, signal),
     enabled: Boolean(userId && submissionId),
     staleTime: 30_000,
-    retry: 1,
     refetchOnReconnect: true,
     refetchInterval: (query) => {
       const response = query.state.data;

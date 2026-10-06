@@ -1,11 +1,6 @@
 import {
   type ActiveTrackDetail,
-  deactivateOtherTracks,
-  ensureShadowRole,
   getActiveLearningTrack,
-  syncUserCapabilities,
-  upsertLearningPath,
-  upsertLearningTrack,
 } from "@functions/api/v1/learning-paths/queries";
 import { syncManagedCatalog } from "@functions/lib/catalog-sync";
 import {
@@ -197,58 +192,30 @@ export async function resolveActiveTrack(
             throw catError;
           }
         }
-        // Deactivate other tracks first to ensure only the new primary track is active
-        await deactivateOtherTracks(qb, userId);
-
         const primaryTrackName = tracks.some((track) => track.trackName === local?.track)
           ? local?.track
           : tracks[0]?.trackName;
-        const trackMap = new Map<string, string>(); // trackName -> trackId
-        const pathsToSync = new Map<string, { learningPathId: string; isActive: boolean }>();
-
-        for (const trackItem of tracks) {
-          const roleId = trackItem.roleId || (await resolveRoleId(qb, trackItem.roleName));
-          const isActiveTrack = trackItem.trackName === primaryTrackName;
-
-          // Shadow-provision role into public.roles if missing (mirrors syncUsers)
-          await ensureShadowRole(qb, {
-            id: roleId,
-            roleName: trackItem.roleName,
-            roleFamilyName: trackItem.trackName,
-            domainName: trackItem.industry || "General",
-          });
-
-          let trackId = trackMap.get(trackItem.trackName);
-          if (!trackId) {
-            trackId = await upsertLearningTrack(qb, {
-              userId,
-              attemptId: trackItem.attemptId,
-              fit: trackItem.fit,
-              track: trackItem.trackName,
-              matchScore: trackItem.matchScore,
-              whyItFits: trackItem.whyItFits,
-              isActive: isActiveTrack,
-            });
-            trackMap.set(trackItem.trackName, trackId);
-          }
-
-          const learningPathId = await upsertLearningPath(qb, {
-            userId,
-            trackId,
-            roleId,
-            metadata: trackItem.industry ? { industry: trackItem.industry } : {},
-          });
-
-          // A role can occur in several clusters. Its shared capability progress
-          // should remain attached to the selected track when possible.
-          if (!pathsToSync.get(roleId)?.isActive) {
-            pathsToSync.set(roleId, { learningPathId, isActive: isActiveTrack });
-          }
-        }
-
-        for (const [roleId, { learningPathId }] of pathsToSync) {
-          await syncUserCapabilities(qb, { userId, learningPathId, roleId });
-        }
+        const resolvedTracks = await Promise.all(
+          tracks.map(async (track) => ({
+            ...track,
+            roleId: track.roleId || (await resolveRoleId(qb, track.roleName)),
+          })),
+        );
+        // One transaction preserves the old selection and progress if any write fails.
+        await qb.rpc(
+          {
+            operation: "rpc",
+            functionName: "import_learner_tracks",
+            allowedArgs: ["p_user_id", "p_tracks", "p_primary_track"],
+          },
+          {
+            args: {
+              p_user_id: userId,
+              p_tracks: resolvedTracks,
+              p_primary_track: primaryTrackName,
+            },
+          },
+        );
 
         const refreshed = await getActiveLearningTrack(qb, userId);
         if (!refreshed) throw new Error("Imported learning track could not be loaded");

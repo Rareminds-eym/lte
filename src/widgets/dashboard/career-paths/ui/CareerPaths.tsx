@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLearningPathStore } from "@/entities/active-learning-path";
+import { useLearningPath } from "@/entities/active-learning-path";
 import type { RecommendedCareerPathsData } from "@/entities/dashboard";
 import { toast, WidgetCard } from "@/shared/ui";
 import { ArrowRightIcon, CompassIcon, GrowthIcon, TrophyIcon } from "@/shared/ui/icons";
@@ -16,8 +16,8 @@ const hexClip = "[clip-path:polygon(50%_0%,100%_25%,100%_75%,50%_100%,0%_75%,0%_
 
 export const CareerPaths: React.FC<CareerPathsProps> = ({ data }) => {
   const navigate = useNavigate();
-  const switchActiveTrack = useLearningPathStore((s) => s.switchActiveTrack);
-  const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
+  const switchActiveTrack = useLearningPath((s) => s.switchActiveTrack);
+  const activeLearningPathLoading = useLearningPath((s) => s.activeLearningPathLoading);
   const queryClient = useQueryClient();
 
   const tracks = data.tracks || [];

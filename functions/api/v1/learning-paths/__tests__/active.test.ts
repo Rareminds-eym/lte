@@ -1,7 +1,7 @@
 import { createQueryGateway, createServiceQueryGateway } from "@functions/lib/query-gateway";
 import { callSkill } from "@functions/lib/skill-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { AuthError, requireAuth } from "@functions/middleware";
+import { AuthError, checkDistributedRateLimit, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +9,7 @@ import { onRequestGet } from "../active";
 
 vi.mock("@functions/middleware", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@functions/middleware")>();
-  return { ...actual, requireAuth: vi.fn() };
+  return { ...actual, requireAuth: vi.fn(), checkDistributedRateLimit: vi.fn() };
 });
 
 vi.mock("@functions/lib/query-gateway", async (importOriginal) => {
@@ -75,6 +75,46 @@ describe("GET /api/v1/learning-paths/active", () => {
     return createQueryGateway(mockSupabase as unknown as SupabaseClient);
   }
 
+  it("rejects an invalid refresh before creating a gateway or touching upstream data", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
+    const response = await onRequestGet({
+      request: new Request("https://lte.test/api/v1/learning-paths/active?refresh=yes"),
+      env: {},
+    } as PagesContext<LteEnv>);
+    expect(response.status).toBe(400);
+    expect(createServiceQueryGateway).not.toHaveBeenCalled();
+    expect(callSkill).not.toHaveBeenCalled();
+  });
+  it("limits explicit refreshes before database writes or upstream calls", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
+    vi.mocked(checkDistributedRateLimit).mockResolvedValueOnce({
+      allowed: false,
+      retryAfterMs: 1500,
+    });
+    const from = vi.fn();
+
+    const response = await onRequestGet({
+      request: new Request("https://lte.test/api/v1/learning-paths/active?refresh=true"),
+      env: {},
+    } as PagesContext<LteEnv>);
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("2");
+    expect(from).not.toHaveBeenCalled();
+    expect(createServiceQueryGateway).not.toHaveBeenCalled();
+    expect(callSkill).not.toHaveBeenCalled();
+  });
+
+  it("returns a sanitized 503 when KV cannot record a refresh", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce(mockUser);
+    vi.mocked(checkDistributedRateLimit).mockRejectedValueOnce(new Error("private KV detail"));
+    const response = await onRequestGet({
+      request: new Request("https://lte.test/api/v1/learning-paths/active?refresh=true"),
+      env: {},
+    } as PagesContext<LteEnv>);
+    expect(response.status).toBe(503);
+    expect(JSON.stringify(await response.json())).not.toContain("private KV detail");
+    expect(createServiceQueryGateway).not.toHaveBeenCalled();
+  });
   it("returns 401 when requireAuth throws", async () => {
     vi.mocked(requireAuth).mockRejectedValueOnce(new AuthError("Missing token", "UNAUTHORIZED"));
     const response = await onRequestGet({

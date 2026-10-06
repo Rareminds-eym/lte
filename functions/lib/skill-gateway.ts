@@ -109,11 +109,9 @@ export async function callSkill<T = unknown>(
     signUserClaim(secret, userId),
   ]);
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutFor(action));
-  let response: Response;
+  const signal = AbortSignal.timeout(timeoutFor(action));
   try {
-    response = await fetch(`${baseUrl}/api/internal/lte/v1`, {
+    const response = await fetch(`${baseUrl}/api/internal/lte/v1`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -122,10 +120,40 @@ export async function callSkill<T = unknown>(
         "X-Lte-Sig": userClaim.sig,
       },
       body: JSON.stringify({ action, requestId, payload }),
-      signal: controller.signal,
+      signal,
     });
+    // Keep the same deadline active until the entire response body is consumed.
+    let raw: unknown;
+    try {
+      raw = await response.json();
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      raw = null;
+    }
+    const parsed = GatewayEnvelopeSchema.safeParse(raw);
+    if (!parsed.success || parsed.data.ok !== true) {
+      const code =
+        parsed.success && parsed.data.error?.code
+          ? parsed.data.error.code
+          : `HTTP_${response.status}`;
+      const message =
+        parsed.success && parsed.data.error?.message
+          ? parsed.data.error.message
+          : `Skill gateway returned ${response.status}`;
+      logger.warn("Skill gateway action failed", {
+        action,
+        requestId,
+        code,
+        status: response.status,
+      });
+      throw new GatewayCallError(message, code);
+    }
+    return parsed.data.data as T;
   } catch (error) {
-    const aborted = error instanceof Error && error.name === "AbortError";
+    if (error instanceof GatewayCallError) throw error;
+    const aborted =
+      signal.aborted ||
+      (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name));
     logger.warn("Skill gateway request failed", {
       action,
       requestId,
@@ -136,29 +164,5 @@ export async function callSkill<T = unknown>(
       aborted ? "Skill gateway timed out" : "Skill gateway unreachable",
       aborted ? "GATEWAY_TIMEOUT" : "GATEWAY_UNREACHABLE",
     );
-  } finally {
-    clearTimeout(timer);
   }
-
-  const raw: unknown = await response.json().catch(() => null);
-  const parsed = GatewayEnvelopeSchema.safeParse(raw);
-  if (!parsed.success || parsed.data.ok !== true) {
-    const code =
-      parsed.success && parsed.data.error?.code
-        ? parsed.data.error.code
-        : `HTTP_${response.status}`;
-    const message =
-      parsed.success && parsed.data.error?.message
-        ? parsed.data.error.message
-        : `Skill gateway returned ${response.status}`;
-    logger.warn("Skill gateway action failed", {
-      action,
-      requestId,
-      code,
-      status: response.status,
-    });
-    throw new GatewayCallError(message, code);
-  }
-
-  return parsed.data.data as T;
 }

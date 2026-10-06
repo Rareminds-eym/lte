@@ -4,12 +4,52 @@ This guide covers various deployment options for the LMS application.
 
 ## Table of Contents
 
+- [LTE Cloudflare KV rate limits](#lte-cloudflare-kv-rate-limits)
 - [Prerequisites](#prerequisites)
 - [Environment Variables](#environment-variables)
 - [Docker Deployment](#docker-deployment)
 - [Cloud Platforms](#cloud-platforms)
 - [Static Hosting](#static-hosting)
 - [CI/CD](#cicd)
+
+## LTE Cloudflare KV rate limits
+
+Review endpoints and explicit learning-path refreshes require the `RATE_LIMIT_KV`
+Pages Functions binding. Normal learning-path reads do not use the limiter.
+Limits remain 60 review requests and 5 explicit refreshes per user per minute.
+
+The production and preview entries in `lte/wrangler.toml` contain explicit
+namespace-ID placeholders until the Cloudflare account can be checked. From `lte/`,
+use an authenticated Wrangler session to list namespaces, and create dedicated
+LTE namespaces if they do not already exist:
+
+```bash
+npx wrangler kv namespace list
+npx wrangler kv namespace create lte-rate-limits-production
+npx wrangler kv namespace create lte-rate-limits-preview
+```
+
+Put the corresponding IDs in `env.production.kv_namespaces` and
+`env.preview.kv_namespaces` before deployment. For dashboard-managed Pages
+bindings, bind `RATE_LIMIT_KV` to the corresponding namespace in each environment.
+The existing SSO namespaces also contain authentication/session data; do not use
+those as LTE namespaces. Local `wrangler pages dev` uses the top-level emulated
+namespace without remote access.
+
+The limiter writes an expiring, unique key for each admitted request under
+`lte:rate-limit:v1:<policy>:<user>:<window>:`. It lists only that user's current
+fixed window, with bounded pagination, and awaits the write before admitting the
+request. This avoids repeated updates to a single KV key. Denials return 429 with
+`Retry-After`; missing bindings or KV failures return a sanitized 503.
+
+KV listing is eventually consistent and check/write is not atomic: simultaneous
+requests and different regions can exceed the configured limit. This is a
+best-effort abuse control, not a strict global quota. See Cloudflare's
+[KV listing consistency](https://developers.cloudflare.com/kv/api/list-keys/) and
+[write limits](https://developers.cloudflare.com/kv/api/write-key-value-pairs/).
+
+The unshipped database limiter migration and SQL test were removed. No rate-limit
+table or RPC is needed. This change does not drop tables from deployed databases.
 
 ## Prerequisites
 

@@ -55,8 +55,12 @@ export class SlidingWindowRateLimiter {
 export const rateLimiter = new SlidingWindowRateLimiter();
 
 /** Structured 429 response with a Retry-After header. */
-export function rateLimitErrorResponse(requestId: string, retryAfterMs: number): Response {
-  return jsonError("Too many artifact submissions. Please wait before retrying.", 429, {
+export function rateLimitErrorResponse(
+  requestId: string,
+  retryAfterMs: number,
+  message = "Too many artifact submissions. Please wait before retrying.",
+): Response {
+  return jsonError(message, 429, {
     code: "RATE_LIMITED",
     details: { retryAfterMs },
     requestId,

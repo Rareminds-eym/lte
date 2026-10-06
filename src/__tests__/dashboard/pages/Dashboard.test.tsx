@@ -3,7 +3,21 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { XpModalProvider } from "@/app/providers/XpModalProvider";
-import { useLearningPathStore } from "@/entities/active-learning-path";
+
+const learningPathMock = vi.hoisted(() => ({
+  state: {} as Record<string, unknown>,
+  setState(next: Record<string, unknown>) {
+    this.state = { ...this.state, ...next };
+  },
+  getState() {
+    return this.state;
+  },
+}));
+vi.mock("@/entities/active-learning-path", () => ({
+  useLearningPath: (select: (state: Record<string, unknown>) => unknown) =>
+    select(learningPathMock.state),
+}));
+
 import { Dashboard } from "@/pages/dashboard";
 import { useXpModalStore } from "@/shared/store";
 
@@ -36,9 +50,9 @@ const createTestQueryClient = () =>
 
 describe("Dashboard Page", () => {
   it("shows a retry for a learning-path failure instead of Take Assessment", async () => {
-    const originalRetry = useLearningPathStore.getState().fetchAndSetActiveLearningPath;
+    const originalRetry = learningPathMock.getState()["fetchAndSetActiveLearningPath"];
     const retry = vi.fn();
-    useLearningPathStore.setState({
+    learningPathMock.setState({
       error: "Unavailable",
       activeTrack: null,
       fetchAndSetActiveLearningPath: retry,
@@ -54,12 +68,12 @@ describe("Dashboard Page", () => {
     expect(screen.queryByText("Take Assessment")).not.toBeInTheDocument();
     fireEvent.click(button);
     expect(retry).toHaveBeenCalledWith("learner-1", { refresh: true });
-    useLearningPathStore.setState({ fetchAndSetActiveLearningPath: originalRetry });
+    learningPathMock.setState({ fetchAndSetActiveLearningPath: originalRetry });
   });
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    useLearningPathStore.setState({
+    learningPathMock.setState({
       activeTrack: {
         learningTrackId: "lt-1",
         track: "Backend Engineering",

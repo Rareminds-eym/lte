@@ -1,7 +1,21 @@
 import { z } from "zod";
-import type { LteEnv } from "./types";
+import type { LteEnv, RateLimitKvBinding } from "./types";
 
 const backendEnvSchema = z.object({
+  RATE_LIMIT_KV: z
+    .custom<RateLimitKvBinding>(
+      (value) =>
+        Boolean(
+          value &&
+            typeof value === "object" &&
+            "list" in value &&
+            typeof value.list === "function" &&
+            "put" in value &&
+            typeof value.put === "function",
+        ),
+      "RATE_LIMIT_KV must be a valid KV namespace binding",
+    )
+    .optional(),
   SSO_SERVICE: z.any().refine((val) => val !== undefined && val !== null, {
     message: "SSO_SERVICE service binding is required",
   }),

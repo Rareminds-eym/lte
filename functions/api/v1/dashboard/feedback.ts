@@ -1,5 +1,11 @@
 import { jsonError, jsonResponse } from "@functions/lib/http";
-import { assignmentPolicy, assignmentSchema } from "@functions/lib/human-review/service";
+import {
+  assignmentPolicy,
+  assignmentSchema,
+  REVIEW_FEEDBACK_LIMIT,
+  REVIEW_FEEDBACK_TEXT,
+  reviewModuleHref,
+} from "@functions/lib/human-review";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
@@ -24,7 +30,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
           { column: "required_at", ascending: true },
           { column: "id", ascending: true },
         ],
-        pageSize: 20,
+        pageSize: REVIEW_FEEDBACK_LIMIT,
       }),
       qb.read(ownedPolicy, {
         auth: { userId: user.sub },
@@ -33,7 +39,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
           { column: "completed_at", ascending: false },
           { column: "id", ascending: true },
         ],
-        pageSize: 20,
+        pageSize: REVIEW_FEEDBACK_LIMIT,
       }),
     ]);
     const upcoming = z.array(assignmentSchema).parse(pending);
@@ -50,12 +56,12 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
             columns: ["id", "user_module_progress_id"],
             filters: ["id"],
             ownership: { column: "user_id", source: "authenticatedUserId", required: true },
-            maxPageSize: 40,
+            maxPageSize: REVIEW_FEEDBACK_LIMIT * 2,
           },
           {
             auth: { userId: user.sub },
             filters: [{ column: "id", op: "in", value: all.map((r) => r.submission_id) }],
-            pageSize: 40,
+            pageSize: REVIEW_FEEDBACK_LIMIT * 2,
           },
         ),
       );
@@ -67,14 +73,14 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
           columns: ["id", "module_id"],
           filters: ["id"],
           ownership: { column: "user_id", source: "authenticatedUserId", required: true },
-          maxPageSize: 40,
+          maxPageSize: REVIEW_FEEDBACK_LIMIT * 2,
         },
         {
           auth: { userId: user.sub },
           filters: [
             { column: "id", op: "in", value: submissions.map((s) => s.user_module_progress_id) },
           ],
-          pageSize: 40,
+          pageSize: REVIEW_FEEDBACK_LIMIT * 2,
         },
       ),
     );
@@ -94,11 +100,11 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
             operation: "read",
             columns: ["id", "level_id", "module_no", "title"],
             filters: ["id"],
-            maxPageSize: 40,
+            maxPageSize: REVIEW_FEEDBACK_LIMIT * 2,
           },
           {
             filters: [{ column: "id", op: "in", value: progress.map((p) => p.module_id) }],
-            pageSize: 40,
+            pageSize: REVIEW_FEEDBACK_LIMIT * 2,
           },
         ),
       );
@@ -109,7 +115,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
       if (!module) throw new Error("Missing review learning context");
       return {
         title: module.title,
-        href: `/my-courses/${module.level_id}/modules/${module.module_no}`,
+        href: reviewModuleHref(module.level_id, module.module_no),
       };
     };
     return jsonResponse({
@@ -119,18 +125,16 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
         ...contextFor(r.submission_id),
         subtitle:
           r.status === "unassigned"
-            ? "Awaiting an eligible staff reviewer"
-            : "Staff review in progress",
-        tag: r.due_by ? `Due ${r.due_by.slice(0, 10)}` : "Awaiting assignment",
+            ? REVIEW_FEEDBACK_TEXT.awaitingReviewer
+            : REVIEW_FEEDBACK_TEXT.inProgress,
+        tag: r.due_by ? `Due ${r.due_by.slice(0, 10)}` : REVIEW_FEEDBACK_TEXT.awaitingAssignment,
         type: "staff-review",
       })),
       recentFeedback: completed.map((r) => ({
         id: r.id,
         ...contextFor(r.submission_id),
         subtitle:
-          r.status === "completed"
-            ? "Staff review passed — view feedback"
-            : "Revision requested — view next steps",
+          r.status === "completed" ? REVIEW_FEEDBACK_TEXT.passed : REVIEW_FEEDBACK_TEXT.revision,
         daysAgo: `${Math.max(0, Math.floor((Date.now() - Date.parse(r.completed_at ?? r.required_at)) / 86400000))}d`,
         type: "staff-review",
       })),

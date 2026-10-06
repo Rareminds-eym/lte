@@ -1,8 +1,9 @@
-import type { ReviewAssignment } from "@functions/lib/human-review/service";
+import type { ReviewAssignment } from "@functions/lib/human-review";
 import {
   isHumanOnlyPlaceholder,
   projectEvaluationReference,
-} from "@functions/lib/human-review/stages";
+  REVIEW_QUERY_LIMIT,
+} from "@functions/lib/human-review";
 import type { QueryGateway } from "@functions/lib/query-gateway";
 
 export async function getReviewDetail(qb: QueryGateway, review: ReviewAssignment) {
@@ -25,7 +26,7 @@ export async function getReviewDetail(qb: QueryGateway, review: ReviewAssignment
         operation: "read",
         columns: ["id", "title", "description", "instructions", "response_type"],
         filters: ["artifact_id"],
-        maxPageSize: 100,
+        maxPageSize: REVIEW_QUERY_LIMIT,
       },
       { filters: [{ column: "artifact_id", op: "eq", value: submission.artifact_id }] },
     ),
@@ -35,7 +36,7 @@ export async function getReviewDetail(qb: QueryGateway, review: ReviewAssignment
         operation: "read",
         columns: ["question_id", "text_response", "url_response"],
         filters: ["submission_id"],
-        maxPageSize: 100,
+        maxPageSize: REVIEW_QUERY_LIMIT,
       },
       { filters: [{ column: "submission_id", op: "eq", value: review.submission_id }] },
     ),
@@ -45,7 +46,7 @@ export async function getReviewDetail(qb: QueryGateway, review: ReviewAssignment
         operation: "read",
         columns: ["id", "question_id", "file_name", "file_type", "file_size_bytes"],
         filters: ["submission_id"],
-        maxPageSize: 100,
+        maxPageSize: REVIEW_QUERY_LIMIT,
       },
       { filters: [{ column: "submission_id", op: "eq", value: review.submission_id }] },
     ),
@@ -80,7 +81,7 @@ export async function getReviewDetail(qb: QueryGateway, review: ReviewAssignment
         operation: "read",
         columns: ["id", "question_id", "file_name", "file_url", "version"],
         filters: ["artifact_id"],
-        maxPageSize: 100,
+        maxPageSize: REVIEW_QUERY_LIMIT,
       },
       { filters: [{ column: "artifact_id", op: "eq", value: submission.artifact_id }] },
     ),

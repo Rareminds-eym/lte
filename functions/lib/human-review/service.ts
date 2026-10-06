@@ -2,6 +2,7 @@ import type { QueryGateway } from "@functions/lib/query-gateway";
 import { callSkill } from "@functions/lib/skill-gateway";
 import type { LteEnv } from "@functions/lib/types";
 import { z } from "zod";
+import { REVIEW_QUERY_LIMIT } from "./config";
 import {
   type ReviewPolicy,
   type ReviewScope,
@@ -57,7 +58,7 @@ export const assignmentPolicy = {
   ],
   filters: ["id", "reviewer_id", "submission_id", "learner_id", "status"],
   sorts: ["due_by", "id", "required_at"],
-  maxPageSize: 100,
+  maxPageSize: REVIEW_QUERY_LIMIT,
 } as const;
 
 export async function reviewRpc(qb: QueryGateway, name: string, args: Record<string, unknown>) {
@@ -97,16 +98,8 @@ export async function getReviewPolicy(env: LteEnv, learnerId: string): Promise<R
   return reviewPolicySchema.parse(await callSkill(env, "review:policy", {}, learnerId));
 }
 
-interface ReviewIdentityAuthority {
-  getUserById(
-    id: string,
-  ): Promise<{ email: string; is_blocked: boolean; is_email_verified: boolean } | null>;
-  getUserMemberships(
-    id: string,
-  ): Promise<{ memberships: Array<{ status: string; org_id: string; role: string }> }>;
-}
 export async function assertActiveReviewer(env: LteEnv, id: string, organizationId?: string) {
-  const authority = env.SSO_SERVICE as ReviewIdentityAuthority;
+  const authority = env.SSO_SERVICE;
   const [user, memberships] = await Promise.all([
     authority.getUserById(id),
     authority.getUserMemberships(id),
@@ -222,7 +215,7 @@ export async function ensureAndAssignReview(
       operation: "read",
       columns: ["id", "status"],
       filters: ["id"],
-      maxPageSize: 100,
+      maxPageSize: REVIEW_QUERY_LIMIT,
     },
     {
       filters: [{ column: "id", op: "in", value: scope.reviewerIds }],

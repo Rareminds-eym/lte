@@ -1,5 +1,18 @@
 # Code Review Report
 
+> Updated 2026-10-06: the original scorecard and file inventory below describe the
+> earlier review snapshot, not the current merge status. The follow-up corrected
+> the false positives listed below and fixed internal schema failures being
+> returned as HTTP 400. Request validation still returns 400; database/upstream
+> validation failures now log server-side and return a sanitized 503. Dashboard
+> learning-path error/retry labels now live in shared configuration.
+> Verification: 32 focused tests, TypeScript type checking, scoped ESLint, and
+> `git diff --check` passed. The LTE graph was refreshed.
+>
+> Deployment still requires real production/preview KV namespace IDs. The two
+> user-excluded issues remain open: catalog recovery depends on missing SQL
+> functions, and review maintenance has no production caller.
+
 **Branch**: `feat/human-review-and-catalog-sync` → `dev`  
 **Commits reviewed**: `63a5562`, `3c97446` (2 ahead of `dev`)  
 **Scope**: 76 files · +11,575 / −2,049 lines  
@@ -13,11 +26,11 @@
 
 This PR introduces a **human (staff) review workflow** for artifact submissions, a **managed catalogue sync** pipeline, and supporting changes across the entire stack — from SQL migrations through backend services to frontend UI updates.
 
-**Overall grade: B+** — Excellent architecture and security design. Three items should block merge: missing test coverage for critical service modules, two silent catch blocks, and one unreachable code path.
+The original review identified test coverage and error-handling work. Follow-up fixes added coverage and logging. The claimed unreachable path was only a redundant condition and did not justify a merge blocker. Consult the update above for remaining deployment and explicitly excluded work.
 
 ---
 
-## Scorecard
+## Original snapshot scorecard (historical)
 
 | Area | Grade | Detail |
 |------|-------|--------|
@@ -29,7 +42,7 @@ This PR introduces a **human (staff) review workflow** for artifact submissions,
 | Test coverage | ⚠️ B− | 20 test files changed/added, but critical new service modules lack tests |
 | Naming & structure | ✅ A | Kebab-case dirs, PascalCase components, proper FSD segments |
 | Logging | ✅ A | `apiLogger`/`logger` used consistently, zero `console.*` statements |
-| SQL migrations | ✅ A | Strong grant-based security model, `FOR UPDATE SKIP LOCKED` outbox, PGTap test suite |
+| SQL migrations | ✅ A | Strong grant-based security model, `FOR UPDATE SKIP LOCKED` outbox, transactional SQL assertion test suite |
 
 ---
 
@@ -57,26 +70,14 @@ This PR introduces a **human (staff) review workflow** for artifact submissions,
 
 ---
 
-## Merge Blockers (3)
+## Original blocker findings and corrections
 
-### BLOCKER-1 · Missing tests for critical new service modules
+### BLOCKER-1 · Test coverage claim — superseded
 
-> **Rule**: "Mandatory Test Files" (critical), "Every new module must have a corresponding unit test file" (high)
-
-The following new modules introduced in this PR have **zero test coverage**:
-
-| Module | Lines | Risk |
-|--------|-------|------|
-| [`functions/lib/human-review/service.ts`](functions/lib/human-review/service.ts) | 264 | Core service: `ensureAndAssignReview`, `requireAssignment`, `assertAssignmentScope`, `requiresFollowupReview` |
-| [`functions/api/v1/reviews/[[path]].ts`](functions/api/v1/reviews/[[path]].ts) | 264 | Main review route handler — queue, stats, operations, start, complete, return, file download |
-| [`functions/api/v1/dashboard/feedback.ts`](functions/api/v1/dashboard/feedback.ts) | 154 | Learner dashboard feedback endpoint |
-| [`functions/lib/human-review/dispatch.ts`](functions/lib/human-review/dispatch.ts) | 74 | CRON-driven reconciliation + outbox processing |
-| [`functions/lib/human-review/operations.ts`](functions/lib/human-review/operations.ts) | 128 | Admin backlog, admin review detail, reassignment |
-| [`functions/api/v1/reviews/queries.ts`](functions/api/v1/reviews/queries.ts) | 95 | Review detail query composition |
-
-**Tests that DO exist** (good coverage): `authorization.test.ts`, `contracts.test.ts`, `scope-recovery.test.ts`, `scores.test.ts`, `stages.test.ts`, `boundary.test.ts`, `detail.test.ts`, `catalog-sync.test.ts`, `learner-track.test.ts`, `process-and-save.test.ts`, `artifact-extractor.test.ts`.
-
-**Fix**: Add test files for at minimum `service.ts` and `[[path]].ts`, which contain the most business logic and the highest blast radius.
+The blanket claim of zero coverage was too broad: boundary, authorization,
+scope-recovery, and detail tests already exercised parts of these modules.
+Dedicated service, handler, feedback, dispatch, and operations tests now also
+exist. A different test filename does not establish missing coverage.
 
 ---
 
@@ -106,29 +107,15 @@ Both catch blocks swallow all errors (network failures, Supabase 500s, malformed
 
 ---
 
-### BLOCKER-3 · Unreachable code path after `.safeParse` guard
+### BLOCKER-3 · Redundant validation condition — severity corrected
 
-> **Rule**: Code quality / dead code
-
-```typescript
-// learner-track.ts lines 146-151
-const parsed = LearningTrackDataSchema.safeParse(raw);
-if (!parsed.success) throw new Error("Invalid learning track gateway response");
-if (parsed.data.found && !parsed.data.tracks?.length && !parsed.data.track) {
-  throw new Error("Assessment found without learning tracks");
-}
-if (parsed.success && parsed.data.found) {   // ← parsed.success is ALWAYS true here
-```
-
-Line 147 throws when `!parsed.success`, so by line 151 `parsed.success` is guaranteed `true`. The redundant `parsed.success &&` check is dead code that confuses reviewers.
-
-**Fix**: Change line 151 to `if (parsed.data.found) {`.
-
-**Location**: [`learner-track.ts:151`](functions/lib/learner-track.ts#L151)
+After the failing `safeParse` branch throws, `parsed.success` is always true.
+The extra condition was redundant; the successful branch remained reachable.
+It was a cleanup, not a merge blocker, and the redundant check is now removed.
 
 ---
 
-## High-Severity Findings (7)
+## Original high-severity findings and corrections
 
 ### HIGH-1 · `fetchAndSetActiveLearningPath` always forces `refresh=true` on boot
 
@@ -217,21 +204,15 @@ Both [`useDashboardData.ts`](src/entities/dashboard/model/useDashboardData.ts) a
 
 ---
 
-### HIGH-7 · `ModuleArtifactSubmission` type duplicated without annotation
+### HIGH-7 · Duplicated runtime contract types — withdrawn
 
-> **Rule**: "Shared types must not cross runtime boundaries by direct import"
-
-The `ModuleArtifactSubmission` interface is defined identically in:
-- [`functions/api/v1/courses/types.ts:64`](functions/api/v1/courses/types.ts#L64) (backend)
-- [`src/entities/course/model/levelContentTypes.ts:59`](src/entities/course/model/levelContentTypes.ts#L59) (frontend)
-
-Per `.codereview.yml`, intentional duplication is the correct approach (types must not cross runtime boundaries). However, **neither file documents the duplication**. Without a comment like `// Mirrors functions/api/v1/courses/types.ts#ModuleArtifactSubmission`, a future developer will change one without the other.
-
-**Fix**: Add mirror comments to both definitions.
+`.codereview.yml` explicitly permits intentional duplication between frontend
+and backend types. It does not require mirror comments. Such comments may aid
+maintenance, but their absence alone is not the cited high-severity violation.
 
 ---
 
-## Medium-Severity Findings (6)
+## Original medium-severity findings and corrections
 
 ### MED-1 · `catalog-sync.ts` silently returns on `schema cache` errors
 
@@ -248,29 +229,28 @@ This is an RPC-level database error. The `schema cache` case typically means the
 
 ---
 
-### MED-2 · `ArtifactPanel.tsx` optimistic state has no reconciliation
+### MED-2 · Rejected submission leaves a local attempt — withdrawn
 
-The `localAttempts` state manually merges optimistic attempt data with server-returned `submittedAttempts`. If the server rejects the submission, the local attempt persists until a full page reload. Consider resetting `localAttempts` when `activeArtifact.submittedAttempts` updates.
-
-**Location**: [`ArtifactPanel.tsx`](src/pages/level-content/ui/components/ArtifactPanel.tsx)
-
----
-
-### MED-3 · `DashboardFeedbackResponseSchema` regex ties schema to route pattern
-
-```typescript
-href: z.string().regex(/^\/my-courses\//),
-```
-
-If the routes change, this schema silently rejects valid data. Consider `z.string().startsWith("/")`.
-
-**Location**: [`dashboardSchemas.ts`](src/entities/dashboard/model/dashboardSchemas.ts)
+`ArtifactSubmitTab` calls `onSubmitted` only from the mutation's `onSuccess`.
+`ArtifactPanel` adds local attempts in that callback, so a rejected submission
+does not create the claimed optimistic attempt. Reconciliation of successful
+submissions is a separate concern.
 
 ---
 
-### MED-4 · `useSubmissionEvaluation` bulk invalidation may cause render waterfall
+### MED-3 · Feedback route validation — withdrawn
 
-The `useEffect` in [`useSubmissionEvaluation.ts`](src/features/submit-artifact/model/useSubmissionEvaluation.ts) invalidates 6 query key prefixes when a staff review completes. This could cause cascading re-renders on the dashboard.
+Restricting feedback links to `/my-courses/` matches their intended route.
+There is no demonstrated valid response being rejected. Keep the allowlist;
+weakening it to any path beginning with `/` is not a required fix.
+
+---
+
+### MED-4 · Cache invalidation waterfall — unsubstantiated
+
+Invalidating several query prefixes does not by itself establish a render
+waterfall or serial network requests. No trace or reproduction supported the
+performance claim, so it is withdrawn as a confirmed defect.
 
 ---
 
@@ -344,7 +324,7 @@ The branch includes 8 SQL migrations under `supabase/migrations/`. Key findings:
 | `20261001091000_review_access_without_rls.sql` | Explicit RLS disable + grant-only access | ✅ Correct pattern |
 | `20261001091200_normalize_review_rubrics.sql` | Normalized rubric criteria + per-criterion scores | ✅ |
 
-**PGTap test suite** ([`human_review.sql`](supabase/tests/human_review.sql), 193 lines): Covers assignment flow, scope transfer, deadline escalation, idempotency conflicts, old-reviewer rejection, permission grants, and verifies `authenticated` role cannot call any review RPC.
+**transactional SQL assertion test suite** ([`human_review.sql`](supabase/tests/human_review.sql), 193 lines): Covers assignment flow, scope transfer, deadline escalation, idempotency conflicts, old-reviewer rejection, permission grants, and verifies `authenticated` role cannot call any review RPC.
 
 > ⚠️ **Database migrations require explicit user approval before merge** per project rules.
 
@@ -369,30 +349,27 @@ The branch includes 8 SQL migrations under `supabase/migrations/`. Key findings:
 | `queries.test.ts` | `ensureShadowRole` | ✅ New |
 | `getModuleDetails.test.ts` | Submitted attempts in module details | ✅ New |
 | Dashboard tests (4 files) | Updated for feedback widget data | ✅ Updated |
-| `learningPathStore.test.ts` | Store with refresh + query invalidation | ✅ Updated |
-| **`service.ts`** | Core service logic (264 lines) | ❌ **Missing** |
-| **`[[path]].ts`** | Route handler (264 lines) | ❌ **Missing** |
-| **`feedback.ts`** | Dashboard feedback endpoint (154 lines) | ❌ **Missing** |
-| **`dispatch.ts`** | CRON reconciliation (74 lines) | ❌ **Missing** |
-| **`operations.ts`** | Admin operations (128 lines) | ❌ **Missing** |
+| `useLearningPath.test.tsx` | TanStack learning path queries and mutations | ✅ Present |
+| `human-review/service.test.ts` | Core service logic | ✅ Present |
+| `reviews/handler.test.ts` | Route handler and internal schema failure responses | ✅ Present |
+| `dashboard/feedback.test.ts` | Dashboard feedback endpoint | ✅ Present |
+| `human-review/dispatch.test.ts` | Maintenance and outbox processing | ✅ Present |
+| `human-review/operations.test.ts` | Admin operations | ✅ Present |
 
 ---
 
-## Action Items (Prioritized)
+## Original action items (historical; withdrawn entries removed)
 
 | Priority | ID | Action | Effort |
 |----------|----|--------|--------|
 | 🔴 Blocker | BLOCKER-1 | Add tests for `service.ts`, `[[path]].ts`, `feedback.ts`, `dispatch.ts`, `operations.ts` | Large |
 | 🔴 Blocker | BLOCKER-2 | Add `logger.warn` to silent catch blocks at lines 122 and 138 of `learner-track.ts` | Trivial |
-| 🔴 Blocker | BLOCKER-3 | Remove redundant `parsed.success` guard at line 151 of `learner-track.ts` | Trivial |
 | 🟡 High | HIGH-1 | Parameterize `refresh` in `fetchAndSetActiveLearningPath` — don't force on boot | Small |
 | 🟡 High | HIGH-2 | Remove dead `isPanelExpanded` prop from interface and parent JSX | Trivial |
 | 🟡 High | HIGH-3 | Extract catalogue timeout `30000` to named constant | Trivial |
 | 🟡 High | HIGH-5 | Move `queryClient.invalidateQueries` out of Zustand store into the calling component | Small |
 | 🟡 High | HIGH-6 | Extract polling interval `30_000` to `shared/config/` | Trivial |
-| 🟡 High | HIGH-7 | Add mirror comments to duplicated `ModuleArtifactSubmission` types | Trivial |
 | 🟢 Medium | MED-1 | Add `logger.warn` for `schema cache` early return in `catalog-sync.ts` | Trivial |
-| 🟢 Medium | MED-2 | Add optimistic state reconciliation for `localAttempts` in `ArtifactPanel` | Small |
 | 🟢 Medium | MED-5 | Zod-validate `refresh` query param in `active.ts` | Trivial |
 | ✅ Resolved | MED-6 | ~~Update `.codereview.yml` structure to include `review-worker/`~~ (worker removed) | n/a |
 
@@ -419,7 +396,7 @@ The branch includes 8 SQL migrations under `supabase/migrations/`. Key findings:
 
 | File | Verdict |
 |------|---------|
-| [`learner-track.ts`](functions/lib/learner-track.ts) | ⚠️ BLOCKER-2 + BLOCKER-3 |
+| [`learner-track.ts`](functions/lib/learner-track.ts) | Logging added; redundant condition removed (BLOCKER-3 severity corrected) |
 | [`artifact-evaluator.ts`](functions/lib/artifact-evaluator/artifact-evaluator.ts) | ✅ Clean human review integration |
 | [`artifact-extractor.ts`](functions/lib/artifact-evaluator/artifact-extractor.ts) | ✅ Smart template sheet filtering |
 | [`response-schema.ts`](functions/lib/artifact-evaluator/response-schema.ts) | ✅ Clean threshold parameterization |
@@ -435,19 +412,19 @@ The branch includes 8 SQL migrations under `supabase/migrations/`. Key findings:
 | File | Verdict |
 |------|---------|
 | [`DashboardPage.tsx`](src/pages/dashboard/ui/DashboardPage.tsx) | ✅ Good retry UX for learning path errors |
-| [`ArtifactPanel.tsx`](src/pages/level-content/ui/components/ArtifactPanel.tsx) | ⚠️ Optimistic state needs reconciliation (MED-2) |
+| [`ArtifactPanel.tsx`](src/pages/level-content/ui/components/ArtifactPanel.tsx) | Claim about failed submissions withdrawn (MED-2) |
 | [`ArtifactFeedbackTab.tsx`](src/pages/level-content/ui/components/ArtifactFeedbackTab.tsx) | ⚠️ Dead `isPanelExpanded` prop (HIGH-2) |
 | [`UpcomingFeedback.tsx`](src/widgets/dashboard/upcoming-feedback/ui/UpcomingFeedback.tsx) | ✅ Good empty states, `Link` routing |
 | [`learningPathStore.ts`](src/entities/active-learning-path/model/learningPathStore.ts) | ⚠️ `refresh=true` always (HIGH-1), Zustand↔TanStack coupling (HIGH-5) |
 | [`learningPathApi.ts`](src/entities/active-learning-path/api/learningPathApi.ts) | ✅ Clean `refresh` parameter |
 | [`dashboardApi.ts`](src/entities/dashboard/api/dashboardApi.ts) | ✅ Graceful degradation for feedback |
-| [`dashboardSchemas.ts`](src/entities/dashboard/model/dashboardSchemas.ts) | ⚠️ Regex-tied href (MED-3) |
+| [`dashboardSchemas.ts`](src/entities/dashboard/model/dashboardSchemas.ts) | Route allowlist retained (MED-3 withdrawn) |
 | [`types.ts`](src/entities/dashboard/model/types.ts) | ✅ Clean `staff-review` type extension |
 | [`useDashboardData.ts`](src/entities/dashboard/model/useDashboardData.ts) | ⚠️ Hardcoded polling interval (HIGH-6) |
 | [`getSubmissionEvaluation.ts`](src/features/submit-artifact/api/getSubmissionEvaluation.ts) | ✅ `EvaluationStage` interface |
-| [`useSubmissionEvaluation.ts`](src/features/submit-artifact/model/useSubmissionEvaluation.ts) | ⚠️ Hardcoded polling (HIGH-6), bulk invalidation (MED-4) |
+| [`useSubmissionEvaluation.ts`](src/features/submit-artifact/model/useSubmissionEvaluation.ts) | Polling interval centralized; waterfall claim withdrawn (MED-4) |
 | [`levelContentSchemas.ts`](src/entities/course/model/levelContentSchemas.ts) | ✅ `ModuleArtifactSubmissionSchema` |
-| [`levelContentTypes.ts`](src/entities/course/model/levelContentTypes.ts) | ⚠️ Undocumented type duplication (HIGH-7) |
+| [`levelContentTypes.ts`](src/entities/course/model/levelContentTypes.ts) | Intentional runtime type duplication permitted (HIGH-7 withdrawn) |
 
 ### Other (8)
 
@@ -457,7 +434,7 @@ The branch includes 8 SQL migrations under `supabase/migrations/`. Key findings:
 | `wrangler.reviews.toml` | Removed from the branch |
 | [`docs/MANAGED_CATALOG_SYNC.md`](docs/MANAGED_CATALOG_SYNC.md) | ✅ |
 | 8 SQL migrations | ✅ Strong security model |
-| [`supabase/tests/human_review.sql`](supabase/tests/human_review.sql) | ✅ Excellent PGTap coverage |
+| [`supabase/tests/human_review.sql`](supabase/tests/human_review.sql) | ✅ Excellent transactional SQL assertion coverage |
 | [`scripts/tests/human-review-concurrency.py`](scripts/tests/human-review-concurrency.py) | ✅ Load test script |
 
 ---

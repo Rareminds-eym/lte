@@ -2,7 +2,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useLearningPathStore } from "@/entities/active-learning-path";
+import { useLearningPath } from "@/entities/active-learning-path";
 import {
   CourseCardGridSkeleton,
   useActiveCourse,
@@ -73,7 +73,7 @@ export const CourseDetailPage: React.FC = () => {
   // Track whether the learning path is still being loaded/created.
   // During the SkillPassport → LTE transition the LP may not exist yet;
   // the levels query is gated on it, so show a skeleton while it settles.
-  const learningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
+  const learningPathLoading = useLearningPath((s) => s.activeLearningPathLoading);
   const [displayType, setDisplayType] = useState<"card" | "list">("card");
 
   const initError = hasInitError(location.state) ? location.state.initializationError : undefined;

@@ -103,7 +103,7 @@ function wire(dir = directory(), items = [item()]) {
     if (policy.functionName === "admin_review_stats") return stats;
     if (policy.functionName === "admin_list_reviews") return { total: items.length, items };
     if (policy.functionName === "admin_reviewer_load") return { [EDUCATOR]: 2 };
-    if (policy.functionName === "reassign_artifact_review")
+    if (policy.functionName === "assign_review_in_scope")
       return { id: id(1), status: "pending", version: 3 };
     return null;
   });
@@ -304,7 +304,7 @@ describe("administrator operations", () => {
     const body = { expectedVersion: 2, reviewerId: EDUCATOR_2, reason: "Cover for Dr. Meera" };
     it("assigns any active educator of the organization and records the reason", async () => {
       await assignReview(qb, env, ADMIN, id(1), body);
-      expect(rpcCalls("reassign_artifact_review")[0]).toMatchObject({
+      expect(rpcCalls("assign_review_in_scope")[0]).toMatchObject({
         p_review_id: id(1),
         p_actor_id: ADMIN,
         p_reviewer_id: EDUCATOR_2,
@@ -319,7 +319,7 @@ describe("administrator operations", () => {
       await expect(assignReview(qb, env, ADMIN, id(1), body)).rejects.toMatchObject({
         status: 403,
       });
-      expect(rpcCalls("reassign_artifact_review")).toHaveLength(0);
+      expect(rpcCalls("assign_review_in_scope")).toHaveLength(0);
     });
     it("works for a learner with no class or program, using default SLA settings", async () => {
       wire(directory(), [
@@ -332,7 +332,7 @@ describe("administrator operations", () => {
         }),
       ]);
       await assignReview(qb, env, ADMIN, id(1), body);
-      expect(rpcCalls("reassign_artifact_review")[0]).toMatchObject({
+      expect(rpcCalls("assign_review_in_scope")[0]).toMatchObject({
         p_scope_id: null,
         p_scope_type: null,
         p_sla_days: 3,
@@ -356,7 +356,7 @@ describe("administrator operations", () => {
             },
       );
       await assignReview(qb, env, ADMIN, id(1), body);
-      expect(rpcCalls("reassign_artifact_review")[0]).toMatchObject({
+      expect(rpcCalls("assign_review_in_scope")[0]).toMatchObject({
         p_sla_days: 5,
         p_timezone: "Asia/Dubai",
         p_load_cap: 4,
@@ -375,7 +375,7 @@ describe("administrator operations", () => {
       ["the learner themself", { ...body, reviewerId: LEARNER }],
     ])("rejects %s", async (_n, bad) => {
       await expect(assignReview(qb, env, ADMIN, id(1), bad)).rejects.toMatchObject({ status: 400 });
-      expect(rpcCalls("reassign_artifact_review")).toHaveLength(0);
+      expect(rpcCalls("assign_review_in_scope")).toHaveLength(0);
     });
     it("rejects a review that is already finished", async () => {
       wire(directory(), [item({ status: "completed" })]);
@@ -394,6 +394,36 @@ describe("administrator operations", () => {
       await expect(assignReview(qb, env, ADMIN, id(1), body)).rejects.toMatchObject({
         status: 400,
       });
+    });
+    it("uses the current scope and checks the previous scope atomically", async () => {
+      vi.mocked(callSkill).mockImplementation(async (_env, action) =>
+        action === "review:org-directory"
+          ? directory()
+          : {
+              scopeId: id(99),
+              scopeType: "college_program",
+              organizationId: ORG,
+              slaDays: 3,
+              timeZone: "Asia/Kolkata",
+              loadCap: 10,
+              threshold: 60,
+              reviewerIds: [EDUCATOR_2],
+            },
+      );
+      await assignReview(qb, env, ADMIN, id(1), body);
+      expect(rpcCalls("assign_review_in_scope")[0]).toMatchObject({
+        p_expected_scope_id: id(5),
+        p_scope_id: id(99),
+        p_version: 2,
+      });
+    });
+    it("fails closed when scope lookup fails instead of assigning default settings", async () => {
+      vi.mocked(callSkill).mockImplementation(async (_env, action) => {
+        if (action === "review:org-directory") return directory();
+        throw new Error("scope offline");
+      });
+      await expect(assignReview(qb, env, ADMIN, id(1), body)).rejects.toThrow("scope offline");
+      expect(rpcCalls("assign_review_in_scope")).toHaveLength(0);
     });
     it("validates the body strictly", async () => {
       await expect(assignReview(qb, env, ADMIN, id(1), { ...body, extra: true })).rejects.toThrow();

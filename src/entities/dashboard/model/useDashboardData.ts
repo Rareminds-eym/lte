@@ -16,7 +16,9 @@ export const useDashboardData = () => {
     enabled: Boolean(userId),
     refetchOnReconnect: true,
     refetchInterval: (query) =>
-      query.state.data?.upcomingFeedback.upcoming.length ? REVIEW_POLLING_INTERVAL_MS : false,
+      query.state.data?.upcomingFeedback.upcoming.length || query.state.data?.upcomingFeedback.error
+        ? REVIEW_POLLING_INTERVAL_MS
+        : false,
     refetchIntervalInBackground: false,
     staleTime: 1000 * 60 * 2, // 2 minutes cache policy
     refetchOnWindowFocus: false, // matches global policy, avoiding focus-refetching

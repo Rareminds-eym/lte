@@ -1,5 +1,5 @@
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { getAuthInstance } from "@functions/middleware/auth";
+import { getAuthInstance } from "@functions/middleware";
 
 /** Review authority comes from a trusted assignment, not a learner subscription.
  * The handler additionally checks live SSO status and the current school/college

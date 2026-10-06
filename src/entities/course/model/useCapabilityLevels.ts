@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLearningPathStore } from "@/entities/active-learning-path";
+import { useLearningPath } from "@/entities/active-learning-path";
 import { useAuthStore } from "@/entities/session";
 import { fetchCapabilityLevels } from "../api/courseApi";
 
@@ -18,8 +18,8 @@ import { fetchCapabilityLevels } from "../api/courseApi";
 export const useCapabilityLevels = (capabilityCode: string) => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const userId = useAuthStore((s) => s.user?.id);
-  const activeTrack = useLearningPathStore((s) => s.activeTrack);
-  const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
+  const activeTrack = useLearningPath((s) => s.activeTrack);
+  const activeLearningPathLoading = useLearningPath((s) => s.activeLearningPathLoading);
 
   // Wait for auth + active learning track before firing the levels query.
   const hasAuth = isAuthenticated;

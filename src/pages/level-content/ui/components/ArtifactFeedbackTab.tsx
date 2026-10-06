@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { ModuleArtifactSubmittedFile } from "@/entities/course";
 import type { EvaluationStage } from "@/features/submit-artifact";
 import { downloadArtifactFile } from "@/features/submit-artifact";
+import { REVIEW_TEXT } from "@/shared/config";
 import {
   ArtifactsIcon,
   Button,
@@ -110,7 +111,7 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
   const feedbackText = evaluationData?.feedback ?? "";
   const improvementsText = awaitingStaffOnly ? "" : (evaluationData?.improvements ?? "");
   const statusLabel = awaitingStaffOnly
-    ? "Awaiting staff review. Scores appear here once a reviewer has evaluated your artifact."
+    ? REVIEW_TEXT.awaitingStaff
     : isEvaluationLoading
       ? "Evaluation in progress…"
       : "Evaluation not available for this attempt.";
@@ -193,14 +194,15 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
               {formatSubmittedDate(selectedAttempt?.submittedAt)}
             </p>
             <p className="text-[11px] font-medium text-content-muted">
-              Evaluator: {staffReviewCompleted || awaitingStaffOnly ? "Staff review" : "AI review"}
+              Evaluator:{" "}
+              {staffReviewCompleted || awaitingStaffOnly ? REVIEW_TEXT.staff : REVIEW_TEXT.ai}
             </p>
           </div>
         </div>
       </div>
 
       <ol
-        aria-label="Review stages"
+        aria-label={REVIEW_TEXT.stages}
         className="flex flex-wrap gap-3 rounded-xl border border-line-default bg-surface-primary p-3 text-xs"
       >
         {(stages?.length
@@ -216,10 +218,10 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
                 className="h-3 w-3 rounded-full border border-line-default"
               />
             )}
-            <span>{stage.stage === "ai" ? "AI review" : "Staff review"}</span>
+            <span>{stage.stage === "ai" ? REVIEW_TEXT.ai : REVIEW_TEXT.staff}</span>
             <span className="text-content-secondary">
               {stage.status === "unassigned"
-                ? "Awaiting reviewer"
+                ? REVIEW_TEXT.awaitingReviewer
                 : stage.status.replaceAll("_", " ")}
             </span>
           </li>
@@ -234,9 +236,7 @@ export const ArtifactFeedbackTab: React.FC<ArtifactFeedbackTabProps> = ({
         )
         .map((stage) => (
           <details key={stage.stage} className="rounded-xl border border-line-default p-3 text-xs">
-            <summary className="cursor-pointer font-semibold">
-              Earlier AI feedback (reference)
-            </summary>
+            <summary className="cursor-pointer font-semibold">{REVIEW_TEXT.earlierAi}</summary>
             <p className="mt-2 whitespace-pre-wrap">{stage.feedback}</p>
           </details>
         ))}

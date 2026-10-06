@@ -113,4 +113,21 @@ describe("Skill Gateway client", () => {
 
     await expect(callSkill(env, "ping", {}, userId)).rejects.toThrow("Skill gateway timed out");
   });
+  it("keeps the timeout active while reading a stalled response body", async () => {
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      status: 200,
+      json: () =>
+        new Promise((_resolve, reject) => {
+          controller.signal.addEventListener("abort", () => reject(controller.signal.reason));
+          controller.abort(new DOMException("deadline", "TimeoutError"));
+        }),
+    } as unknown as Response);
+    await expect(callSkill(env, "catalogue:get", {}, userId)).rejects.toMatchObject({
+      code: "GATEWAY_TIMEOUT",
+    });
+    expect(timeout).toHaveBeenCalledWith(30_000);
+    timeout.mockRestore();
+  });
 });

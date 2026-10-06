@@ -61,7 +61,7 @@ BEGIN
   RAISE EXCEPTION 'expected incomplete score rejection';
  EXCEPTION WHEN raise_exception THEN IF SQLERRM<>'REVIEW_SCORES_INCOMPLETE' THEN RAISE; END IF; END;
 
- command := jsonb_build_object('expectedVersion',r.version,'decision','pass','feedback','Meets standard','rationale','Evidence verified',
+ command := jsonb_build_object('xpRewards','{"final_artifact_accepted_1":20,"final_artifact_accepted_2":15,"final_artifact_accepted_3":10,"final_artifact_failed":1,"practice_artifact_accepted":2,"practice_artifact_failed":1}'::jsonb,'expectedVersion',r.version,'decision','pass','feedback','Meets standard','rationale','Evidence verified',
  'hasCriticalFailure',false,'actionItems','[]'::jsonb,'criteria',
  (SELECT jsonb_agg(c || jsonb_build_object('score',2,'evidence','Observed','tone','success')) FROM jsonb_array_elements(r.rubric_snapshot->'criteria') c));
  BEGIN

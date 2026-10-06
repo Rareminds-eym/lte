@@ -1,7 +1,8 @@
 import type React from "react";
 import { Link } from "react-router-dom";
 import type { UpcomingFeedbackData } from "@/entities/dashboard";
-import { WidgetCard } from "@/shared/ui";
+import { REVIEW_TEXT, ROUTES } from "@/shared/config";
+import { Button, WidgetCard } from "@/shared/ui";
 import {
   CalendarIcon,
   GoodFeedbackIcon,
@@ -13,9 +14,11 @@ import {
 
 export interface UpcomingFeedbackProps {
   data: UpcomingFeedbackData;
+  onRetry?: () => void;
+  retrying?: boolean;
 }
 
-export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
+export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data, onRetry, retrying }) => {
   return (
     <WidgetCard
       title="Upcoming & Feedback"
@@ -26,6 +29,11 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
         {data.error && (
           <p role="alert" className="text-sm text-content-secondary">
             {data.error}
+            {onRetry && (
+              <Button type="button" onClick={onRetry} disabled={retrying}>
+                {REVIEW_TEXT.retryFeedback}
+              </Button>
+            )}
           </p>
         )}
         {/* Section 1: UPCOMING */}
@@ -35,12 +43,12 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
           </div>
           <div className="space-y-4">
             {!data.error && !data.upcoming.length && (
-              <p className="text-sm text-content-secondary">No staff reviews pending.</p>
+              <p className="text-sm text-content-secondary">{REVIEW_TEXT.noPending}</p>
             )}
             {data.upcoming.map((item) => (
               <Link
                 key={item.id}
-                to={item.href ?? "/my-courses"}
+                to={item.href ?? ROUTES.MY_COURSES}
                 className="flex items-center justify-between group cursor-pointer"
               >
                 <div className="flex items-start gap-3.5 min-w-0 pr-2">
@@ -85,12 +93,12 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
           </div>
           <div className="space-y-4">
             {!data.error && !data.recentFeedback.length && (
-              <p className="text-sm text-content-secondary">No staff feedback yet.</p>
+              <p className="text-sm text-content-secondary">{REVIEW_TEXT.noFeedback}</p>
             )}
             {data.recentFeedback.map((item) => (
               <Link
                 key={item.id}
-                to={item.href ?? "/my-courses"}
+                to={item.href ?? ROUTES.MY_COURSES}
                 className="flex items-center justify-between group cursor-pointer"
               >
                 <div className="flex items-start gap-3.5 min-w-0 pr-2">

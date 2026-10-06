@@ -102,7 +102,11 @@ export function normalizeCompletion(command: CompletionCommand) {
   return {
     ...command,
     criteria,
-    score: Math.round((criteria.reduce((sum, row) => sum + row.score, 0) / 15) * 100),
+    score: Math.round(
+      (criteria.reduce((sum, row) => sum + row.score, 0) /
+        REVIEW_CRITERIA.reduce((sum, criterion) => sum + criterion.maxScore, 0)) *
+        100,
+    ),
   };
 }
 

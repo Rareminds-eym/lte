@@ -3,7 +3,7 @@ import {
   getReviewPolicy,
   getReviewScope,
   requiresFollowupReview,
-} from "@functions/lib/human-review/service";
+} from "@functions/lib/human-review";
 import { asQueryGateway, type QueryGatewaySource } from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
 import {

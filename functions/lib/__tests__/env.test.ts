@@ -21,6 +21,13 @@ describe("validateBackendEnv", () => {
     expect(validateBackendEnv(validEnv)).toEqual(validEnv);
   });
 
+  it("retains a valid KV binding", () => {
+    const kv = { list: async () => ({ keys: [], list_complete: true }), put: async () => {} };
+    expect(validateBackendEnv({ ...validEnv, RATE_LIMIT_KV: kv }).RATE_LIMIT_KV).toBe(kv);
+  });
+  it("rejects a malformed KV binding", () => {
+    expect(() => validateBackendEnv({ ...validEnv, RATE_LIMIT_KV: {} })).toThrow(/RATE_LIMIT_KV/);
+  });
   it("rejects a missing SSO_SERVICE binding", () => {
     const { SSO_SERVICE: _ignored, ...rest } = validEnv;
     expect(() => validateBackendEnv(rest)).toThrow(/SSO_SERVICE service binding is required/);

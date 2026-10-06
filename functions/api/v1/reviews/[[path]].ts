@@ -2,33 +2,52 @@ import { getObjectKeyFromFileUrl } from "@functions/api/v1/artifacts/file-querie
 import { sanitizeContentDispositionFilename } from "@functions/lib/artifact-evaluator";
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import {
-  completionHash,
-  completionSchema,
-  idempotencyKeySchema,
-  normalizeCompletion,
-  startSchema,
-} from "@functions/lib/human-review/contracts";
-import {
   adminOverview,
   adminReviewDetail,
-  assignReview,
-  REVIEW_VIEWS,
-} from "@functions/lib/human-review/operations";
-import {
   assertActiveReviewer,
   assertAssignmentScope,
   assignmentPolicy,
   assignmentSchema,
+  assignReview,
+  completionHash,
+  completionSchema,
+  idempotencyKeySchema,
+  normalizeCompletion,
+  REVIEW_AUTH_BATCH_SIZE,
+  REVIEW_BODY_LIMIT_BYTES,
+  REVIEW_PAGE_SIZE,
+  REVIEW_RATE_LIMIT,
+  REVIEW_STATS_LIMIT,
+  REVIEW_VIEWS,
   ReviewError,
+  reassignmentSchema,
   requireAssignment,
   reviewRpc,
-} from "@functions/lib/human-review/service";
+  startSchema,
+} from "@functions/lib/human-review";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
-import { getAuthUser, rateLimitErrorResponse, rateLimiter } from "@functions/middleware";
+import { XP_AMOUNTS } from "@functions/lib/xp-engine.core";
+import {
+  checkDistributedRateLimit,
+  getAuthUser,
+  rateLimitErrorResponse,
+} from "@functions/middleware";
 import { apiLogger } from "@functions/shared/logger";
 import { z } from "zod";
 import { getReviewDetail } from "./queries";
+
+/** Only request input failures are client errors; service schema failures remain 503s. */
+function parseRequest<T extends z.ZodType>(schema: T, input: unknown): z.output<T> {
+  const result = schema.safeParse(input);
+  if (!result.success)
+    throw new ReviewError(
+      result.error.issues[0]?.message ?? "Invalid request",
+      400,
+      "VALIDATION_ERROR",
+    );
+  return result.data;
+}
 
 async function readCommand(request: Request): Promise<unknown> {
   const reader = request.body?.getReader();
@@ -39,7 +58,7 @@ async function readCommand(request: Request): Promise<unknown> {
     const next = await reader.read();
     if (next.done) break;
     size += next.value.byteLength;
-    if (size > 65536) {
+    if (size > REVIEW_BODY_LIMIT_BYTES) {
       await reader.cancel();
       throw new ReviewError("Review body too large", 413, "BODY_TOO_LARGE");
     }
@@ -63,8 +82,17 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
   try {
     const user = getAuthUser(context);
     if (!user) return jsonError("Unauthorized", 401, { code: "UNAUTHORIZED", requestId });
-    const rate = rateLimiter.check(`reviews:${user.sub}`, 60, 60_000);
-    if (!rate.allowed) return rateLimitErrorResponse(requestId, rate.retryAfterMs);
+    const rate = await checkDistributedRateLimit(
+      context.env.RATE_LIMIT_KV,
+      user.sub,
+      REVIEW_RATE_LIMIT,
+    );
+    if (!rate.allowed)
+      return rateLimitErrorResponse(
+        requestId,
+        rate.retryAfterMs,
+        "Too many review requests. Please wait before retrying.",
+      );
     const qb = createServiceQueryGateway(context.env);
     const url = new URL(context.request.url);
     const parts = url.pathname
@@ -73,7 +101,6 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
       .filter(Boolean);
     const method = context.request.method;
     if (parts.length === 1 && (parts[0] === "queue" || parts[0] === "stats") && method === "GET") {
-      await assertActiveReviewer(context.env, user.sub);
       const cursor = url.searchParams.get("cursor");
       if (cursor && (cursor.length > 512 || !/^[A-Za-z0-9+/=]+$/.test(cursor)))
         throw new ReviewError("Invalid cursor", 400, "INVALID_CURSOR");
@@ -88,6 +115,7 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
           throw new ReviewError("Invalid cursor", 400, "INVALID_CURSOR");
         }
       }
+      await assertActiveReviewer(context.env, user.sub);
       const raw = z.array(assignmentSchema).parse(
         parts[0] === "stats"
           ? await qb.read(assignmentPolicy, {
@@ -95,20 +123,20 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
                 { column: "reviewer_id", op: "eq", value: user.sub },
                 { column: "status", op: "in", value: ["pending", "in_progress"] },
               ],
-              pageSize: 100,
+              pageSize: REVIEW_STATS_LIMIT,
             })
           : await reviewRpc(qb, "list_artifact_review_queue", {
               p_actor_id: user.sub,
               p_after_due: after?.due ?? null,
               p_after_id: after?.id ?? null,
-              p_limit: 26,
+              p_limit: REVIEW_PAGE_SIZE + 1,
             }),
       );
-      const pageRows = parts[0] === "stats" ? raw : raw.slice(0, 25);
+      const pageRows = parts[0] === "stats" ? raw : raw.slice(0, REVIEW_PAGE_SIZE);
       const items = [];
-      for (let offset = 0; offset < pageRows.length; offset += 10) {
+      for (let offset = 0; offset < pageRows.length; offset += REVIEW_AUTH_BATCH_SIZE) {
         const authorized = await Promise.all(
-          pageRows.slice(offset, offset + 10).map(async (row) => {
+          pageRows.slice(offset, offset + REVIEW_AUTH_BATCH_SIZE).map(async (row) => {
             try {
               await assertAssignmentScope(context.env, row, user.sub);
               return row;
@@ -126,29 +154,32 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
           pending: items.filter((r) => r.status === "pending").length,
           inProgress: items.filter((r) => r.status === "in_progress").length,
           overdue: items.filter((r) => r.due_by && Date.parse(r.due_by) < Date.now()).length,
-          truncated: raw.length === 100,
+          truncated: raw.length === REVIEW_STATS_LIMIT,
         });
       const last = pageRows.at(-1);
       const nextCursor =
-        raw.length > 25 && last ? btoa(JSON.stringify({ due: last.due_by, id: last.id })) : null;
+        raw.length > REVIEW_PAGE_SIZE && last
+          ? btoa(JSON.stringify({ due: last.due_by, id: last.id }))
+          : null;
       return jsonResponse({ success: true, items, nextCursor, hasMore: nextCursor !== null });
     }
     if (parts[0] === "operations") {
       if (parts.length === 2 && parts[1] === "overview" && method === "GET") {
-        const query = z
-          .object({
+        const query = parseRequest(
+          z.object({
             view: z.enum(REVIEW_VIEWS).default("all"),
             q: z.string().trim().max(100).default(""),
             page: z.coerce.number().int().min(1).max(1000).default(1),
-          })
-          .parse({
+          }),
+          {
             view: url.searchParams.get("view") ?? undefined,
             q: url.searchParams.get("q") ?? undefined,
             page: url.searchParams.get("page") ?? undefined,
-          });
+          },
+        );
         return jsonResponse(await adminOverview(qb, context.env, user.sub, query));
       }
-      const reviewId = z.uuid().parse(parts[1]);
+      const reviewId = parseRequest(z.uuid(), parts[1]);
       if (parts.length === 2 && method === "GET")
         return jsonResponse(await adminReviewDetail(qb, context.env, user.sub, reviewId));
       if (parts.length === 3 && parts[2] === "reassign" && method === "POST")
@@ -158,17 +189,39 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
             context.env,
             user.sub,
             reviewId,
-            await readCommand(context.request),
+            parseRequest(reassignmentSchema, await readCommand(context.request)),
           ),
         });
       return jsonError("Not found", 404, { code: "NOT_FOUND", requestId });
     }
-    const id = z.uuid().parse(parts[0]);
+    const id = parseRequest(z.uuid(), parts[0]);
+    const fileId =
+      parts.length === 4 && parts[1] === "files" && parts[3] === "download" && method === "GET"
+        ? parseRequest(z.uuid(), parts[2])
+        : undefined;
+    const command: z.infer<typeof startSchema> | z.infer<typeof completionSchema> | undefined =
+      parts.length === 2 &&
+      method === "POST" &&
+      ["start", "complete", "return"].includes(parts[1] ?? "")
+        ? parts[1] === "start"
+          ? parseRequest(startSchema, await readCommand(context.request))
+          : parseRequest(completionSchema, await readCommand(context.request))
+        : undefined;
+    const key =
+      command && parts[1] !== "start"
+        ? parseRequest(idempotencyKeySchema, context.request.headers.get("Idempotency-Key"))
+        : undefined;
+    if (
+      parts[1] === "return" &&
+      command &&
+      "decision" in command &&
+      command.decision !== "revise_and_resubmit"
+    )
+      throw new ReviewError("Return requires revision", 400, "INVALID_DECISION");
     const review = await requireAssignment(qb, context.env, id, user.sub);
     if (parts.length === 1 && method === "GET")
       return jsonResponse({ success: true, ...(await getReviewDetail(qb, review)) });
     if (parts.length === 4 && parts[1] === "files" && parts[3] === "download" && method === "GET") {
-      const fileId = z.uuid().parse(parts[2]);
       const file = (await qb.read(
         {
           table: "artifact_submission_files",
@@ -200,10 +253,8 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
         },
       });
     }
-    if (parts.length === 2 && method === "POST") {
-      const body = await readCommand(context.request);
+    if (command) {
       if (parts[1] === "start") {
-        const command = startSchema.parse(body);
         return jsonResponse({
           success: true,
           review: await reviewRpc(qb, "start_artifact_review", {
@@ -213,28 +264,22 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
           }),
         });
       }
-      if (parts[1] === "complete" || parts[1] === "return") {
-        const command = completionSchema.parse(body);
-        if (parts[1] === "return" && command.decision !== "revise_and_resubmit")
-          throw new ReviewError("Return requires revision", 400, "INVALID_DECISION");
-        const key = idempotencyKeySchema.parse(context.request.headers.get("Idempotency-Key"));
+      if ((parts[1] === "complete" || parts[1] === "return") && "decision" in command) {
         const result = await reviewRpc(qb, "complete_artifact_review", {
           p_review_id: id,
           p_actor_id: user.sub,
           p_key: key,
-          p_hash: await completionHash(command),
-          p_command: normalizeCompletion(command),
+          p_hash: await completionHash(completionSchema.parse(command)),
+          p_command: {
+            ...normalizeCompletion(completionSchema.parse(command)),
+            xpRewards: XP_AMOUNTS,
+          },
         });
         return jsonResponse({ success: true, ...(result as Record<string, unknown>) });
       }
     }
     return jsonError("Not found", 404, { code: "NOT_FOUND", requestId });
   } catch (error) {
-    if (error instanceof z.ZodError)
-      return jsonError(error.issues[0]?.message ?? "Invalid request", 400, {
-        code: "VALIDATION_ERROR",
-        requestId,
-      });
     if (error instanceof ReviewError)
       return jsonError(error.message, error.status, { code: error.code, requestId });
     apiLogger.error("Review request failed", error, { requestId });

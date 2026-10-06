@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLearningPathStore } from "@/entities/active-learning-path";
+import { useLearningPath } from "@/entities/active-learning-path";
 import { ApiError } from "@/shared/api";
 import { fetchUserCourses } from "../api/courseApi";
 
 export const useCourses = (userId?: string, options?: { enabled?: boolean }) => {
-  const activeTrackId = useLearningPathStore((s) => s.activeTrack?.learningTrackId);
+  const activeTrackId = useLearningPath((s) => s.activeTrack?.learningTrackId);
 
   return useQuery({
     queryKey: ["userCourses", userId, activeTrackId],

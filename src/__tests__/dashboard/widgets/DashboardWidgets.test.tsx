@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { MOCK_DASHBOARD_DATA } from "@/entities/dashboard";
@@ -14,7 +14,7 @@ import {
 } from "@/widgets";
 
 vi.mock("@/entities/active-learning-path", () => ({
-  useLearningPathStore: Object.assign(
+  useLearningPath: Object.assign(
     vi.fn().mockImplementation((selector) => {
       const mockState = {
         activeTrack: null,
@@ -125,6 +125,25 @@ describe("Dashboard Widgets", () => {
     expect(screen.getByText("RECENT FEEDBACK")).toBeInTheDocument();
     expect(screen.getByText("Mock Interview #3 Result")).toBeInTheDocument();
     expect(screen.getByText("2d")).toBeInTheDocument();
+  });
+
+  it("offers feedback retry and disables it during the request", () => {
+    const onRetry = vi.fn();
+    const data = { upcoming: [], recentFeedback: [], error: "Feedback unavailable" };
+    const { rerender } = render(
+      <MemoryRouter>
+        <UpcomingFeedback data={data} onRetry={onRetry} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Retry feedback" }));
+    expect(onRetry).toHaveBeenCalledOnce();
+    expect(screen.queryByText("No staff reviews pending.")).not.toBeInTheDocument();
+    rerender(
+      <MemoryRouter>
+        <UpcomingFeedback data={data} onRetry={onRetry} retrying />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("button", { name: "Retry feedback" })).toBeDisabled();
   });
 
   it("renders CareerPaths with track explorer and match stats", () => {

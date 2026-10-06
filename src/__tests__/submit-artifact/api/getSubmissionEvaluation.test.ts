@@ -37,4 +37,12 @@ describe("getSubmissionEvaluation", () => {
 
     expect(mockApiFetch).toHaveBeenCalledWith("/api/v1/artifacts/submissions/a%2Fb%20c/evaluation");
   });
+  it("rejects malformed stage data before polling or rendering it", async () => {
+    mockApiFetch.mockResolvedValue({
+      success: true,
+      evaluation: null,
+      stages: [{ stage: "staff_review", status: 42 }],
+    });
+    await expect(getSubmissionEvaluation("submission-123")).rejects.toThrow();
+  });
 });

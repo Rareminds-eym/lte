@@ -37,7 +37,7 @@ def fixture():
 
 
 def completion(f, decision='pass', key='same-command'):
-    command = dict(expectedVersion=f['version'], decision=decision,
+    command = dict(xpRewards=json.loads((Path(__file__).resolve().parents[2] / 'functions/shared/xp-rewards.json').read_text()), expectedVersion=f['version'], decision=decision,
                    criteria=[dict(c, score=2, evidence='Observed evidence') for c in f['criteria']],
                    feedback='Evidence checked', rationale='Rubric applied', hasCriticalFailure=False,
                    actionItems=[] if decision == 'pass' else ['Add missing evidence'])

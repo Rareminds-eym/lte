@@ -2,6 +2,7 @@ import type { QueryGateway } from "@functions/lib/query-gateway";
 import { callSkill, GatewayCallError } from "@functions/lib/skill-gateway";
 import type { LteEnv } from "@functions/lib/types";
 import { z } from "zod";
+import { DEFAULT_REVIEW_SLA, REVIEW_PAGE_SIZE as PAGE_SIZE, REVIEW_QUERY_LIMIT } from "./config";
 import { assertActiveReviewer, getReviewScope, ReviewError, reviewRpc } from "./service";
 
 /**
@@ -13,8 +14,6 @@ import { assertActiveReviewer, getReviewScope, ReviewError, reviewRpc } from "./
  * school_admin memberships). Nothing here trusts an organisation, learner or
  * educator id taken from the request.
  */
-const PAGE_SIZE = 25;
-const DEFAULT_SLA = { slaDays: 3, timeZone: "Asia/Kolkata", loadCap: 10 } as const;
 
 export const REVIEW_VIEWS = [
   "all",
@@ -210,12 +209,12 @@ export async function adminReviewDetail(
         columns: ["action", "actor_id", "detail", "created_at"],
         filters: ["review_id"],
         sorts: ["created_at"],
-        maxPageSize: 100,
+        maxPageSize: REVIEW_QUERY_LIMIT,
       },
       {
         filters: [{ column: "review_id", op: "eq", value: reviewId }],
         sort: [{ column: "created_at", ascending: true }],
-        pageSize: 100,
+        pageSize: REVIEW_QUERY_LIMIT,
       },
     ),
   );
@@ -301,18 +300,24 @@ export async function assignReview(
       { id: command.reviewerId, email: identity.email },
     );
   // SLA / capacity come from the learner's class or program when there is one.
-  const settings = await getReviewScope(env, item.learnerId).then(
-    (scope) => scope ?? DEFAULT_SLA,
-    () => DEFAULT_SLA,
-  );
-  return reviewRpc(qb, "reassign_artifact_review", {
+  const scope = await getReviewScope(env, item.learnerId);
+  if (scope && scope.organizationId !== learner.organizationId)
+    throw new ReviewError(
+      "Learner organization changed. Refresh before assigning.",
+      409,
+      "REVIEW_CONFLICT",
+    );
+  const settings = scope ?? DEFAULT_REVIEW_SLA;
+  return reviewRpc(qb, "assign_review_in_scope", {
     p_review_id: reviewId,
     p_actor_id: actorId,
     p_reviewer_id: command.reviewerId,
     p_version: command.expectedVersion,
     p_reason: command.reason,
-    p_scope_id: item.scopeId,
-    p_scope_type: item.scopeType,
+    p_expected_scope_id: item.scopeId,
+    p_expected_scope_type: item.scopeType,
+    p_scope_id: scope?.scopeId ?? null,
+    p_scope_type: scope?.scopeType ?? null,
     p_load_cap: settings.loadCap,
     p_sla_days: settings.slaDays,
     p_timezone: settings.timeZone,

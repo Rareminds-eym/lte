@@ -3,33 +3,11 @@ import {
   QueryGatewayDatabaseError,
   type QueryGatewaySource,
 } from "@functions/lib/query-gateway";
+import xpRewards from "@functions/shared/xp-rewards.json";
 import { apiLogger } from "../shared/logger";
 
 // Event to XP amount mapping (TRD-DB-007 enum values)
-export const XP_AMOUNTS: Record<string, number> = {
-  stage_completed: 1,
-  practice_artifact_accepted: 2,
-  practice_artifact_failed: 1,
-  final_artifact_accepted_1: 20,
-  final_artifact_accepted_2: 15,
-  final_artifact_accepted_3: 10,
-  final_artifact_failed: 1, // +1 per attempt
-  manual_eval_accepted: 5, // fallback evaluation pass / manual reviewer accept
-  fallback_eval_failed: 1,
-  course_completed_on_time: 10,
-  fast_track_capability: 15,
-  capstone_completed: 0, // Configured/Passed custom
-  daily_login: 1,
-  profile_completed: 50,
-  streak_7_day: 5,
-  consistency_30_day: 30,
-  readiness_milestone_25: 10,
-  readiness_milestone_50: 20,
-  readiness_milestone_75: 30,
-  readiness_milestone_100: 100,
-  legacy_consistency_bonus: 20,
-  promotional_xp: 0, // Custom/Configured
-};
+export const XP_AMOUNTS: Readonly<Record<string, number>> = xpRewards;
 
 // Event to category mapping (TRD-DB-007)
 export const XP_CATEGORIES: Record<string, "evidence" | "engagement"> = {

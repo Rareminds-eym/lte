@@ -2,6 +2,7 @@ import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv } from "@functions/lib/types";
 import { apiLogger } from "@functions/shared/logger";
 import { z } from "zod";
+import { REVIEW_DEADLINE_BATCH_SIZE, REVIEW_MAINTENANCE_BATCH_SIZE } from "./config";
 import { assignmentSchema, ensureAndAssignReview, reviewRpc } from "./service";
 
 const outboxSchema = z.array(
@@ -24,7 +25,9 @@ export async function dispatchReviewWork(env: LteEnv) {
   const qb = createServiceQueryGateway(env);
   const scopeChecks = z
     .array(assignmentSchema)
-    .parse(await reviewRpc(qb, "claim_review_scope_checks", { p_limit: 25 }));
+    .parse(
+      await reviewRpc(qb, "claim_review_scope_checks", { p_limit: REVIEW_MAINTENANCE_BATCH_SIZE }),
+    );
   for (const assignment of scopeChecks) {
     try {
       await ensureAndAssignReview(
@@ -38,9 +41,11 @@ export async function dispatchReviewWork(env: LteEnv) {
       apiLogger.error("Review scope reconciliation failed", error, { reviewId: assignment.id });
     }
   }
-  const assignments = z
-    .array(assignmentSchema)
-    .parse(await reviewRpc(qb, "claim_review_reconciliation", { p_limit: 25 }));
+  const assignments = z.array(assignmentSchema).parse(
+    await reviewRpc(qb, "claim_review_reconciliation", {
+      p_limit: REVIEW_MAINTENANCE_BATCH_SIZE,
+    }),
+  );
   for (const assignment of assignments) {
     try {
       await ensureAndAssignReview(
@@ -54,9 +59,11 @@ export async function dispatchReviewWork(env: LteEnv) {
       apiLogger.error("Review reconciliation failed", error, { reviewId: assignment.id });
     }
   }
-  await reviewRpc(qb, "schedule_review_deadlines", { p_limit: 100 });
+  await reviewRpc(qb, "schedule_review_deadlines", { p_limit: REVIEW_DEADLINE_BATCH_SIZE });
   if (!env.LTE_SYNC_QUEUE) throw new Error("LTE_SYNC_QUEUE is required for review dispatch");
-  const events = outboxSchema.parse(await reviewRpc(qb, "claim_review_outbox", { p_limit: 25 }));
+  const events = outboxSchema.parse(
+    await reviewRpc(qb, "claim_review_outbox", { p_limit: REVIEW_MAINTENANCE_BATCH_SIZE }),
+  );
   for (const event of events) {
     let sent = false;
     try {
