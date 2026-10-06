@@ -10,6 +10,8 @@ import { UpcomingFeedback } from "@/widgets/dashboard/upcoming-feedback";
 
 interface DashboardContentProps {
   data: DashboardData;
+  onRetryFeedback?: () => void;
+  retryingFeedback?: boolean;
 }
 
 /**
@@ -20,7 +22,11 @@ interface DashboardContentProps {
  *
  * Only rendered when data is successfully fetched.
  */
-export const DashboardContent: React.FC<DashboardContentProps> = ({ data }) => (
+export const DashboardContent: React.FC<DashboardContentProps> = ({
+  data,
+  onRetryFeedback,
+  retryingFeedback,
+}) => (
   <div className="space-y-6 max-w-[1440px] mx-auto">
     {/* Top Banner: Career Target & Overview */}
     <section aria-label="Career Target Summary">
@@ -49,7 +55,11 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ data }) => (
         <CapabilityGapMap data={data.capabilityGaps} />
       </div>
       <div className="h-full">
-        <UpcomingFeedback data={data.upcomingFeedback} />
+        <UpcomingFeedback
+          data={data.upcomingFeedback}
+          onRetry={onRetryFeedback}
+          retrying={retryingFeedback}
+        />
       </div>
     </section>
 

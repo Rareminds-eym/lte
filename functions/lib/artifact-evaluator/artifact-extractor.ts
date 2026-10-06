@@ -122,6 +122,7 @@ function renderSheetRows(rows: unknown[][], sheetName: string): SpreadsheetRows 
 async function parseSpreadsheet(
   buffer: ArrayBuffer,
   format: string,
+  options?: { isTemplate?: boolean },
 ): Promise<ExtractedArtifactContent> {
   // Dynamic import so SheetJS's heavy module body does not execute at worker startup.
   const XLSX = await import("../../../vendor/sheetjs/xlsx-0.20.3/xlsx.mjs");
@@ -150,7 +151,17 @@ async function parseSpreadsheet(
 
   const parts: string[] = [];
   let rowsOmitted = 0;
-  for (const sheetName of workbook.SheetNames.slice(0, MAX_SHEETS)) {
+  const sheetNames =
+    options?.isTemplate && workbook.SheetNames.length > 1
+      ? (() => {
+          const filtered = workbook.SheetNames.filter(
+            (name) => !/sample|example|instruction|guide|readme/i.test(name),
+          );
+          return filtered.length > 0 ? filtered : workbook.SheetNames;
+        })()
+      : workbook.SheetNames;
+
+  for (const sheetName of sheetNames.slice(0, MAX_SHEETS)) {
     const sheet = workbook.Sheets[sheetName];
     if (!sheet) continue;
     if (sheet["!ref"]) {
@@ -285,6 +296,7 @@ async function parsePptx(buffer: ArrayBuffer): Promise<ExtractedArtifactContent>
 export async function extractArtifactContent(
   file: File,
   preReadBuffer?: ArrayBuffer,
+  options?: { isTemplate?: boolean },
 ): Promise<ExtractedArtifactContent> {
   const format = normalizeArtifactExtension(file.name) || "file";
   try {
@@ -293,7 +305,7 @@ export async function extractArtifactContent(
       case "xlsx":
       case "xls":
       case "csv":
-        return await parseSpreadsheet(buffer, format);
+        return await parseSpreadsheet(buffer, format, options);
       case "pdf":
         return await parsePdf(buffer);
       case "docx":

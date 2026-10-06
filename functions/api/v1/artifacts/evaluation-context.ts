@@ -228,7 +228,7 @@ export async function fetchArtifactTemplateContent(
         if (!res.ok) continue;
         const buffer = await res.arrayBuffer();
         const file = new File([buffer], template.file_name);
-        const extracted = await extractArtifactContent(file, buffer);
+        const extracted = await extractArtifactContent(file, buffer, { isTemplate: true });
         if (extracted.isReadable && extracted.extractedText.trim().length > 0) {
           templateMap.set(key, extracted.extractedText);
         }

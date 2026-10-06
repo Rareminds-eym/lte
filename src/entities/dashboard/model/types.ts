@@ -60,7 +60,8 @@ export interface UpcomingItem {
   title: string;
   subtitle: string;
   tag: string;
-  type: "education" | "portfolio";
+  type: "education" | "portfolio" | "staff-review";
+  href?: string;
 }
 
 export interface FeedbackItem {
@@ -68,10 +69,12 @@ export interface FeedbackItem {
   title: string;
   subtitle: string;
   daysAgo: string;
-  type: "interview" | "ai-mentor";
+  type: "interview" | "ai-mentor" | "staff-review";
+  href?: string;
 }
 
 export interface UpcomingFeedbackData {
+  error?: string;
   upcoming: UpcomingItem[];
   recentFeedback: FeedbackItem[];
 }

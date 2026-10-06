@@ -8,6 +8,12 @@ export const CONFIG = {
   TIMEOUT: 10000,
 };
 
+export const LEARNING_PATH_TEXT = {
+  loadErrorTitle: "Unable to load your learning path",
+  loadErrorDescription: "We could not load your assessment recommendations. Please try again.",
+  retryLoading: "Retry Loading Learning Path",
+} as const;
+
 export const ROUTES = {
   HOME: "/",
   DASHBOARD: "/dashboard",
@@ -30,3 +36,6 @@ export function getSkillpassportUrl(): string {
 export * from "./auth";
 export * from "./env";
 export * from "./logging";
+export * from "./polling";
+
+export * from "./review";

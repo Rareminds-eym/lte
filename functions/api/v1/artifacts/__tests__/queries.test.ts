@@ -19,6 +19,15 @@ import {
   xlsxBuffer,
 } from "./queries-helpers";
 
+// The institution's review policy is resolved through SkillPassport; these tests
+// exercise submission persistence, so use "no policy configured" (AI evaluates).
+vi.mock("@functions/lib/human-review/service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@functions/lib/human-review/service")>()),
+  requiresFollowupReview: async () => false,
+  getReviewScope: async () => null,
+  getReviewPolicy: async () => ({ evaluationMode: "ai_first" }),
+  ensureAndAssignReview: async () => undefined,
+}));
 describe("artifact submission queries", () => {
   beforeEach(() => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue("00000000-0000-4000-8000-000000000001");

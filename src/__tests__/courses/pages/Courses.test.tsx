@@ -285,3 +285,8 @@ describe("Courses", () => {
     expect(screen.getByText("8 Enrolled")).toBeInTheDocument();
   });
 });
+
+vi.mock("@/entities/active-learning-path", () => ({
+  useLearningPath: (select: (state: Record<string, unknown>) => unknown) =>
+    select({ activeTrack: null, activeLearningPathLoading: false, needsAssessment: false }),
+}));

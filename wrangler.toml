@@ -18,6 +18,11 @@ inspector_port = 9228
 # LOCAL BINDINGS
 # ============================================================================
 
+# Local development uses an emulated namespace; no remote KV writes.
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "local-lte-rate-limits"
+
 [[services]]
 binding = "SSO_SERVICE"
 service = "sso-api"
@@ -48,6 +53,11 @@ COOKIE_DOMAIN = ".rareminds.in"
 SKILLPASSPORT_INTERNAL_URL = "https://skillpassport.rareminds.in"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 
+# Replace with the dedicated production namespace ID before deployment.
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "REPLACE_WITH_PRODUCTION_RATE_LIMIT_KV_ID"
+
 [[env.production.services]]
 binding = "SSO_SERVICE"
 service = "sso-api"
@@ -69,6 +79,11 @@ bucket_name = "lte"
 ENVIRONMENT = "development"
 SKILLPASSPORT_INTERNAL_URL = "https://skillpassport-dev.pages.dev"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
+
+# Keep preview traffic in a separate namespace from production.
+[[env.preview.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "REPLACE_WITH_PREVIEW_RATE_LIMIT_KV_ID"
 
 [[env.preview.services]]
 binding = "SSO_SERVICE"

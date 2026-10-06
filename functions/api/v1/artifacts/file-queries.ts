@@ -39,7 +39,7 @@ const ownedArtifactFileReadPolicy = {
   },
 } as const;
 
-function getObjectKeyFromFileUrl(fileUrl: string): string {
+export function getObjectKeyFromFileUrl(fileUrl: string): string {
   try {
     const url = new URL(fileUrl);
     return decodeURIComponent(url.pathname.replace(/^\/+/, ""));

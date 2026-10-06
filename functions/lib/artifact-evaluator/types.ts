@@ -36,7 +36,7 @@ export interface SubmissionCheckResult {
 }
 
 export interface ArtifactDebugTelemetry {
-  provider: "openrouter" | "fallback";
+  provider: "openrouter" | "fallback" | "none";
   latencyMs: number | null;
   modelUsed: string;
   timestamp: string;
@@ -65,11 +65,13 @@ export interface AIEvaluationResult {
   singleImprovementPoint: string;
   calculatedXp: number;
   modelUsed: string;
-  provider: "openrouter" | "fallback";
+  /** "none": no evaluator ran because the institution chose human-review-only. */
+  provider: "openrouter" | "fallback" | "none";
   /** True whenever the result came from the deterministic fallback instead of the LLM. */
   requiresManualReview: boolean;
-  /** "ai" for LLM evaluation, "fallback" for the deterministic rules engine. */
-  evaluationSource: "ai" | "fallback";
+  /** "ai" for LLM evaluation, "fallback" for the deterministic rules engine,
+   * "human_only" when the institution skips AI and routes straight to a human. */
+  evaluationSource: "ai" | "fallback" | "human_only";
   /** XP event type for frontend modal display (practice_artifact_accepted, final_artifact_failed, etc.) */
   eventType?: string;
   debugTelemetry?: ArtifactDebugTelemetry;

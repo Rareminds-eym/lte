@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useLearningPathStore } from "@/entities/active-learning-path";
+import { useLearningPath } from "@/entities/active-learning-path";
 import { CourseCard, useCourses } from "@/entities/course";
 import { useAuthStore } from "@/entities/session";
 import { LearningPathInitializer } from "@/features/initialize-learning-path";
@@ -38,7 +38,7 @@ export const CoursesPage = () => {
   const authLoading = useAuthStore((s) => s.loading);
   const authInitialized = useAuthStore((s) => s.initialized);
   const userId = user?.id;
-  const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
+  const needsAssessment = useLearningPath((s) => s.needsAssessment);
 
   const hasInitParams = Boolean(searchParams.get("trackId"));
 

@@ -56,6 +56,15 @@ export interface ModuleArtifactSubmittedFile {
   uploadedAt: string | null;
 }
 
+/** Mirrors functions/api/v1/courses/types.ts#ModuleArtifactSubmission */
+export interface ModuleArtifactSubmission {
+  submissionId: string;
+  attemptNo: number;
+  versionLabel: string;
+  isLatest: boolean;
+  submittedAt: string | null;
+}
+
 export interface ModuleArtifact {
   id: string;
   artifactType: "practice" | "final";
@@ -64,6 +73,7 @@ export interface ModuleArtifact {
   questions: ModuleArtifactQuestion[];
   templates: ModuleArtifactTemplate[];
   submittedFiles: ModuleArtifactSubmittedFile[];
+  submittedAttempts?: ModuleArtifactSubmission[];
   isActive: boolean;
 }
 

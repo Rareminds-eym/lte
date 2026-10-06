@@ -2,7 +2,21 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { useLearningPathStore } from "@/entities/active-learning-path";
+
+const learningPathMock = vi.hoisted(() => ({
+  state: {} as Record<string, unknown>,
+  setState(next: Record<string, unknown>) {
+    this.state = { ...this.state, ...next };
+  },
+  getState() {
+    return this.state;
+  },
+}));
+vi.mock("@/entities/active-learning-path", () => ({
+  useLearningPath: (select: (state: Record<string, unknown>) => unknown) =>
+    select(learningPathMock.state),
+}));
+
 import { useAuthStore } from "@/entities/session";
 
 const mockFetchCapabilityLevels = vi.fn();
@@ -23,7 +37,7 @@ function createWrapper() {
 describe("useCapabilityLevels", () => {
   it("should be disabled when not authenticated or learning path not ready", () => {
     useAuthStore.setState({ isAuthenticated: false });
-    useLearningPathStore.setState({ activeTrack: null, activeLearningPathLoading: false });
+    learningPathMock.setState({ activeTrack: null, activeLearningPathLoading: false });
 
     const { result } = renderHook(() => useCapabilityLevels("TS-101"), {
       wrapper: createWrapper(),
@@ -33,7 +47,7 @@ describe("useCapabilityLevels", () => {
 
   it("should fetch capability levels on success when authenticated and track is ready", async () => {
     useAuthStore.setState({ isAuthenticated: true });
-    useLearningPathStore.setState({
+    learningPathMock.setState({
       activeTrack: {
         learningTrackId: "lt-1",
       } as unknown as import("@/shared/types/auth").ActiveTrackDetail,

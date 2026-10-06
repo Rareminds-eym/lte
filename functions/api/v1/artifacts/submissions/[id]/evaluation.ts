@@ -3,6 +3,7 @@ import {
   getSubmissionEvaluationFlow,
 } from "@functions/api/v1/artifacts/queries";
 import { jsonError, jsonResponse } from "@functions/lib/http";
+import { getEvaluationStages } from "@functions/lib/human-review";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { getAuthUser } from "@functions/middleware";
@@ -33,6 +34,7 @@ export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Respo
 
     return jsonResponse({
       success: true,
+      stages: await getEvaluationStages(qb, validSubmissionId, user.sub),
       evaluation: flow
         ? {
             id: flow.id,
