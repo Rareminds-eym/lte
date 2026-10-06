@@ -56,7 +56,7 @@ R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 # Replace with the dedicated production namespace ID before deployment.
 [[env.production.kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-id = "REPLACE_WITH_PRODUCTION_RATE_LIMIT_KV_ID"
+id = "a162f140e4464515a8d5a27b5ebc6c6b"
 
 [[env.production.services]]
 binding = "SSO_SERVICE"
@@ -83,7 +83,7 @@ R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 # Keep preview traffic in a separate namespace from production.
 [[env.preview.kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-id = "REPLACE_WITH_PREVIEW_RATE_LIMIT_KV_ID"
+id = "a01a250ae61941a6adb3b4c702b6ea2f"
 
 [[env.preview.services]]
 binding = "SSO_SERVICE"
