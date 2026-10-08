@@ -2092,3 +2092,43 @@ primary_rule: |
     severity: critical
 
 
+
+  - category: database
+    title: Preserve migration history
+    severity: critical
+    description: >
+      Never edit, delete or rename migrations present in the Git comparison baseline. PR checks use
+      the merge base with the target branch; push checks use the previous commit. Local checks default
+      to origin/dev. Migrations introduced within the same PR may still be edited. Add new migrations
+      to change existing schema; this baseline is Git history, not proof of production execution.
+  - category: database
+    title: Enforce migration and seed naming and ordering
+    severity: critical
+    description: >
+      New migrations must use YYYYMMDDHHMMSS_description.sql. New dev and production seeds must use
+      YYYYMMDDHHMMSS_seed_description.sql. Require real calendar timestamps and lowercase snake_case
+      descriptions. Reject duplicate timestamps across migrations or within each seed directory; dev
+      and production may share timestamps. New migrations must sort after baseline migrations.
+      Grandfather existing legacy filenames without allowing changes to existing migration contents.
+      Archived seeds are excluded. Seed execution follows filename order, so timestamped additions
+      sort before legacy seed_ filenames; account for this when adding dependent data.
+  - category: database
+    title: Run database validation locally and in CI
+    severity: critical
+    description: >
+      Run npm run lint:database locally and through pre-commit. Keep the Validate Database Rules step
+      in the existing lint-and-validate CI job for pushes and pull requests. Use scripts/checks/validate-database.js as the single
+      database check script and propagate validation failures. This check validates filenames,
+      Git migration history and schema-only migration contents without executing SQL or starting Docker. Encoding, empty-file,
+      conflict-marker and configured-path safety checks are outside this validation scope.
+  - category: database
+    title: Keep data manipulation in seeds
+    severity: critical
+    description: >
+      New migrations must contain schema changes only. Place INSERT, UPDATE, DELETE, MERGE,
+      TRUNCATE, COPY FROM and other direct data changes in dev/production seed files. Reject data
+      changes in executed DO blocks, including dynamic EXECUTE and PERFORM calls. Definitions of
+      runtime functions, procedures, triggers and rules may contain data manipulation because they
+      define application behavior. Existing baseline migrations remain unchanged. Enforce this
+      through npm run lint:database locally and in CI. Static checks cannot inspect arbitrary
+      function side effects; reviewers must also reject indirect data changes during migration.
