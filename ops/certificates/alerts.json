@@ -1,0 +1,6 @@
+{
+  "windowSeconds": 900,
+  "renderFailureRatio": 0.05,
+  "issuanceFailureCount": 10,
+  "immutabilityViolationCount": 0
+}

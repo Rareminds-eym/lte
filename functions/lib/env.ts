@@ -2,6 +2,11 @@ import { z } from "zod";
 import type { LteEnv, RateLimitKvBinding } from "./types";
 
 const backendEnvSchema = z.object({
+  BROWSER_RENDERING_API_TOKEN: z.string().trim().min(1),
+  CF_ACCOUNT_ID: z.string().regex(/^[a-f0-9]{32}$/i),
+  CERTIFICATE_VERIFY_BASE_URL: z
+    .url()
+    .refine((value) => ["http:", "https:"].includes(new URL(value).protocol)),
   RATE_LIMIT_KV: z
     .custom<RateLimitKvBinding>(
       (value) =>

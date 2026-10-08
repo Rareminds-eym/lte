@@ -87,6 +87,7 @@ export const DashboardLayout: React.FC = () => {
   const navPathMap: Record<string, string> = {
     dashboard: "/dashboard",
     "my-courses": "/my-courses",
+    certificates: "/certificates",
     settings: "/settings",
   };
 
@@ -96,15 +97,18 @@ export const DashboardLayout: React.FC = () => {
     if (path) navigate(path);
   };
 
-  const activeNavId = location.pathname.includes("settings")
-    ? "settings"
-    : location.pathname.includes("dashboard")
-      ? "dashboard"
-      : "my-courses";
+  const activeNavId = location.pathname.startsWith("/certificates")
+    ? "certificates"
+    : location.pathname.includes("settings")
+      ? "settings"
+      : location.pathname.includes("dashboard")
+        ? "dashboard"
+        : "my-courses";
 
   const pageTitleMap: Record<string, string> = {
     dashboard: "Dashboard",
     "my-courses": "My Courses",
+    certificates: "Certificates",
     settings: "Settings",
   };
   const pageTitle = pageTitleMap[activeNavId] ?? "Dashboard";

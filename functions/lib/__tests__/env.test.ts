@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { validateBackendEnv } from "../env";
 
 const validEnv = {
+  BROWSER_RENDERING_API_TOKEN: "test-browser-token",
+  CF_ACCOUNT_ID: "a".repeat(32),
+  CERTIFICATE_VERIFY_BASE_URL: "https://skillpassport.rareminds.in/verify",
   SSO_SERVICE: {},
   STORAGE_BUCKET: {
     put: () => Promise.resolve({}),

@@ -37,10 +37,12 @@ binding = "STORAGE_BUCKET"
 bucket_name = "lte"
 
 [vars]
+CF_ACCOUNT_ID = "ad91abcd16cd9e9c569d83d9ef46e398"
 ENVIRONMENT = "production"
 SSO_WORKER_LOCAL_URL = "http://localhost:8787"
 COOKIE_DOMAIN = ".rareminds.in"
 SKILLPASSPORT_INTERNAL_URL = "http://localhost:8788"
+CERTIFICATE_VERIFY_BASE_URL = "http://localhost:8788/verify"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 
 # ============================================================================
@@ -48,9 +50,11 @@ R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 # ============================================================================
 
 [env.production.vars]
+CF_ACCOUNT_ID = "ad91abcd16cd9e9c569d83d9ef46e398"
 ENVIRONMENT = "production"
 COOKIE_DOMAIN = ".rareminds.in"
 SKILLPASSPORT_INTERNAL_URL = "https://skillpassport.rareminds.in"
+CERTIFICATE_VERIFY_BASE_URL = "https://skillpassport.rareminds.in/verify"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 
 # Replace with the dedicated production namespace ID before deployment.
@@ -76,8 +80,10 @@ bucket_name = "lte"
 # ============================================================================
 
 [env.preview.vars]
+CF_ACCOUNT_ID = "ad91abcd16cd9e9c569d83d9ef46e398"
 ENVIRONMENT = "development"
 SKILLPASSPORT_INTERNAL_URL = "https://skillpassport-dev.pages.dev"
+CERTIFICATE_VERIFY_BASE_URL = "https://skillpassport-dev.pages.dev/verify"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 
 # Keep preview traffic in a separate namespace from production.
@@ -102,7 +108,9 @@ bucket_name = "lte"
 # SECRETS
 # ============================================================================
 # For local development: add secrets to .dev.vars.
-# For production: set secrets using `wrangler secret put <KEY_NAME>` or dashboard.
+# For production/preview: wrangler pages secret put <KEY_NAME> --project-name lte
+# - BROWSER_RENDERING_API_TOKEN (Browser Rendering – Edit)
+# CF_ACCOUNT_ID must be configured per environment before deploy (32-hex account identifier).
 #
 # Required:
 # - SUPABASE_URL

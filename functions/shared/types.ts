@@ -42,6 +42,9 @@ export interface LteEnv {
   SKILLPASSPORT_INTERNAL_URL: string;
   SKILLPASSPORT_INTERNAL_SECRET: string;
   OPENROUTER_API_KEY?: string;
+  BROWSER_RENDERING_API_TOKEN?: string;
+  CF_ACCOUNT_ID?: string;
+  CERTIFICATE_VERIFY_BASE_URL?: string;
 }
 
 export interface SsoSubscriptionSnapshot {

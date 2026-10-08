@@ -1,13 +1,13 @@
 {
   "allowedFetchFiles": [
     "src/shared/api/client.ts",
-    "src/shared/api/authApi.ts",
-    "src/entities/course/ui/ResourceContentViewer/DocxContentViewer.tsx",
+    "src/shared/api/authClient.ts",
+    "src/entities/course/ui/resource-content-viewer/DocxContentViewer.tsx",
     "src/entities/course/ui/PptxContentViewer.tsx",
-    "src/entities/course/ui/ResourceContentViewer/types.ts"
+    "src/entities/course/ui/resource-content-viewer/types.ts"
   ],
   "allowedImageFiles": [
-    "src/shared/ui/Image/Image.tsx"
+    "src/shared/ui/Image.tsx"
   ],
   "allowedCatchFiles": [
     "functions/lib/cookies.ts",
@@ -30,18 +30,42 @@
     ".spec."
   ],
   "authModuleFiles": [
-    "src/shared/api/authApi.ts",
+    "src/shared/api/authClient.ts",
     "src/entities/session/model/authStore.ts",
     "functions/lib/auth.ts",
     "functions/lib/sso-client.ts",
-    "functions/middleware/auth.ts"
+    "functions/middleware/auth.ts",
+    "src/app/providers/AuthInitializer.tsx",
+    "src/shared/config/auth.ts",
+    "functions/[[path]].ts",
+    "functions/shared/types.ts",
+    "functions/lib/human-review/service.ts",
+    "functions/api/v1/settings/password.ts"
   ],
   "consolePatterns": [
-    { "pattern": "console\\.log\\s*\\(", "method": "console.log" },
-    { "pattern": "console\\.debug\\s*\\(", "method": "console.debug" },
-    { "pattern": "console\\.info\\s*\\(", "method": "console.info" },
-    { "pattern": "console\\.warn\\s*\\(", "method": "console.warn" },
-    { "pattern": "console\\.error\\s*\\(", "method": "console.error" },
-    { "pattern": "console\\.trace\\s*\\(", "method": "console.trace" }
+    {
+      "pattern": "console\\.log\\s*\\(",
+      "method": "console.log"
+    },
+    {
+      "pattern": "console\\.debug\\s*\\(",
+      "method": "console.debug"
+    },
+    {
+      "pattern": "console\\.info\\s*\\(",
+      "method": "console.info"
+    },
+    {
+      "pattern": "console\\.warn\\s*\\(",
+      "method": "console.warn"
+    },
+    {
+      "pattern": "console\\.error\\s*\\(",
+      "method": "console.error"
+    },
+    {
+      "pattern": "console\\.trace\\s*\\(",
+      "method": "console.trace"
+    }
   ]
 }

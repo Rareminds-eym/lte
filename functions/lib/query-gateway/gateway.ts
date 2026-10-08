@@ -369,26 +369,26 @@ export function createQueryGateway(supabase: SupabaseClient) {
   const client = asGatewayClient(supabase);
 
   return {
-    async read(
+    async read<T = unknown>(
       policy: QueryGatewayReadPolicy,
       options?: QueryGatewayReadOptions,
-    ): Promise<unknown> {
-      return resolveResult(buildReadQuery(client, policy, options));
+    ): Promise<T> {
+      return resolveResult(buildReadQuery(client, policy, options)) as Promise<T>;
     },
 
-    async insert(
+    async insert<T = unknown>(
       policy: QueryGatewayInsertPolicy,
       payload: Record<string, unknown>,
       options?: QueryGatewayInsertOptions,
-    ): Promise<unknown> {
-      return resolveResult(buildInsertQuery(client, policy, payload, options));
+    ): Promise<T> {
+      return resolveResult(buildInsertQuery(client, policy, payload, options)) as Promise<T>;
     },
 
-    async update(
+    async update<T = unknown>(
       policy: QueryGatewayUpdatePolicy,
       options: QueryGatewayUpdateOptions,
-    ): Promise<unknown> {
-      return resolveResult(buildUpdateQuery(client, policy, options));
+    ): Promise<T> {
+      return resolveResult(buildUpdateQuery(client, policy, options)) as Promise<T>;
     },
 
     async upsert(

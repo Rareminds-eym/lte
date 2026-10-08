@@ -1,3 +1,5 @@
+import { logCertificateFailure } from "@functions/lib/certificates/logging";
+import { ensureCertificatesForUser } from "@functions/lib/certificates/reconcile";
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
@@ -241,6 +243,11 @@ export async function onRequestPut(context: PagesContext<LteEnv>): Promise<Respo
       },
     });
 
+    try {
+      await ensureCertificatesForUser(qb, { requestId }, userId);
+    } catch (error) {
+      logCertificateFailure(error, { requestId, userId, operation: "profile" });
+    }
     const fullName = `${firstName} ${lastName}`.trim();
     const email = user.email;
     const program = getMetaString(updatedMetadata, ["program"]);

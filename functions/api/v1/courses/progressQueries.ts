@@ -1,3 +1,5 @@
+import { issueCourseCertificate } from "@functions/lib/certificates/issuance";
+import { logCertificateFailure } from "@functions/lib/certificates/logging";
 import {
   asQueryGateway,
   QueryGatewayDatabaseError,
@@ -656,6 +658,19 @@ export async function recalculateLevelProgress(
 
   // Trigger readiness recalculation on level completion transition
   if (isCompleted && !wasCompleted && currentProgress?.id) {
+    try {
+      await issueCourseCertificate(
+        qb,
+        {},
+        { userId, levelId, levelProgressId: currentProgress.id },
+      );
+    } catch (error) {
+      logCertificateFailure(error, {
+        userId,
+        type: "course_completion",
+        operation: "completion_hook",
+      });
+    }
     let completeCourseOnTime: typeof import("@functions/lib/xp-engine.progress").completeCourseOnTime;
     let triggerReadinessRecalculation: typeof import("@functions/lib/xp-engine.progress").triggerReadinessRecalculation;
     try {

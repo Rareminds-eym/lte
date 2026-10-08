@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createLogger } from "../shared/logger";
+import { signServiceToken } from "./internal-service-token";
 
 const logger = createLogger("skill-gateway");
 
@@ -51,18 +52,6 @@ async function hmacKey(secret: string): Promise<CryptoKey> {
     false,
     ["sign"],
   );
-}
-
-async function signServiceToken(
-  secret: string,
-  claims: { app: string; actions: string[]; iat: number; exp: number },
-): Promise<string> {
-  const key = await hmacKey(secret);
-  const header = b64urlEncode(encoder.encode(JSON.stringify({ alg: "HS256", typ: "svc" })));
-  const payload = b64urlEncode(encoder.encode(JSON.stringify(claims)));
-  const data = `${header}.${payload}`;
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  return `${data}.${b64urlEncode(new Uint8Array(signature))}`;
 }
 
 async function signUserClaim(secret: string, sub: string): Promise<{ claim: string; sig: string }> {

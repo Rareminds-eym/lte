@@ -26,6 +26,9 @@ const mockUser: AuthUser = {
 };
 
 const mockEnv: LteEnv = {
+  BROWSER_RENDERING_API_TOKEN: "test-browser-token",
+  CF_ACCOUNT_ID: "a".repeat(32),
+  CERTIFICATE_VERIFY_BASE_URL: "https://skillpassport.rareminds.in/verify",
   ASSETS: { fetch: async () => new Response() },
   SSO_SERVICE: {} as LteEnv["SSO_SERVICE"],
   STORAGE_BUCKET: {

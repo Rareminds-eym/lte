@@ -28,6 +28,9 @@ const LevelModules = lazy(() =>
   import("@/pages/level-modules").then((m) => ({ default: m.LevelModulesPage })),
 );
 const NotFound = lazy(() => import("@/pages/not-found").then((m) => ({ default: m.NotFound })));
+const Certificates = lazy(() =>
+  import("@/pages/certificates").then((m) => ({ default: m.CertificatesPage })),
+);
 const Settings = lazy(() => import("@/pages/settings").then((m) => ({ default: m.Settings })));
 
 export const AppRouter: React.FC = () => {
@@ -54,6 +57,14 @@ export const AppRouter: React.FC = () => {
         />
         <Route path="/auth/callback" element={null} />
         <Route element={<DashboardLayout />}>
+          <Route
+            path="/certificates"
+            element={
+              <RouteLoadingBoundary fallback={<PageLoader message="Loading certificates..." />}>
+                <Certificates />
+              </RouteLoadingBoundary>
+            }
+          />
           <Route
             path="/dashboard"
             element={
