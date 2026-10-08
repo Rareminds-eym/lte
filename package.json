@@ -47,6 +47,7 @@
     "lint:state": "node scripts/checks/validate-state-boundaries.js",
     "lint:catch": "node scripts/checks/validate-empty-catch.js",
     "lint:naming": "node scripts/checks/validate-naming-conventions.js",
+    "lint:database": "node scripts/checks/validate-database.js",
     "lint:versioning": "node scripts/checks/validate-endpoint-versioning.js",
     "lint:lazy": "node scripts/checks/validate-route-lazy.js",
     "lint:testlayout": "node scripts/checks/validate-test-layout.js",
