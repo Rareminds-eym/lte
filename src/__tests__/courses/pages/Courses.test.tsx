@@ -223,7 +223,7 @@ describe("Courses", () => {
 
   it("renders page title and description", () => {
     renderCourses();
-    expect(screen.getByText("My Courses")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Courses" })).toBeInTheDocument();
     expect(
       screen.getByText("Track your enrolled courses and continue where you left off."),
     ).toBeInTheDocument();

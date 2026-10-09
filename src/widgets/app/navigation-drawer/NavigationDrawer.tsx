@@ -4,7 +4,6 @@ import { UI_TEXT } from "@/shared/config";
 import {
   BookOpenIcon,
   Button,
-  CertificateIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ClipboardCheckIcon,
@@ -44,13 +43,8 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "my-courses",
-    label: UI_TEXT.myCourses,
+    label: UI_TEXT.myLearning,
     icon: <BookOpenIcon size={20} />,
-  },
-  {
-    id: "certificates",
-    label: UI_TEXT.certificates,
-    icon: <CertificateIcon size={20} />,
   },
   {
     id: "rewards-milestones",

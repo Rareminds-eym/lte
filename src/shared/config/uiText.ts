@@ -24,7 +24,8 @@ export const UI_TEXT = {
   assessmentDescription:
     "Take a quick assessment to get your personalized learning track and unlock your courses.",
   noCourses: "No courses found. Please check back later.",
-  myCourses: "My Courses",
+  myLearning: "My Learning",
+  coursesHeading: "Courses",
   coursesDescription: "Track your enrolled courses and continue where you left off.",
   enrolled: "Enrolled",
   completed: "Completed",
