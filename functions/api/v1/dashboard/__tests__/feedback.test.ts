@@ -1,9 +1,12 @@
+import { createQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestGet } from "../feedback";
 
 const read = vi.fn();
-vi.mock("@functions/lib/query-gateway", () => ({
+vi.mock("@functions/lib/query-gateway", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@functions/lib/query-gateway")>()),
   createServiceQueryGateway: () => ({ read }),
 }));
 
@@ -82,33 +85,52 @@ describe("dashboard/feedback.ts", () => {
       completed_at: now,
     };
 
-    let readCallNo = 0;
-    read.mockImplementation(async () => {
-      readCallNo++;
-      if (readCallNo === 1) return [pendingReview]; // pending
-      if (readCallNo === 2) return [completedReview]; // recent
-      if (readCallNo === 3)
-        // submissions
-        return [
-          { id: id(20), user_module_progress_id: id(30) },
-          { id: id(21), user_module_progress_id: id(31) },
-        ];
-      if (readCallNo === 4)
-        // progress
-        return [
-          { id: id(30), module_id: id(40) },
-          { id: id(31), module_id: id(41) },
-        ];
-      if (readCallNo === 5)
-        // modules
-        return [
-          { id: id(40), level_id: id(50), module_no: 1, title: "Module A" },
-          { id: id(41), level_id: id(51), module_no: 2, title: "Module B" },
-        ];
-      return [];
+    const results = [
+      [pendingReview],
+      [completedReview],
+      [
+        { id: id(20), user_module_progress_id: id(30) },
+        { id: id(21), user_module_progress_id: id(31) },
+      ],
+      [
+        { id: id(30), module_id: id(40) },
+        { id: id(31), module_id: id(41) },
+      ],
+      [
+        { id: id(40), level_id: id(50), module_no: 1, title: "Module A" },
+        { id: id(41), level_id: id(51), module_no: 2, title: "Module B" },
+      ],
+    ];
+    const chains = results.map((data) => {
+      const chain = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        in: vi.fn(() => chain),
+        order: vi.fn(() => chain),
+        range: vi.fn(() => chain),
+        // biome-ignore lint/suspicious/noThenProperty: Supabase query builders are thenable.
+        then: (resolve: (value: unknown) => unknown) =>
+          Promise.resolve({ data, error: null }).then(resolve),
+      };
+      return chain;
     });
+    let queryIndex = 0;
+    const from = vi.fn((_table: string) => chains[queryIndex++]);
+    const gateway = createQueryGateway({ from } as unknown as SupabaseClient);
+    read.mockImplementation(gateway.read);
 
     const response = await onRequestGet(makeContext());
+    expect(response.status).toBe(200);
+    expect(from.mock.calls.map(([table]) => table)).toEqual([
+      "review_assignments",
+      "review_assignments",
+      "artifact_submissions",
+      "user_module_progress",
+      "modules",
+    ]);
+    chains.slice(0, 4).forEach((chain, index) => {
+      expect(chain.eq).toHaveBeenCalledWith(index < 2 ? "learner_id" : "user_id", id(1));
+    });
     const body = (await response.json()) as {
       upcoming: Array<{ title: string; type: string }>;
       recentFeedback: Array<{ title: string; type: string }>;

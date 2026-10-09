@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
+import { UI_TEXT } from "@/shared/config";
 import {
   BookOpenIcon,
   Button,
@@ -20,8 +21,6 @@ import {
   toast,
 } from "@/shared/ui";
 
-const COMING_SOON_TOAST = "⏳";
-
 export interface NavigationDrawerProps {
   activeNavId?: string;
   isCollapsed?: boolean;
@@ -40,52 +39,52 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     id: "dashboard",
-    label: "Dashboard",
+    label: UI_TEXT.dashboard,
     icon: <DashboardGridIcon size={20} />,
   },
   {
     id: "my-courses",
-    label: "My Courses",
+    label: UI_TEXT.myCourses,
     icon: <BookOpenIcon size={20} />,
   },
   {
     id: "certificates",
-    label: "Certificates",
+    label: UI_TEXT.certificates,
     icon: <CertificateIcon size={20} />,
   },
   {
     id: "rewards-milestones",
-    label: "Rewards & Milestones",
+    label: UI_TEXT.rewardsMilestones,
     locked: true,
     icon: <CreditCardIcon size={20} />,
   },
   {
     id: "career-explorer",
-    label: "Career Explorer",
+    label: UI_TEXT.careerExplorer,
     locked: true,
     icon: <CompassIcon size={20} />,
   },
   {
     id: "learning-progress",
-    label: "Learning Progress",
+    label: UI_TEXT.learningProgress,
     locked: true,
     icon: <ClipboardCheckIcon size={20} />,
   },
   {
     id: "mentor-feedback",
-    label: "Mentor Feedback",
+    label: UI_TEXT.mentorFeedback,
     locked: true,
     icon: <MessageSquareIcon size={20} />,
   },
   {
     id: "achievements",
-    label: "Achievements",
+    label: UI_TEXT.achievements,
     locked: true,
     icon: <TrophyIcon size={20} />,
   },
   {
     id: "settings",
-    label: "Settings",
+    label: UI_TEXT.settings,
     icon: <SettingsIcon size={20} />,
   },
 ];
@@ -108,7 +107,10 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   const handleNavClick = (id: string) => {
     const item = NAV_ITEMS.find((i) => i.id === id);
     if (item?.locked) {
-      toast(`${item.label} is coming soon`, { icon: COMING_SOON_TOAST, id: "coming-soon" });
+      toast.error(UI_TEXT.comingSoon(item.label), {
+        icon: UI_TEXT.comingSoonIcon,
+        id: "coming-soon",
+      });
       return;
     }
     setActiveId(id);
@@ -118,12 +120,12 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   };
 
   const handleMentorClick = () => {
-    toast("AI Mentor is coming soon", { icon: COMING_SOON_TOAST, id: "coming-soon" });
+    toast.error(UI_TEXT.aiMentorComingSoon, { icon: UI_TEXT.comingSoonIcon, id: "coming-soon" });
   };
 
   return (
     <aside
-      className={`relative bg-white border-r border-line-subtle h-screen flex flex-col justify-between p-3.5 shrink-0 font-sans select-none transition-[width] duration-300 ease-in-out ${
+      className={`relative bg-white border-r border-line-subtle h-dvh flex flex-col justify-between p-3.5 shrink-0 font-sans select-none transition-[width] duration-300 ease-in-out ${
         isCollapsed ? "w-[72px]" : "w-64"
       } ${className}`}
     >
@@ -131,7 +133,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
       <button
         type="button"
         onClick={handleToggle}
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={isCollapsed ? UI_TEXT.expandSidebar : UI_TEXT.collapseSidebar}
         className="hidden md:flex w-8 h-8 rounded-full bg-white border border-line-default text-content-secondary shadow-md items-center justify-center -right-4 top-[2.875rem] absolute z-20 cursor-pointer hover:bg-surface-muted hover:text-content-primary transition-all active:scale-95"
       >
         {isCollapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
@@ -161,7 +163,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         </div>
 
         {/* Unified Navigation Menu */}
-        <nav className="space-y-1 w-full flex flex-col">
+        <nav aria-label={UI_TEXT.mainNavigation} className="space-y-1 w-full flex flex-col">
           {NAV_ITEMS.map((item) => {
             const isActive = activeId === item.id;
             const isLocked = Boolean(item.locked);
@@ -169,8 +171,9 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
               <button
                 key={item.id}
                 type="button"
+                aria-current={isActive ? "page" : undefined}
                 aria-disabled={isLocked || undefined}
-                aria-label={isLocked ? `${item.label} — Coming soon` : undefined}
+                aria-label={isLocked ? `${item.label} — Coming soon` : item.label}
                 title={
                   isLocked ? `${item.label} — Coming soon` : isCollapsed ? item.label : undefined
                 }
@@ -218,9 +221,9 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             <IconButton
               variant="solid-blue"
               size="lg"
-              aria-label="Ask AI Mentor — Coming soon"
+              aria-label={UI_TEXT.askAiMentorComingSoon}
               aria-disabled="true"
-              title="Ask AI Mentor — Coming soon"
+              title={UI_TEXT.askAiMentorComingSoon}
               onClick={handleMentorClick}
               icon={<SparklesIcon size={20} />}
             />
@@ -229,22 +232,22 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           /* Expanded AI Mentor Promo Card */
           <div className="bg-surface-secondary rounded-2xl p-4 flex flex-col space-y-2.5 text-left transition-all duration-300">
             <h3 className="text-xs font-bold text-content-primary leading-snug">
-              Need help choosing what to do next?
+              {UI_TEXT.mentorPrompt}
             </h3>
-            <p className="text-xs text-content-muted font-medium leading-tight">
-              Get guidance from your AI Mentor
+            <p className="text-xs text-content-secondary font-medium leading-tight">
+              {UI_TEXT.mentorDescription}
             </p>
             <Button
               variant="primary"
               size="sm"
-              aria-label="Ask AI Mentor — Coming soon"
+              aria-label={UI_TEXT.askAiMentorComingSoon}
               aria-disabled="true"
-              title="Ask AI Mentor — Coming soon"
+              title={UI_TEXT.askAiMentorComingSoon}
               onClick={handleMentorClick}
               className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-xs border-none justify-center mt-1 cursor-not-allowed!"
               icon={<SparklesIcon size={16} />}
             >
-              Ask AI Mentor
+              {UI_TEXT.askAiMentor}
             </Button>
           </div>
         )}

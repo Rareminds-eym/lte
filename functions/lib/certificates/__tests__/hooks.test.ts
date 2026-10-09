@@ -1,4 +1,7 @@
-import { recalculateLevelProgress } from "@functions/api/v1/courses/progressQueries";
+import {
+  recalculateLevelProgress,
+  recalculateSubmissionLevelProgress,
+} from "@functions/api/v1/courses/progressQueries";
 import { calculateReadiness, completeCourseOnTime } from "@functions/lib/xp-engine.progress";
 import { beforeEach, expect, it, vi } from "vitest";
 import { issueCourseCertificate, issueRoleCertificate } from "../issuance";
@@ -10,6 +13,39 @@ vi.mock("@functions/lib/xp-engine.core", () => ({
 }));
 vi.mock("@functions/lib/xp-engine.engagement", () => ({ evaluateMilestones: vi.fn() }));
 beforeEach(() => vi.clearAllMocks());
+it("resolves an accepted submission through learner-owned progress before issuing", async () => {
+  const { qb, read } = gateway();
+  read.mockImplementation(async (policy, options) => {
+    const filter = options?.filters?.[0];
+    if (policy.table === "artifact_submissions") return { user_module_progress_id: pathId };
+    if (policy.table === "user_module_progress" && filter?.column === "id")
+      return { user_capability_level_progress_id: row.level_progress_id };
+    if (policy.table === "user_capability_level_progress" && filter?.column === "id")
+      return { level_id: levelId };
+    if (policy.table === "modules") return [{ id: "module" }];
+    if (policy.table === "user_module_progress")
+      return [{ id: pathId, module_status: "mastered", completion_percentage: 100 }];
+    if (policy.table === "user_capability_level_progress")
+      return { id: row.level_progress_id, status: "in_progress" };
+    if (policy.table === "levels") return { duration_minutes: 1 };
+    if (policy.table === "user_stage_progress") return [];
+    if (policy.table === "learning_paths") return [];
+    return null;
+  });
+  await recalculateSubmissionLevelProgress(qb, userId, row.id);
+  expect(read).toHaveBeenCalledWith(
+    expect.objectContaining({
+      table: "artifact_submissions",
+      ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+    }),
+    expect.objectContaining({ auth: { userId } }),
+  );
+  expect(issueCourseCertificate).toHaveBeenCalledWith(
+    qb,
+    {},
+    { userId, levelId, levelProgressId: row.level_progress_id },
+  );
+});
 it.each([
   60, 100_000,
 ])("issues course certificates for completion taking %s seconds", async (seconds) => {

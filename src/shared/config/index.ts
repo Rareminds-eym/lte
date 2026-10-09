@@ -21,6 +21,8 @@ export const ROUTES = {
   NOT_FOUND: "/404",
   MY_COURSES: "/my-courses",
   COURSES: "/courses",
+  SETTINGS: "/settings",
+  CERTIFICATES: "/certificates",
 };
 
 export const routeForModule = (levelId: string, moduleNo: number) =>
@@ -39,3 +41,5 @@ export * from "./logging";
 export * from "./polling";
 
 export * from "./review";
+
+export * from "./uiText";

@@ -9,6 +9,7 @@ export const certificateSummarySchema = z.object({
   certificateType: certificateTypeSchema,
   status: z.enum(["pending_name", "issued", "revoked"]),
   title: z.string(),
+  learnerName: z.string().nullable(),
   subtitle: z.string().nullable(),
   levelLabel: z.string().nullable(),
   badge: z.enum(["developing", "skilled", "mastery"]).nullable(),

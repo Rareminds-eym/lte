@@ -16,3 +16,10 @@ it("offers name recovery only for pending certificates", () => {
   render(<CertificateCard certificate={{ ...certificate, status: "pending_name" }} />, { wrapper });
   expect(screen.getByRole("link", { name: /Add your name/ })).toHaveAttribute("href", "/settings");
 });
+it("keeps an issued course certificate available for later viewing", () => {
+  render(<CertificateCard certificate={certificate} />, { wrapper });
+  expect(screen.getByRole("link", { name: "View certificate" })).toHaveAttribute(
+    "href",
+    `/certificates?levelId=${certificate.levelId}`,
+  );
+});

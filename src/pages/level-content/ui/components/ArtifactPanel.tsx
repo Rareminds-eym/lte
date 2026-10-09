@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ModuleArtifact, ModuleArtifactSubmittedFile } from "@/entities/course";
 import type {
   SubmissionEvaluationResponse,
@@ -18,6 +18,7 @@ interface ArtifactPanelProps {
   setExpandedArtifactQuestionId: React.Dispatch<React.SetStateAction<string | null | undefined>>;
   onXpEarned?: (xpAmount: number, eventType: string) => void;
   onArtifactSubmitted?: (artifactId: string) => void;
+  onReviewCompleted?: (completionKey: string) => void;
 }
 
 /**
@@ -49,6 +50,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   setExpandedArtifactQuestionId,
   onXpEarned,
   onArtifactSubmitted,
+  onReviewCompleted,
 }) => {
   const [submittedFilesByArtifactId, setSubmittedFilesByArtifactId] = useState<
     Record<string, ModuleArtifactSubmittedFile[]>
@@ -126,9 +128,44 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     ) ?? null;
   const selectedSubmissionId =
     selectedAttempt?.submissionId ?? selectedAttempt?.files[0]?.submissionId;
-  const { data: storedEvaluation, isFetching: isStoredEvaluationFetching } =
-    useSubmissionEvaluation(selectedSubmissionId);
+  const {
+    data: storedEvaluation,
+    isFetching: isStoredEvaluationFetching,
+    completionKey,
+  } = useSubmissionEvaluation(selectedSubmissionId);
   const latestEvaluation = toAttemptEvaluation(storedEvaluation?.evaluation ?? null);
+  const notifiedCompletion = useRef<string | null>(null);
+  const pendingReviews = useRef(new Set<string>());
+  const isNewAttempt = Boolean(
+    activeArtifact &&
+      localAttempts[activeArtifact.id]?.some(
+        (attempt) => attempt.submissionId === selectedSubmissionId,
+      ),
+  );
+  useEffect(() => {
+    if (selectedSubmissionId && storedEvaluation && !completionKey) {
+      pendingReviews.current.add(selectedSubmissionId);
+    }
+    if (
+      activeArtifactType !== "final" ||
+      !selectedAttempt?.isLatest ||
+      !completionKey ||
+      notifiedCompletion.current === completionKey ||
+      (!isNewAttempt &&
+        (!selectedSubmissionId || !pendingReviews.current.has(selectedSubmissionId)))
+    )
+      return;
+    notifiedCompletion.current = completionKey;
+    onReviewCompleted?.(completionKey);
+  }, [
+    activeArtifactType,
+    selectedAttempt?.isLatest,
+    selectedSubmissionId,
+    storedEvaluation,
+    completionKey,
+    isNewAttempt,
+    onReviewCompleted,
+  ]);
 
   if (!activeArtifact || !activeArtifactType) {
     return (

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SEARCH_QUERY_MAX_LENGTH } from "@/shared/config";
 
 // Shared Zod schemas for validation
 
@@ -16,3 +17,5 @@ export const PaginationParamsSchema = z.object({
 });
 
 export type PaginationParams = z.infer<typeof PaginationParamsSchema>;
+
+export const SearchQuerySchema = z.string().trim().max(SEARCH_QUERY_MAX_LENGTH);

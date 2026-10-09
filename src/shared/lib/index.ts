@@ -1,7 +1,10 @@
 // Shared utility functions and helpers
+
 import { twMerge } from "tailwind-merge";
 
+export { containDialogFocus } from "./containDialogFocus";
 export * from "./queryClient";
+export { toPercentage } from "./toPercentage";
 
 export const cn = (...classes: (string | undefined | null | false)[]): string => {
   return twMerge(classes.filter(Boolean).join(" "));

@@ -6,6 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { URL, fileURLToPath } from 'node:url';
 
+if (process.argv.includes('--lte-only')) process.env.CERTIFICATE_LTE_ONLY = '1';
 if (process.argv.includes('--browser')) process.env.CERTIFICATE_VERIFY_BROWSER = '1';
 const directory = dirname(fileURLToPath(import.meta.url));
 const project = resolve(directory, '../..');

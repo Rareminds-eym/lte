@@ -195,6 +195,17 @@ vi.mock("@/features/initialize-learning-path", () => ({
 }));
 
 describe("Courses", () => {
+  it("filters submitted dashboard searches and restores results when cleared", () => {
+    render(
+      <MemoryRouter initialEntries={["/my-courses?q=course%202"]}>
+        <Courses />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Course 2")).toBeInTheDocument();
+    expect(screen.queryByText("Course 1")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(screen.getByText("Course 1")).toBeInTheDocument();
+  });
   const renderCourses = () =>
     render(
       <MemoryRouter>

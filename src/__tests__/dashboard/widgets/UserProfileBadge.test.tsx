@@ -33,7 +33,7 @@ describe("UserProfileBadge", () => {
   it("calls onClick when button is clicked", () => {
     const onClick = vi.fn();
     render(<UserProfileBadge name="Frank" onClick={onClick} />);
-    fireEvent.click(screen.getByRole("button", { name: "Frank" }));
+    fireEvent.click(screen.getByRole("button", { name: "Frank, account menu" }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 

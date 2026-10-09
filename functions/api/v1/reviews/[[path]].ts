@@ -1,4 +1,5 @@
 import { getObjectKeyFromFileUrl } from "@functions/api/v1/artifacts/file-queries";
+import { recalculateSubmissionLevelProgress } from "@functions/api/v1/courses/progressQueries";
 import { sanitizeContentDispositionFilename } from "@functions/lib/artifact-evaluator";
 import { jsonError, jsonResponse } from "@functions/lib/http";
 import {
@@ -36,6 +37,10 @@ import {
 import { apiLogger } from "@functions/shared/logger";
 import { z } from "zod";
 import { getReviewDetail } from "./queries";
+
+const reviewCompletionResultSchema = z
+  .object({ decision: z.enum(["pass", "revise_and_resubmit"]) })
+  .passthrough();
 
 /** Only request input failures are client errors; service schema failures remain 503s. */
 function parseRequest<T extends z.ZodType>(schema: T, input: unknown): z.output<T> {
@@ -265,17 +270,22 @@ export async function onRequest(context: PagesContext<LteEnv>): Promise<Response
         });
       }
       if ((parts[1] === "complete" || parts[1] === "return") && "decision" in command) {
-        const result = await reviewRpc(qb, "complete_artifact_review", {
-          p_review_id: id,
-          p_actor_id: user.sub,
-          p_key: key,
-          p_hash: await completionHash(completionSchema.parse(command)),
-          p_command: {
-            ...normalizeCompletion(completionSchema.parse(command)),
-            xpRewards: XP_AMOUNTS,
-          },
-        });
-        return jsonResponse({ success: true, ...(result as Record<string, unknown>) });
+        const result = reviewCompletionResultSchema.parse(
+          await reviewRpc(qb, "complete_artifact_review", {
+            p_review_id: id,
+            p_actor_id: user.sub,
+            p_key: key,
+            p_hash: await completionHash(completionSchema.parse(command)),
+            p_command: {
+              ...normalizeCompletion(completionSchema.parse(command)),
+              xpRewards: XP_AMOUNTS,
+            },
+          }),
+        );
+        if (result.decision === "pass") {
+          await recalculateSubmissionLevelProgress(qb, review.learner_id, review.submission_id);
+        }
+        return jsonResponse({ success: true, ...result });
       }
     }
     return jsonError("Not found", 404, { code: "NOT_FOUND", requestId });

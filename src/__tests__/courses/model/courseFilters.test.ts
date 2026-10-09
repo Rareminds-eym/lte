@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   COURSE_PAGE_SIZE,
   filterCoursesByPriority,
+  filterCoursesBySearch,
   getSafeCoursePage,
   paginateCourses,
-} from "@/pages/courses/model/courseFilters";
+} from "@/pages/courses";
 
 const courses = Array.from({ length: COURSE_PAGE_SIZE + 2 }, (_, index) => ({
   id: `course-${index + 1}`,
@@ -12,6 +13,33 @@ const courses = Array.from({ length: COURSE_PAGE_SIZE + 2 }, (_, index) => ({
 }));
 
 describe("courseFilters", () => {
+  it("combines case-insensitive search terms with the selected role", () => {
+    const courses = [
+      {
+        id: "a",
+        title: "API Design",
+        description: "Reliable services",
+        category: "Backend",
+        tags: ["HTTP"],
+        roleId: "r1",
+        roleName: "Engineer",
+      },
+      {
+        id: "b",
+        title: "API Design",
+        description: "Client integration",
+        category: "Frontend",
+        tags: ["React"],
+        roleId: "r2",
+        roleName: "Developer",
+      },
+    ] as Parameters<typeof filterCoursesBySearch>[0];
+    expect(filterCoursesBySearch(courses, "api HTTP", "r1").map((course) => course.id)).toEqual([
+      "a",
+    ]);
+    expect(filterCoursesBySearch(courses, "React", "r1")).toEqual([]);
+    expect(filterCoursesBySearch(courses, "missing", null)).toEqual([]);
+  });
   it("returns the original course list when no priority filter is selected", () => {
     expect(
       filterCoursesByPriority(

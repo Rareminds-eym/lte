@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { NavigationDrawer } from "@/widgets/app/navigation-drawer";
 
-const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }));
+const { toastMock } = vi.hoisted(() => ({ toastMock: Object.assign(vi.fn(), { error: vi.fn() }) }));
 
 vi.mock("react-hot-toast", () => ({ default: toastMock }));
 
@@ -16,7 +16,7 @@ const LOCKED_LABELS = [
 
 describe("NavigationDrawer", () => {
   beforeEach(() => {
-    toastMock.mockClear();
+    toastMock.error.mockClear();
   });
 
   it("renders all 8 nav items", () => {
@@ -150,25 +150,25 @@ describe("NavigationDrawer", () => {
   it.each(LOCKED_LABELS)("shows a coming soon toast when %s is clicked", (label) => {
     render(<NavigationDrawer />);
     fireEvent.click(screen.getByText(label));
-    expect(toastMock).toHaveBeenCalledWith(`${label} is coming soon`, expect.any(Object));
+    expect(toastMock.error).toHaveBeenCalledWith(`${label} is coming soon`, expect.any(Object));
   });
 
   it("does not show a toast when an unlocked item is clicked", () => {
     render(<NavigationDrawer />);
     fireEvent.click(screen.getByText("My Courses"));
-    expect(toastMock).not.toHaveBeenCalled();
+    expect(toastMock.error).not.toHaveBeenCalled();
   });
 
   it("shows a coming soon toast when Ask AI Mentor button is clicked", () => {
     render(<NavigationDrawer isCollapsed={false} />);
     fireEvent.click(screen.getByText("Ask AI Mentor"));
-    expect(toastMock).toHaveBeenCalledWith("AI Mentor is coming soon", expect.any(Object));
+    expect(toastMock.error).toHaveBeenCalledWith("AI Mentor is coming soon", expect.any(Object));
   });
 
   it("shows a coming soon toast when collapsed AI Mentor icon is clicked", () => {
     render(<NavigationDrawer isCollapsed />);
     fireEvent.click(screen.getByLabelText("Ask AI Mentor — Coming soon"));
-    expect(toastMock).toHaveBeenCalledWith("AI Mentor is coming soon", expect.any(Object));
+    expect(toastMock.error).toHaveBeenCalledWith("AI Mentor is coming soon", expect.any(Object));
   });
 
   it("keeps locked items focusable for discoverability", () => {

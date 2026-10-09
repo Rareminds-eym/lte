@@ -8,6 +8,7 @@ export const certificate: Certificate = {
   certificateType: "course_completion",
   status: "issued",
   title: "Problem solving",
+  learnerName: "Ada Lovelace",
   subtitle: "Engineering",
   levelLabel: "Level 1",
   badge: "skilled",

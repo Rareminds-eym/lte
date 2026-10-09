@@ -48,6 +48,7 @@ export function summary(row: CertificateRow, env: LteEnv) {
     certificateType: row.certificate_type,
     status: row.status,
     title: row.title,
+    learnerName: row.learner_name,
     subtitle: row.subtitle,
     levelLabel: row.level_label,
     badge: row.badge,

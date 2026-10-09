@@ -1,3 +1,4 @@
+import * as evaluator from "@functions/lib/artifact-evaluator";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as XLSX from "../../../../../vendor/sheetjs/xlsx-0.20.3/xlsx.mjs";
 import {
@@ -19,6 +20,11 @@ import {
   xlsxBuffer,
 } from "./queries-helpers";
 
+const progress = vi.hoisted(() => ({ recalculate: vi.fn() }));
+vi.mock("@functions/api/v1/courses/progressQueries", () => ({
+  recalculateSubmissionLevelProgress: progress.recalculate,
+}));
+
 // The institution's review policy is resolved through SkillPassport; these tests
 // exercise submission persistence, so use "no policy configured" (AI evaluates).
 vi.mock("@functions/lib/human-review/service", async (importOriginal) => ({
@@ -30,6 +36,7 @@ vi.mock("@functions/lib/human-review/service", async (importOriginal) => ({
 }));
 describe("artifact submission queries", () => {
   beforeEach(() => {
+    progress.recalculate.mockReset().mockResolvedValue(undefined);
     vi.spyOn(crypto, "randomUUID").mockReturnValue("00000000-0000-4000-8000-000000000001");
   });
 
@@ -79,6 +86,41 @@ describe("artifact submission queries", () => {
         file_name: "Readiness Sheet.xlsx",
       },
     ]);
+  });
+
+  it("recalculates authoritative course completion after immediate AI acceptance", async () => {
+    const evaluation = vi
+      .spyOn(evaluator, "processAndSaveArtifactEvaluation")
+      .mockResolvedValueOnce({
+        overallScore: 100,
+        confidence: 100,
+        decision: "pass",
+        rubricRows: [],
+        feedback: "Accepted",
+        singleImprovementPoint: "",
+        calculatedXp: 20,
+        eventType: "final_artifact_accepted_1",
+      } as never);
+    const chains = createSubmitChains();
+    const supabase = createSupabase(chains);
+    const file = createTestFile([xlsxBuffer], "answer.xlsx", { type: XLSX_CONTENT_TYPE });
+    try {
+      const result = await submitArtifactSubmission(
+        supabase,
+        createEnv(),
+        "user-1",
+        { artifact_id: "artifact-1", answers: [{ question_id: "question-1" }] },
+        new Map([["question-1", file]]),
+      );
+      expect(result.status).toBe("accepted");
+      expect(progress.recalculate).toHaveBeenCalledWith(
+        expect.anything(),
+        "user-1",
+        "submission-1",
+      );
+    } finally {
+      evaluation.mockRestore();
+    }
   });
 
   it("rejects a required file submission before creating a submission when no file is provided", async () => {
@@ -347,6 +389,50 @@ describe("artifact submission queries", () => {
     expect(chains.artifact_submissions.update).toHaveBeenCalledWith(
       expect.objectContaining({ status: "human_review" }),
     );
+  });
+
+  it("repairs course progression when an accepted response is retried", async () => {
+    const existing = {
+      id: "submission-1",
+      artifact_id: "artifact-1",
+      user_id: "user-1",
+      user_module_progress_id: "progress-1",
+      attempt_no: 1,
+      version_label: "v1",
+      is_latest: true,
+      status: "accepted",
+      previous_submission_id: null,
+      submitted_at: "2026-08-05T10:00:00.000Z",
+      sealed_at: "2026-08-05T10:05:00.000Z",
+    };
+    const chains = createSubmitChains();
+    chains.artifact_submissions.maybeSingle.mockResolvedValueOnce(ok(existing));
+    chains.artifact_evaluation_flows.maybeSingle.mockResolvedValueOnce(
+      ok({
+        id: "flow-1",
+        submission_id: existing.id,
+        stage: "ai",
+        status: "completed",
+        score: 100,
+        decision: "pass",
+        feedback: "Accepted",
+        improvements: null,
+        completed_at: existing.sealed_at,
+        metadata: { confidence: 100, rubric_rows: [], calculated_xp: 20 },
+      }),
+    );
+    const result = await submitArtifactSubmission(
+      createSupabase(chains),
+      createEnv(),
+      "user-1",
+      { artifact_id: "artifact-1", answers: [{ question_id: "question-1" }] },
+      new Map([
+        ["question-1", createTestFile([xlsxBuffer], "answer.xlsx", { type: XLSX_CONTENT_TYPE })],
+      ]),
+      "idem-key-1",
+    );
+    expect(result).toMatchObject({ duplicate: true, status: "accepted" });
+    expect(progress.recalculate).toHaveBeenCalledWith(expect.anything(), "user-1", existing.id);
   });
 
   it("rejects resubmission when the latest submission is already accepted", async () => {

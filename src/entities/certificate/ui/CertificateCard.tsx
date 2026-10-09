@@ -41,6 +41,14 @@ export function CertificateCard({
           {CERTIFICATE_LABELS.nameRequired}
         </Link>
       )}
+      {certificate.status === "issued" && certificate.levelId && (
+        <Link
+          className="mt-4 rounded text-sm font-semibold text-brand-700 underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-600"
+          to={`${CERTIFICATE_CLIENT_CONFIG.collectionPath}?levelId=${encodeURIComponent(certificate.levelId)}`}
+        >
+          {CERTIFICATE_LABELS.view}
+        </Link>
+      )}
       <div className="mt-auto flex flex-col gap-2 pt-6 sm:flex-row sm:flex-wrap">{actions}</div>
     </article>
   );

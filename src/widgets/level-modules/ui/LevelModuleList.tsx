@@ -22,7 +22,6 @@ import {
   LightbulbIcon,
   LightningBoltIcon,
   LockIcon,
-  SparklesIcon,
   TargetIcon,
   TrendingArrowIcon,
   TrendUpIcon,
@@ -558,7 +557,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
 
       {/* Course Completion Timeline Row using @theme tokens */}
       {hasModules && (
-        <div className="relative flex gap-4 sm:gap-6 items-center pt-2">
+        <div className="relative flex gap-4 sm:gap-6 items-start pt-2">
           {/* Left Timeline Indicator */}
           <div className="flex flex-col items-center shrink-0 z-10">
             <div
@@ -576,7 +575,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
 
           {/* Right Content Card */}
           <div
-            className={`flex-1 p-5 sm:p-7 rounded-3xl border shadow-2xs flex items-center justify-between gap-4 ${
+            className={`min-w-0 flex-1 p-5 sm:p-7 rounded-3xl border shadow-2xs flex flex-col items-stretch gap-4 ${
               isCourseCompleted
                 ? "bg-success-50 border-success-200"
                 : "bg-surface-primary border-line-default"
@@ -600,9 +599,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
               )}
             </div>
 
-            {isCourseCompleted ? (
-              <SparklesIcon className="w-6 h-6 text-success-500 shrink-0" />
-            ) : (
+            {!isCourseCompleted && (
               <div className="h-11 w-11 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
                 <LockIcon className="w-5 h-5" />
               </div>
