@@ -22,13 +22,14 @@ describe("NavigationDrawer", () => {
   it("renders all 8 nav items", () => {
     render(<NavigationDrawer />);
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("My Courses")).toBeInTheDocument();
+    expect(screen.getByText("My Learning")).toBeInTheDocument();
     expect(screen.getByText("Rewards & Milestones")).toBeInTheDocument();
     expect(screen.getByText("Career Explorer")).toBeInTheDocument();
     expect(screen.getByText("Learning Progress")).toBeInTheDocument();
     expect(screen.getByText("Mentor Feedback")).toBeInTheDocument();
     expect(screen.getByText("Achievements")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Certificates" })).not.toBeInTheDocument();
   });
 
   it("defaults activeNavId to dashboard", () => {
@@ -39,14 +40,14 @@ describe("NavigationDrawer", () => {
 
   it("accepts a different activeNavId", () => {
     render(<NavigationDrawer activeNavId="my-courses" />);
-    const coursesBtn = screen.getByText("My Courses").closest("button");
+    const coursesBtn = screen.getByText("My Learning").closest("button");
     expect(coursesBtn?.className).toContain("bg-brand-50");
   });
 
   it("calls onNavigate when an unlocked nav item is clicked", () => {
     const onNavigate = vi.fn();
     render(<NavigationDrawer onNavigate={onNavigate} />);
-    fireEvent.click(screen.getByText("My Courses"));
+    fireEvent.click(screen.getByText("My Learning"));
     expect(onNavigate).toHaveBeenCalledWith("my-courses");
   });
 
@@ -111,8 +112,8 @@ describe("NavigationDrawer", () => {
     render(<NavigationDrawer />);
     const dashboardBtn = screen.getByText("Dashboard").closest("button");
     expect(dashboardBtn?.className).toContain("bg-brand-50");
-    fireEvent.click(screen.getByText("My Courses"));
-    const coursesBtn = screen.getByText("My Courses").closest("button");
+    fireEvent.click(screen.getByText("My Learning"));
+    const coursesBtn = screen.getByText("My Learning").closest("button");
     expect(coursesBtn?.className).toContain("bg-brand-50");
   });
 
@@ -155,7 +156,7 @@ describe("NavigationDrawer", () => {
 
   it("does not show a toast when an unlocked item is clicked", () => {
     render(<NavigationDrawer />);
-    fireEvent.click(screen.getByText("My Courses"));
+    fireEvent.click(screen.getByText("My Learning"));
     expect(toastMock.error).not.toHaveBeenCalled();
   });
 

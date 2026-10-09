@@ -5,6 +5,7 @@ import { Route, Routes } from "react-router-dom";
 import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 import { LevelPlayerLayout } from "@/app/layouts/LevelPlayerLayout";
 import { MainLayout } from "@/app/layouts/MainLayout";
+import { MyLearningLayout } from "@/app/layouts/MyLearningLayout";
 import { GuestGuard } from "@/app/router/guards";
 import { CourseDetailSkeleton } from "@/pages/course-detail/ui/CourseDetailSkeleton";
 import { CoursesPageSkeleton } from "@/pages/courses/ui/CoursesPageSkeleton";
@@ -58,29 +59,31 @@ export const AppRouter: React.FC = () => {
         />
         <Route path="/auth/callback" element={null} />
         <Route element={<DashboardLayout />}>
-          <Route
-            path="/certificates"
-            element={
-              <ErrorBoundary FallbackComponent={ErrorFallback}>
-                <RouteLoadingBoundary fallback={<PageLoader message="Loading certificates..." />}>
-                  <Certificates />
+          <Route element={<MyLearningLayout />}>
+            <Route
+              path="/my-courses"
+              element={
+                <RouteLoadingBoundary fallback={<CoursesPageSkeleton />}>
+                  <Courses />
                 </RouteLoadingBoundary>
-              </ErrorBoundary>
-            }
-          />
+              }
+            />
+            <Route
+              path="/certificates"
+              element={
+                <ErrorBoundary FallbackComponent={ErrorFallback}>
+                  <RouteLoadingBoundary fallback={<PageLoader message="Loading certificates..." />}>
+                    <Certificates />
+                  </RouteLoadingBoundary>
+                </ErrorBoundary>
+              }
+            />
+          </Route>
           <Route
             path="/dashboard"
             element={
               <RouteLoadingBoundary fallback={<DashboardSkeleton />}>
                 <Dashboard />
-              </RouteLoadingBoundary>
-            }
-          />
-          <Route
-            path="/my-courses"
-            element={
-              <RouteLoadingBoundary fallback={<CoursesPageSkeleton />}>
-                <Courses />
               </RouteLoadingBoundary>
             }
           />

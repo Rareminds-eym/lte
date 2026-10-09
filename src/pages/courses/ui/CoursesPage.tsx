@@ -151,7 +151,7 @@ export const CoursesPage = () => {
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl font-bold text-content-primary leading-tight">
-                {UI_TEXT.myCourses}
+                {UI_TEXT.coursesHeading}
               </h1>
               <p className="text-sm text-content-secondary mt-0.5">{UI_TEXT.coursesDescription}</p>
             </div>

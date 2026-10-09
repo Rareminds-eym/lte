@@ -117,7 +117,6 @@ export const DashboardLayout: React.FC = () => {
   const navPathMap: Record<string, string> = {
     dashboard: ROUTES.DASHBOARD,
     "my-courses": ROUTES.MY_COURSES,
-    certificates: ROUTES.CERTIFICATES,
     settings: ROUTES.SETTINGS,
   };
 
@@ -127,25 +126,23 @@ export const DashboardLayout: React.FC = () => {
     if (path) navigate(path);
   };
 
-  const activeNavId = location.pathname.startsWith("/certificates")
-    ? "certificates"
-    : location.pathname.includes("settings")
-      ? "settings"
-      : location.pathname.includes("dashboard")
-        ? "dashboard"
-        : "my-courses";
+  const activeNavId = location.pathname.includes("settings")
+    ? "settings"
+    : location.pathname.includes("dashboard")
+      ? "dashboard"
+      : "my-courses";
 
   const pageTitleMap: Record<string, string> = {
     dashboard: UI_TEXT.dashboard,
-    "my-courses": UI_TEXT.myCourses,
-    certificates: UI_TEXT.certificates,
+    "my-courses": UI_TEXT.myLearning,
     settings: UI_TEXT.settings,
   };
   const pageTitle = pageTitleMap[activeNavId] ?? UI_TEXT.dashboard;
 
   return (
+    // Clip the fixed shell without creating scroll containers for fragment links or focus.
     <div
-      className={`dashboard-shell flex h-dvh bg-surface-secondary overflow-hidden relative ${UI_INTERACTION_CLASSES}`}
+      className={`dashboard-shell flex h-dvh bg-surface-secondary overflow-clip relative ${UI_INTERACTION_CLASSES}`}
     >
       <a
         href={`#${DASHBOARD_SCROLL_CONTAINER_ID}`}
@@ -192,7 +189,7 @@ export const DashboardLayout: React.FC = () => {
       )}
 
       {/* Main Layout Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-dvh overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-dvh overflow-clip">
         <SectionBoundary label={pageTitle}>
           <Header
             pageTitle={pageTitle}
