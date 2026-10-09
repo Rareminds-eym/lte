@@ -1,10 +1,5 @@
 import { asQueryGateway, type QueryGatewaySource } from "@functions/lib/query-gateway";
-import {
-  awardCertificateXp,
-  finalizePendingNames,
-  issueCourseCertificate,
-  issueRoleCertificate,
-} from "./issuance";
+import { finalizePendingNames, issueCourseCertificate, issueRoleCertificate } from "./issuance";
 import { logCertificateFailure } from "./logging";
 import {
   certificateOwnerReadPolicy,
@@ -65,6 +60,4 @@ export async function ensureCertificatesForUser(
     }
   }
   await finalizePendingNames(qb, env, userId);
-  // Heal a crash after insert/finalization but before the idempotent XP write.
-  for (const row of existing) await awardCertificateXp(qb, row);
 }

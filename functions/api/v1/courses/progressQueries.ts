@@ -1,5 +1,4 @@
-import { issueCourseCertificate } from "@functions/lib/certificates/issuance";
-import { logCertificateFailure } from "@functions/lib/certificates/logging";
+import { issueCourseCertificate, logCertificateFailure } from "@functions/lib/certificates";
 import {
   asQueryGateway,
   QueryGatewayDatabaseError,

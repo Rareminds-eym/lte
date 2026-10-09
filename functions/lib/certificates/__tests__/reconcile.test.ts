@@ -1,17 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import {
-  awardCertificateXp,
-  finalizePendingNames,
-  issueCourseCertificate,
-  issueRoleCertificate,
-} from "../issuance";
+import { finalizePendingNames, issueCourseCertificate, issueRoleCertificate } from "../issuance";
 import { certificateOwnerReadPolicy, readAll } from "../queries";
 import { ensureCertificatesForUser } from "../reconcile";
 import { revokeCertificate } from "../revocation";
 import { gateway, row, userId } from "./fixtures";
 
 vi.mock("../issuance", () => ({
-  awardCertificateXp: vi.fn(),
   finalizePendingNames: vi.fn(),
   issueCourseCertificate: vi.fn(),
   issueRoleCertificate: vi.fn(),
@@ -37,7 +31,6 @@ it("backfills no more than five distinct natural subjects per call", async () =>
   expect(issueCourseCertificate).toHaveBeenCalledTimes(5);
   expect(issueRoleCertificate).not.toHaveBeenCalled();
   expect(finalizePendingNames).toHaveBeenCalled();
-  expect(awardCertificateXp).toHaveBeenCalledWith(qb, row);
 });
 it("backfills roles, deduplicates reimports, and tolerates individual failures", async () => {
   const { qb, read } = gateway();

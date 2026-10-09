@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { validateBackendEnv } from "../env";
 
 const validEnv = {
+  ASSETS: { fetch: async () => new Response() },
+  RATE_LIMIT_KV: { list: async () => ({ keys: [], list_complete: true }), put: async () => {} },
   BROWSER_RENDERING_API_TOKEN: "test-browser-token",
   CF_ACCOUNT_ID: "a".repeat(32),
   CERTIFICATE_VERIFY_BASE_URL: "https://skillpassport.rareminds.in/verify",
@@ -11,6 +13,7 @@ const validEnv = {
     get: () => Promise.resolve(null),
     head: () => Promise.resolve(null),
     delete: () => Promise.resolve(undefined),
+    list: async () => ({ objects: [], truncated: false }),
   },
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
@@ -44,12 +47,12 @@ describe("validateBackendEnv", () => {
 
   it("rejects a missing STORAGE_BUCKET binding", () => {
     const { STORAGE_BUCKET: _ignored, ...rest } = validEnv;
-    expect(() => validateBackendEnv(rest)).toThrow(/STORAGE_BUCKET R2 binding is required/);
+    expect(() => validateBackendEnv(rest)).toThrow(/STORAGE_BUCKET must be a valid binding/);
   });
 
   it("rejects an invalid STORAGE_BUCKET binding", () => {
     expect(() => validateBackendEnv({ ...validEnv, STORAGE_BUCKET: {} })).toThrow(
-      /STORAGE_BUCKET must be a valid R2 bucket binding/,
+      /STORAGE_BUCKET must be a valid binding/,
     );
   });
 

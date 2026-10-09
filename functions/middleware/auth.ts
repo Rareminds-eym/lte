@@ -2,6 +2,7 @@ import type { VerifiedAuthUser as AuthUser, VerifiedAuthContext } from "@raremin
 import { createAuth } from "@rareminds-eym/auth-core";
 import { validateBackendEnv } from "../lib/env";
 import type { LteEnv } from "../lib/types";
+import { requestCorrelation } from "./requestContext";
 
 // Memoize the Auth instance per SSO_SERVICE binding reference so per-instance
 // caches inside auth-core (e.g. JWKS) survive across requests instead of being
@@ -32,6 +33,7 @@ export function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
       sso: ssoRpcRaw as unknown as Parameters<typeof createAuth>[0]["sso"],
       issuer: "sso-api",
       audience: "sso-client",
+      correlationId: (request) => requestCorrelation(request).requestId,
       approvedOrigins: [
         "https://lte.rareminds.in",
         "http://localhost:8080",

@@ -1,4 +1,4 @@
-import rules from "../../../ops/certificates/alerts.json";
+import rules from "@ops/certificates/alerts.json";
 export interface CertificateLogEvent {
   timestamp: number;
   event: string;
@@ -44,8 +44,13 @@ export class CertificateAlertMonitor {
     this.events = this.events.filter(
       (event) => event.timestamp > now - rules.windowSeconds * 1000 && event.timestamp <= now,
     );
-    const renders = this.events.filter((event) => event.event === "certificate.render");
-    const failures = renders.filter((event) => event.outcome === "failure").length;
+    const renders = this.events.filter(
+      (event) =>
+        event.event === "certificate.render" || event.event === "certificate.render_failed",
+    );
+    const failures = renders.filter(
+      (event) => event.outcome === "failure" || event.event === "certificate.render_failed",
+    ).length;
     const issuance = this.events.filter(
       (event) => event.event === "certificate.issue_failed",
     ).length;

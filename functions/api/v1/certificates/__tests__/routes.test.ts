@@ -4,9 +4,8 @@ import {
   onRequestOptions,
   onRequestGet as verify,
 } from "@functions/api/v1/public/certificates/[credentialId]";
+import { certificatePdf, ensureCertificatesForUser } from "@functions/lib/certificates";
 import { env, gateway, row, userId } from "@functions/lib/certificates/__tests__/fixtures";
-import { ensureCertificatesForUser } from "@functions/lib/certificates/reconcile";
-import { certificatePdf } from "@functions/lib/certificates/storage";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
@@ -20,10 +19,11 @@ vi.mock("@functions/lib/query-gateway", async (original) => ({
   ...(await original<typeof import("@functions/lib/query-gateway")>()),
   createServiceQueryGateway: vi.fn(),
 }));
-vi.mock("@functions/lib/certificates/reconcile", () => ({ ensureCertificatesForUser: vi.fn() }));
-vi.mock("@functions/lib/certificates/storage", async (original) => ({
-  ...(await original<typeof import("@functions/lib/certificates/storage")>()),
+vi.mock("@functions/lib/certificates", async (original) => ({
+  ...(await original<typeof import("@functions/lib/certificates")>()),
   certificatePdf: vi.fn(),
+  ensureCertificatesForUser: vi.fn(),
+  drainCertificateStorageCleanup: vi.fn().mockResolvedValue(0),
 }));
 vi.mock("@functions/middleware", async (original) => ({
   ...(await original<typeof import("@functions/middleware")>()),
@@ -44,6 +44,7 @@ function context(path = "", origin = env.SKILLPASSPORT_INTERNAL_URL) {
     params: { credentialId: row.credential_id },
     data: { user: { sub: userId } },
     next: vi.fn().mockResolvedValue(new Response()),
+    waitUntil: vi.fn(),
   } as unknown as PagesContext;
 }
 beforeEach(() => {
@@ -138,6 +139,17 @@ it("keeps stored certificates readable after reconciliation failure", async () =
   vi.mocked(createServiceQueryGateway).mockReturnValue(qb);
   vi.mocked(ensureCertificatesForUser).mockRejectedValueOnce(new Error("issue failed"));
   expect((await list(context())).status).toBe(200);
+});
+it("treats malformed database output as unavailable, not invalid client input", async () => {
+  const { qb, read } = gateway();
+  read.mockResolvedValue({ ...row, completion_date: "invalid" });
+  vi.mocked(createServiceQueryGateway).mockReturnValue(qb);
+  expect((await detail(context())).status).toBe(503);
+  expect((await verify(context())).status).toBe(503);
+  expect(createServiceQueryGateway).toHaveBeenCalledWith(expect.anything(), {
+    requestId: expect.any(String),
+    traceparent: expect.any(String),
+  });
 });
 it("serves internal pages and PDFs only behind service authentication", async () => {
   const { qb, read } = gateway();

@@ -1,9 +1,9 @@
 import { asQueryGateway, type QueryGatewaySource } from "@functions/lib/query-gateway";
 import { z } from "zod";
-import { generateCredentialId } from "./credential-id";
+import { generateCredentialId } from "./credentialId";
 import { certificateLogger, errorCode, logCertificateFailure } from "./logging";
 import { certificateReplacePolicy } from "./queries";
-import type { CertificateRow } from "./types";
+import { type CertificateRow, certificateRowSchema, parseCertificateData } from "./types";
 
 const correctionsSchema = z
   .object({
@@ -35,15 +35,18 @@ export async function replaceCertificate(
     const qb = asQueryGateway(source);
     for (let attempt = 0; ; attempt++) {
       try {
-        const result = (await qb.rpc(certificateReplacePolicy, {
-          args: {
-            p_certificate_id: value.certificateId,
-            p_actor_id: value.actorId,
-            p_reason: value.reason,
-            p_credential_id: generateCredentialId(),
-            p_corrections: value.corrections,
-          },
-        })) as CertificateRow;
+        const result = parseCertificateData(
+          certificateRowSchema,
+          await qb.rpc(certificateReplacePolicy, {
+            args: {
+              p_certificate_id: value.certificateId,
+              p_actor_id: value.actorId,
+              p_reason: value.reason,
+              p_credential_id: generateCredentialId(),
+              p_corrections: value.corrections,
+            },
+          }),
+        );
         certificateLogger.info("certificate.replaced", {
           requestId,
           certificateId: result.id,

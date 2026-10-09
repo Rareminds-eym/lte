@@ -1,5 +1,4 @@
-import { logCertificateFailure } from "@functions/lib/certificates/logging";
-import { ensureCertificatesForUser } from "@functions/lib/certificates/reconcile";
+import { ensureCertificatesForUser, logCertificateFailure } from "@functions/lib/certificates";
 import { jsonError, jsonResponse, readJsonObject } from "@functions/lib/http";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv, PagesContext } from "@functions/lib/types";

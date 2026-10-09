@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createQueryGateway, QueryGatewayDatabaseError, QueryGatewayError } from "../index";
 
 interface MockChain {
+  is: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   neq: ReturnType<typeof vi.fn>;
   gt: ReturnType<typeof vi.fn>;
@@ -26,6 +27,7 @@ interface MockChain {
 
 function createChain(data: unknown = [], error: unknown = null): MockChain {
   const chain: MockChain = {
+    is: vi.fn().mockImplementation(() => chain),
     eq: vi.fn().mockImplementation(() => chain),
     neq: vi.fn().mockImplementation(() => chain),
     gt: vi.fn().mockImplementation(() => chain),
@@ -58,6 +60,21 @@ function createSupabase(chain: MockChain): SupabaseClient {
 }
 
 describe("query gateway", () => {
+  it("uses IS NULL for compare-and-swap instead of SQL equality with null", async () => {
+    const chain = createChain([{ id: "certificate" }]);
+    const qb = createQueryGateway(createSupabase(chain));
+    const policy = {
+      table: "certificates",
+      operation: "read",
+      columns: ["id"],
+      filters: ["pdf_object_key"],
+    } as const;
+    await qb.read(policy, { filters: [{ column: "pdf_object_key", op: "is", value: null }] });
+    expect(chain.is).toHaveBeenCalledWith("pdf_object_key", null);
+    await expect(
+      qb.read(policy, { filters: [{ column: "pdf_object_key", op: "is", value: "bad" }] }),
+    ).rejects.toMatchObject({ code: "INVALID_FILTER_VALUE" });
+  });
   it("reads with allowed filters, sorting, and clamped pagination", async () => {
     const chain = createChain([{ id: "level-1" }]);
     const supabase = createSupabase(chain);

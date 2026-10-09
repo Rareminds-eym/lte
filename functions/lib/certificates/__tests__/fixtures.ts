@@ -36,17 +36,41 @@ export function gateway() {
   const read = vi.fn();
   const insert = vi.fn();
   const update = vi.fn();
+  const rpc = vi.fn();
   const qb = {
     read,
     insert,
     update,
     upsert: vi.fn(),
     delete: vi.fn(),
-    rpc: vi.fn(),
+    rpc,
   } as unknown as QueryGateway;
-  return { qb, read, insert, update };
+  return { qb, read, insert, update, rpc };
 }
 export const env = {
+  ASSETS: { fetch: vi.fn() },
+  LTE_SYNC_QUEUE: { send: vi.fn() },
+  RATE_LIMIT_KV: {
+    list: vi.fn().mockResolvedValue({ keys: [], list_complete: true }),
+    put: vi.fn(),
+  },
+  SSO_SERVICE: {
+    getUserById: vi.fn(),
+    getUserMemberships: vi.fn(),
+    getJwks: vi.fn(),
+    exchangeAuthorizationCode: vi.fn(),
+    provisionLteAccess: vi.fn(),
+  },
+  STORAGE_BUCKET: {
+    get: vi.fn(),
+    put: vi.fn(),
+    head: vi.fn(),
+    delete: vi.fn(),
+    list: vi.fn().mockResolvedValue({ objects: [], truncated: false }),
+  },
+  SUPABASE_URL: "https://example.supabase.co",
+  SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
+  OPENROUTER_API_KEY: "test-openrouter-key",
   CF_ACCOUNT_ID: "a".repeat(32),
   BROWSER_RENDERING_API_TOKEN: "private-test-render-token",
   CERTIFICATE_VERIFY_BASE_URL: "https://skillpassport.rareminds.in/verify",

@@ -3,6 +3,7 @@ import { apiFetch } from "./client";
 export { ApiError } from "./ApiError";
 export { authClient } from "./authClient";
 export { apiFetch, apiFetchBlob, apiPreAuthFetch } from "./client";
+export { requestCorrelationHeaders } from "./requestContext";
 
 export async function apiGet<T = unknown>(url: string, options?: RequestInit): Promise<T> {
   return apiFetch<T>(url, {

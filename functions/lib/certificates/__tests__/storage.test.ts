@@ -1,11 +1,11 @@
 import type { LteEnv } from "@functions/lib/types";
 import { beforeEach, expect, it, vi } from "vitest";
-import { renderPdf } from "../pdf-renderer";
+import { renderPdf } from "../pdfRenderer";
 import { certificatePdf } from "../storage";
 import { CERTIFICATE_TEMPLATE_VERSION } from "../template";
 import { env, gateway, row } from "./fixtures";
 
-vi.mock("../pdf-renderer", () => ({ renderPdf: vi.fn() }));
+vi.mock("../pdfRenderer", () => ({ renderPdf: vi.fn() }));
 beforeEach(() => vi.clearAllMocks());
 function setup() {
   const mock = gateway();
@@ -78,6 +78,30 @@ it.each([
     status: current ? 410 : 404,
   });
   expect(bucket.delete).toHaveBeenCalledOnce();
+});
+it("a concurrent loser deletes only its own unique upload, never the winner cache", async () => {
+  const { qb, runtime, update, read, bucket, rpc } = setup();
+  update.mockResolvedValueOnce([{ id: row.id }]).mockResolvedValueOnce([]);
+  await certificatePdf(qb, runtime, row, "winner");
+  const winningKey = bucket.put.mock.calls[0]?.[0];
+  read.mockResolvedValue({ ...row, pdf_object_key: winningKey });
+  await expect(certificatePdf(qb, runtime, row, "loser")).rejects.toMatchObject({ status: 503 });
+  const losingKey = bucket.put.mock.calls[1]?.[0];
+  expect(losingKey).not.toBe(winningKey);
+  expect(bucket.delete).toHaveBeenCalledWith(losingKey);
+  expect(bucket.delete).not.toHaveBeenCalledWith(winningKey);
+  expect(rpc.mock.invocationCallOrder[0]).toBeLessThan(bucket.put.mock.invocationCallOrder[0]!);
+  expect(update.mock.calls[0]?.[1].filters).toContainEqual({
+    column: "pdf_object_key",
+    op: "is",
+    value: null,
+  });
+});
+it("does not upload when durable cleanup registration fails", async () => {
+  const { qb, runtime, rpc, bucket } = setup();
+  rpc.mockRejectedValueOnce(new Error("registration failed"));
+  await expect(certificatePdf(qb, runtime, row, "request")).rejects.toThrow("registration failed");
+  expect(bucket.put).not.toHaveBeenCalled();
 });
 it("propagates render failure and does not write an object", async () => {
   const { qb, runtime, bucket } = setup();

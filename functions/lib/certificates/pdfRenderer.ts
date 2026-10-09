@@ -1,3 +1,5 @@
+import { CERTIFICATE_CONFIG } from "./config";
+
 export class PdfRenderRateLimitedError extends Error {
   constructor(public readonly retryAfterSeconds: number) {
     super("PDF renderer busy");
@@ -12,6 +14,7 @@ export class PdfRenderUpstreamError extends Error {
 export async function renderPdf(
   env: { CF_ACCOUNT_ID?: string; BROWSER_RENDERING_API_TOKEN?: string },
   html: string,
+  correlation?: { requestId: string; traceparent?: string },
 ): Promise<ArrayBuffer> {
   if (
     !env.CF_ACCOUNT_ID ||
@@ -19,7 +22,7 @@ export async function renderPdf(
     !env.BROWSER_RENDERING_API_TOKEN
   )
     throw new PdfRenderUpstreamError(503);
-  const signal = AbortSignal.timeout(25_000);
+  const signal = AbortSignal.timeout(CERTIFICATE_CONFIG.rendererTimeoutMs);
   try {
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/browser-run/pdf`,
@@ -28,6 +31,8 @@ export async function renderPdf(
         headers: {
           Authorization: `Bearer ${env.BROWSER_RENDERING_API_TOKEN}`,
           "Content-Type": "application/json",
+          ...(correlation?.requestId ? { "X-Request-Id": correlation.requestId } : {}),
+          ...(correlation?.traceparent ? { traceparent: correlation.traceparent } : {}),
         },
         body: JSON.stringify({
           html,
@@ -35,7 +40,8 @@ export async function renderPdf(
             format: "a4",
             landscape: true,
             printBackground: true,
-            preferCSSPageSize: true,
+            preferCSSPageSize: false,
+            margin: { top: 0, right: 0, bottom: 0, left: 0 },
           },
           rejectRequestPattern: ["^https?://.*"],
           setJavaScriptEnabled: false,

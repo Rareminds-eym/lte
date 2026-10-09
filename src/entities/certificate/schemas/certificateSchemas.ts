@@ -1,4 +1,10 @@
 import { z } from "zod";
+export const certificateFiltersSchema = z
+  .object({
+    type: z.enum(["course_completion", "role_readiness"]).optional(),
+    levelId: z.uuid().optional(),
+  })
+  .strict();
 export const certificateSchema = z.object({
   credentialId: z.string().regex(/^LTE-[0-9A-HJKMNP-TV-Z]{16}$/),
   certificateType: z.enum(["course_completion", "role_readiness"]),

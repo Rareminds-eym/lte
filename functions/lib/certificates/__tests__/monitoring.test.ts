@@ -2,6 +2,14 @@ import { expect, it } from "vitest";
 import { CertificateAlertMonitor, parseCertificateLog } from "../monitoring";
 
 const now = Date.parse("2026-10-08T09:00:00Z");
+it("counts the actual render-failure event but not unrelated cleanup or list failures", () => {
+  const monitor = new CertificateAlertMonitor();
+  monitor.ingest({ timestamp: now, event: "certificate.list_failed" }, now);
+  monitor.ingest({ timestamp: now, event: "certificate.storage_cleanup_failed" }, now);
+  expect(monitor.ingest({ timestamp: now, event: "certificate.render_failed" }, now)).toMatchObject(
+    [{ rule: "render_failure_rate", state: "firing", count: 1, total: 1 }],
+  );
+});
 it("fires each configured threshold, deduplicates, and resolves after fifteen minutes", () => {
   const monitor = new CertificateAlertMonitor();
   expect(

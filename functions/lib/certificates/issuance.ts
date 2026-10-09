@@ -3,33 +3,30 @@ import {
   type QueryGateway,
   type QueryGatewaySource,
 } from "@functions/lib/query-gateway";
-import { awardXp } from "@functions/lib/xp-engine.core";
-import { generateCredentialId } from "./credential-id";
-import { resolveLearnerName } from "./learner-name";
+import { XP_AMOUNTS } from "@functions/lib/xp-engine.core";
+import { generateCredentialId } from "./credentialId";
+import { resolveLearnerName } from "./learnerName";
 import { certificateLogger, errorCode, logCertificateFailure } from "./logging";
 import {
-  certificateFinalizePolicy,
-  certificateInsertPolicy,
+  certificateFinalizeAtomicPolicy,
+  certificateIssuePolicy,
   certificateNamePolicy,
   certificateOwnerReadPolicy,
   readAll,
 } from "./queries";
 import { courseSnapshot, rolePath, roleSnapshot } from "./snapshots";
-import type { CertificateEnv, CertificateRow, IssueResult } from "./types";
+import {
+  atomicIssueResultSchema,
+  type CertificateEnv,
+  type CertificateRow,
+  certificateRowSchema,
+  type IssueResult,
+  parseCertificateData,
+} from "./types";
 
-export async function awardCertificateXp(qb: QueryGateway, row: CertificateRow): Promise<void> {
-  if (row.status === "issued" && !row.supersedes_id)
-    await awardXp(qb, row.user_id, "certificate_earned", "certificates", row.id, {
-      credential_id: row.credential_id,
-      certificate_type: row.certificate_type,
-    });
-}
-async function result(
-  qb: QueryGateway,
-  row: CertificateRow,
-  created: boolean,
-): Promise<IssueResult> {
-  await awardCertificateXp(qb, row);
+const certificateXpAmount = XP_AMOUNTS["certificate_earned"] ?? 0;
+
+function result(row: CertificateRow, created: boolean): IssueResult {
   return { certificateId: row.id, credentialId: row.credential_id, status: row.status, created };
 }
 async function nameFor(qb: QueryGateway, userId: string) {
@@ -62,37 +59,51 @@ async function issue(
     });
   try {
     const previous = await existing();
-    if (previous) return await result(qb, previous, false);
+    if (previous) return result(parseCertificateData(certificateRowSchema, previous), false);
     const [display, learnerName] = await Promise.all([snapshot(), nameFor(qb, userId)]);
     for (let attempt = 0; attempt < 3; attempt++) {
-      let row: CertificateRow;
       try {
-        row = await qb.insert<CertificateRow>(
-          certificateInsertPolicy,
-          {
-            ...display,
-            credential_id: generateCredentialId(),
-            learner_name: learnerName,
-            status: learnerName ? "issued" : "pending_name",
-            issued_at: learnerName ? new Date().toISOString() : null,
-          },
-          { auth: { userId }, result: "single" },
+        const issuedAt = learnerName ? new Date().toISOString() : null;
+        const rpcResult = parseCertificateData(
+          atomicIssueResultSchema,
+          await qb.rpc(certificateIssuePolicy, {
+            auth: { userId },
+            args: {
+              p_credential_id: generateCredentialId(),
+              p_certificate_type: display["certificate_type"],
+              p_status: learnerName ? "issued" : "pending_name",
+              p_level_id: display["level_id"] ?? null,
+              p_role_id: display["role_id"] ?? null,
+              p_learning_path_id: display["learning_path_id"] ?? null,
+              p_level_progress_id: display["level_progress_id"] ?? null,
+              p_learner_name: learnerName,
+              p_title: display["title"],
+              p_subtitle: display["subtitle"] ?? null,
+              p_level_label: display["level_label"] ?? null,
+              p_badge: display["badge"] ?? null,
+              p_completion_date: display["completion_date"],
+              p_metadata: display["metadata"] ?? {},
+              p_issued_at: issuedAt,
+              p_xp_amount: certificateXpAmount,
+            },
+          }),
         );
+        const row = rpcResult.certificate;
+        if (rpcResult.created) {
+          certificateLogger.info("certificate.issued", {
+            requestId,
+            certificateId: row.id,
+            type: row.certificate_type,
+            status: row.status,
+            created: true,
+          });
+        }
+        return result(row, rpcResult.created);
       } catch (error) {
-        if (errorCode(error) !== "23505") throw error;
+        if (errorCode(error) !== "23505" || attempt === 2) throw error;
         const winner = await existing();
-        if (winner) return await result(qb, winner, false);
-        if (attempt === 2) throw error;
-        continue;
+        if (winner) return result(parseCertificateData(certificateRowSchema, winner), false);
       }
-      certificateLogger.info("certificate.issued", {
-        requestId,
-        certificateId: row.id,
-        type: row.certificate_type,
-        status: row.status,
-        created: true,
-      });
-      return await result(qb, row, true);
     }
     throw new Error("Credential collision retries exhausted");
   } catch (error) {
@@ -140,21 +151,23 @@ export async function finalizePendingNames(
   let count = 0;
   for (const row of pending) {
     try {
-      const updated = await qb.update<CertificateRow[]>(certificateFinalizePolicy, {
-        data: { learner_name: learnerName, status: "issued", issued_at: new Date().toISOString() },
-        filters: [
-          { column: "id", op: "eq", value: row.id },
-          { column: "status", op: "eq", value: "pending_name" },
-        ],
+      const raw = await qb.rpc(certificateFinalizeAtomicPolicy, {
+        auth: { userId },
+        args: {
+          p_certificate_id: row.id,
+          p_learner_name: learnerName,
+          p_issued_at: new Date().toISOString(),
+          p_xp_amount: certificateXpAmount,
+        },
       });
-      for (const issued of updated ?? []) {
-        await awardCertificateXp(qb, issued);
+      const parsed = parseCertificateData(certificateRowSchema.nullable(), raw);
+      if (parsed) {
         count++;
         certificateLogger.info("certificate.issued", {
           requestId: env.requestId ?? crypto.randomUUID(),
-          certificateId: issued.id,
-          type: issued.certificate_type,
-          status: issued.status,
+          certificateId: parsed.id,
+          type: parsed.certificate_type,
+          status: parsed.status,
           created: false,
         });
       }

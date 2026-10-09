@@ -1,6 +1,6 @@
 /** Run via npm run certificates:sample. Reads local .dev.vars through Node --env-file. */
 import { writeFile } from 'node:fs/promises';
-import { renderPdf } from '../../functions/lib/certificates/pdf-renderer';
+import { renderPdf } from '../../functions/lib/certificates/pdfRenderer';
 import { certificateHtml } from '../../functions/lib/certificates/template';
 import type { CertificateRow } from '../../functions/lib/certificates/types';
 

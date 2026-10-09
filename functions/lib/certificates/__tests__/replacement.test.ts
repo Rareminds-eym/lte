@@ -1,11 +1,8 @@
 import { QueryGatewayDatabaseError } from "@functions/lib/query-gateway";
-import { awardXp } from "@functions/lib/xp-engine.core";
 import { describe, expect, it, vi } from "vitest";
-import { awardCertificateXp } from "../issuance";
 import { replaceCertificate } from "../replacement";
 import { gateway, row, userId } from "./fixtures";
 
-vi.mock("@functions/lib/xp-engine.core", () => ({ awardXp: vi.fn() }));
 const input = {
   certificateId: row.id,
   actorId: userId,
@@ -40,11 +37,6 @@ describe("ops replacement", () => {
       } as typeof input),
     ).rejects.toThrow();
     expect(qb.rpc).not.toHaveBeenCalled();
-  });
-  it("never awards extra XP for a replacement", async () => {
-    const { qb } = gateway();
-    await awardCertificateXp(qb, { ...row, supersedes_id: row.id });
-    expect(awardXp).not.toHaveBeenCalled();
   });
   it("retries credential collisions and propagates other errors", async () => {
     const { qb } = gateway();

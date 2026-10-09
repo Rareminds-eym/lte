@@ -1,4 +1,4 @@
-import { credentialIdSchema } from "@functions/lib/certificates/credential-id";
+import { credentialIdSchema } from "@functions/lib/certificates";
 import { z } from "zod";
 export const certificateTypeSchema = z.enum(["course_completion", "role_readiness"]);
 export const listQuerySchema = z

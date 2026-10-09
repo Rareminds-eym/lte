@@ -1,17 +1,47 @@
+import { validateBackendEnv } from "@functions/lib/env";
 import { jsonError } from "@functions/lib/http";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
+import { requestCorrelation } from "@functions/middleware";
 import { getAuthUser } from "@functions/middleware/auth";
 import { checkDistributedRateLimit } from "@functions/middleware/distributed-rate-limiter";
 import { rateLimitErrorResponse } from "@functions/middleware/rate-limiter";
 import { z } from "zod";
+import { logCertificateFailure, wasCertificateErrorLogged } from "./logging";
 import {
   PdfRenderRateLimitedError,
   PdfRenderTimeoutError,
   PdfRenderUpstreamError,
-} from "./pdf-renderer";
+} from "./pdfRenderer";
 import { CertificateDownloadError } from "./storage";
 import { verifyUrl } from "./template";
 import type { CertificateRow } from "./types";
+
+export function certificateRequestContext(context: PagesContext): {
+  requestId: string;
+  traceparent: string;
+} {
+  validateBackendEnv(context.env);
+  return requestCorrelation(context.request, context.data);
+}
+
+export function correlationHeaders(requestId: string, traceparent: string): HeadersInit {
+  return { "X-Request-Id": requestId, traceparent };
+}
+
+export function correlateResponse(
+  response: Response,
+  requestId: string,
+  traceparent: string,
+): Response {
+  const headers = new Headers(response.headers);
+  headers.set("X-Request-Id", requestId);
+  headers.set("traceparent", traceparent);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 export function summary(row: CertificateRow, env: LteEnv) {
   return {
     credentialId: row.credential_id,
@@ -74,6 +104,8 @@ export function certificateError(error: unknown, requestId: string): Response {
       code: "PDF_RENDER_UNAVAILABLE",
       requestId,
     });
+  if (!wasCertificateErrorLogged(error))
+    logCertificateFailure(error, { requestId, operation: "list" });
   return jsonError("Certificate service temporarily unavailable", 503, {
     code: "CERTIFICATE_UNAVAILABLE",
     requestId,

@@ -1,26 +1,19 @@
 import { jsonResponse } from "@functions/lib/http";
 import type { QueryGateway } from "@functions/lib/query-gateway";
 import type { LteEnv } from "@functions/lib/types";
+import {
+  certificateCursorSchema as cursorSchema,
+  type internalQuerySchema,
+} from "@functions/schemas/certificateInternal";
 import { z } from "zod";
-import { credentialIdSchema } from "./credential-id";
+
+export { internalQuerySchema } from "@functions/schemas/certificateInternal";
+
+import { credentialIdSchema } from "./credentialId";
 import { certificateInternalReadPolicy } from "./queries";
 import { verifyUrl } from "./template";
 import type { CertificateRow } from "./types";
-export const internalQuerySchema = z
-  .object({
-    userId: z.uuid().optional(),
-    updatedSince: z.iso.datetime({ offset: true }).optional(),
-    cursor: z.string().max(512).optional(),
-    limit: z.coerce.number().int().min(1).max(100).default(100),
-  })
-  .strict()
-  .refine(
-    (value) => Boolean(value.userId) !== Boolean(value.updatedSince),
-    "Provide userId or updatedSince",
-  );
-const cursorSchema = z
-  .object({ updatedAt: z.iso.datetime({ offset: true }), id: z.uuid() })
-  .strict();
+
 const internalItemSchema = z.object({
   credentialId: credentialIdSchema,
   userId: z.uuid(),
@@ -110,17 +103,18 @@ export async function internalPage(qb: QueryGateway, query: z.infer<typeof inter
     { column: "id", ascending: true },
   ];
   // Two disjoint reads implement lexicographic (updated_at, id) > cursor without raw PostgREST OR strings.
-  const same = cursor
-    ? await qb.read<CertificateRow[]>(certificateInternalReadPolicy, {
-        filters: [
-          ...filters,
-          { column: "updated_at", op: "eq", value: cursor.updatedAt },
-          { column: "id", op: "gt", value: cursor.id },
-        ],
-        sort,
-        limit: query.limit,
-      })
-    : [];
+  const same =
+    (cursor
+      ? await qb.read<CertificateRow[]>(certificateInternalReadPolicy, {
+          filters: [
+            ...filters,
+            { column: "updated_at", op: "eq", value: cursor.updatedAt },
+            { column: "id", op: "gt", value: cursor.id },
+          ],
+          sort,
+          limit: query.limit,
+        })
+      : []) ?? [];
   const later =
     same.length < query.limit
       ? await qb.read<CertificateRow[]>(certificateInternalReadPolicy, {
@@ -134,7 +128,7 @@ export async function internalPage(qb: QueryGateway, query: z.infer<typeof inter
           limit: query.limit - same.length,
         })
       : [];
-  const rows = [...same, ...later];
+  const rows = [...same, ...(later ?? [])];
   const last = rows.at(-1);
   // A full last page intentionally emits a cursor; its following empty page terminates the pull.
   return {

@@ -16,7 +16,7 @@ import { onRequestGet as verify } from '../../functions/api/v1/public/certificat
 import { onRequest as internalAuth } from '../../functions/api/v1/internal/certificates/_middleware';
 import { onRequestGet as internalList } from '../../functions/api/v1/internal/certificates/index';
 import { createServiceQueryGateway } from '../../functions/lib/query-gateway';
-import { signServiceToken } from '../../functions/lib/internal-service-token';
+import { signServiceToken } from '../../functions/lib/serviceToken';
 import { revokeCertificate } from '../../functions/lib/certificates/revocation';
 import type { LteEnv, PagesContext } from '../../functions/lib/types';
 

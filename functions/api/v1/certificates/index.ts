@@ -1,26 +1,49 @@
-import { certificateError, limitRequest, ownerId, summary } from "@functions/lib/certificates/http";
-import { logCertificateFailure } from "@functions/lib/certificates/logging";
-import { certificateOwnerReadPolicy, readAll } from "@functions/lib/certificates/queries";
-import { ensureCertificatesForUser } from "@functions/lib/certificates/reconcile";
-import type { CertificateRow } from "@functions/lib/certificates/types";
+import type { CertificateRow } from "@functions/lib/certificates";
+import {
+  CERTIFICATE_CONFIG,
+  certificateError,
+  certificateOwnerReadPolicy,
+  certificateRequestContext,
+  correlationHeaders,
+  drainCertificateStorageCleanup,
+  ensureCertificatesForUser,
+  limitRequest,
+  logCertificateFailure,
+  ownerId,
+  parseCertificateData,
+  readAll,
+  summary,
+} from "@functions/lib/certificates";
 import { jsonResponse } from "@functions/lib/http";
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
 import type { PagesContext } from "@functions/lib/types";
-import { listQuerySchema, listResponseSchema } from "./schemas";
+import { listQuerySchema, listResponseSchema } from "@functions/schemas";
 export async function onRequestGet(context: PagesContext): Promise<Response> {
-  const requestId = crypto.randomUUID();
+  const correlation = certificateRequestContext(context);
+  const { requestId, traceparent } = correlation;
   try {
     const userId = ownerId(context);
-    const limited = await limitRequest(context, userId, "certificates", 60, requestId);
+    const limited = await limitRequest(
+      context,
+      userId,
+      "certificates",
+      CERTIFICATE_CONFIG.listRateLimit,
+      requestId,
+    );
     if (limited) return limited;
     const query = listQuerySchema.parse(
       Object.fromEntries(new URL(context.request.url).searchParams),
     );
-    const qb = createServiceQueryGateway(context.env);
+    const qb = createServiceQueryGateway(context.env, { requestId, traceparent });
+    context.waitUntil(
+      drainCertificateStorageCleanup(qb, context.env, requestId).catch((error) => {
+        logCertificateFailure(error, { requestId, operation: "storage_cleanup" });
+      }),
+    );
     try {
-      await ensureCertificatesForUser(qb, { requestId }, userId);
+      await ensureCertificatesForUser(qb, correlation, userId);
     } catch (error) {
-      logCertificateFailure(error, { requestId, userId, operation: "list_reconcile" });
+      logCertificateFailure(error, { requestId, userId, operation: "reconcile" });
     }
     const filters = [
       ...(query.type ? [{ column: "certificate_type", op: "eq" as const, value: query.type }] : []),
@@ -35,10 +58,20 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       ],
     });
     return jsonResponse(
-      listResponseSchema.parse({ certificates: rows.map((row) => summary(row, context.env)) }),
-      { headers: { "Cache-Control": "private, no-store", "X-Request-Id": requestId } },
+      parseCertificateData(listResponseSchema, {
+        certificates: rows.map((row) => summary(row, context.env)),
+      }),
+      {
+        headers: {
+          "Cache-Control": "private, no-store",
+          ...correlationHeaders(requestId, traceparent),
+        },
+      },
     );
   } catch (error) {
-    return certificateError(error, requestId);
+    const response = certificateError(error, requestId);
+    for (const [key, value] of Object.entries(correlationHeaders(requestId, traceparent)))
+      response.headers.set(key, value);
+    return response;
   }
 }

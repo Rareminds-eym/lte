@@ -5,6 +5,10 @@
    Change values here to rebrand the entire app.
    ══════════════════════════════════════════════════════════════════════════════ */
 @theme {
+  /* Fixed paper dimensions for the server-rendered certificate. */
+  --spacing-certificate-width: 297mm;
+  --spacing-certificate-height: 210mm;
+
   /* ── Brand (primary blue) ── */
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;

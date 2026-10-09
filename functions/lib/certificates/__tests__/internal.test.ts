@@ -1,16 +1,16 @@
 import { onRequest } from "@functions/api/v1/internal/certificates/_middleware";
 import { onRequestGet } from "@functions/api/v1/internal/certificates/index";
-import { signServiceToken, verifyServiceToken } from "@functions/lib/internal-service-token";
+import { signServiceToken } from "@functions/lib/serviceToken";
 import type { PagesContext } from "@functions/lib/types";
 import { beforeEach, expect, it, vi } from "vitest";
-import { certificateError } from "../http";
+import { certificateError, certificateRequestContext } from "../http";
 import {
   internalItem,
   internalPage,
   internalQuerySchema,
   internalResponseSchema,
 } from "../internal";
-import { PdfRenderRateLimitedError, PdfRenderTimeoutError } from "../pdf-renderer";
+import { PdfRenderRateLimitedError, PdfRenderTimeoutError } from "../pdfRenderer";
 import { CertificateDownloadError } from "../storage";
 import { env, gateway, row, userId } from "./fixtures";
 
@@ -19,30 +19,8 @@ const claims = () => {
   const now = Math.floor(Date.now() / 1000);
   return { app: "skillpassport", actions: ["certificates.read"], iat: now, exp: now + 300 };
 };
-beforeEach(() => vi.clearAllMocks());
-it("uses the unchanged service token wire format", async () => {
-  const expected = claims();
-  const token = await signServiceToken(secret, expected);
-  expect(await verifyServiceToken(secret, token)).toEqual(expected);
-  expect(JSON.parse(atob(token.split(".")[0]!))).toEqual({ alg: "HS256", typ: "svc" });
-});
-it("rejects invalid signatures, expired/future/overlong tokens and malformed claims", async () => {
-  const token = await signServiceToken(secret, claims());
-  for (const invalid of ["bad", "a.b.c", `${token}x`, "x".repeat(9000)])
-    await expect(verifyServiceToken(secret, invalid)).rejects.toThrow();
-  await expect(
-    verifyServiceToken("different-secret-that-is-32-characters", token),
-  ).rejects.toThrow();
-  for (const value of [
-    { ...claims(), exp: 1 },
-    { ...claims(), exp: claims().exp + 1 },
-    { ...claims(), iat: claims().iat + 60 },
-    { ...claims(), nbf: claims().iat + 60 },
-    { ...claims(), actions: "bad" },
-  ]) {
-    const signed = await signServiceToken(secret, value as ReturnType<typeof claims>);
-    await expect(verifyServiceToken(secret, signed)).rejects.toThrow();
-  }
+beforeEach(() => {
+  vi.clearAllMocks();
 });
 function context(token?: string): PagesContext {
   return {
@@ -61,9 +39,9 @@ function context(token?: string): PagesContext {
     data: {},
   } as unknown as PagesContext;
 }
-it("middleware returns 401 for absent/bad tokens and 403 for wrong app/action", async () => {
+it("middleware preserves the legacy service contract and enforces app/actions", async () => {
   expect((await onRequest(context())).status).toBe(401);
-  expect((await onRequest(context("broken"))).status).toBe(401);
+  expect((await onRequest(context("bad"))).status).toBe(401);
   for (const value of [
     { ...claims(), app: "lte" },
     { ...claims(), actions: ["other"] },
@@ -72,16 +50,45 @@ it("middleware returns 401 for absent/bad tokens and 403 for wrong app/action", 
   expect((await onRequest(context(await signServiceToken(secret, claims())))).status).toBe(200);
   expect((await onRequestGet(context())).status).toBe(401);
 });
+it("does not invoke handlers or rate-limit storage for rejected service tokens", async () => {
+  const ctx = context("bad");
+  const response = await onRequest(ctx);
+  expect(response.status).toBe(401);
+  expect(ctx.next).not.toHaveBeenCalled();
+  expect(ctx.env.RATE_LIMIT_KV.list).not.toHaveBeenCalled();
+  expect(ctx.data?.["certificateServiceApp"]).toBeUndefined();
+});
+it("preserves request correlation through middleware and the certificate handler", async () => {
+  const ctx = context(await signServiceToken(secret, claims()));
+  const traceparent = "00-1234567890abcdef1234567890abcdef-1234567890abcdef-01";
+  ctx.request.headers.set("X-Request-Id", "12345678-1234-4234-8234-123456789abc");
+  ctx.request.headers.set("traceparent", traceparent);
+  const response = await onRequest(ctx);
+  expect(response.headers.get("X-Request-Id")).toBe("12345678-1234-4234-8234-123456789abc");
+  expect(response.headers.get("traceparent")).toBe(traceparent);
+  expect(certificateRequestContext(ctx)).toEqual({
+    requestId: "12345678-1234-4234-8234-123456789abc",
+    traceparent,
+  });
+  expect(ctx.data?.["certificateServiceApp"]).toBe("skillpassport");
+
+  const generated = context(await signServiceToken(secret, claims()));
+  const generatedResponse = await onRequest(generated);
+  expect(certificateRequestContext(generated)).toEqual({
+    requestId: generatedResponse.headers.get("X-Request-Id"),
+    traceparent: generatedResponse.headers.get("traceparent"),
+  });
+});
 it("middleware bounds app requests and fails closed on KV outages", async () => {
   const ctx = context(await signServiceToken(secret, claims()));
-  vi.mocked(ctx.env.RATE_LIMIT_KV!.list).mockResolvedValue({
+  vi.mocked(ctx.env.RATE_LIMIT_KV.list).mockResolvedValue({
     keys: Array.from({ length: 600 }, () => ({ name: "hit" })),
     list_complete: true,
   });
   const response = await onRequest(ctx);
   expect(response.status).toBe(429);
   expect(await response.json()).toMatchObject({ ok: false, error: { code: "RATE_LIMITED" } });
-  vi.mocked(ctx.env.RATE_LIMIT_KV!.list).mockRejectedValue(new Error("KV failed"));
+  vi.mocked(ctx.env.RATE_LIMIT_KV.list).mockRejectedValue(new Error("KV failed"));
   expect((await onRequest(ctx)).status).toBe(503);
 });
 it("validates internal modes, cursors, and field mapping", async () => {

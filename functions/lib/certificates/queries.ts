@@ -100,7 +100,7 @@ export const certificatePdfUpdatePolicy = {
   operation: "update",
   updateColumns: ["pdf_object_key", "pdf_template_version", "pdf_generated_at"],
   requireFilter: true,
-  filters: ["user_id", "id", "status"],
+  filters: ["user_id", "id", "status", "pdf_object_key"],
   returningColumns: ["id"],
 } as const;
 export const certificateRevokePolicy = {
@@ -189,4 +189,33 @@ export const certificateReplacePolicy = {
   operation: "rpc",
   functionName: "replace_certificate",
   allowedArgs: ["p_certificate_id", "p_actor_id", "p_reason", "p_credential_id", "p_corrections"],
+} as const;
+export const certificateIssuePolicy = {
+  operation: "rpc",
+  functionName: "issue_certificate_atomic",
+  allowedArgs: [
+    "p_credential_id",
+    "p_certificate_type",
+    "p_status",
+    "p_level_id",
+    "p_role_id",
+    "p_learning_path_id",
+    "p_level_progress_id",
+    "p_learner_name",
+    "p_title",
+    "p_subtitle",
+    "p_level_label",
+    "p_badge",
+    "p_completion_date",
+    "p_metadata",
+    "p_issued_at",
+    "p_xp_amount",
+  ],
+  ownership: { arg: "p_user_id", source: "authenticatedUserId", required: true },
+} as const;
+export const certificateFinalizeAtomicPolicy = {
+  operation: "rpc",
+  functionName: "finalize_certificate_name_atomic",
+  allowedArgs: ["p_certificate_id", "p_learner_name", "p_issued_at", "p_xp_amount"],
+  ownership: { arg: "p_user_id", source: "authenticatedUserId", required: true },
 } as const;

@@ -1,4 +1,5 @@
 import type { QueryGateway } from "@functions/lib/query-gateway";
+import { z } from "zod";
 import {
   completedLevelsPolicy,
   completedPathsPolicy,
@@ -8,7 +9,9 @@ import {
   roleSnapshotPolicy,
   trackSnapshotPolicy,
 } from "./queries";
+import { completedLevelSchema, completedPathSchema, levelSchema } from "./snapshotSchemas";
 import type { CertificateRow } from "./types";
+import { parseCertificateData } from "./types";
 
 export interface CompletedLevel {
   id: string;
@@ -27,37 +30,37 @@ export interface CompletedPath {
   badge: string | null;
   role_readiness_percentage: number;
 }
-interface Level {
-  title: string;
-  level_code: string;
-  duration_minutes: number;
-  capabilities: { code: string; name: string };
-  level_scale: { level_no: number };
-}
 const badge = (value: string | null): CertificateRow["badge"] =>
   value === "developing" || value === "skilled" || value === "mastery" ? value : null;
 export async function courseSnapshot(
   qb: QueryGateway,
   input: { userId: string; levelId: string; levelProgressId: string; learningPathId?: string },
 ) {
-  const progress = await qb.read<CompletedLevel | null>(completedLevelsPolicy, {
-    auth: { userId: input.userId },
-    filters: [
-      { column: "id", op: "eq", value: input.levelProgressId },
-      { column: "level_id", op: "eq", value: input.levelId },
-    ],
-    result: "maybeSingle",
-  });
+  const progress = parseCertificateData(
+    completedLevelSchema.nullable(),
+    await qb.read(completedLevelsPolicy, {
+      auth: { userId: input.userId },
+      filters: [
+        { column: "id", op: "eq", value: input.levelProgressId },
+        { column: "level_id", op: "eq", value: input.levelId },
+      ],
+      result: "maybeSingle",
+    }),
+  );
   if (
     progress?.status !== "completed" ||
     !progress.completed_at ||
     (input.learningPathId && progress.learning_path_id !== input.learningPathId)
   )
     throw new Error("Course is not completed");
-  const level = await qb.read<Level>(levelSnapshotPolicy, {
-    filters: [{ column: "id", op: "eq", value: input.levelId }],
-    result: "single",
-  });
+  const level = parseCertificateData(
+    levelSchema.nullable(),
+    await qb.read(levelSnapshotPolicy, {
+      filters: [{ column: "id", op: "eq", value: input.levelId }],
+      result: "single",
+    }),
+  );
+  if (!level) throw new Error("Certificate level snapshot not found");
   const modules = await readAll<{ id: string }>(qb, modulesSnapshotPolicy, {
     filters: [
       { column: "level_id", op: "eq", value: input.levelId },
@@ -86,11 +89,14 @@ export async function courseSnapshot(
   };
 }
 export async function rolePath(qb: QueryGateway, userId: string, learningPathId: string) {
-  const path = await qb.read<CompletedPath | null>(completedPathsPolicy, {
-    auth: { userId },
-    filters: [{ column: "id", op: "eq", value: learningPathId }],
-    result: "maybeSingle",
-  });
+  const path = parseCertificateData(
+    completedPathSchema.nullable(),
+    await qb.read(completedPathsPolicy, {
+      auth: { userId },
+      filters: [{ column: "id", op: "eq", value: learningPathId }],
+      result: "maybeSingle",
+    }),
+  );
   if (path?.status !== "completed" || !path.completed_at) throw new Error("Role is not completed");
   return path;
 }
@@ -111,12 +117,20 @@ export async function roleSnapshot(qb: QueryGateway, userId: string, path: Compl
       sort: [{ column: "id", ascending: true }],
     }),
   ]);
+  if (!role || !track) throw new Error("Certificate role snapshot not found");
+  const roleName = parseCertificateData(z.object({ role_name: z.string() }), role).role_name;
+  const trackName = parseCertificateData(z.object({ track: z.string() }), track).track;
+  parseCertificateData(z.array(completedLevelSchema), progress);
   const capabilities: Array<{ code: string; name: string; levelLabel: string }> = [];
   for (const item of progress) {
-    const level = await qb.read<Level>(levelSnapshotPolicy, {
-      filters: [{ column: "id", op: "eq", value: item.level_id }],
-      result: "single",
-    });
+    const level = parseCertificateData(
+      levelSchema.nullable(),
+      await qb.read(levelSnapshotPolicy, {
+        filters: [{ column: "id", op: "eq", value: item.level_id }],
+        result: "single",
+      }),
+    );
+    if (!level) throw new Error("Certificate capability snapshot not found");
     capabilities.push({ ...level.capabilities, levelLabel: `Level ${level.level_scale.level_no}` });
   }
   return {
@@ -125,8 +139,8 @@ export async function roleSnapshot(qb: QueryGateway, userId: string, path: Compl
     role_id: path.role_id,
     learning_path_id: path.id,
     level_progress_id: null,
-    title: role.role_name,
-    subtitle: track.track,
+    title: roleName,
+    subtitle: trackName,
     level_label: null,
     badge: badge(path.badge),
     completion_date: path.completed_at!,
