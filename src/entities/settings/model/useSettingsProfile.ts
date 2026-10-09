@@ -35,6 +35,7 @@ export const useUpdateProfile = () => {
     mutationFn: updateSettingsProfile,
     onSuccess: (updatedProfile) => {
       queryClient.setQueryData(settingsProfileQueryKey(userId), updatedProfile);
+      void queryClient.invalidateQueries({ queryKey: ["certificates"] });
     },
   });
 };

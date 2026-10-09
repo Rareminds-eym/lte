@@ -11,6 +11,7 @@ export const XP_AMOUNTS: Readonly<Record<string, number>> = xpRewards;
 
 // Event to category mapping (TRD-DB-007)
 export const XP_CATEGORIES: Record<string, "evidence" | "engagement"> = {
+  certificate_earned: "engagement",
   stage_completed: "evidence",
   practice_artifact_accepted: "evidence",
   practice_artifact_failed: "evidence",
@@ -61,6 +62,8 @@ export function generateIdempotencyKey(
   metadata: Record<string, unknown> = {},
 ): string {
   switch (eventType) {
+    case "certificate_earned":
+      return `cert:${userId}:${sourceId}`;
     case "stage_completed":
       return `stage:${userId}:${sourceId}`;
     case "practice_artifact_accepted":

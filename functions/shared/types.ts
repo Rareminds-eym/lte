@@ -8,7 +8,12 @@ export interface R2BucketBinding {
   ): Promise<unknown>;
   get(key: string, options?: unknown): Promise<unknown>;
   head(key: string): Promise<unknown>;
-  delete(key: string): Promise<void>;
+  delete(key: string | string[]): Promise<void>;
+  list?(options: { prefix: string; cursor?: string; limit?: number }): Promise<{
+    objects: Array<{ key: string }>;
+    truncated: boolean;
+    cursor?: string;
+  }>;
 }
 
 export interface AssetsBinding {
@@ -30,7 +35,7 @@ export interface RateLimitKvBinding {
 
 export interface LteEnv {
   /** Required by review routes and explicit learning-path refreshes. */
-  RATE_LIMIT_KV?: RateLimitKvBinding;
+  RATE_LIMIT_KV: RateLimitKvBinding;
   ASSETS: AssetsBinding;
   LTE_SYNC_QUEUE?: QueueSender;
   SSO_SERVICE: SsoRpcService;
@@ -42,6 +47,9 @@ export interface LteEnv {
   SKILLPASSPORT_INTERNAL_URL: string;
   SKILLPASSPORT_INTERNAL_SECRET: string;
   OPENROUTER_API_KEY?: string;
+  BROWSER_RENDERING_API_TOKEN: string;
+  CF_ACCOUNT_ID: string;
+  CERTIFICATE_VERIFY_BASE_URL: string;
 }
 
 export interface SsoSubscriptionSnapshot {

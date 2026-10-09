@@ -763,3 +763,7 @@ Rebuilds the graph automatically on every `git commit` (AST-only, free). Re-run 
 - [Vitest Documentation](https://vitest.dev/)
 - [Testing Library Documentation](https://testing-library.com/)
 - [Feature-Sliced Design](https://feature-sliced.design/)
+
+### Certificates
+
+Learners receive immutable course-completion and role-readiness certificates. Use **Certificates** in the sidebar, or download/share from a completed course. Add a missing name in Settings to finalize a pending certificate. PDFs render on demand and public verification is hosted by SkillPassport. Backend configuration, internal pull API, migration order, revocation and erasure procedures are documented in [functions/README.md](functions/README.md#certificates).

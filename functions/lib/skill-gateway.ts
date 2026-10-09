@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createLogger } from "../shared/logger";
+import { signServiceToken } from "./serviceToken";
 
 const logger = createLogger("skill-gateway");
 
@@ -7,9 +8,9 @@ const logger = createLogger("skill-gateway");
  * Caller-side client for the LTE ↔ SkillPassport internal gateway
  * (`POST {SKILLPASSPORT_INTERNAL_URL}/api/internal/lte/v1`).
  *
- * Signing is delegated to `@rareminds-eym/auth-core` (verifyJWT/createJWT
- * utilities) using the shared HMAC secret, then the gateway POSTs an action
- * envelope. Response is Zod-validated.
+ * This legacy HTTP gateway uses the shared HMAC service-token contract from
+ * dev; it is separate from SSO's typed Service Binding RPC and auth-core user
+ * authentication. Response envelopes are Zod-validated.
  *
  * Failure modes are typed: a non-ok / malformed / unreachable gateway throws
  * `GatewayCallError` — callers (learner-track) treat it as "fall through".
@@ -51,18 +52,6 @@ async function hmacKey(secret: string): Promise<CryptoKey> {
     false,
     ["sign"],
   );
-}
-
-async function signServiceToken(
-  secret: string,
-  claims: { app: string; actions: string[]; iat: number; exp: number },
-): Promise<string> {
-  const key = await hmacKey(secret);
-  const header = b64urlEncode(encoder.encode(JSON.stringify({ alg: "HS256", typ: "svc" })));
-  const payload = b64urlEncode(encoder.encode(JSON.stringify(claims)));
-  const data = `${header}.${payload}`;
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  return `${data}.${b64urlEncode(new Uint8Array(signature))}`;
 }
 
 async function signUserClaim(secret: string, sub: string): Promise<{ claim: string; sig: string }> {

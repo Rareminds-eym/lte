@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   BookOpenIcon,
   Button,
+  CertificateIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ClipboardCheckIcon,
@@ -46,6 +47,11 @@ const NAV_ITEMS: NavItem[] = [
     id: "my-courses",
     label: "My Courses",
     icon: <BookOpenIcon size={20} />,
+  },
+  {
+    id: "certificates",
+    label: "Certificates",
+    icon: <CertificateIcon size={20} />,
   },
   {
     id: "rewards-milestones",

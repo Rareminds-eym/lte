@@ -3,6 +3,10 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { LevelModuleList } from "@/widgets/level-modules/ui/LevelModuleList";
 
+vi.mock("@/features/certificate-actions", () => ({
+  LevelCertificateActions: () => <button type="button">Download certificate</button>,
+}));
+
 // Mock navigate hook
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {

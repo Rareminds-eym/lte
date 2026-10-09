@@ -17,6 +17,7 @@ export const useStartLevelProgress = () => {
       queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });
       queryClient.invalidateQueries({ queryKey: [LEVEL_DETAILS_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["certificates"] });
     },
   });
 };
@@ -36,6 +37,7 @@ export const useStartModuleProgress = () => {
       });
       queryClient.invalidateQueries({ queryKey: getLevelDetailsQueryKey(variables.levelId) });
       queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["certificates"] });
     },
   });
 };
@@ -77,6 +79,7 @@ export const useUpdateStageProgress = () => {
       queryClient.invalidateQueries({ queryKey: ["capabilityLevels"] });
       // Invalidate dashboard journey so Continue Your Journey follows the last touch
       queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["certificates"] });
     },
   });
 };

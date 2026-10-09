@@ -7,3 +7,8 @@ SKILLPASSPORT_INTERNAL_SECRET=your_secret_here_min_32_chars
 
 # OpenRouter AI Engine Configuration
 OPENROUTER_API_KEY=sk-or-v1-your-openrouter-api-key-here
+
+# Browser Rendering – Edit, account scoped (only new secret)
+BROWSER_RENDERING_API_TOKEN=your_browser_rendering_token
+CF_ACCOUNT_ID=your_32_hex_cloudflare_account_id
+CERTIFICATE_VERIFY_BASE_URL=http://localhost:8788/verify

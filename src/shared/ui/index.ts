@@ -8,6 +8,7 @@ export { ErrorFallback } from "./ErrorFallback";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { Image } from "./Image";
 export * from "./icons";
+export { CertificateIcon } from "./icons";
 export { InlineSpinner } from "./inline-spinner";
 export { PageLoader } from "./PageLoader";
 export {

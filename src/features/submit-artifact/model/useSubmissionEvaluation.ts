@@ -42,6 +42,7 @@ export const useSubmissionEvaluation = (submissionId: string | undefined) => {
       "levelModuleDetails",
       "levelDetails",
       "dashboardData",
+      "certificates",
     ]) {
       void queryClient.invalidateQueries({ queryKey: [prefix] });
     }

@@ -105,7 +105,7 @@ describe("Readiness API Endpoints", () => {
           if (table === "artifact_submissions") {
             return chainable([]);
           }
-          if (table === "user_profiles") {
+          if (table === "users") {
             return chainable({ bio: "", job_title: "", skills: [] });
           }
           return chainable();
@@ -167,7 +167,7 @@ describe("Readiness API Endpoints", () => {
           if (table === "user_module_progress") {
             return chainable([{ module_status: "mastered", module_id: "mod-1" }]);
           }
-          if (table === "user_profiles") {
+          if (table === "users") {
             return chainable({ bio: "Bio data", job_title: "Developer", skills: ["JS"] });
           }
           return chainable();

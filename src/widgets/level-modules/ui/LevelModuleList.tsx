@@ -6,6 +6,7 @@ import {
   LTE_STAGE_SEQUENCE,
   normalizeLteStageName,
 } from "@/entities/course";
+import { LevelCertificateActions } from "@/features/certificate-actions";
 import { Button } from "@/shared/ui/Button";
 import {
   BeakerIcon,
@@ -591,6 +592,7 @@ export const LevelModuleList: React.FC<LevelModuleListProps> = ({
                   ? "Congratulations! You have completed this course"
                   : "Course completion locked"}
               </span>
+              {isCourseCompleted && levelId && <LevelCertificateActions levelId={levelId} />}
               {!isCourseCompleted && (
                 <span className="mt-1 block text-sm font-medium text-content-muted">
                   Complete all modules to unlock your course completion certificate.
