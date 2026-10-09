@@ -181,6 +181,22 @@ describe("Dashboard Page", () => {
     expect(screen.getByText("Achievements")).toBeInTheDocument();
   });
 
+  it("keeps the active dashboard visible when a track switch or background refresh fails", async () => {
+    learningPathMock.setState({ error: "Unable to switch learning track" });
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={createTestQueryClient()}>
+          <Dashboard />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("Backend Engineer")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Retry Loading Learning Path" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Before You Trust the Answer")).toBeInTheDocument();
+  });
+
   it("renders XpRewardModal when there is an unshown daily login event", async () => {
     localStorage.clear();
     vi.restoreAllMocks();

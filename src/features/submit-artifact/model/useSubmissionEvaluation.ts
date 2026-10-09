@@ -21,7 +21,10 @@ export const useSubmissionEvaluation = (submissionId: string | undefined) => {
     refetchOnReconnect: true,
     refetchInterval: (query) => {
       const response = query.state.data;
+      const staffReview = response?.stages?.find((stage) => stage.stage === "staff_review");
+      if (staffReview && ["completed", "returned"].includes(staffReview.status)) return false;
       const pending =
+        response?.evaluation?.status === "pending" ||
         response?.evaluation?.decision === "human_review" ||
         response?.stages?.some((stage) =>
           ["unassigned", "pending", "in_progress"].includes(stage.status),
@@ -30,11 +33,23 @@ export const useSubmissionEvaluation = (submissionId: string | undefined) => {
     },
     refetchIntervalInBackground: false,
   });
-  const completedAt = query.data?.stages?.find(
-    (stage) => stage.stage === "staff_review" && stage.status === "completed",
-  )?.completed_at;
+  const staffReview = query.data?.stages?.find((stage) => stage.stage === "staff_review");
+  const isTerminal = staffReview
+    ? ["completed", "returned"].includes(staffReview.status)
+    : query.data?.evaluation?.status === "completed";
+  const isPassingCompletion = staffReview
+    ? staffReview.status === "completed"
+    : query.data?.evaluation?.status === "completed" && query.data.evaluation.decision === "pass";
+  const terminalKey =
+    isTerminal && userId && submissionId
+      ? `${userId}:${submissionId}:${staffReview?.completed_at ?? query.data?.evaluation?.completed_at ?? "completed"}`
+      : null;
+  const completionKey =
+    isPassingCompletion && userId && submissionId
+      ? `${userId}:${submissionId}:${staffReview?.completed_at ?? query.data?.evaluation?.completed_at ?? "completed"}`
+      : null;
   useEffect(() => {
-    if (!completedAt || !userId) return;
+    if (!terminalKey) return;
     for (const prefix of [
       "userCourses",
       "capabilityLevels",
@@ -46,6 +61,6 @@ export const useSubmissionEvaluation = (submissionId: string | undefined) => {
     ]) {
       void queryClient.invalidateQueries({ queryKey: [prefix] });
     }
-  }, [completedAt, userId, submissionId, queryClient]);
-  return query;
+  }, [queryClient, terminalKey]);
+  return { ...query, completionKey };
 };

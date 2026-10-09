@@ -1,1 +1,1 @@
-export { DashboardContent } from "./ui";
+export { DashboardContent, type DashboardContentProps } from "./ui";

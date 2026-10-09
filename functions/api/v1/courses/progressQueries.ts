@@ -12,6 +12,11 @@ import {
   normalizeStageName,
 } from "@functions/lib/stage-sequence";
 import { apiLogger } from "@functions/shared/logger";
+import { z } from "zod";
+
+const submissionModuleProgressSchema = z.object({ user_module_progress_id: z.uuid() });
+const moduleLevelProgressSchema = z.object({ user_capability_level_progress_id: z.uuid() });
+const levelIdSchema = z.object({ level_id: z.uuid() });
 
 const levelLookupPolicy = {
   table: "levels",
@@ -204,6 +209,30 @@ const levelProgressRecalcUpdatePolicy = {
   filters: ["user_id", "level_id"],
   ownership: { column: "user_id", source: "authenticatedUserId", required: true },
   requireFilter: true,
+} as const;
+
+const submissionModuleProgressPolicy = {
+  table: "artifact_submissions",
+  operation: "read",
+  columns: ["user_module_progress_id"],
+  filters: ["id", "user_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const moduleLevelProgressPolicy = {
+  table: "user_module_progress",
+  operation: "read",
+  columns: ["user_capability_level_progress_id"],
+  filters: ["id", "user_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+} as const;
+
+const levelIdPolicy = {
+  table: "user_capability_level_progress",
+  operation: "read",
+  columns: ["level_id"],
+  filters: ["id", "user_id"],
+  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
 } as const;
 
 const completedStageNamesPolicy = {
@@ -715,6 +744,43 @@ export async function recalculateLevelProgress(
 
     await triggerReadinessRecalculation(qb, userId).catch(() => null);
   }
+}
+
+/** Recalculates the learner-owned level containing an accepted artifact submission. */
+export async function recalculateSubmissionLevelProgress(
+  source: QueryGatewaySource,
+  userId: string,
+  submissionId: string,
+): Promise<void> {
+  const qb = asQueryGateway(source);
+  const submission = submissionModuleProgressSchema.parse(
+    await qb.read(submissionModuleProgressPolicy, {
+      auth: { userId },
+      filters: [{ column: "id", op: "eq", value: submissionId }],
+      result: "single",
+    }),
+  );
+  const moduleProgress = moduleLevelProgressSchema.parse(
+    await qb.read(moduleLevelProgressPolicy, {
+      auth: { userId },
+      filters: [{ column: "id", op: "eq", value: submission.user_module_progress_id }],
+      result: "single",
+    }),
+  );
+  const levelProgress = levelIdSchema.parse(
+    await qb.read(levelIdPolicy, {
+      auth: { userId },
+      filters: [
+        {
+          column: "id",
+          op: "eq",
+          value: moduleProgress.user_capability_level_progress_id,
+        },
+      ],
+      result: "single",
+    }),
+  );
+  await recalculateLevelProgress(qb, userId, levelProgress.level_id);
 }
 
 export async function upsertStageProgress(

@@ -44,3 +44,6 @@ it("logs unexpected errors server-side without leaking sensitive messages to cli
   expect(spy).toHaveBeenCalled();
   spy.mockRestore();
 });
+it("returns the immutable learner name for the owner's certificate preview", () => {
+  expect(summary(row, env)).toHaveProperty("learnerName", row.learner_name);
+});

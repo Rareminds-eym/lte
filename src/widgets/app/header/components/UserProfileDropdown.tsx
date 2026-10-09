@@ -1,4 +1,5 @@
 import type React from "react";
+import { UI_TEXT } from "@/shared/config";
 import { LogoutIcon, UserIcon } from "@/shared/ui/icons";
 
 export interface UserProfileDropdownProps {
@@ -21,7 +22,28 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   return (
     <div
       role="menu"
+      aria-label={UI_TEXT.account}
       aria-orientation="vertical"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" || event.key === "Tab") {
+          if (event.key === "Escape") event.preventDefault();
+          onClose();
+          return;
+        }
+        if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const items = Array.from(
+          event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+        );
+        const index = items.indexOf(document.activeElement as HTMLButtonElement);
+        const next =
+          event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? items.length - 1
+              : (index + (event.key === "ArrowUp" ? -1 : 1) + items.length) % items.length;
+        items[next]?.focus();
+      }}
       className="absolute right-0 top-full mt-2 w-64 bg-surface-primary rounded-2xl border border-line-default shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 select-none"
     >
       {/* Row 1: Email Header */}
@@ -41,7 +63,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-content-body hover:text-content-primary hover:bg-surface-muted rounded-xl transition-colors cursor-pointer border-none bg-transparent"
         >
           <UserIcon size={16} className="text-content-secondary shrink-0" />
-          <span>Your Profile</span>
+          <span>{UI_TEXT.yourProfile}</span>
         </button>
       </div>
 
@@ -57,7 +79,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-danger-500 hover:text-danger-600 hover:bg-danger-50 rounded-xl transition-colors cursor-pointer border-none bg-transparent"
         >
           <LogoutIcon size={16} className="text-danger-500 shrink-0" />
-          <span>Logout</span>
+          <span>{UI_TEXT.logout}</span>
         </button>
       </div>
     </div>

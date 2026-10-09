@@ -6,7 +6,9 @@ import { useAuthStore } from "@/entities/session";
 import { LearningPathInitializer } from "@/features/initialize-learning-path";
 import { StartAssessmentButton } from "@/features/start-assessment";
 import { getLogger } from "@/shared";
+import { UI_TEXT } from "@/shared/config";
 import { cn } from "@/shared/lib";
+import { SearchQuerySchema } from "@/shared/schemas";
 import { Button, SegmentedControl } from "@/shared/ui";
 import {
   BookOpenIcon,
@@ -19,7 +21,12 @@ import {
 } from "@/shared/ui/icons";
 import { Pagination } from "@/widgets";
 import { LearningPathEmptyState } from "@/widgets/learning-path";
-import { COURSE_PAGE_SIZE, getSafeCoursePage, paginateCourses } from "../model/courseFilters";
+import {
+  COURSE_PAGE_SIZE,
+  filterCoursesBySearch,
+  getSafeCoursePage,
+  paginateCourses,
+} from "../model/courseFilters";
 import { CoursesPageSkeleton } from "./CoursesPageSkeleton";
 
 const STATS_PILL_STYLES = {
@@ -30,9 +37,13 @@ const STATS_PILL_STYLES = {
 
 export const CoursesPage = () => {
   const [activeRoleFilter, setActiveRoleFilter] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const parsedSearch = SearchQuerySchema.safeParse(searchParams.get("q") ?? "");
+  const searchQuery = parsedSearch.success ? parsedSearch.data : "";
+  const [pagination, setPagination] = useState({ query: searchQuery, page: 1 });
+  const currentPage = pagination.query === searchQuery ? pagination.page : 1;
+  const setCurrentPage = (page: number) => setPagination({ query: searchQuery, page });
 
   const user = useAuthStore((s) => s.user);
   const authLoading = useAuthStore((s) => s.loading);
@@ -56,13 +67,11 @@ export const CoursesPage = () => {
   const uniqueRoles = Array.from(rolesMap.entries()).map(([id, name]) => ({ id, name }));
 
   const roleTabs = [
-    { id: null as string | null, label: "All Roles" },
+    { id: null as string | null, label: UI_TEXT.allRoles },
     ...uniqueRoles.map((r) => ({ id: r.id, label: r.name })),
   ];
 
-  const filteredCourses = (courses ?? []).filter(
-    (c) => !activeRoleFilter || c.roleId === activeRoleFilter,
-  );
+  const filteredCourses = filterCoursesBySearch(courses ?? [], searchQuery, activeRoleFilter);
 
   const totalPages = Math.ceil(filteredCourses.length / COURSE_PAGE_SIZE);
   const safePage = getSafeCoursePage(currentPage, totalPages);
@@ -95,11 +104,11 @@ export const CoursesPage = () => {
     return (
       <div className="mx-auto max-w-[1440px] py-16 text-center" role="alert">
         <div className="rounded-2xl border border-danger-200 bg-danger-50 p-8 shadow-xs max-w-md mx-auto">
-          <p className="text-base font-bold text-danger-700">Failed to load courses</p>
+          <p className="text-base font-bold text-danger-700">{UI_TEXT.failedToLoadCourses}</p>
           <p className="text-xs text-danger-600 mt-1">{error.message}</p>
           <div className="mt-4 flex justify-center">
             <Button type="button" size="sm" variant="outline" onClick={() => void refetch()}>
-              Retry Loading Courses
+              {UI_TEXT.retryLoadingCourses}
             </Button>
           </div>
         </div>
@@ -116,11 +125,9 @@ export const CoursesPage = () => {
             <div className="mx-auto w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
               <BookOpenIcon size={20} className="text-accent-purple-600" />
             </div>
-            <h2 className="text-xl font-bold text-content-primary">No learning path yet</h2>
+            <h2 className="text-xl font-bold text-content-primary">{UI_TEXT.noLearningPathYet}</h2>
             <p className="text-sm text-content-secondary">
-              {needsAssessment
-                ? "Take a quick assessment to get your personalized learning track and unlock your courses."
-                : "No courses found. Please check back later."}
+              {needsAssessment ? UI_TEXT.assessmentDescription : UI_TEXT.noCourses}
             </p>
             {needsAssessment && (
               <div className="pt-2">
@@ -143,10 +150,10 @@ export const CoursesPage = () => {
               <BookOpenIcon size={20} className="text-accent-purple-600" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-content-primary leading-tight">My Courses</h1>
-              <p className="text-sm text-content-secondary mt-0.5">
-                Track your enrolled courses and continue where you left off.
-              </p>
+              <h1 className="text-2xl font-bold text-content-primary leading-tight">
+                {UI_TEXT.myCourses}
+              </h1>
+              <p className="text-sm text-content-secondary mt-0.5">{UI_TEXT.coursesDescription}</p>
             </div>
           </div>
 
@@ -154,19 +161,19 @@ export const CoursesPage = () => {
             <StatsPill
               icon={<LayersIcon size={14} />}
               count={total}
-              label="Enrolled"
+              label={UI_TEXT.enrolled}
               className={STATS_PILL_STYLES.enrolled}
             />
             <StatsPill
               icon={<CheckIcon size={14} />}
               count={completed}
-              label="Completed"
+              label={UI_TEXT.completed}
               className={STATS_PILL_STYLES.completed}
             />
             <StatsPill
               icon={<ClockIcon size={14} />}
               count={inProgress}
-              label="In Progress"
+              label={UI_TEXT.inProgress}
               className={STATS_PILL_STYLES.inProgress}
             />
           </div>
@@ -174,10 +181,35 @@ export const CoursesPage = () => {
       </header>
 
       {/* Role Tabs */}
+      {searchQuery && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-default bg-surface-primary p-4 text-sm text-content-secondary"
+        >
+          <p>
+            {UI_TEXT.searchResults(filteredCourses.length)}{" "}
+            <span className="font-semibold text-content-primary">
+              {UI_TEXT.quotedSearch(searchQuery)}
+            </span>
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              next.delete("q");
+              setSearchParams(next);
+              setCurrentPage(1);
+            }}
+          >
+            {UI_TEXT.clearSearch}
+          </Button>
+        </div>
+      )}
       {uniqueRoles.length > 0 && (
         <div
           role="tablist"
-          aria-label="Filter by role"
+          aria-label={UI_TEXT.filterByRole}
           className="flex items-center gap-4 overflow-x-auto border-b border-line-default scrollbar-none sm:gap-6"
         >
           {roleTabs.map((tab) => {
@@ -225,26 +257,26 @@ export const CoursesPage = () => {
           icon={<FilterIcon size={16} />}
           className="rounded-full"
         >
-          Filter
+          {UI_TEXT.filter}
         </Button>
 
         <div className="flex min-w-0 items-center gap-3">
           <span className="text-sm text-content-secondary font-medium">
-            {filteredCourses.length} courses
+            {filteredCourses.length} {UI_TEXT.courses}
           </span>
           <SegmentedControl
             value={viewMode}
             onChange={(v) => setViewMode(v as "grid" | "list")}
-            ariaLabel="Display type"
+            ariaLabel={UI_TEXT.displayType}
             options={[
               {
                 value: "grid",
-                label: "Grid view",
+                label: UI_TEXT.gridView,
                 icon: <DashboardGridIcon size={16} />,
               },
               {
                 value: "list",
-                label: "List view",
+                label: UI_TEXT.listView,
                 icon: <ListIcon size={16} />,
               },
             ]}
@@ -266,7 +298,7 @@ export const CoursesPage = () => {
         </div>
       ) : (
         <div className="text-center py-16 text-content-secondary">
-          No courses found on this page.
+          {searchQuery ? UI_TEXT.noSearchResults : UI_TEXT.noCoursesOnPage}
         </div>
       )}
 

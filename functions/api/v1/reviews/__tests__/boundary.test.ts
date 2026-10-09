@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   read: vi.fn(),
   rpc: vi.fn(),
   assignment: vi.fn(),
+  recalculate: vi.fn(),
   object: vi.fn(),
 }));
 vi.mock("@functions/middleware", async (original) => ({
@@ -33,6 +34,9 @@ vi.mock("@functions/lib/human-review/operations", async (original) => ({
   adminReviewDetail: mocks.detail,
   assignReview: mocks.assign,
 }));
+vi.mock("@functions/api/v1/courses/progressQueries", () => ({
+  recalculateSubmissionLevelProgress: mocks.recalculate,
+}));
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const context = (path: string, init?: RequestInit) =>
   ({
@@ -45,7 +49,8 @@ describe("review HTTP boundary", () => {
     vi.clearAllMocks();
     mocks.rate.mockResolvedValue({ allowed: true, retryAfterMs: 0 });
     mocks.actor.mockReturnValue({ sub: id(1) });
-    mocks.assignment.mockResolvedValue({ id: id(2), submission_id: id(3) });
+    mocks.assignment.mockResolvedValue({ id: id(2), submission_id: id(3), learner_id: id(4) });
+    mocks.recalculate.mockResolvedValue(undefined);
   });
   it("uses the KV binding and returns Retry-After before loading assignments", async () => {
     const ctx = context(id(2));
@@ -153,6 +158,7 @@ describe("review HTTP boundary", () => {
         }),
       }),
     );
+    expect(mocks.recalculate).toHaveBeenCalledWith(expect.anything(), id(4), id(3));
   });
   it("rejects unauthenticated requests before reading assignments", async () => {
     mocks.actor.mockReturnValue(null);

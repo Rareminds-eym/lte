@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MOCK_DASHBOARD_DATA } from "@/entities/dashboard";
 
 import {
@@ -13,13 +13,15 @@ import {
   UpcomingFeedback,
 } from "@/widgets";
 
+const switchTrack = vi.hoisted(() => vi.fn());
+
 vi.mock("@/entities/active-learning-path", () => ({
   useLearningPath: Object.assign(
     vi.fn().mockImplementation((selector) => {
       const mockState = {
         activeTrack: null,
         activeLearningPathLoading: false,
-        switchActiveTrack: vi.fn().mockResolvedValue(undefined),
+        switchActiveTrack: switchTrack,
       };
       return selector(mockState);
     }),
@@ -44,6 +46,59 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 });
 
 describe("Dashboard Widgets", () => {
+  beforeEach(() => {
+    switchTrack.mockReset().mockResolvedValue(undefined);
+  });
+
+  it("blocks repeated track switches until the first request completes", async () => {
+    let finish: () => void = () => {};
+    switchTrack.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(
+      <MemoryRouter>
+        <CareerPaths
+          data={{
+            ...MOCK_DASHBOARD_DATA.careerPaths,
+            tracks: [
+              { id: "active", title: "Backend", isSelected: true },
+              { id: "next", title: "Frontend" },
+              { id: "other", title: "DevOps" },
+            ],
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const next = screen.getByRole("button", { name: "Switch to Frontend" });
+    const other = screen.getByRole("button", { name: "Switch to DevOps" });
+    fireEvent.click(next);
+    fireEvent.click(other);
+    expect(switchTrack).toHaveBeenCalledExactlyOnceWith("next");
+    expect(next).toBeDisabled();
+    expect(other).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Switching to Frontend…");
+    await act(async () => finish());
+    expect(next).toBeEnabled();
+  });
+
+  it("clamps journey progress and disables actions when route context is missing", () => {
+    const journey = MOCK_DASHBOARD_DATA.journey;
+    if (!journey) throw new Error("Expected a journey fixture");
+    render(
+      <MemoryRouter>
+        <JourneyHero data={{ ...journey, progressPercentage: 140 }} state="active" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("progressbar", { name: "Journey progress" })).toHaveAttribute(
+      "aria-valuenow",
+      "100",
+    );
+    expect(screen.getByRole("button", { name: "Continue Challenge" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "View Details" })).toBeDisabled();
+  });
   it("renders CareerTargetBanner with readiness stats and gamification metrics", () => {
     render(<CareerTargetBanner data={MOCK_DASHBOARD_DATA.careerTarget} />);
     expect(screen.getByText("Career Target")).toBeInTheDocument();
@@ -143,7 +198,7 @@ describe("Dashboard Widgets", () => {
         <UpcomingFeedback data={data} onRetry={onRetry} retrying />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("button", { name: "Retry feedback" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Retrying…" })).toBeDisabled();
   });
 
   it("renders CareerPaths with track explorer and match stats", () => {

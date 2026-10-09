@@ -1,5 +1,7 @@
 import type React from "react";
 import type { DashboardData } from "@/entities/dashboard";
+import { DASHBOARD_ROW_HEIGHTS, UI_TEXT } from "@/shared/config";
+import { SectionBoundary } from "@/shared/ui";
 import { Achievements } from "@/widgets/dashboard/achievements";
 import { CapabilityGapMap } from "@/widgets/dashboard/capability-gap-map";
 import { CareerPaths } from "@/widgets/dashboard/career-paths";
@@ -8,7 +10,7 @@ import { JourneyHero } from "@/widgets/dashboard/journey-hero";
 import { TodaysPriorities } from "@/widgets/dashboard/todays-priorities";
 import { UpcomingFeedback } from "@/widgets/dashboard/upcoming-feedback";
 
-interface DashboardContentProps {
+export interface DashboardContentProps {
   data: DashboardData;
   onRetryFeedback?: () => void;
   retryingFeedback?: boolean;
@@ -27,52 +29,78 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
   onRetryFeedback,
   retryingFeedback,
 }) => (
-  <div className="space-y-6 max-w-[1440px] mx-auto">
+  <div className="dashboard-content space-y-6 max-w-[1440px] mx-auto min-w-0">
     {/* Top Banner: Career Target & Overview */}
-    <section aria-label="Career Target Summary">
-      <CareerTargetBanner data={data.careerTarget} />
+    <section aria-label={UI_TEXT.careerTargetSummary}>
+      <SectionBoundary label={UI_TEXT.careerTarget}>
+        <CareerTargetBanner data={data.careerTarget} />
+      </SectionBoundary>
     </section>
 
     {/* Row 1: Journey Hero Banner + Today's Priorities */}
     <section
-      className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch"
-      aria-label="Journey and Priorities"
+      className={`grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch ${DASHBOARD_ROW_HEIGHTS.journey}`}
+      aria-label={UI_TEXT.journeyAndPriorities}
     >
-      <div className="lg:col-span-2 h-full">
-        <JourneyHero data={data.journey} state={data.journeyState} />
+      <div className="lg:col-span-2 min-w-0 lg:[&>section]:h-full">
+        <SectionBoundary label={UI_TEXT.journeyProgress}>
+          <JourneyHero data={data.journey} state={data.journeyState} />
+        </SectionBoundary>
       </div>
-      <div className="h-full">
-        <TodaysPriorities data={data.priorities} />
+      <div className="min-w-0 lg:[&>section]:h-full">
+        <SectionBoundary label={UI_TEXT.todaySPriorities}>
+          <TodaysPriorities data={data.priorities} />
+        </SectionBoundary>
       </div>
     </section>
 
     {/* Row 2: Capability Gap Map + Upcoming & Feedback */}
     <section
-      className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch"
-      aria-label="Capabilities and Upcoming Events"
+      className={`grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch ${DASHBOARD_ROW_HEIGHTS.capabilities}`}
+      aria-label={UI_TEXT.capabilitiesAndUpcomingEvents}
     >
-      <div className="h-full">
-        <CapabilityGapMap data={data.capabilityGaps} />
+      <div
+        id="capability-gap-map"
+        tabIndex={-1}
+        className="min-w-0 scroll-mt-6 lg:[&>section]:h-full"
+      >
+        <SectionBoundary label={UI_TEXT.capabilityGapMap}>
+          <CapabilityGapMap data={data.capabilityGaps} />
+        </SectionBoundary>
       </div>
-      <div className="h-full">
-        <UpcomingFeedback
-          data={data.upcomingFeedback}
-          onRetry={onRetryFeedback}
-          retrying={retryingFeedback}
-        />
+      <div
+        id="dashboard-feedback"
+        tabIndex={-1}
+        className="min-w-0 scroll-mt-6 lg:[&>section]:h-full"
+      >
+        <SectionBoundary label={UI_TEXT.upcomingFeedback}>
+          <UpcomingFeedback
+            data={data.upcomingFeedback}
+            onRetry={onRetryFeedback}
+            retrying={retryingFeedback}
+          />
+        </SectionBoundary>
       </div>
     </section>
 
     {/* Row 3: Recommended Career Paths + Achievements */}
     <section
-      className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch"
-      aria-label="Career Paths and Achievements"
+      className={`grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch ${DASHBOARD_ROW_HEIGHTS.careers}`}
+      aria-label={UI_TEXT.careerPathsAndAchievements}
     >
-      <div className="lg:col-span-2 h-full">
-        <CareerPaths data={data.careerPaths} />
+      <div
+        id="career-paths"
+        tabIndex={-1}
+        className="lg:col-span-2 min-w-0 scroll-mt-6 lg:[&>section]:h-full"
+      >
+        <SectionBoundary label={UI_TEXT.recommendedCareerPaths}>
+          <CareerPaths data={data.careerPaths} />
+        </SectionBoundary>
       </div>
-      <div className="h-full">
-        <Achievements data={data.achievements} />
+      <div id="achievements" tabIndex={-1} className="min-w-0 scroll-mt-6 lg:[&>section]:h-full">
+        <SectionBoundary label={UI_TEXT.achievements}>
+          <Achievements data={data.achievements} />
+        </SectionBoundary>
       </div>
     </section>
   </div>

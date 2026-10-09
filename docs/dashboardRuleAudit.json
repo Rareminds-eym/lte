@@ -1,0 +1,244 @@
+{
+  "scope": "Dashboard changes in this session, including the earlier feedback endpoint fix and UI polish.",
+  "rulesFile": ".codereview.yml",
+  "rulesFileModified": false,
+  "baselineCommit": "df75249",
+  "corrected": [
+    "Cards have responsive min/max bounds, shared desktop row heights and keyboard-accessible internal scrolling; loading skeletons share the row heights",
+    "Notification dropdown instead of scrolling to feedback",
+    "Removed extra stylesheet; retained only Tailwind utilities and existing semantic tokens",
+    "Centralized UI copy and validated search input with Zod",
+    "Localized widget, header and navigation error boundaries",
+    "Public API import for the feedback gateway regression test",
+    "Typed global toasts for unavailable navigation actions",
+    "Unit tests for new shared components, helpers and notification panel",
+    "Priority task text and metadata reflow within narrow cards",
+    "Career-path hexagons scale within their panel; details and metrics adapt to available card width",
+    "Capability table column widths and badge sizing prevent clipped labels",
+    "Achievements adapt to card width; milestone progress fill has no uneven top padding",
+    "Career-target summary columns share available width for long text",
+    "All seven dashboard card headers are outside the scrollable bodies; titles, subtitles and header actions remain visible as details and footer content scroll"
+  ],
+  "verification": {
+    "build": "passed; dist rebuilt",
+    "typecheck": "passed",
+    "eslintAndStylelint": "passed",
+    "biome": "passed; repository has 32 warnings, including unrelated test non-null assertions",
+    "fullSuite": {
+      "passed": 1570,
+      "skipped": 1,
+      "note": "Run before final contrast/copy changes; final focused suite also passed."
+    },
+    "architectureFindingsAdded": [],
+    "baselineComparison": {
+      "image": {
+        "baselineFindings": 1,
+        "workspaceFindings": 1
+      },
+      "tokens": {
+        "baselineFindings": 3,
+        "workspaceFindings": 3
+      },
+      "catch": {
+        "baselineFindings": 3,
+        "workspaceFindings": 3
+      },
+      "naming": {
+        "baselineFindings": 2,
+        "workspaceFindings": 2
+      },
+      "toaster": {
+        "baselineFindings": 13,
+        "workspaceFindings": 11
+      },
+      "zod": {
+        "baselineFindings": 1,
+        "workspaceFindings": 1
+      },
+      "alias": {
+        "baselineFindings": 4,
+        "workspaceFindings": 4
+      }
+    },
+    "otherPassedChecks": [
+      "file types",
+      "console usage",
+      "file lengths",
+      "auth boundaries",
+      "runtime isolation",
+      "API client boundaries",
+      "state boundaries",
+      "endpoint versioning",
+      "route lazy loading",
+      "test placement",
+      "service bindings",
+      "query gateway",
+      "secret scanning"
+    ],
+    "previousFocusedSuite": {
+      "passed": 127,
+      "skipped": 1
+    },
+    "finalFocusedSuite": {
+      "passed": 97,
+      "skipped": 1,
+      "scope": "Dashboard, navigation and shared UI text after fixed card header changes"
+    },
+    "previousBrowser": {
+      "errors": [],
+      "results": [
+        {
+          "width": 320,
+          "overflow": [],
+          "violations": []
+        },
+        {
+          "width": 375,
+          "overflow": [],
+          "violations": []
+        },
+        {
+          "width": 768,
+          "overflow": [],
+          "violations": []
+        },
+        {
+          "width": 1024,
+          "overflow": [],
+          "violations": []
+        },
+        {
+          "width": 1280,
+          "overflow": [],
+          "violations": []
+        },
+        {
+          "width": 1440,
+          "overflow": [],
+          "violations": []
+        },
+        {
+          "width": 1920,
+          "overflow": [],
+          "violations": []
+        }
+      ],
+      "belowFold": [
+        {
+          "top": 400,
+          "violations": []
+        },
+        {
+          "top": 800,
+          "violations": []
+        },
+        {
+          "top": 1600,
+          "violations": []
+        }
+      ],
+      "notificationViolations": [],
+      "mobileViolations": [],
+      "interactions": "passed"
+    },
+    "previousCardSizingBrowser": {
+      "scenarios": [
+        "normal",
+        "empty",
+        "oversize"
+      ],
+      "widths": [
+        320,
+        375,
+        768,
+        1024,
+        1440
+      ],
+      "cases": 15,
+      "cardsPerCase": 7,
+      "equalDesktopRows": "passed",
+      "allCardMinMaxBounds": "passed",
+      "horizontalOverflow": [],
+      "automatedAccessibilityViolations": [],
+      "keyboardScrollingAndFooterReachability": "passed",
+      "pageWheelScrollingOverShortCard": "passed"
+    },
+    "previousSpacingBrowser": {
+      "fixture": "Actual dashboard widgets and layout rendered with seeded normal, long-text and empty content; no live data mutations",
+      "scenarios": [
+        "normal",
+        "long",
+        "empty"
+      ],
+      "widths": [
+        320,
+        375,
+        768,
+        1024,
+        1280,
+        1440,
+        1920
+      ],
+      "sidebarStates": [
+        "expanded",
+        "collapsed"
+      ],
+      "cases": 42,
+      "cardsPerCase": 7,
+      "equalDesktopRows": "passed",
+      "allCardMinMaxBounds": "passed",
+      "outerEdgeAlignment": "passed",
+      "pageGutters": "symmetric",
+      "rowGapsPx": 24,
+      "internalHorizontalClipping": [],
+      "tableBadgeOverflow": [],
+      "automatedAccessibilityViolations": [],
+      "notificationPanelBoundsAndFocus": "passed",
+      "notificationOpeningAndDismissalPreservesMainScroll": "passed",
+      "keyboardScrollingAndActionReachability": "passed"
+    },
+    "browser": {
+      "fixture": "Actual dashboard widgets and layout rendered with seeded normal, oversized and empty content; no live data mutations",
+      "scenarios": [
+        "normal",
+        "oversize",
+        "empty"
+      ],
+      "widths": [
+        320,
+        375,
+        768,
+        1024,
+        1280,
+        1440,
+        1920
+      ],
+      "sidebarStates": [
+        "expanded",
+        "collapsed"
+      ],
+      "cases": 42,
+      "cardsPerCase": 7,
+      "cardHeadersOutsideScrollRegions": "passed",
+      "headerMovementWhileBodyScrollsPx": 0,
+      "allCardMinMaxBounds": "passed",
+      "equalDesktopRows": "passed",
+      "horizontalClipping": [],
+      "automatedAccessibilityViolations": [],
+      "mouseWheelAndKeyboardBodyScrolling": "passed",
+      "headerActionsAccessibleAfterBodyScroll": "passed",
+      "notificationPanelPreservesPageScroll": "passed"
+    }
+  },
+  "limitation": "Repository-wide compliance is not clean. Architecture, image, design-token, catch, naming, toast, Zod and alias checks have existing findings reproduced on the unchanged baseline. These dashboard changes add no findings in those checks and remove two untyped navigation toast findings. Unrelated certificate and level-content edits in the shared workspace are outside this dashboard audit.",
+  "cardSizing": {
+    "desktopBreakpointPx": 1024,
+    "desktopRowHeightsPx": {
+      "journeyAndPriorities": 440,
+      "capabilitiesAndFeedback": 416,
+      "careersAndAchievements": 560
+    },
+    "overflow": "Vertical scrolling is limited to each labelled, keyboard-focusable card body; card headers stay outside the scrolling area. Mobile cards remain stacked within responsive min/max bounds.",
+    "implementation": "Centralized Tailwind utility constants in shared/config/uiText.ts; no stylesheet or review configuration changes"
+  }
+}

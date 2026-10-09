@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { CERTIFICATE_CLIENT_CONFIG } from "@/entities/certificate";
 import {
   type EContentItem,
   fetchLevelModuleDetails,
@@ -30,6 +31,7 @@ import {
 } from "@/shared/ui";
 import { LevelHeader, type ModuleItem, ModulesDrawer, StageStepperBar } from "@/widgets";
 import { ArtifactPanel } from "./components/ArtifactPanel";
+import { CompletedCourseCertificate } from "./components/CompletedCourseCertificate";
 import {
   formatContentType,
   formatDuration,
@@ -70,6 +72,7 @@ export const LevelContentPage: React.FC = () => {
   const [totalXpAmount, setTotalXpAmount] = useState(0);
   const [optimisticCompletedStages, setOptimisticCompletedStages] = useState<LteStage[]>([]);
   const [submittedArtifactIds, setSubmittedArtifactIds] = useState<string[]>([]);
+  const [reviewCompletionKey, setReviewCompletionKey] = useState<string | null>(null);
 
   const moduleNumber = Number(moduleNo);
   const hasValidRouteParams = Boolean(levelId) && Number.isInteger(moduleNumber);
@@ -94,6 +97,7 @@ export const LevelContentPage: React.FC = () => {
     setPrevModuleId(levelModule?.id);
     setOptimisticCompletedStages([]);
     setSubmittedArtifactIds([]);
+    setReviewCompletionKey(null);
     setIsScenarioExpanded(false);
   }
   const nextModuleNoForPrefetch = Number.isInteger(moduleNumber) ? moduleNumber + 1 : undefined;
@@ -477,10 +481,9 @@ export const LevelContentPage: React.FC = () => {
     }
 
     if (source === "level_complete") {
-      toast.success("Level completed successfully!");
-      if (level?.capabilityCode) {
-        navigate(getCourseOverviewPath(level.capabilityCode));
-      }
+      navigate(
+        `${CERTIFICATE_CLIENT_CONFIG.collectionPath}?levelId=${encodeURIComponent(resolvedLevelId)}`,
+      );
       return;
     }
 
@@ -492,10 +495,9 @@ export const LevelContentPage: React.FC = () => {
       navigate(`/my-courses/${encodeURIComponent(levelId)}/modules/${pendingModule}?stage=engage`);
     } else {
       if (finalArtifactStageIndex >= 0) return;
-      toast.success("Course completed successfully!");
-      if (level?.capabilityCode) {
-        navigate(getCourseOverviewPath(level.capabilityCode));
-      }
+      navigate(
+        `${CERTIFICATE_CLIENT_CONFIG.collectionPath}?levelId=${encodeURIComponent(resolvedLevelId)}`,
+      );
     }
   };
 
@@ -515,8 +517,9 @@ export const LevelContentPage: React.FC = () => {
 
   const handleCompleteCourse = () => {
     if (finalArtifactStageIndex >= 0) return;
-    toast.success("Course completed successfully!");
-    navigate(getCourseOverviewPath(level.capabilityCode));
+    navigate(
+      `${CERTIFICATE_CLIENT_CONFIG.collectionPath}?levelId=${encodeURIComponent(resolvedLevelId)}`,
+    );
   };
 
   const handleAdvanceBeyondStage = () => {
@@ -729,6 +732,7 @@ export const LevelContentPage: React.FC = () => {
               currentIds.includes(artifactId) ? currentIds : [...currentIds, artifactId],
             );
           }}
+          onReviewCompleted={setReviewCompletionKey}
         />
       )}
     />
@@ -833,6 +837,9 @@ export const LevelContentPage: React.FC = () => {
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-surface-secondary">
+      {reviewCompletionKey && (
+        <CompletedCourseCertificate key={reviewCompletionKey} levelId={resolvedLevelId} />
+      )}
       <LevelHeader
         levelTitle={level.title}
         activeStage={activeStage}

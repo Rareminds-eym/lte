@@ -41,3 +41,23 @@ it("separates operational failure from a valid empty result", async () => {
     await screen.findByText("No certificate is available for this level yet."),
   ).toBeInTheDocument();
 });
+it("shows the recorded certificate with verification and download actions", async () => {
+  vi.mocked(apiFetch).mockResolvedValue({ certificates: [certificate] });
+  render(<LevelCertificateActions levelId={certificate.levelId!} />, { wrapper });
+  expect(await screen.findByRole("article", { name: "Certificate preview" })).toHaveTextContent(
+    "Ada Lovelace",
+  );
+  expect(screen.getByRole("link", { name: "Verify certificate" })).toHaveAttribute(
+    "href",
+    certificate.verifyUrl,
+  );
+  expect(screen.getByRole("status")).toHaveTextContent("Your certificate is ready");
+});
+it("respects the server's download permission", async () => {
+  vi.mocked(apiFetch).mockResolvedValue({
+    certificates: [{ ...certificate, downloadable: false }],
+  });
+  render(<LevelCertificateActions levelId={certificate.levelId!} />, { wrapper });
+  expect(await screen.findByText(/PDF download is temporarily unavailable/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Download certificate" })).not.toBeInTheDocument();
+});

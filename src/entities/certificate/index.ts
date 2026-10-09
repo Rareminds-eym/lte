@@ -9,3 +9,4 @@ export {
   certificateSchema,
 } from "./schemas/certificateSchemas";
 export { CertificateCard } from "./ui/CertificateCard";
+export { CertificatePreview } from "./ui/CertificatePreview";

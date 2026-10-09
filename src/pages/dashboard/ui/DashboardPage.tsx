@@ -6,7 +6,7 @@ import { DASHBOARD_QUERY_KEY, useDashboardData } from "@/entities/dashboard";
 import { useAuthStore } from "@/entities/session";
 import { getLogger } from "@/shared";
 import { apiFetch } from "@/shared/api";
-import { LEARNING_PATH_TEXT } from "@/shared/config";
+import { LEARNING_PATH_TEXT, UI_TEXT } from "@/shared/config";
 import { useXpModalStore } from "@/shared/store";
 import { Button } from "@/shared/ui";
 import { DashboardContent } from "@/widgets/dashboard";
@@ -94,20 +94,27 @@ export const DashboardPage: React.FC = () => {
         className="p-8 text-center bg-surface-primary rounded-2xl border border-line-default max-w-lg mx-auto my-12 shadow-sm"
         role="alert"
       >
-        <h2 className="text-lg font-bold text-content-primary mb-2">Unable to load Dashboard</h2>
-        <p className="text-xs text-content-secondary mb-4">
-          There was an error loading your dashboard metrics. Please try again.
-        </p>
+        <h2 className="text-lg font-bold text-content-primary mb-2">
+          {UI_TEXT.unableToLoadDashboard}
+        </h2>
+        <p className="text-xs text-content-secondary mb-4">{UI_TEXT.dashboardErrorDescription}</p>
         <div className="flex justify-center">
-          <Button type="button" size="sm" variant="primary" onClick={() => void refetch()}>
-            Retry Loading Dashboard
+          <Button
+            type="button"
+            size="sm"
+            variant="primary"
+            disabled={isFetching}
+            aria-busy={isFetching}
+            onClick={() => void refetch()}
+          >
+            {isFetching ? UI_TEXT.loadingDashboard : UI_TEXT.retryLoadingDashboard}
           </Button>
         </div>
       </div>
     );
   }
 
-  if (learningPathError) {
+  if (learningPathError && !activeTrack) {
     return (
       <div className="p-8 text-center max-w-lg mx-auto my-12" role="alert">
         <h2 className="text-lg font-bold mb-2">{LEARNING_PATH_TEXT.loadErrorTitle}</h2>

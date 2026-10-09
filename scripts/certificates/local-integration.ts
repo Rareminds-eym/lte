@@ -56,6 +56,9 @@ const env = {
   ...(process.env['CERTIFICATE_VERIFY_BROWSER'] === '1'
     ? { CERTIFICATE_VERIFY_BASE_URL: 'http://localhost:18788/verify' }
     : {}),
+  // The local harness injects fixture identity; production middleware is tested separately.
+  ASSETS: await runtime.getWorker(),
+  SSO_SERVICE: { getJwks: async () => { throw new Error("SSO is outside this LTE-only harness"); } },
   STORAGE_BUCKET: bucket,
   RATE_LIMIT_KV: kv,
 } as unknown as LteEnv;
@@ -132,10 +135,10 @@ const verification = await verify(
   context('/api/v1/public/certificates/test', certificate.credentialId)
 );
 assert.equal(((await verification.json()) as { status: string }).status, 'valid');
-if (process.env['CERTIFICATE_VERIFY_BROWSER'] === '1') {
-  // Follow the exact URI embedded by the template in the generated PDF.
-  const pdfLink = new TextDecoder('latin1').decode(bytes).match(/\/URI\s*\(([^)]+)\)/)?.[1];
-  assert.equal(pdfLink, certificate.verifyUrl);
+// Inspect the actual PDF annotation in LTE-only runs too.
+const pdfLink = new TextDecoder('latin1').decode(bytes).match(/\/URI\s*\(([^)]+)\)/)?.[1];
+assert.equal(pdfLink, certificate.verifyUrl);
+if (process.env['CERTIFICATE_VERIFY_BROWSER'] === '1' && process.env['CERTIFICATE_LTE_ONLY'] !== '1') {
   await verifyInBrowser(pdfLink!, async request => {
     const ctx = context(
       new URL(request.url).pathname,

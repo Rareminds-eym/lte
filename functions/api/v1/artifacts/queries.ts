@@ -1,3 +1,4 @@
+import { recalculateSubmissionLevelProgress } from "@functions/api/v1/courses/progressQueries";
 import type { ArtifactEvaluationInput } from "@functions/lib/artifact-evaluator";
 import {
   extractArtifactContent,
@@ -529,7 +530,6 @@ export async function submitArtifactSubmission(
       });
     }
 
-    // Fetch full artifact details for AI Evaluation
     let artifactMeta: ArtifactMetaRow | null = null;
     try {
       artifactMeta = (await qb.read(artifactMetaReadPolicy, {
@@ -562,8 +562,7 @@ export async function submitArtifactSubmission(
       questionDetails: questionDetails ?? [],
       input,
       filesByQuestionId,
-      // Phase 3: reuse the bytes already read for signature validation instead
-      // of arrayBuffer()-ing every file a second time.
+      // Reuse bytes already read for signature validation.
       preReadBuffers: new Map(
         [...fileContexts].map(([questionId, ctx]) => [questionId, ctx.buffer]),
       ),
@@ -586,6 +585,9 @@ export async function submitArtifactSubmission(
     await rollbackArtifactSubmission(source, env, submission.id, uploadedObjectKeys);
     throw error;
   }
+
+  if (evalResult.decision === "pass")
+    await recalculateSubmissionLevelProgress(qb, userId, submission.id);
 
   return {
     submission_id: submission.id,
@@ -692,11 +694,7 @@ async function buildDuplicateSubmissionResponse(
     );
   }
 
-  // P0-2: a duplicate request with no flow row means the original request
-  // died mid-evaluation (e.g. isolate timeout/kill): the submission, its
-  // answers and files persisted, but no evaluation was ever written. Instead
-  // of returning "pending" forever, re-run the evaluation from the persisted
-  // rows and R2 objects, then return the completed result.
+  // A duplicate with no flow died mid-evaluation. Re-run from persisted data.
   let currentFlow = flow;
   if (!currentFlow) {
     currentFlow = await rerunEvaluationForDuplicateSubmission(source, env, userId, submission);
@@ -706,6 +704,9 @@ async function buildDuplicateSubmissionResponse(
       );
     }
   }
+
+  if (currentFlow.decision === "pass")
+    await recalculateSubmissionLevelProgress(qb, userId, submission.id);
 
   const meta = (currentFlow.metadata as Record<string, unknown> | null) ?? null;
 

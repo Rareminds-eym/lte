@@ -15,6 +15,7 @@ it("validates certificate identity, enums, dates, and optional filters", () => {
     { completionDate: "yesterday" },
     { levelId: "bad" },
     { verifyUrl: "not a url" },
+    { verifyUrl: "javascript:alert(1)" },
   ])
     expect(() => certificateSchema.parse({ ...certificate, ...patch })).toThrow();
   expect(() => certificateFiltersSchema.parse({ type: "other" })).toThrow();
