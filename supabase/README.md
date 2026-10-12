@@ -27,6 +27,7 @@ The following ports are configured for local development:
 ```bash
 supabase start
 ```
+GoTrue / Supabase Auth is disabled locally (`[auth] enabled = false` in `config.toml`), so no auth container is started and no `-x gotrue` flag is needed. Authentication is handled by the SSO worker.
 
 ### Run migrations
 ```bash
