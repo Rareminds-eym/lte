@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@file-viewer/pptx": "2.2.4",
+    "@file-viewer/pptx": "3.1.2",
     "@rareminds-eym/auth-client": "2.1.0",
     "@rareminds-eym/auth-core": "3.0.0",
     "@rareminds-eym/identity-client": "1.0.0",
