@@ -85,6 +85,15 @@ describe("PptxContentViewer", () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
+  it("renders a persisted relative R2 asset without sending it to the external preview proxy", async () => {
+    const url = "/api/admin/lte/assets?key=resources%2Fdeck.pptx";
+    render(<PptxContentViewer title="Stored deck" url={url} />);
+    await waitFor(() => expect(screen.getByText("1 / 2")).toBeInTheDocument());
+    expect(fetch).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
 
   it("shows an open-resource fallback when preview loading fails", async () => {
     vi.stubGlobal(

@@ -38,6 +38,8 @@ export interface LteEnv {
   RATE_LIMIT_KV: RateLimitKvBinding;
   ASSETS: AssetsBinding;
   LTE_SYNC_QUEUE?: QueueSender;
+  LTE_ASSET_VALIDATION_QUEUE?: { sendBatch(messages: Array<{ body: unknown }>): Promise<void> };
+  LTE_CATALOG_SYNC_SECRET?: string;
   SSO_SERVICE: SsoRpcService;
   STORAGE_BUCKET: R2BucketBinding;
   R2_PUBLIC_DOMAIN?: string;

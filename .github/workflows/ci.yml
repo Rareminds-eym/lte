@@ -9,6 +9,9 @@ on:
 jobs:
   lint-and-validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
 
     strategy:
       matrix:
@@ -111,4 +114,18 @@ jobs:
       - name: Add Coverage to Job Summary
         if: always()
         run: node scripts/tools/add-coverage-summary.js
+
+      - name: Validate patch coverage
+        if: github.event_name == 'pull_request'
+        env:
+          COVERAGE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/checks/validate-patch-coverage.js "$COVERAGE_BASE"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          flags: unittests
+          use_oidc: true
+          fail_ci_if_error: true
 

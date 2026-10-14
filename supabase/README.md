@@ -14,19 +14,32 @@ The following ports are configured for local development:
 
 | Service | Port | Purpose |
 |---------|------|---------|
-| API | 54321 | REST API endpoint |
-| Database | 54322 | PostgreSQL connection |
-| Studio | 54323 | Supabase Studio UI |
-| Inbucket (SMTP) | 54324-54326 | Email testing |
-| Realtime | 54327 | WebSocket connections |
-| Vector | 54328 | Vector database |
+| API | 54341 | REST API endpoint |
+| Database | 54347 | PostgreSQL connection |
+| Studio | 54343 | Supabase Studio UI |
+| Shadow database | 54340 | Schema diff operations |
+
+These are LTE's ports; SkillPassport and SSO use separate local Supabase
+projects. Realtime, storage, SMTP and analytics are disabled in LTE's current
+configuration.
 
 ## Usage
 
 ### Start Supabase locally
 ```bash
-supabase start
+npx supabase start
 ```
+Run this command from `lte/`. The first start creates a local database and
+applies the migrations already in this repository. Automatic seed-file
+execution is disabled. Check the resulting catalog before importing data;
+restarting services does not require a reset or restore prior learner progress.
+
+Set `SUPABASE_URL=http://127.0.0.1:54341` and the matching local service-role key
+in `lte/.dev.vars`. Keep the key private and never put it in a `VITE_` variable.
+Check service status with `npx supabase status`. If dashboard requests report
+`Network connection lost`, confirm this API is running before changing schema
+or resetting data.
+
 GoTrue / Supabase Auth is disabled locally (`[auth] enabled = false` in `config.toml`), so no auth container is started and no `-x gotrue` flag is needed. Authentication is handled by the SSO worker.
 
 ### Run migrations
@@ -70,7 +83,7 @@ supabase db reset --linked --sql-paths "./seed/production/*.sql"
 ```
 
 ### View Studio
-Open http://127.0.0.1:54323 in your browser
+Open http://127.0.0.1:54343 in your browser
 
 ## Database Schema
 

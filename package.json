@@ -72,6 +72,7 @@
     "setup:husky": "node scripts/tools/setup-husky-cross-platform.js",
     "ci": "npm run lint:files && npm run lint:console && npm run lint:lengths && npm run lint:biome && npm run lint:secrets && npm run lint && npm run typecheck && vitest run",
     "workers:dev": "npm run workers:sso",
+    "workers:sso": "npm --prefix ../sso-worker run dev",
     "pages:dev": "wrangler pages dev dist --compatibility-date=2026-06-08 --port=8789 --service SSO_SERVICE=sso-api#SsoWorker",
     "pages:build": "npm run build",
     "certificates:test:local": "node scripts/certificates/run-local.mjs",

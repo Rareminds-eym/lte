@@ -25,6 +25,22 @@ function item(overrides: Partial<EContentItem>): EContentItem {
 }
 
 describe("getResourcePreviewUrl", () => {
+  it("uses LTE asset URLs directly and detects their actual file extension", () => {
+    for (const extension of ["pptx", "docx", "pdf", "xlsx"] as const) {
+      const url = `/api/admin/lte/assets?key=${encodeURIComponent(`resources/file.${extension}`)}`;
+      expect(getResourcePreviewUrl(url)).toBe(url);
+      expect(getResourceFileKind(item({ url, contentType: "doc" }))).toBe(extension);
+    }
+    const url = "/api/v1/catalog/assets?key=resources%2Ffile.docx";
+    expect(getResourcePreviewUrl(url)).toBe(url);
+    expect(getResourcePreviewUrl("//evil.example.com/file.docx")).toContain("/preview?url=");
+    expect(getResourcePreviewUrl("/api/other?key=file.docx")).toContain("/preview?url=");
+    expect(
+      getResourceFileKind(
+        item({ url: "/api/admin/lte/assets?key=resources%2Fexport.pdf", contentType: "slide" }),
+      ),
+    ).toBe("pdf");
+  });
   it("encodes the url", () => {
     expect(getResourcePreviewUrl("https://a.b/x y.pdf")).toBe(
       "/api/v1/courses/resources/preview?url=https%3A%2F%2Fa.b%2Fx%20y.pdf",

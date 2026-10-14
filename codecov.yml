@@ -36,6 +36,7 @@ ignore:
   - '**/*.test.tsx'
   - '**/*.spec.ts'
   - '**/*.spec.tsx'
+  - '**/__tests__/**'
   - '**/setupTests.ts'
   - '**/*.config.js'
   - '**/*.config.ts'
@@ -55,4 +56,5 @@ flags:
   unittests:
     paths:
       - src/
+      - functions/
     carryforward: true

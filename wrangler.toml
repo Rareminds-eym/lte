@@ -29,6 +29,10 @@ service = "sso-api"
 entrypoint = "SsoWorker"
 
 [[queues.producers]]
+queue = "lte-asset-validation"
+binding = "LTE_ASSET_VALIDATION_QUEUE"
+
+[[queues.producers]]
 queue = "lte-db-sync-queue"
 binding = "LTE_SYNC_QUEUE"
 
@@ -68,6 +72,10 @@ service = "sso-api"
 entrypoint = "SsoWorker"
 
 [[env.production.queues.producers]]
+queue = "lte-asset-validation"
+binding = "LTE_ASSET_VALIDATION_QUEUE"
+
+[[env.production.queues.producers]]
 queue = "lte-db-sync-queue"
 binding = "LTE_SYNC_QUEUE"
 
@@ -97,6 +105,10 @@ service = "sso-api-dev"
 entrypoint = "SsoWorker"
 
 [[env.preview.queues.producers]]
+queue = "lte-asset-validation-dev"
+binding = "LTE_ASSET_VALIDATION_QUEUE"
+
+[[env.preview.queues.producers]]
 queue = "lte-db-sync-queue-dev"
 binding = "LTE_SYNC_QUEUE"
 
@@ -115,3 +127,6 @@ bucket_name = "lte"
 # Required:
 # - SUPABASE_URL
 # - SUPABASE_SERVICE_ROLE_KEY
+
+# Catalog integration: LTE_CATALOG_SYNC_SECRET (same value as sp-dash; >=32 characters).
+# Existing sp-dash Worker consumes lte-asset-validation; Pages only produces jobs.
