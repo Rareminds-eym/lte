@@ -32,6 +32,7 @@
     "dev": "vite --mode development --port 8080",
     "dev:prod": "vite --port 8789",
     "build": "npm run certificates:styles && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
+    "build:functions": "wrangler pages functions build --outdir .wrangler/pages-build",
     "build:dev": "npm run certificates:styles && node --max-old-space-size=12288 ./node_modules/vite/bin/vite.js build --mode development",
     "lint": "eslint . && npm run lint:css",
     "lint:css": "stylelint \"src/**/*.css\" --max-warnings 0",
@@ -83,7 +84,7 @@
     "certificates:monitor": "esbuild scripts/certificates/monitor.ts --bundle --platform=node --format=esm --outfile=/tmp/lte-certificate-monitor.mjs && node /tmp/lte-certificate-monitor.mjs"
   },
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=22.13.0",
     "npm": ">=10.0.0"
   },
   "devDependencies": {

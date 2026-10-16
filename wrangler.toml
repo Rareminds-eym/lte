@@ -1,5 +1,8 @@
 # Wrangler configuration for LTE Cloudflare Pages Functions.
 # SSO owns auth-code Durable Object storage; LTE consumes SSO through RPC.
+# Local development configuration: deployed Pages settings are dashboard-managed.
+# Keep pages_build_output_dir unset until production/preview bindings are reconciled.
+# Adding it opts this file into deployment and replaces dashboard configuration.
 
 name = "lte"
 compatibility_date = "2026-06-08"
