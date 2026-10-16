@@ -17,7 +17,7 @@ A modern Learning Transform Engine built with React, TypeScript, Vite, and a Fea
 
 ## Prerequisites
 
-- Node.js >= 22.0.0
+- Node.js >= 22.13.0 (use the version pinned in `.nvmrc`)
 - npm >= 10.0.0
 
 The required runtime versions are defined in `package.json`.
@@ -66,6 +66,7 @@ For detailed onboarding notes, see [TEAM_ONBOARDING.md](TEAM_ONBOARDING.md).
 ### Build
 
 - `npm run build` - Creates an optimized production build.
+- `npm run build:functions` - Compiles Pages Functions without compatibility overrides; does not deploy or start a server.
 - `npm run build:dev` - Creates a development-mode build.
 - `npm run pages:build` - Runs the production build for Pages usage.
 

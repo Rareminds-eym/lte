@@ -5,7 +5,7 @@
  * Creates immutable normalized snapshots with deterministic hashing.
  */
 
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 export interface NormalizedSnapshot {
   tables: Record<

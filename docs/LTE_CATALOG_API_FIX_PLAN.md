@@ -4,6 +4,59 @@
 coverage, quality checks and builds pass. Production cutover and live queue
 verification remain operational checks; no deployment was performed.
 
+## Pages deployment follow-up (2026-10-16)
+
+The failed Cloudflare build of `30cf1db` completed Vite successfully, then
+Wrangler 3.114.17 failed to resolve the bare `crypto` import in
+`functions/lib/catalog/ingestion/snapshot-serializer.ts`. A local Functions build
+without compatibility overrides reproduced the failure. Earlier validation passed
+explicit compatibility settings and missed this deployment compiler path.
+
+The serializer now imports `node:crypto`. Functions compile successfully with
+both Cloudflare's Wrangler 3.114.17 and the locked Wrangler 4.120.1 without CLI
+compatibility overrides. The hashing implementation and snapshot format are unchanged.
+
+The build also selected Node 20 from `.nvmrc`, below the locked dependencies'
+requirements. The pin is now 22.22.3, CI reads the same file, and package/lockfile
+metadata declare the actual minimum, 22.13.0. The optional Docker build stage now
+uses Node 22. The new `npm run build:functions` command compiles the existing
+Pages Functions into ignored local artifacts; CI runs both frontend and Functions
+builds. Neither command starts a persistent server or deploys another Worker.
+
+A read-only download of the live LTE Pages configuration confirmed that its
+production and preview runtime settings already enable `nodejs_compat` with
+compatibility date `2026-06-08`. The missing `pages_build_output_dir` notice
+means the checked-in Wrangler file remains local-only and deployment uses dashboard
+settings. It is not the fatal compiler error. Simply adding that property would
+replace dashboard-managed bindings and variables with the local configuration.
+The file contains local URLs and unverified namespace IDs, so this fix documents
+the configuration boundary instead of migrating deployment settings implicitly.
+
+The same read-only inspection found no deployed `RATE_LIMIT_KV` or
+`LTE_ASSET_VALIDATION_QUEUE` binding in either environment. Those remain the
+existing feature-specific production cutover prerequisites, separate from this
+compiler fix. KV is required by review, explicit refresh and certificate handlers;
+ordinary learning-path reads do not use the limiter. The asset queue is required
+only when catalog publication emits asset validation messages. Neither missing
+binding prevents compilation or establishes that the entire app is unavailable.
+A direct read-only Pages API check on 2026-10-16 independently confirmed both
+missing bindings and the existing Node compatibility settings in each environment.
+It found no NODE_VERSION override. The Node 20 engine warnings are a separate
+dependency mismatch, not the reported fatal compiler error; Docker alignment is
+independent build maintenance. June 2026 is the existing compatibility date, not
+a newly required minimum. No Cloudflare bindings, variables or secrets were changed.
+No database commands, SQL edits, data changes or persistent application servers
+are part of this follow-up.
+
+Verification for this deployment follow-up: production Vite build passes;
+Functions compile with Wrangler 3.114.17 and 4.120.1 without CLI compatibility
+overrides. All 231 test files pass (1,801 tests passed, one skipped). Full-suite
+coverage is 85.58% statements, 75.77% branches, 85.17% functions and 87.19%
+lines, above the existing thresholds. The changed-line gate passes with no
+changed executable lines (the source change is an import specifier). Existing
+pre-commit quality checks pass; existing non-blocking Biome warnings remain.
+The optional Docker image was not built. A remote Pages deployment was not run.
+
 ## Additional re-audit: corrections completed (2026-10-14)
 
 The re-audit found an omitted CI gate and incomplete guards in alternate write

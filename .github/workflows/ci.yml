@@ -13,10 +13,6 @@ jobs:
       contents: read
       id-token: write
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -107,6 +103,12 @@ jobs:
 
       - name: Type Check
         run: npm run typecheck
+
+      - name: Build production frontend
+        run: npm run build
+
+      - name: Compile Pages Functions without compatibility overrides
+        run: npm run build:functions
 
       - name: Run Tests
         run: npx vitest run --coverage
