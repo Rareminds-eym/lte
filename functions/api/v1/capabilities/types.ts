@@ -5,6 +5,7 @@ import type { GetCapabilitiesRequestSchema } from "./schemas";
 export interface Capability {
   id: string;
   name: string;
+  displayName?: string;
   description: string;
   code?: string;
   slug?: string;
@@ -18,6 +19,7 @@ export interface CapabilityRow {
   id: string;
   code: string;
   name: string;
+  display_name?: string | null;
   description: string;
   slug?: string;
 }
