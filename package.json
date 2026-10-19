@@ -82,7 +82,7 @@
     "@biomejs/biome": "2.5.3",
     "@commitlint/cli": "20.5.0",
     "@commitlint/config-conventional": "20.5.0",
-    "@eslint/js": "9.27.0",
+    "@eslint/js": "10.0.1",
     "@feature-sliced/steiger-plugin": "^0.7.0",
     "@secretlint/quick-start": "11.4.0",
     "@secretlint/secretlint-rule-preset-recommend": "11.4.0",
