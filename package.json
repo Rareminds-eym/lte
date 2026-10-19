@@ -23,7 +23,7 @@
     "react-router-dom": "7.18.1",
     "tailwind-merge": "3.6.0",
     "wrangler": "4.120.1",
-    "zod": "4.4.3",
+    "zod": "4.6.7",
     "zustand": "5.0.14"
   },
   "scripts": {
