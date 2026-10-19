@@ -20,7 +20,7 @@
     "react-dom": "19.2.7",
     "react-error-boundary": "6.1.1",
     "react-hot-toast": "2.6.0",
-    "react-router-dom": "7.18.1",
+    "react-router-dom": "7.18.4",
     "tailwind-merge": "3.6.0",
     "wrangler": "4.120.1",
     "zod": "4.4.3",
