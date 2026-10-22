@@ -237,6 +237,73 @@ describe("emitStageCompletedEvent", () => {
     ]);
   });
 
+  it.each([
+    { remainingStatus: "mastered", completedModules: 3, courseStatus: "completed" },
+    { remainingStatus: "in_progress", completedModules: 2, courseStatus: "in_progress" },
+  ])("preserves mastered module counts during durable delivery ($remainingStatus)", async ({
+    remainingStatus,
+    completedModules,
+    courseStatus,
+  }) => {
+    const qb = makeGateway({
+      levels: mockChain({ maybeSingle: ok(levelInfo), thenQueue: [ok(rawLevels)] }),
+      capabilities: mockChain({ maybeSingle: ok(capInfo) }),
+      user_capability_level_progress: mockChain({
+        thenVal: ok([
+          { level_id: "lvl-1", status: "completed" },
+          { level_id: "lvl-2", status: courseStatus },
+        ]),
+      }),
+      user_module_progress: mockChain({
+        thenVal: ok([
+          { module_id: "m1", module_status: "completed", completion_percentage: 100 },
+          { module_id: "m2", module_status: "mastered", completion_percentage: 100 },
+          {
+            module_id: "m3",
+            module_status: remainingStatus,
+            completion_percentage: remainingStatus === "mastered" ? 100 : 50,
+          },
+        ]),
+      }),
+      modules: mockChain({ thenVal: ok(allModules) }),
+      level_skills: mockChain({ thenVal: ok([]) }),
+    });
+
+    qb.rpc = vi.fn().mockResolvedValue(null);
+    expect(
+      await emitStageCompletedEvent(
+        qb,
+        { LTE_SYNC_QUEUE: { send } },
+        {
+          ...input,
+          persistedOnly: true,
+          levelCompleted: false,
+          status: "in_progress",
+        },
+      ),
+    ).toBe(true);
+
+    const [message] = send.mock.calls[0] as [unknown, unknown];
+    const event = (await decompress(message as Uint8Array)) as DecompressedEvent;
+    expect(event.payload).toMatchObject({
+      status: courseStatus,
+      completedModules,
+      totalModules: 3,
+    });
+    expect(event.payload.levels?.[1]).toMatchObject({
+      completedModules: completedModules - 1,
+      completionPercentage: remainingStatus === "mastered" ? 100 : 50,
+      modules: [
+        { id: "m2", status: "completed", completionPercentage: 100 },
+        {
+          id: "m3",
+          status: remainingStatus === "mastered" ? "completed" : "in_progress",
+          completionPercentage: remainingStatus === "mastered" ? 100 : 50,
+        },
+      ],
+    });
+  });
+
   it("falls back to sending JSON when the bytes send fails", async () => {
     send.mockRejectedValueOnce(new Error("bytes rejected")).mockResolvedValueOnce(undefined);
     const qb = makeGateway({ levels: mockChain({ maybeSingle: ok(null) }) });
@@ -258,7 +325,7 @@ describe("emitStageCompletedEvent", () => {
     const env = { LTE_SYNC_QUEUE: { send } };
     const errorSpy = vi.spyOn(apiLogger, "error").mockImplementation(() => undefined);
 
-    await expect(emitStageCompletedEvent(qb, env, input)).resolves.toBeUndefined();
+    await expect(emitStageCompletedEvent(qb, env, input)).resolves.toBe(false);
     expect(send).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledWith("Failed to emit to LTE_SYNC_QUEUE", expect.any(Error), {
       userId: "user-1",
