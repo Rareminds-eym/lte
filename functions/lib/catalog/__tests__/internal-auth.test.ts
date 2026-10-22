@@ -92,4 +92,51 @@ describe("catalog machine boundary", () => {
     ).toBe(413);
     expect(handle).not.toHaveBeenCalled();
   });
+  it.each([
+    new SyntaxError("downstream parser details"),
+    new RangeError("downstream range details"),
+  ])("classifies downstream %s as an operational failure", async (error) => {
+    const endpoint = internalEndpoint(async () => {
+      throw error;
+    });
+    const response = await endpoint(context(await signed("/api/v1/internal/learning/equivalence")));
+    expect(response.status).toBe(503);
+    expect(await response.text()).not.toContain(error.message);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+  it("supports the larger signed evidence body cap without widening default endpoints", async () => {
+    const body = JSON.stringify({ evidence: "x".repeat(20_000) }),
+      path = "/api/v1/internal/learning/equivalence";
+    const handler = vi.fn(async () => Response.json({ ok: true }));
+    expect((await internalEndpoint(handler)(context(await signed(path, body)))).status).toBe(413);
+    expect(
+      (await internalEndpoint(handler, 65_536)(context(await signed(path, body)))).status,
+    ).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+  it("rejects malformed signed JSON before invoking a handler", async () => {
+    const handler = vi.fn(async () => Response.json({ ok: true }));
+    expect(
+      (
+        await internalEndpoint(handler)(
+          context(await signed("/api/v1/internal/catalog/export", "{")),
+        )
+      ).status,
+    ).toBe(400);
+    expect(handler).not.toHaveBeenCalled();
+  });
+  it("correlates unauthorized and configuration failures without caching them", async () => {
+    const endpoint = internalEndpoint(async () => Response.json({ ok: true }));
+    const configured = context(new Request("https://lte.invalid"));
+    const missing = context(new Request("https://lte.invalid"));
+    delete missing.env.LTE_CATALOG_SYNC_SECRET;
+    for (const ctx of [configured, missing]) {
+      const response = await endpoint(ctx);
+      expect([401, 503]).toContain(response.status);
+      const body = await response.json();
+      expect(body.requestId).toBe(response.headers.get("X-Request-Id"));
+      expect(response.headers.get("traceparent")).toBeTruthy();
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+    }
+  });
 });
