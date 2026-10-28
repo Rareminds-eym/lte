@@ -45,7 +45,7 @@ export async function signedContext(
     new TextEncoder().encode(`POST\n${path}\n${timestamp}\n${bytes}`),
   );
   return {
-    env: { LTE_CATALOG_SYNC_SECRET: secret } as PagesContext["env"],
+    env: { LTE_INTERNAL_SECRET: secret } as PagesContext["env"],
     params: {},
     data: {},
     next: async () => new Response(),

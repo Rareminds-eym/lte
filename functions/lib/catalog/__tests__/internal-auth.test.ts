@@ -30,7 +30,7 @@ async function signed(path: string, body = "{}", timestamp = String(Date.now()))
 function context(request: Request): PagesContext {
   return {
     request,
-    env: { LTE_CATALOG_SYNC_SECRET: secret } as LteEnv,
+    env: { LTE_INTERNAL_SECRET: secret } as LteEnv,
     params: {},
     next: async () => new Response(),
     waitUntil: () => {},
@@ -129,7 +129,7 @@ describe("catalog machine boundary", () => {
     const endpoint = internalEndpoint(async () => Response.json({ ok: true }));
     const configured = context(new Request("https://lte.invalid"));
     const missing = context(new Request("https://lte.invalid"));
-    delete missing.env.LTE_CATALOG_SYNC_SECRET;
+    Reflect.deleteProperty(missing.env, "LTE_INTERNAL_SECRET");
     for (const ctx of [configured, missing]) {
       const response = await endpoint(ctx);
       expect([401, 503]).toContain(response.status);

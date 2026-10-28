@@ -14,7 +14,7 @@ import { PdfRenderRateLimitedError, PdfRenderTimeoutError } from "../pdfRenderer
 import { CertificateDownloadError } from "../storage";
 import { env, gateway, row, userId } from "./fixtures";
 
-const secret = env.SKILLPASSPORT_INTERNAL_SECRET;
+const secret = env.LTE_INTERNAL_SECRET;
 const claims = () => {
   const now = Math.floor(Date.now() / 1000);
   return { app: "skillpassport", actions: ["certificates.read"], iat: now, exp: now + 300 };

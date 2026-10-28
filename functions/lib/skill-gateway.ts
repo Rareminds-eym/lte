@@ -72,7 +72,7 @@ const GatewayEnvelopeSchema = z.object({
 
 export interface SkillGatewayEnv {
   SKILLPASSPORT_INTERNAL_URL: string;
-  SKILLPASSPORT_INTERNAL_SECRET: string;
+  LTE_INTERNAL_SECRET: string;
 }
 
 /**
@@ -86,7 +86,7 @@ export async function callSkill<T = unknown>(
   userId: string,
 ): Promise<T> {
   const baseUrl = env.SKILLPASSPORT_INTERNAL_URL?.replace(/\/+$/, "");
-  const secret = env.SKILLPASSPORT_INTERNAL_SECRET;
+  const secret = env.LTE_INTERNAL_SECRET;
   if (!baseUrl || !secret || secret.length < 32) {
     throw new GatewayCallError("Skill gateway env is not configured", "GATEWAY_MISCONFIGURED");
   }

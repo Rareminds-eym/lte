@@ -46,9 +46,9 @@ const backendEnvSchema = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY must not be empty"),
     COOKIE_DOMAIN: z.string().optional(),
     SKILLPASSPORT_INTERNAL_URL: z.string().url("SKILLPASSPORT_INTERNAL_URL must be a valid URL"),
-    SKILLPASSPORT_INTERNAL_SECRET: z
+    LTE_INTERNAL_SECRET: z
       .string()
-      .min(32, "SKILLPASSPORT_INTERNAL_SECRET must be at least 32 characters long"),
+      .min(32, "LTE_INTERNAL_SECRET must be at least 32 characters long"),
     OPENROUTER_API_KEY: z.string().trim().min(1, "OPENROUTER_API_KEY must not be empty"),
   })
   .passthrough();

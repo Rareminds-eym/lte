@@ -251,7 +251,7 @@ applications through a dashboard proxy and an LTE compatibility function.
 No deployment or remote secret/database modification is part of local coding.
 Before the actual cutover:
 
-1. Configure `LTE_CATALOG_SYNC_SECRET` (at least 32 characters) on LTE Pages
+1. Configure `LTE_INTERNAL_SECRET` (at least 32 characters) on LTE Pages
    and the dashboard, matching the existing recovery secret. The SkillPassport
    recovery caller keeps its existing matching secret.
 2. Confirm LTE production uses its existing production Supabase credentials,

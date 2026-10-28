@@ -39,7 +39,6 @@ export interface LteEnv {
   ASSETS: AssetsBinding;
   LTE_SYNC_QUEUE?: QueueSender;
   LTE_ASSET_VALIDATION_QUEUE?: { sendBatch(messages: Array<{ body: unknown }>): Promise<void> };
-  LTE_CATALOG_SYNC_SECRET?: string;
   SSO_SERVICE: SsoRpcService;
   STORAGE_BUCKET: R2BucketBinding;
   R2_PUBLIC_DOMAIN?: string;
@@ -47,7 +46,8 @@ export interface LteEnv {
   SUPABASE_SERVICE_ROLE_KEY: string;
   COOKIE_DOMAIN?: string;
   SKILLPASSPORT_INTERNAL_URL: string;
-  SKILLPASSPORT_INTERNAL_SECRET: string;
+  /** Shared server-only signing secret for gateway, certificate, catalogue and learning requests. */
+  LTE_INTERNAL_SECRET: string;
   OPENROUTER_API_KEY?: string;
   BROWSER_RENDERING_API_TOKEN: string;
   CF_ACCOUNT_ID: string;

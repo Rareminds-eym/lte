@@ -37,7 +37,7 @@ it("allows only maintenance callers and validates the empty command before I/O",
 it("requires a distinct app and cleanup action, so read tokens cannot drain jobs", async () => {
   const now = Math.floor(Date.now() / 1000);
   const ctx = context();
-  const readToken = await signServiceToken(env.SKILLPASSPORT_INTERNAL_SECRET, {
+  const readToken = await signServiceToken(env.LTE_INTERNAL_SECRET, {
     app: "skillpassport",
     actions: ["certificates.read"],
     iat: now,
@@ -46,7 +46,7 @@ it("requires a distinct app and cleanup action, so read tokens cannot drain jobs
   ctx.request.headers.set("Authorization", `Bearer ${readToken}`);
   expect((await onRequest(ctx)).status).toBe(403);
   expect(ctx.next).not.toHaveBeenCalled();
-  const token = await signServiceToken(env.SKILLPASSPORT_INTERNAL_SECRET, {
+  const token = await signServiceToken(env.LTE_INTERNAL_SECRET, {
     app: "lte-maintenance",
     actions: ["certificates.cleanup"],
     iat: now,

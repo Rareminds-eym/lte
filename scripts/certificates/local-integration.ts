@@ -149,7 +149,7 @@ if (process.env['CERTIFICATE_VERIFY_BROWSER'] === '1' && process.env['CERTIFICAT
   });
 }
 const now = Math.floor(Date.now() / 1000);
-const token = await signServiceToken(env.SKILLPASSPORT_INTERNAL_SECRET, {
+const token = await signServiceToken(env.LTE_INTERNAL_SECRET, {
   app: 'skillpassport',
   actions: ['certificates.read'],
   iat: now,
