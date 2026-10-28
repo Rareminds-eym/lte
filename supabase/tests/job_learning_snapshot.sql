@@ -2,12 +2,21 @@
 BEGIN;
 DO $$
 DECLARE subject uuid:=gen_random_uuid(); reviewer uuid:=gen_random_uuid(); track uuid; path uuid; progress uuid; module_progress uuid;
- target uuid; role uuid; rubric uuid; artifact record; submission uuid; review uuid; result jsonb; item jsonb; original_fingerprint text; command jsonb;
+ target uuid:=gen_random_uuid(); role uuid:=gen_random_uuid(); capability uuid:=gen_random_uuid(); scale uuid;
+ module_ref uuid:=gen_random_uuid(); content_ref uuid:=gen_random_uuid(); artifact_ref uuid:=gen_random_uuid();
+ rubric uuid; artifact record; submission uuid; review uuid; result jsonb; item jsonb; original_fingerprint text; command jsonb;
 BEGIN
  INSERT INTO public.users(id,email) VALUES(subject,subject||'@learning-test.invalid'),(reviewer,reviewer||'@learning-test.invalid');
- SELECT l.id INTO STRICT target FROM public.levels l JOIN public.modules m ON m.level_id=l.id JOIN public.modules_content mc ON mc.module_id=m.id JOIN public.module_artifacts a ON a.modules_content_id=mc.id
- WHERE l.is_active AND l.status::text='published' AND m.is_active AND m.is_published AND mc.is_active AND a.is_active AND a.artifact_type::text='final' LIMIT 1;
- SELECT id INTO STRICT role FROM public.roles LIMIT 1;
+ -- Own the catalog fixture so this suite also runs against unpublished or empty catalogs.
+ INSERT INTO public.capabilities(id,code,name,description,is_active) VALUES(capability,'learning-'||left(capability::text,8),'Learning fixture','Test',true);
+ INSERT INTO public.level_scale(level_no,level_label,generic_definition) VALUES(1,'Test','Test') ON CONFLICT(level_no) DO NOTHING;
+ SELECT id INTO STRICT scale FROM public.level_scale WHERE level_no=1;
+ INSERT INTO public.levels(id,level_code,capability_id,level_id,title,description,duration_minutes,difficulty_level,status,is_active)
+ VALUES(target,'learning-'||left(target::text,8),capability,scale,'Learning fixture','Test',1,'beginner','published',true);
+ INSERT INTO public.modules(id,level_id,module_no,title,description,is_active,is_published) VALUES(module_ref,target,1,'Learning fixture','Test',true,true);
+ INSERT INTO public.modules_content(id,module_id,stage_name,stage_order,is_active) VALUES(content_ref,module_ref,'express',4,true);
+ INSERT INTO public.module_artifacts(id,modules_content_id,artifact_type,total_score,is_active) VALUES(artifact_ref,content_ref,'final',100,true);
+ INSERT INTO public.roles(id,role_name,role_family_name,domain_name) VALUES(role,'Learning fixture '||role,'Test','Test');
  SELECT id INTO rubric FROM public.review_rubric_templates LIMIT 1;
  IF rubric IS NULL THEN INSERT INTO public.review_rubric_templates(version,name) VALUES(1,'Learning fixture rubric') RETURNING id INTO rubric; END IF;
  INSERT INTO public.learning_tracks(user_id,assessment_id,fit,track,match_score,duration,why_it_fits) VALUES(subject,gen_random_uuid(),'High','Learning fixture',90,'1 week','Fixture') RETURNING id INTO track;
@@ -15,6 +24,7 @@ BEGIN
  INSERT INTO public.user_capability_level_progress(user_id,learning_path_id,level_id,sequence_no,from_level,to_level,current_score,current_level,required_level,gap,gap_score,status,completion_percentage)
  VALUES(subject,path,target,1,0,1,100,1,1,0,0,'completed',100) RETURNING id INTO progress;
  result:=public.job_learning_snapshot(subject,ARRAY[target]);item:=result->'levels'->0;
+ IF jsonb_array_length(result->'levels') IS DISTINCT FROM 1 THEN RAISE EXCEPTION 'FAIL: published fixture missing from qualification snapshot'; END IF;
  IF (item->>'approved')::boolean THEN RAISE EXCEPTION 'FAIL: content completion alone qualified'; END IF;
  original_fingerprint:=item->>'fingerprint';
  FOR artifact IN SELECT a.id artifact_id,m.id module_id FROM public.modules m JOIN public.modules_content mc ON mc.module_id=m.id JOIN public.module_artifacts a ON a.modules_content_id=mc.id
