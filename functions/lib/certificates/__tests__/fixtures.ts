@@ -75,5 +75,5 @@ export const env = {
   BROWSER_RENDERING_API_TOKEN: "private-test-render-token",
   CERTIFICATE_VERIFY_BASE_URL: "https://skillpassport.rareminds.in/verify",
   SKILLPASSPORT_INTERNAL_URL: "https://skillpassport.rareminds.in",
-  SKILLPASSPORT_INTERNAL_SECRET: "test-internal-secret-at-least-32-characters",
+  LTE_INTERNAL_SECRET: "test-internal-secret-at-least-32-characters",
 };

@@ -4,7 +4,7 @@ import { callSkill } from "../skill-gateway";
 describe("Skill Gateway client", () => {
   const env = {
     SKILLPASSPORT_INTERNAL_URL: "https://skillpassport.test",
-    SKILLPASSPORT_INTERNAL_SECRET: "mock-secret-at-least-32-chars-long-here",
+    LTE_INTERNAL_SECRET: "mock-secret-at-least-32-chars-long-here",
   };
   const userId = "11111111-1111-1111-1111-111111111111";
 
@@ -16,7 +16,7 @@ describe("Skill Gateway client", () => {
   it("should fail-fast if environment config is missing or invalid secret", async () => {
     const badEnv = {
       SKILLPASSPORT_INTERNAL_URL: "",
-      SKILLPASSPORT_INTERNAL_SECRET: "short",
+      LTE_INTERNAL_SECRET: "short",
     };
     await expect(callSkill(badEnv, "ping", {}, userId)).rejects.toThrow(
       "Skill gateway env is not configured",

@@ -25,7 +25,7 @@ function context(path: string, method = "GET", body?: unknown): PagesContext {
     }),
     env: {
       SSO_SERVICE: {},
-      LTE_CATALOG_SYNC_SECRET: secret,
+      LTE_INTERNAL_SECRET: secret,
       STORAGE_BUCKET: { get: async () => null },
     } as unknown as LteEnv,
     params: { jobId: id },

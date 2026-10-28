@@ -50,7 +50,7 @@ export function internalEndpoint(
     try {
       const key = await crypto.subtle.importKey(
         "raw",
-        new TextEncoder().encode(config.data.LTE_CATALOG_SYNC_SECRET),
+        new TextEncoder().encode(config.data.LTE_INTERNAL_SECRET),
         { name: "HMAC", hash: "SHA-256" },
         false,
         ["verify"],

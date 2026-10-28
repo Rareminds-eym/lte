@@ -131,5 +131,5 @@ bucket_name = "lte"
 # - SUPABASE_URL
 # - SUPABASE_SERVICE_ROLE_KEY
 
-# Catalog integration: LTE_CATALOG_SYNC_SECRET (same value as sp-dash; >=32 characters).
+# Catalog integration: LTE_INTERNAL_SECRET (same value as sp-dash; >=32 characters).
 # Existing sp-dash Worker consumes lte-asset-validation; Pages only produces jobs.

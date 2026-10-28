@@ -36,7 +36,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
   try {
     const token = extractBearerToken(context.request);
     if (!token) throw new Error("Missing service token");
-    claims = await verifyServiceToken(context.env.SKILLPASSPORT_INTERNAL_SECRET, token);
+    claims = await verifyServiceToken(context.env.LTE_INTERNAL_SECRET, token);
   } catch {
     return respond(internalError("UNAUTHORIZED", "Invalid service token", 401, requestId));
   }
