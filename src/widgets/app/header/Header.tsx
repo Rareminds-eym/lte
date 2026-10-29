@@ -2,7 +2,7 @@ import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { SEARCH_QUERY_MAX_LENGTH, UI_TEXT } from "@/shared/config";
 import { SearchQuerySchema } from "@/shared/schemas";
-import { IconButton, SectionBoundary, toast } from "@/shared/ui";
+import { IconButton, SectionBoundary, ThemeToggle, toast } from "@/shared/ui";
 import { BellIcon, MenuIcon, SearchIcon } from "@/shared/ui/icons";
 import { NotificationPanel } from "./components/NotificationPanel";
 import { UserProfileBadge } from "./components/UserProfileBadge";
@@ -153,6 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
           }}
           className="relative flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0 min-w-0"
         >
+          <ThemeToggle />
           <div ref={notificationTriggerRef}>
             <IconButton
               aria-label={UI_TEXT.notifications}

@@ -7,6 +7,14 @@
     <meta name="description" content="LTE - Learner Transformer Engine" />
     <link rel="icon" href="/favicon.ico" />
     <title>LTE</title>
+    <script>
+      // Apply the saved preference before first paint.
+      try {
+        const dark = localStorage.getItem('lte-theme') === 'dark';
+        document.documentElement.classList.toggle('dark', dark);
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+      } catch {}
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

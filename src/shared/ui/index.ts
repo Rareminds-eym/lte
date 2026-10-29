@@ -1,4 +1,5 @@
 // Shared UI components
+export { ThemeToggle } from "./ThemeToggle";
 
 // Loading primitives
 export { ApplicationLoader } from "./application-loader";

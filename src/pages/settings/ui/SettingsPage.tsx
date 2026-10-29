@@ -8,7 +8,7 @@ import {
   useSettingsProfile,
   useUpdateProfile,
 } from "@/entities/settings";
-import { Button, TextField, ToggleSwitch, toast } from "@/shared/ui";
+import { Button, TextField, ThemeToggle, ToggleSwitch, toast } from "@/shared/ui";
 import {
   CameraIcon,
   CheckIcon,
@@ -276,6 +276,13 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* ─── Section 1: Profile ──────────────────────────────────────── */}
+      <section aria-labelledby="heading-appearance" className="flex items-center justify-between gap-4 bg-surface-primary rounded-2xl border border-line-default p-6 md:p-8 mb-8">
+        <div>
+          <h2 id="heading-appearance" className="text-base font-bold text-content-primary">Appearance</h2>
+          <p className="text-sm text-content-secondary mt-1">Switch between light and dark themes. Your preference is saved on this browser.</p>
+        </div>
+        <ThemeToggle />
+      </section>
       <section
         ref={profileRef}
         id="section-profile"
