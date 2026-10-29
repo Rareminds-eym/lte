@@ -1,5 +1,4 @@
 // Shared UI components
-export { ThemeToggle } from "./ThemeToggle";
 
 // Loading primitives
 export { ApplicationLoader } from "./application-loader";
@@ -33,6 +32,7 @@ export {
 } from "./SegmentedProgressBar";
 export { Skeleton, SkeletonGroup } from "./skeleton";
 export { TextField, type TextFieldProps } from "./TextField";
+export { ThemeToggle } from "./ThemeToggle";
 export {
   ToggleSwitch,
   type ToggleSwitchProps,
