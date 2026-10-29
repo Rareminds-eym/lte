@@ -1,4 +1,9 @@
 import type { QueryGatewayReadPolicy, QueryGatewayRpcPolicy } from "@functions/lib/query-gateway";
+export const learningRecommendationSummaryPolicy = {
+  operation: "rpc",
+  functionName: "job_learning_recommendation_summary",
+  allowedArgs: ["p_user", "p_policy"],
+} as const satisfies QueryGatewayRpcPolicy;
 export const learningSnapshotPolicy = {
   operation: "rpc",
   functionName: "job_learning_snapshot",
