@@ -34,7 +34,8 @@ async function main() {
     const filenameLower = file.toLowerCase();
     const hasAuthInName = filenameLower.includes("auth") || filenameLower.includes("sso");
     if (hasAuthInName) {
-      const isApprovedPath = APPROVED_AUTH_FILENAME_PATHS.some((approvedPath) => {
+      // Narrow machine-auth exception: no sibling files or direct SSO binding access.
+      const isApprovedPath = file === "functions/lib/catalog/internal-auth.ts" || APPROVED_AUTH_FILENAME_PATHS.some((approvedPath) => {
         return filenameLower.startsWith(approvedPath.toLowerCase());
       });
       if (!isApprovedPath) {

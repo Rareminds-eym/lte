@@ -623,13 +623,23 @@ rules:
 
   * `withAuth`
   * middleware provided by `@rareminds-eym/auth-core`
+  * `internalEndpoint` from `functions/lib/catalog/internal-auth.ts`, only for
+    service-to-service endpoints under `/api/v1/internal/`.
+
+  The internal service exception requires the central wrapper to validate
+  `LTE_INTERNAL_SECRET`, enforce the bounded body size and timestamp freshness,
+  and verify HMAC-SHA256 over the exact method, path, timestamp and body before
+  invoking the handler. A user ID in that verified body is a trusted service's
+  asserted subject, not an authenticated end-user identity. The calling service
+  must authorize that subject before signing. Unsigned or altered requests must
+  never reach business logic. This exception does not apply to browser/user APIs.
 
   Never:
 
   * manually decode JWTs
   * manually verify JWT signatures
   * manually parse authentication cookies
-  * manually extract and trust user IDs from request bodies
+  * manually extract and trust user IDs from unverified request bodies
   * duplicate authentication logic inside individual endpoints
 
   Authentication must be handled centrally through backend middleware.
