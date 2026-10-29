@@ -2,73 +2,43 @@
 
 ## Overview
 
-This project uses Codecov for code coverage reporting and tracking. Coverage reports are automatically generated and uploaded on every push and pull request.
+GitHub Actions generates and validates coverage on every push and pull request.
+Codecov is an optional reporting integration that must be enabled after registering
+this repository with Codecov.
 
 ## Current Setup
 
-### Coverage Targets
+- Vitest enforces 80% lines/statements and 75% branches/functions coverage.
+- Pull requests must cover at least 80% of changed executable lines.
+- GitHub retains generated reports in the `coverage-reports` artifact for 14 days,
+  including reports from runs that fail coverage validation.
+- Coverage totals appear in the GitHub Actions job summary.
+- Codecov uploads use GitHub OIDC and run only when the repository Actions variable
+  `CODECOV_ENABLED` is exactly `true`. An enabled upload still fails CI on error.
 
-- **Project Coverage**: Minimum 70% (with 2% threshold)
-- **PR Patch Coverage**: Minimum 80% (with 5% threshold)
-- **CI fails if**: Coverage drops below targets
+Disabling the external reporting integration does not disable either coverage gate.
 
-### What's Configured
+## Enable Codecov
 
-1. **Vitest** - Generates coverage reports using v8
-2. **GitHub Actions** - Runs tests and uploads coverage
-3. **Codecov** - Displays coverage reports and trends
-4. **codecov.yml** - Configuration file
+1. Sign in to Codecov with access to the `Rareminds-eym` organization.
+2. Register/activate `Rareminds-eym/lte` and grant the Codecov GitHub integration
+   access to this repository. Confirm Codecov recognizes the exact owner/repository.
+3. In GitHub repository **Settings → Secrets and variables → Actions → Variables**,
+   add `CODECOV_ENABLED` with value `true`.
+4. Run CI and verify **Upload coverage to Codecov** succeeds.
 
-## Setup Steps
-
-### 1. Sign Up for Codecov (One-time)
-
-1. Go to [codecov.io](https://codecov.io/)
-2. Sign in with your GitHub account
-3. Click "Add new repository"
-4. Select `Rareminds-eym/rm-lms`
-5. Copy the upload token (you'll need this)
-
-### 2. Add Codecov Token to GitHub Secrets
-
-1. Go to your GitHub repository
-2. Navigate to **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Name: `CODECOV_TOKEN`
-5. Value: Paste the token from Codecov
-6. Click **Add secret**
-
-### 3. Update CI Workflow (Already Done)
-
-The workflow is already configured to:
-
-- Run tests with coverage on Node 20.x
-- Upload coverage to Codecov
-- Upload coverage artifacts to GitHub
-- Fail CI if coverage upload fails
-
-### 4. Verify Setup
-
-Push a commit and check:
-
-```bash
-git add .
-git commit -m "chore: setup codecov"
-git push
-```
-
-Then:
-
-1. Go to GitHub Actions tab
-2. Check the CI workflow run
-3. Look for "Upload coverage to Codecov" step
-4. Should see: "Coverage uploaded successfully"
+The workflow requests `id-token: write` for OIDC authentication; no
+`CODECOV_TOKEN` repository secret is required by this configuration. A valid OIDC
+identity does not activate an unregistered repository: Codecov can still reject it
+with `Repository not found`. Complete repository registration before enabling
+uploads. When uploads are disabled, CI emits an explicit notice and the reports
+remain available in GitHub Actions.
 
 ## Using Codecov
 
 ### View Coverage Reports
 
-1. Go to [codecov.io/gh/Rareminds-eym/rm-lms](https://codecov.io/gh/Rareminds-eym/rm-lms)
+1. Go to [codecov.io/gh/Rareminds-eym/lte](https://codecov.io/gh/Rareminds-eym/lte)
 2. View overall coverage percentage
 3. Browse file-by-file coverage
 4. See coverage trends over time
@@ -87,7 +57,7 @@ Codecov automatically comments on PRs with:
 The README includes a coverage badge that shows current coverage:
 
 ```markdown
-[![codecov](https://codecov.io/gh/Rareminds-eym/rm-lms/branch/main/graph/badge.svg)](https://codecov.io/gh/Rareminds-eym/rm-lms)
+[![codecov](https://codecov.io/gh/Rareminds-eym/lte/branch/main/graph/badge.svg)](https://codecov.io/gh/Rareminds-eym/lte)
 ```
 
 ## Configuration (codecov.yml)
@@ -147,29 +117,18 @@ npm test
 
 ## Coverage Thresholds
 
-### Current Thresholds
+### Required CI Gates
 
-- **Overall Project**: 70% minimum
-- **New Code (PR Patch)**: 80% minimum
-- **Threshold**: 2% drop allowed for project, 5% for patches
+Vitest requires 80% lines/statements and 75% branches/functions. The separate PR
+patch validator requires 80% of changed executable lines. These checks run even
+when Codecov is disabled. Their configuration lives in `vite.config.ts` and
+`scripts/checks/validate-patch-coverage.js`.
 
-### Why These Numbers?
+### Optional Codecov Status Targets
 
-- **70% project**: Realistic for existing code, allows gradual improvement
-- **80% patch**: Higher bar for new code to improve overall coverage
-- **Thresholds**: Prevents small fluctuations from failing CI
-
-### Adjusting Thresholds
-
-Edit `codecov.yml`:
-
-```yaml
-coverage:
-  status:
-    project:
-      default:
-        target: 75% # Increase to 75%
-```
+`codecov.yml` configures a 70% project target with 2% tolerance and an 80% patch
+target with 5% tolerance. These external reporting targets apply once Codecov is
+activated; they do not replace the stricter required CI gates above.
 
 ## Troubleshooting
 
@@ -179,10 +138,10 @@ coverage:
 
 **Solutions**:
 
-1. Check `CODECOV_TOKEN` is set in GitHub Secrets
-2. Verify token is correct on codecov.io
-3. Check coverage file exists: `ls -la coverage/lcov.info`
-4. Re-run the workflow
+1. Confirm `Rareminds-eym/lte` is registered in Codecov and accessible to its GitHub integration.
+2. Confirm `CODECOV_ENABLED=true` is set only after registration is complete.
+3. Keep the job's `id-token: write` permission for OIDC authentication.
+4. Check coverage file exists: `ls -la coverage/lcov.info`, then re-run CI.
 
 ### Coverage Not Showing on PR
 
@@ -249,10 +208,10 @@ Coverage reports are also uploaded as GitHub Actions artifacts:
 
 1. Go to GitHub Actions → Select a workflow run
 2. Scroll to "Artifacts" section
-3. Download "coverage-report"
-4. Extract and open `index.html`
+3. Download "coverage-reports"
+4. Extract and open `lcov-report/index.html`
 
-Artifacts are kept for 30 days.
+Artifacts are kept for 14 days.
 
 ## Integration with Protected Configs
 
@@ -284,15 +243,6 @@ The codecov.yml file is protected by CODEOWNERS:
 
 ## Summary
 
-✅ Codecov configured with 70% project and 80% patch targets
-✅ Automatic coverage upload on every push/PR
-✅ PR comments with coverage changes
-✅ Coverage badge in README
-✅ Local coverage reports available
-✅ Protected by CODEOWNERS
-
-**Next**: Add `CODECOV_TOKEN` to GitHub Secrets to enable uploads.
-
----
-
-**Questions?** Contact @rareminds-git or @gokulrajr-r
+CI enforces coverage thresholds, publishes job-summary totals, and retains coverage
+artifacts independently of Codecov. To enable external dashboards and PR comments,
+register `Rareminds-eym/lte` in Codecov, then set `CODECOV_ENABLED=true`.

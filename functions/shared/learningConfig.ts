@@ -2,6 +2,11 @@
 export const LEARNING_POLICY = {
   maxRequestedLevels: 100,
   maxSnapshotLevels: 500,
+  maxRecommendationLevels: 50,
+  maxCapabilityNameChars: 300,
+  maxLevelTitleChars: 500,
+  minLevelNumber: 1,
+  maxLevelNumber: 5,
   minEvidenceChars: 200,
   maxEvidenceChars: 10_000,
   maxEvaluationBytes: 65_536,
@@ -16,6 +21,8 @@ export const LEARNING_POLICY = {
 } as const;
 export const LEARNING_MESSAGES = {
   invalidQualification: "Invalid qualification request",
+  invalidRecommendationSummary: "Invalid learning summary request.",
+  evaluationPolicyChanged: "Learning evaluation policy changed.",
   unavailable: "Qualification evidence unavailable",
   invalidEvidence: "Provide assessable evidence content.",
   changed: "Learning content changed.",

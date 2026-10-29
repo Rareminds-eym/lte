@@ -61,3 +61,28 @@ it.each([
     503,
   );
 });
+
+it("rejects a changed subject after the service signs the request", async () => {
+  const context = await signedContext("recommendation-summary", payload);
+  context.request = new Request(context.request.url, {
+    method: "POST",
+    headers: context.request.headers,
+    body: JSON.stringify({ ...payload, userId: "20000000-0000-4000-8000-000000000002" }),
+  });
+  expect((await onRequestPost(context)).status).toBe(401);
+  expect(f.create).not.toHaveBeenCalled();
+  expect(f.rpc).not.toHaveBeenCalled();
+});
+it("preserves the AI evaluation policy for a signed service request", async () => {
+  const aiSummary = { ...summary, evaluationPolicy: "ai" };
+  f.rpc.mockResolvedValue(aiSummary);
+  const response = await onRequestPost(
+    await signedContext("recommendation-summary", { ...payload, evaluationPolicy: "ai" }),
+  );
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual(aiSummary);
+  expect(f.rpc).toHaveBeenCalledWith(
+    expect.objectContaining({ functionName: "job_learning_recommendation_summary" }),
+    { args: { p_user: payload.userId, p_policy: "ai" } },
+  );
+});
