@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LevelContentPage } from "@/pages/level-content";
+import { useXpModalStore } from "@/shared/store";
 
 const {
   fetchLevelModuleDetailsMock,
@@ -199,6 +200,11 @@ const mockLevelContentData = {
   },
 };
 
+function CertificateDestination() {
+  const location = useLocation();
+  return <div data-testid="certificate-route">{location.search}</div>;
+}
+
 const renderPage = (path = `/my-courses/${levelId}/modules/1`) => {
   const queryClient = new QueryClient();
   return render(
@@ -206,6 +212,7 @@ const renderPage = (path = `/my-courses/${levelId}/modules/1`) => {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/my-courses/:levelId/modules/:moduleNo" element={<LevelContentPage />} />
+          <Route path="/certificates" element={<CertificateDestination />} />
           <Route
             path="/my-courses/:capabilityCode"
             element={<div data-testid="course-overview-route" />}
@@ -223,6 +230,30 @@ describe("LevelContentPage", () => {
     useLevelModuleDetailsMock.mockReset();
     useStartModuleProgressMock.mockReturnValue({ mutate: vi.fn() });
     useUpdateStageProgressMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  });
+
+  it.each([
+    0, 50,
+  ])("opens the certificate after server-confirmed completion and the %s XP reward", (xp) => {
+    useXpModalStore.getState().clearAll();
+    useLevelDetailsMock.mockReturnValue({ data: mockLevelContentData.level, isLoading: false });
+    useLevelModuleDetailsMock.mockReturnValue({
+      data: mockLevelContentData.module,
+      isLoading: false,
+    });
+    useUpdateStageProgressMock.mockReturnValue({
+      isPending: false,
+      mutate: (_input: unknown, callbacks?: { onSuccess?: (data: unknown) => void }) =>
+        callbacks?.onSuccess?.({ levelCompleted: true, levelXpAwarded: xp, totalXp: 100 }),
+    });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /Mark Done & Next/i }));
+    const event = useXpModalStore.getState().pendingEvents[0];
+    if (!event) throw new Error("Expected a course completion reward");
+    expect(event.eventType).toBe("course_completed_on_time");
+    act(() => event.onClose?.());
+    expect(screen.getByTestId("certificate-route")).toHaveTextContent(`?levelId=${levelId}`);
+    useXpModalStore.getState().clearAll();
   });
 
   it("loads level and module content from the level entity hook", () => {
@@ -584,7 +615,7 @@ describe("LevelContentPage", () => {
     });
   });
 
-  it("returns to the capability overview when the final module is complete", () => {
+  it("opens the earned certificate when the final module is complete", () => {
     const data = {
       level: {
         ...mockLevelContentData.level,
@@ -658,7 +689,7 @@ describe("LevelContentPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Complete Course/i }));
 
-    expect(screen.getByTestId("course-overview-route")).toBeInTheDocument();
+    expect(screen.getByTestId("certificate-route")).toHaveTextContent(`?levelId=${levelId}`);
   });
 
   it("handles toggling modules drawer and expanding/collapsing stage info", async () => {

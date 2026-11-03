@@ -14,3 +14,24 @@ export function paginateCourses(courses: Course[], page: number): Course[] {
   const start = (page - 1) * COURSE_PAGE_SIZE;
   return courses.slice(start, start + COURSE_PAGE_SIZE);
 }
+
+export function filterCoursesBySearch(
+  courses: Course[],
+  query: string,
+  roleId: string | null,
+): Course[] {
+  const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  return courses.filter((course) => {
+    if (roleId && course.roleId !== roleId) return false;
+    const text = [
+      course.title,
+      course.description,
+      course.category,
+      course.roleName,
+      ...course.tags,
+    ]
+      .join(" ")
+      .toLocaleLowerCase();
+    return terms.every((term) => text.includes(term));
+  });
+}

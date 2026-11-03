@@ -195,6 +195,17 @@ vi.mock("@/features/initialize-learning-path", () => ({
 }));
 
 describe("Courses", () => {
+  it("filters submitted dashboard searches and restores results when cleared", () => {
+    render(
+      <MemoryRouter initialEntries={["/my-courses?q=course%202"]}>
+        <Courses />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Course 2")).toBeInTheDocument();
+    expect(screen.queryByText("Course 1")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(screen.getByText("Course 1")).toBeInTheDocument();
+  });
   const renderCourses = () =>
     render(
       <MemoryRouter>
@@ -212,7 +223,7 @@ describe("Courses", () => {
 
   it("renders page title and description", () => {
     renderCourses();
-    expect(screen.getByText("My Courses")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Courses" })).toBeInTheDocument();
     expect(
       screen.getByText("Track your enrolled courses and continue where you left off."),
     ).toBeInTheDocument();
@@ -285,3 +296,8 @@ describe("Courses", () => {
     expect(screen.getByText("8 Enrolled")).toBeInTheDocument();
   });
 });
+
+vi.mock("@/entities/active-learning-path", () => ({
+  useLearningPath: (select: (state: Record<string, unknown>) => unknown) =>
+    select({ activeTrack: null, activeLearningPathLoading: false, needsAssessment: false }),
+}));

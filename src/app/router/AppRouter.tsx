@@ -1,9 +1,11 @@
 import type React from "react";
 import { lazy } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import { Route, Routes } from "react-router-dom";
 import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 import { LevelPlayerLayout } from "@/app/layouts/LevelPlayerLayout";
 import { MainLayout } from "@/app/layouts/MainLayout";
+import { MyLearningLayout } from "@/app/layouts/MyLearningLayout";
 import { GuestGuard } from "@/app/router/guards";
 import { CourseDetailSkeleton } from "@/pages/course-detail/ui/CourseDetailSkeleton";
 import { CoursesPageSkeleton } from "@/pages/courses/ui/CoursesPageSkeleton";
@@ -11,7 +13,7 @@ import { CoursesPageSkeleton } from "@/pages/courses/ui/CoursesPageSkeleton";
 import { DashboardSkeleton } from "@/pages/dashboard/ui/DashboardSkeleton";
 import { LevelModulesSkeleton } from "@/pages/level-modules/ui/LevelModulesSkeleton";
 import { SettingsPageSkeleton } from "@/pages/settings/ui/SettingsPageSkeleton";
-import { PageLoader, RouteLoadingBoundary } from "@/shared/ui";
+import { ErrorFallback, PageLoader, RouteLoadingBoundary } from "@/shared/ui";
 
 // Lazy loaded page components — must be declared at module scope (workspace rule)
 const HomePage = lazy(() => import("@/pages/home").then((m) => ({ default: m.HomePage })));
@@ -28,6 +30,9 @@ const LevelModules = lazy(() =>
   import("@/pages/level-modules").then((m) => ({ default: m.LevelModulesPage })),
 );
 const NotFound = lazy(() => import("@/pages/not-found").then((m) => ({ default: m.NotFound })));
+const Certificates = lazy(() =>
+  import("@/pages/certificates").then((m) => ({ default: m.CertificatesPage })),
+);
 const Settings = lazy(() => import("@/pages/settings").then((m) => ({ default: m.Settings })));
 
 export const AppRouter: React.FC = () => {
@@ -54,19 +59,31 @@ export const AppRouter: React.FC = () => {
         />
         <Route path="/auth/callback" element={null} />
         <Route element={<DashboardLayout />}>
+          <Route element={<MyLearningLayout />}>
+            <Route
+              path="/my-courses"
+              element={
+                <RouteLoadingBoundary fallback={<CoursesPageSkeleton />}>
+                  <Courses />
+                </RouteLoadingBoundary>
+              }
+            />
+            <Route
+              path="/certificates"
+              element={
+                <ErrorBoundary FallbackComponent={ErrorFallback}>
+                  <RouteLoadingBoundary fallback={<PageLoader message="Loading certificates..." />}>
+                    <Certificates />
+                  </RouteLoadingBoundary>
+                </ErrorBoundary>
+              }
+            />
+          </Route>
           <Route
             path="/dashboard"
             element={
               <RouteLoadingBoundary fallback={<DashboardSkeleton />}>
                 <Dashboard />
-              </RouteLoadingBoundary>
-            }
-          />
-          <Route
-            path="/my-courses"
-            element={
-              <RouteLoadingBoundary fallback={<CoursesPageSkeleton />}>
-                <Courses />
               </RouteLoadingBoundary>
             }
           />

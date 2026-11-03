@@ -27,13 +27,8 @@ vi.mock("@/entities/session", () => ({
   useAuthStore: mockUseAuthStore,
 }));
 
-// Mock learning path store
 vi.mock("@/entities/active-learning-path", () => ({
-  useLearningPathStore: {
-    getState: () => ({
-      fetchAndSetActiveLearningPath: vi.fn().mockResolvedValue(undefined),
-    }),
-  },
+  loadLearningPath: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock useInitializeLearningPath hook

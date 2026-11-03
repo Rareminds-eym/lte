@@ -26,18 +26,23 @@ const mockUser: AuthUser = {
 };
 
 const mockEnv: LteEnv = {
+  BROWSER_RENDERING_API_TOKEN: "test-browser-token",
+  CF_ACCOUNT_ID: "a".repeat(32),
+  CERTIFICATE_VERIFY_BASE_URL: "https://skillpassport.rareminds.in/verify",
   ASSETS: { fetch: async () => new Response() },
+  RATE_LIMIT_KV: { list: async () => ({ keys: [], list_complete: true }), put: async () => {} },
   SSO_SERVICE: {} as LteEnv["SSO_SERVICE"],
   STORAGE_BUCKET: {
     put: () => Promise.resolve({}),
     get: () => Promise.resolve(null),
     head: () => Promise.resolve(null),
     delete: () => Promise.resolve(undefined),
+    list: async () => ({ objects: [], truncated: false }),
   },
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   SKILLPASSPORT_INTERNAL_URL: "https://skillpassport.example.com",
-  SKILLPASSPORT_INTERNAL_SECRET: "a-secret-that-is-at-least-32-characters-long",
+  LTE_INTERNAL_SECRET: "a-secret-that-is-at-least-32-characters-long",
   OPENROUTER_API_KEY: "sk-or-test-key",
 };
 

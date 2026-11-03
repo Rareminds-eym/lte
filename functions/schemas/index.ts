@@ -34,3 +34,5 @@ export const EnrollmentSchema = z.object({
 export type EnrollmentRequest = z.infer<typeof EnrollmentSchema>;
 
 export * from "./artifacts";
+export * from "./certificateInternal";
+export * from "./certificates";

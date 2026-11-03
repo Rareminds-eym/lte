@@ -140,6 +140,13 @@ const roleExistsReadPolicy = {
   filters: ["id"],
 } as const;
 
+const roleShadowUpsertPolicy = {
+  table: "roles",
+  operation: "upsert",
+  upsertColumns: ["id", "role_name", "role_family_name", "domain_name", "metadata", "updated_at"],
+  onConflict: "id",
+} as const;
+
 const deactivateLearningTracksPolicy = {
   table: "learning_tracks",
   operation: "update",
@@ -473,6 +480,42 @@ export async function checkRoleExists(
   return !!data;
 }
 
+export async function ensureShadowRole(
+  source: QueryGatewaySource,
+  params: {
+    id: string;
+    roleName: string;
+    roleFamilyName?: string;
+    domainName?: string;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  const qb = asQueryGateway(source);
+  const exists = await checkRoleExists(qb, params.id);
+  if (exists) return;
+
+  const now = new Date().toISOString();
+  try {
+    await qb.upsert(roleShadowUpsertPolicy, {
+      id: params.id,
+      role_name: params.roleName.slice(0, 255),
+      role_family_name: (params.roleFamilyName || params.roleName).slice(0, 255),
+      domain_name: (params.domainName || "General").slice(0, 500),
+      metadata: params.metadata ?? {},
+      updated_at: now,
+    });
+  } catch (error) {
+    const recheck = await checkRoleExists(qb, params.id).catch(() => false);
+    if (!recheck) {
+      apiLogger.warn("Failed to shadow-provision role into public.roles", {
+        roleId: params.id,
+        roleName: params.roleName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+}
+
 const PG_UNIQUE_VIOLATION = "23505";
 
 export async function upsertLearningTrack(
@@ -769,7 +812,6 @@ export async function syncUserCapabilities(
       gap,
       has_gap: gap > 0,
       gap_score: gapScore,
-      badge: "none",
       updated_at: new Date().toISOString(),
     };
   });

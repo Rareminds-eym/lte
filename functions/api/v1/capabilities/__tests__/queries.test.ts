@@ -125,6 +125,54 @@ describe("capabilities queries", () => {
       ]);
     });
 
+    it("returns displayName from display_name and keeps the original name unchanged", async () => {
+      const gateway = gatewayWith({
+        role_capability_sequence: {
+          data: [
+            {
+              ...arrayCapabilityRow,
+              capabilities: [
+                { id: "c1", code: "C1", name: "Long formal name", display_name: "Short name" },
+              ],
+            },
+          ],
+        },
+      });
+
+      const [capability] = await getCapabilitiesByRoleId(gateway, "role-1");
+
+      expect(capability?.name).toBe("Long formal name");
+      expect(capability?.displayName).toBe("Short name");
+    });
+
+    it("leaves displayName undefined when display_name is null or missing", async () => {
+      const gateway = gatewayWith({
+        role_capability_sequence: {
+          data: [
+            {
+              ...arrayCapabilityRow,
+              capabilities: [{ id: "c1", code: "C1", name: "One", display_name: null }],
+            },
+            objectCapabilityRow,
+          ],
+        },
+      });
+
+      const result = await getCapabilitiesByRoleId(gateway, "role-1");
+
+      expect(result.map((c) => c.displayName)).toEqual([undefined, undefined]);
+      expect(result.map((c) => c.name)).toEqual(["One", "Two"]);
+    });
+
+    it("selects display_name from the capabilities join", async () => {
+      const supabase = supabaseWith({ role_capability_sequence: { data: [] } });
+      await getCapabilitiesByRoleId(createQueryGateway(supabase), "role-1");
+
+      const chain = (supabase.from as ReturnType<typeof vi.fn>).mock.results[0]
+        ?.value as QueryChain;
+      expect(chain.select).toHaveBeenCalledWith(expect.stringContaining("display_name"));
+    });
+
     it("returns [] for null data and empty data", async () => {
       await expect(
         getCapabilitiesByRoleId(gatewayWith({ role_capability_sequence: { data: null } }), "r"),

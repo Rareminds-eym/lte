@@ -4,7 +4,7 @@ import { callSkill } from "../skill-gateway";
 describe("Skill Gateway client", () => {
   const env = {
     SKILLPASSPORT_INTERNAL_URL: "https://skillpassport.test",
-    SKILLPASSPORT_INTERNAL_SECRET: "mock-secret-at-least-32-chars-long-here",
+    LTE_INTERNAL_SECRET: "mock-secret-at-least-32-chars-long-here",
   };
   const userId = "11111111-1111-1111-1111-111111111111";
 
@@ -16,7 +16,7 @@ describe("Skill Gateway client", () => {
   it("should fail-fast if environment config is missing or invalid secret", async () => {
     const badEnv = {
       SKILLPASSPORT_INTERNAL_URL: "",
-      SKILLPASSPORT_INTERNAL_SECRET: "short",
+      LTE_INTERNAL_SECRET: "short",
     };
     await expect(callSkill(badEnv, "ping", {}, userId)).rejects.toThrow(
       "Skill gateway env is not configured",
@@ -112,5 +112,22 @@ describe("Skill Gateway client", () => {
     vi.mocked(globalThis.fetch).mockRejectedValue(abortError);
 
     await expect(callSkill(env, "ping", {}, userId)).rejects.toThrow("Skill gateway timed out");
+  });
+  it("keeps the timeout active while reading a stalled response body", async () => {
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      status: 200,
+      json: () =>
+        new Promise((_resolve, reject) => {
+          controller.signal.addEventListener("abort", () => reject(controller.signal.reason));
+          controller.abort(new DOMException("deadline", "TimeoutError"));
+        }),
+    } as unknown as Response);
+    await expect(callSkill(env, "catalogue:get", {}, userId)).rejects.toMatchObject({
+      code: "GATEWAY_TIMEOUT",
+    });
+    expect(timeout).toHaveBeenCalledWith(30_000);
+    timeout.mockRestore();
   });
 });

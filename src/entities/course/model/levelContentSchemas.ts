@@ -71,6 +71,14 @@ export const ModuleArtifactSubmittedFileSchema = z.object({
   uploadedAt: z.string().nullable(),
 });
 
+export const ModuleArtifactSubmissionSchema = z.object({
+  submissionId: z.string(),
+  attemptNo: z.number(),
+  versionLabel: z.string(),
+  isLatest: z.boolean(),
+  submittedAt: z.string().nullable(),
+});
+
 export const ModuleArtifactSchema = z.object({
   id: z.string(),
   artifactType: z.enum(["practice", "final"]),
@@ -79,6 +87,7 @@ export const ModuleArtifactSchema = z.object({
   questions: z.array(ModuleArtifactQuestionSchema),
   templates: z.array(ModuleArtifactTemplateSchema),
   submittedFiles: z.array(ModuleArtifactSubmittedFileSchema),
+  submittedAttempts: z.array(ModuleArtifactSubmissionSchema).default([]),
   isActive: z.boolean(),
 });
 

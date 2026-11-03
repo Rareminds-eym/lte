@@ -1,4 +1,5 @@
 import type React from "react";
+import { UI_TEXT } from "@/shared/config";
 import { Image } from "@/shared/ui";
 import { ChevronRightIcon, UserIcon } from "@/shared/ui/icons";
 
@@ -25,6 +26,7 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
       onClick={onClick}
       aria-expanded={isOpen}
       aria-haspopup="menu"
+      aria-label={UI_TEXT.accountMenu(name)}
       className={`flex items-center gap-2 p-1 rounded-xl hover:bg-surface-muted transition-colors cursor-pointer text-left border-none bg-transparent ${className}`}
     >
       {/* Avatar Circle */}
@@ -45,7 +47,7 @@ export const UserProfileBadge: React.FC<UserProfileBadgeProps> = ({
       <div className="hidden sm:flex flex-col leading-tight max-w-[120px]">
         <span className="text-sm font-bold text-content-primary truncate">{name}</span>
         {status && (
-          <span className="text-xs font-normal text-content-muted truncate">{status}</span>
+          <span className="text-xs font-normal text-content-secondary truncate">{status}</span>
         )}
       </div>
 

@@ -5,6 +5,7 @@ import {
   activateLearningTrack,
   checkRoleExists,
   deactivateOtherTracks,
+  ensureShadowRole,
   getActiveLearningTrack,
   syncUserCapabilities,
   upsertLearningPath,
@@ -495,6 +496,39 @@ describe("learning-paths queries", () => {
       await expect(
         syncUserCapabilities(gateway, { userId: "u1", learningPathId: "lp1", roleId: "r1" }),
       ).rejects.toThrow("Failed to upsert user capabilities: boom");
+    });
+  });
+
+  describe("ensureShadowRole", () => {
+    it("skips upsert when role already exists", async () => {
+      const { gateway, supabase } = gatewayWith({
+        roles: { query: { data: { id: "r1" } } },
+      });
+      await ensureShadowRole(gateway, { id: "r1", roleName: "Software Engineer" });
+      const rolesChain = fromChain(supabase, 0);
+      expect(rolesChain?.upsert).not.toHaveBeenCalled();
+    });
+
+    it("upserts role when role does not exist", async () => {
+      const { gateway, supabase } = gatewayWith({
+        roles: { query: { data: null }, upsert: { data: { id: "r1" } } },
+      });
+      await ensureShadowRole(gateway, {
+        id: "r1",
+        roleName: "Software Engineer",
+        roleFamilyName: "Engineering",
+        domainName: "Tech",
+      });
+      const rolesChain = fromChain(supabase, 1);
+      expect(rolesChain?.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "r1",
+          role_name: "Software Engineer",
+          role_family_name: "Engineering",
+          domain_name: "Tech",
+        }),
+        expect.anything(),
+      );
     });
   });
 });

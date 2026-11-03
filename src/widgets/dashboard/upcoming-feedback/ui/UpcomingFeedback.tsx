@@ -1,6 +1,8 @@
 import type React from "react";
+import { Link } from "react-router-dom";
 import type { UpcomingFeedbackData } from "@/entities/dashboard";
-import { WidgetCard } from "@/shared/ui";
+import { DASHBOARD_CARD_HEIGHTS, REVIEW_TEXT, ROUTES, UI_TEXT } from "@/shared/config";
+import { Button, WidgetCard } from "@/shared/ui";
 import {
   CalendarIcon,
   GoodFeedbackIcon,
@@ -12,28 +14,54 @@ import {
 
 export interface UpcomingFeedbackProps {
   data: UpcomingFeedbackData;
+  onRetry?: () => void;
+  retrying?: boolean;
 }
 
-export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
+export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data, onRetry, retrying }) => {
   return (
     <WidgetCard
-      title="Upcoming & Feedback"
-      infoTooltip="Upcoming events info"
+      scrollable
+      className={DASHBOARD_CARD_HEIGHTS.standard}
+      title={UI_TEXT.upcomingFeedback}
+      infoTooltip={UI_TEXT.reviewTooltip}
       icon={<GoodFeedbackIcon size={18} className="text-content-primary shrink-0" />}
-      action={{
-        label: "View calendar",
-        href: "#calendar",
-      }}
     >
       <div className="space-y-5">
+        {data.error && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-3 rounded-xl border border-line-default bg-surface-secondary p-3 text-sm text-content-secondary"
+          >
+            <p className="flex-1 min-w-0">{data.error}</p>
+            {onRetry && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={onRetry}
+                disabled={retrying}
+                aria-busy={retrying}
+              >
+                {retrying ? UI_TEXT.retrying : REVIEW_TEXT.retryFeedback}
+              </Button>
+            )}
+          </div>
+        )}
         {/* Section 1: UPCOMING */}
         <div>
-          <div className="text-xs font-extrabold text-content-muted uppercase tracking-wider mb-3">
-            UPCOMING
+          <div className="text-xs font-extrabold text-content-secondary uppercase tracking-wider mb-3">
+            {UI_TEXT.upcomingHeading}
           </div>
           <div className="space-y-4">
+            {!data.error && !data.upcoming.length && (
+              <p className="text-sm text-content-secondary">{REVIEW_TEXT.noPending}</p>
+            )}
             {data.upcoming.map((item) => (
-              <div key={item.id} className="flex items-center justify-between group cursor-pointer">
+              <Link
+                key={item.id}
+                to={item.href ?? ROUTES.MY_COURSES}
+                className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 group cursor-pointer rounded-lg min-h-11"
+              >
                 <div className="flex items-start gap-3.5 min-w-0 pr-2">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
@@ -58,10 +86,10 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                   </div>
                 </div>
 
-                <span className="px-3 py-1 bg-surface-secondary text-content-secondary text-xs font-semibold rounded-full shrink-0 shadow-2xs">
+                <span className="ml-[54px] sm:ml-0 px-3 py-1 bg-surface-secondary text-content-secondary text-xs font-semibold rounded-full shrink-0 shadow-2xs">
                   {item.tag}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -71,17 +99,24 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
 
         {/* Section 2: RECENT FEEDBACK */}
         <div>
-          <div className="text-xs font-extrabold text-content-muted uppercase tracking-wider mb-3">
-            RECENT FEEDBACK
+          <div className="text-xs font-extrabold text-content-secondary uppercase tracking-wider mb-3">
+            {UI_TEXT.recentFeedbackHeading}
           </div>
           <div className="space-y-4">
+            {!data.error && !data.recentFeedback.length && (
+              <p className="text-sm text-content-secondary">{REVIEW_TEXT.noFeedback}</p>
+            )}
             {data.recentFeedback.map((item) => (
-              <div key={item.id} className="flex items-center justify-between group cursor-pointer">
+              <Link
+                key={item.id}
+                to={item.href ?? ROUTES.MY_COURSES}
+                className="flex items-center justify-between gap-2 group cursor-pointer rounded-lg min-h-11"
+              >
                 <div className="flex items-start gap-3.5 min-w-0 pr-2">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       item.type === "interview"
-                        ? "bg-level-developing-bg text-level-developing-text"
+                        ? "bg-level-developing-bg text-warning-700"
                         : "bg-level-proficient-bg text-level-proficient-text"
                     }`}
                   >
@@ -105,7 +140,7 @@ export const UpcomingFeedback: React.FC<UpcomingFeedbackProps> = ({ data }) => {
                   <CalendarIcon size={14} />
                   <span>{item.daysAgo}</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

@@ -96,6 +96,7 @@ interface EmitStageCompletedEventInput {
   levelId: string;
   moduleNumber: number;
   durationSeconds?: number;
+  persistedOnly?: boolean;
   levelCompleted: boolean;
   status: "in_progress" | "completed";
 }
@@ -218,10 +219,6 @@ async function buildCourseSnapshot(
 
     if (rawLevels && rawLevels.length > 0) {
       const sortedLevels = [...rawLevels].sort((a, b) => a.level_code.localeCompare(b.level_code));
-      const currentIndex = Math.max(
-        0,
-        sortedLevels.findIndex((l) => l.id === input.levelId),
-      );
 
       levelsPayload = [];
       const rawAllModules = (await qb.read(modulesByLevelsReadPolicy, {
@@ -256,6 +253,11 @@ async function buildCourseSnapshot(
             })) as Array<{ id: string; level_no: number }> | null)
           : null;
       const scaleNoMap = new Map((rawScaleRes ?? []).map((s) => [s.id, s.level_no]));
+      sortedLevels.sort(
+        (a, b) =>
+          (scaleNoMap.get(a.level_id) ?? Number.MAX_SAFE_INTEGER) -
+            (scaleNoMap.get(b.level_id) ?? Number.MAX_SAFE_INTEGER) || a.id.localeCompare(b.id),
+      );
       const levelNoMap = new Map(
         sortedLevels.map((l, index) => [l.id, scaleNoMap.get(l.level_id) ?? index + 1]),
       );
@@ -277,7 +279,6 @@ async function buildCourseSnapshot(
         else skillsByLevel.set(ls.level_id, [payloadItem]);
       }
 
-      let i = 0;
       for (const lvl of sortedLevels) {
         const rawMods = modulesByLevel.get(lvl.id) ?? null;
 
@@ -287,9 +288,10 @@ async function buildCourseSnapshot(
 
         const dbStatus = levelDbMap.get(lvl.id);
         let levelStatus: LevelStatus = "not_started";
-        if (isCurrent) {
-          levelStatus = input.levelCompleted ? "completed" : "in_progress";
-        } else if (dbStatus === "completed" || i < currentIndex) {
+        if (isCurrent && !input.persistedOnly) {
+          levelStatus =
+            input.levelCompleted || dbStatus === "completed" ? "completed" : "in_progress";
+        } else if (dbStatus === "completed") {
           levelStatus = "completed";
         } else if (dbStatus === "in_progress") {
           levelStatus = "in_progress";
@@ -303,14 +305,14 @@ async function buildCourseSnapshot(
             let mInProgress = false;
 
             if (mDb) {
-              mDone = mDb.module_status === "completed";
+              mDone = mDb.module_status === "completed" || mDb.module_status === "mastered";
               mInProgress = mDb.module_status === "in_progress";
-            } else if (isCurrent) {
+            } else if (isCurrent && !input.persistedOnly) {
               mDone =
                 m.module_no < input.moduleNumber ||
                 (m.module_no === input.moduleNumber && isCompletedStatus);
               mInProgress = m.module_no === input.moduleNumber && !isCompletedStatus;
-            } else if (levelStatus === "completed") {
+            } else if (levelStatus === "completed" && !input.persistedOnly) {
               mDone = true;
             }
 
@@ -346,12 +348,13 @@ async function buildCourseSnapshot(
           modules,
           ...(levelStatus === "completed" ? { skills: skillsByLevel.get(lvl.id) ?? [] } : {}),
         });
-        i++;
       }
     }
   }
 
   const levels = levelsPayload && levelsPayload.length > 0 ? levelsPayload : undefined;
+  if (input.persistedOnly && !levels)
+    throw new Error("Authoritative course snapshot is unavailable");
   const isCourseCompleted = levels
     ? levels.every((l) => l.status === "completed")
     : input.levelCompleted;
@@ -391,12 +394,31 @@ export async function emitStageCompletedEvent(
   qb: QueryGateway,
   env: Pick<LteEnv, "LTE_SYNC_QUEUE">,
   input: EmitStageCompletedEventInput,
-): Promise<void> {
+): Promise<boolean> {
   const lteQueue = env.LTE_SYNC_QUEUE;
-  if (!lteQueue) return;
+  if (!lteQueue) return false;
 
   try {
+    const revisionPolicy = {
+      table: "learning_progress_revisions",
+      operation: "read",
+      columns: ["revision"],
+      filters: ["user_id"],
+    } as const;
+    const before = await qb.read<{ revision: number }>(revisionPolicy, {
+      filters: [{ column: "user_id", op: "eq", value: input.userId }],
+      result: "maybeSingle",
+    });
+    const sourceRevision = before?.revision ?? 0;
+    if (!Number.isSafeInteger(sourceRevision) || sourceRevision < 0)
+      throw new Error("Invalid learning revision");
     const snapshot = await buildCourseSnapshot(qb, input);
+    const after = await qb.read<{ revision: number }>(revisionPolicy, {
+      filters: [{ column: "user_id", op: "eq", value: input.userId }],
+      result: "maybeSingle",
+    });
+    if ((after?.revision ?? 0) !== sourceRevision)
+      throw new Error("Learning changed during snapshot; durable delivery will retry");
     const resumeUrl = `/my-courses/${snapshot.lteCourseCode || snapshot.lteCourseId}`;
 
     // earnedSkills carries the REAL skill names of every completed level in the
@@ -414,6 +436,8 @@ export async function emitStageCompletedEvent(
     const eventMessage = {
       type: snapshot.isCourseCompleted ? "lte.level_completed" : "lte.module_completed",
       payload: {
+        schemaVersion: 2,
+        sourceRevision,
         userId: input.userId,
         lteCourseId: snapshot.lteCourseId,
         courseTitle: snapshot.courseTitle,
@@ -439,11 +463,21 @@ export async function emitStageCompletedEvent(
       });
       await lteQueue.send(eventMessage, { contentType: "json" });
     }
+    await qb.rpc(
+      {
+        operation: "rpc",
+        functionName: "ack_learning_progress_delivery",
+        allowedArgs: ["p_user", "p_level", "p_revision"],
+      },
+      { args: { p_user: input.userId, p_level: input.levelId, p_revision: sourceRevision } },
+    );
+    return true;
   } catch (queueErr) {
     // Fail-soft: Queue errors never crash the user's HTTP response
     apiLogger.error("Failed to emit to LTE_SYNC_QUEUE", queueErr, {
       userId: input.userId,
       levelId: input.levelId,
     });
+    return false;
   }
 }

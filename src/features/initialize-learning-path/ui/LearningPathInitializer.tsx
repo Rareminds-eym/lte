@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { ZodIssue } from "zod";
 import { useShallow } from "zustand/react/shallow";
-import { useLearningPathStore } from "@/entities/active-learning-path";
+import { loadLearningPath } from "@/entities/active-learning-path";
 import { useAuthStore } from "@/entities/session";
 import { getLogger } from "@/shared";
 import { initializeLearningPathSchema } from "../model/initializeLearningPath.schema";
@@ -103,15 +103,12 @@ export const LearningPathInitializer = ({ capabilityCode }: LearningPathInitiali
         onSuccess: async () => {
           const userId = useAuthStore.getState().user?.id;
           if (userId) {
-            await useLearningPathStore
-              .getState()
-              .fetchAndSetActiveLearningPath(userId)
-              .catch((error: unknown) => {
-                logger.error(
-                  "Failed to fetch active learning path",
-                  error instanceof Error ? error : new Error(String(error)),
-                );
-              });
+            await loadLearningPath(userId).catch((error: unknown) => {
+              logger.error(
+                "Failed to fetch active learning path",
+                error instanceof Error ? error : new Error(String(error)),
+              );
+            });
           }
           const targetUrl = capabilityCode ? buildCourseDetailUrl(capabilityCode) : "/my-courses";
           navigate(targetUrl, {

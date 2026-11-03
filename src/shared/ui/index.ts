@@ -4,10 +4,12 @@
 export { ApplicationLoader } from "./application-loader";
 export { Breadcrumb, type BreadcrumbItem, type BreadcrumbProps } from "./Breadcrumb";
 export { Button, type ButtonProps } from "./Button";
+export { Dialog, type DialogProps } from "./Dialog";
 export { ErrorFallback } from "./ErrorFallback";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { Image } from "./Image";
 export * from "./icons";
+export { CertificateIcon } from "./icons";
 export { InlineSpinner } from "./inline-spinner";
 export { PageLoader } from "./PageLoader";
 export {
@@ -18,6 +20,7 @@ export {
   type RadioOption,
 } from "./RadioButton";
 export { RouteContentSkeleton, RouteLoadingBoundary } from "./route-loading-boundary";
+export { SectionBoundary, type SectionBoundaryProps } from "./SectionBoundary";
 export {
   SegmentedControl,
   type SegmentedControlProps,
@@ -29,6 +32,7 @@ export {
 } from "./SegmentedProgressBar";
 export { Skeleton, SkeletonGroup } from "./skeleton";
 export { TextField, type TextFieldProps } from "./TextField";
+export { ThemeToggle } from "./ThemeToggle";
 export {
   ToggleSwitch,
   type ToggleSwitchProps,

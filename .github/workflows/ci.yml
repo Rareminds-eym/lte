@@ -9,10 +9,9 @@ on:
 jobs:
   lint-and-validate:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [22.x]
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -23,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -33,6 +32,20 @@ jobs:
 
       - name: Validate File Types
         run: npm run lint:files
+
+      - name: Validate Database Rules
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            npm run lint:database -- --base "$BASE_SHA"
+          elif [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            npm run lint:database -- --base "$BEFORE_SHA" --exact-base
+          else
+            npm run lint:database -- --base origin/dev
+          fi
 
       - name: Detect Console Usage
         run: npm run lint:console
@@ -91,10 +104,45 @@ jobs:
       - name: Type Check
         run: npm run typecheck
 
+      - name: Build production frontend
+        run: npm run build
+
+      - name: Compile Pages Functions without compatibility overrides
+        run: npm run build:functions
+
       - name: Run Tests
         run: npx vitest run --coverage
 
       - name: Add Coverage to Job Summary
         if: always()
         run: node scripts/tools/add-coverage-summary.js
+
+      - name: Validate patch coverage
+        if: github.event_name == 'pull_request'
+        env:
+          COVERAGE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/checks/validate-patch-coverage.js "$COVERAGE_BASE"
+
+      - name: Retain coverage reports
+        if: always() && hashFiles('coverage/lcov.info') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: coverage/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Explain Codecov setup
+        if: vars.CODECOV_ENABLED != 'true'
+        run: |
+          echo "::notice::Codecov upload is disabled until this repository is registered in Codecov and CODECOV_ENABLED=true is set. Coverage thresholds and PR patch coverage remain enforced locally; reports are retained in coverage-reports."
+
+      - name: Upload coverage to Codecov
+        if: vars.CODECOV_ENABLED == 'true'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          flags: unittests
+          use_oidc: true
+          fail_ci_if_error: true
 

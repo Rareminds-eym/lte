@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { EvaluationStage } from "@/features/submit-artifact";
 import {
   ArtifactFeedbackTab,
   type SubmittedArtifactAttempt,
@@ -58,6 +59,7 @@ const renderTab = (
     activeFeedbackAttemptNo?: number | null;
     latestEvaluation?: SubmittedArtifactAttempt["evaluation"];
     isEvaluationLoading?: boolean;
+    stages?: EvaluationStage[];
   } = {},
 ) => {
   const onSelectAttempt = vi.fn();
@@ -65,10 +67,10 @@ const renderTab = (
     <ArtifactFeedbackTab
       submittedAttempts={overrides.attempts ?? [createAttempt(1, baseEvaluation)]}
       activeFeedbackAttemptNo={overrides.activeFeedbackAttemptNo ?? 1}
-      isPanelExpanded={false}
       onSelectAttempt={onSelectAttempt}
       latestEvaluation={overrides.latestEvaluation}
       isEvaluationLoading={overrides.isEvaluationLoading ?? false}
+      stages={overrides.stages}
     />,
   );
   return { onSelectAttempt, ...result };
@@ -159,6 +161,83 @@ describe("ArtifactFeedbackTab", () => {
     fireEvent.click(screen.getByText("answer.xlsx"));
 
     await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith("File expired."));
+  });
+
+  describe("human-review-only scope (no AI stage)", () => {
+    const stage = (overrides: Partial<EvaluationStage>): EvaluationStage => ({
+      stage: "staff_review",
+      status: "pending",
+      score: null,
+      decision: null,
+      feedback: null,
+      improvements: null,
+      completed_at: null,
+      evaluated_by: null,
+      ...overrides,
+    });
+    const placeholder: SubmittedArtifactAttempt["evaluation"] = {
+      overall_score: 0,
+      decision: "human_review",
+      rubric_rows: [
+        {
+          label: "Completeness",
+          score: 0,
+          maxScore: 3,
+          level: "Not demonstrated",
+          tone: "warning",
+        },
+      ],
+      feedback: "Your artifact is awaiting staff review.",
+      improvements: "Wait for a staff reviewer to evaluate this artifact.",
+      calculated_xp: 0,
+    };
+
+    it("hides the placeholder zero scores and shows an awaiting message", () => {
+      renderTab({
+        attempts: [createAttempt(1, placeholder)],
+        stages: [stage({ status: "pending" })],
+      });
+
+      expect(screen.queryByText("Completeness")).not.toBeInTheDocument();
+      expect(screen.queryByText(/0\/3/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Wait for a staff reviewer/)).not.toBeInTheDocument();
+      expect(
+        screen.getAllByText(/Awaiting staff review\. Scores appear here/).length,
+      ).toBeGreaterThan(0);
+      expect(screen.getByText("Your artifact is awaiting staff review.")).toBeInTheDocument();
+      expect(screen.getByText("Human Review Required")).toBeInTheDocument();
+      expect(screen.getByText(/Evaluator:/).textContent).toContain("Staff review");
+      expect(screen.queryByText("0")).not.toBeInTheDocument();
+    });
+
+    it("still shows real AI reference scores when an AI stage exists", () => {
+      renderTab({
+        attempts: [
+          createAttempt(1, {
+            ...placeholder,
+            overall_score: 40,
+            rubric_rows: [
+              { label: "Completeness", score: 1, maxScore: 3, level: "Partially demonstrated" },
+            ],
+          }),
+        ],
+        stages: [stage({ stage: "ai", status: "completed" }), stage({ status: "pending" })],
+      });
+
+      expect(screen.getByText("Completeness")).toBeInTheDocument();
+      expect(screen.getByText(/Evaluator:/).textContent).toContain("AI review");
+    });
+
+    it("shows the staff result once staff review is completed", () => {
+      renderTab({
+        attempts: [createAttempt(1, baseEvaluation)],
+        stages: [stage({ status: "completed" })],
+      });
+
+      expect(screen.getByText("Completeness")).toBeInTheDocument();
+      expect(screen.getByText("Passed")).toBeInTheDocument();
+      expect(screen.getByText(/Evaluator:/).textContent).toContain("Staff review");
+    });
   });
 
   it("selects a different attempt via the attempt tabs", () => {

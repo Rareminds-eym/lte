@@ -187,6 +187,7 @@ export default defineConfig({
 		],
 		coverage: {
 			provider: "v8",
+			include: ["src/**/*.{ts,tsx}", "functions/**/*.ts"],
 			reporter: ["text", "lcov", "html", "json-summary"],
 			exclude: [
 				"node_modules/",
@@ -199,8 +200,7 @@ export default defineConfig({
 				"**/*.css",
 				"**/*.svg",
 				"**/*.{spec,test}.{ts,tsx}",
-				"**/index.ts",
-				"**/index.tsx",
+				"**/__tests__/**",
 			],
 			thresholds: {
 				branches: 75,
