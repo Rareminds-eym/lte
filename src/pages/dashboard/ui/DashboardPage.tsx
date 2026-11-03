@@ -1,11 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useEffect } from "react";
-import { useLearningPathStore } from "@/entities/active-learning-path";
+import { useLearningPath } from "@/entities/active-learning-path";
 import { DASHBOARD_QUERY_KEY, useDashboardData } from "@/entities/dashboard";
 import { useAuthStore } from "@/entities/session";
 import { getLogger } from "@/shared";
 import { apiFetch } from "@/shared/api";
+import { LEARNING_PATH_TEXT, UI_TEXT } from "@/shared/config";
 import { useXpModalStore } from "@/shared/store";
 import { Button } from "@/shared/ui";
 import { DashboardContent } from "@/widgets/dashboard";
@@ -15,12 +16,14 @@ import { DashboardSkeleton } from "./DashboardSkeleton";
 const logger = getLogger("DashboardPage");
 
 export const DashboardPage: React.FC = () => {
-  const { data, isPending, isError, refetch } = useDashboardData();
+  const { data, isPending, isError, refetch, isFetching } = useDashboardData();
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.user?.id);
-  const activeTrack = useLearningPathStore((s) => s.activeTrack);
-  const needsAssessment = useLearningPathStore((s) => s.needsAssessment);
-  const activeLearningPathLoading = useLearningPathStore((s) => s.activeLearningPathLoading);
+  const activeTrack = useLearningPath((s) => s.activeTrack);
+  const needsAssessment = useLearningPath((s) => s.needsAssessment);
+  const learningPathError = useLearningPath((s) => s.error);
+  const retryLearningPath = useLearningPath((s) => s.fetchAndSetActiveLearningPath);
+  const activeLearningPathLoading = useLearningPath((s) => s.activeLearningPathLoading);
 
   const addEvent = useXpModalStore((s) => s.addEvent);
   const shownEventIds = useXpModalStore((s) => s.shownEventIds);
@@ -91,15 +94,38 @@ export const DashboardPage: React.FC = () => {
         className="p-8 text-center bg-surface-primary rounded-2xl border border-line-default max-w-lg mx-auto my-12 shadow-sm"
         role="alert"
       >
-        <h2 className="text-lg font-bold text-content-primary mb-2">Unable to load Dashboard</h2>
-        <p className="text-xs text-content-secondary mb-4">
-          There was an error loading your dashboard metrics. Please try again.
-        </p>
+        <h2 className="text-lg font-bold text-content-primary mb-2">
+          {UI_TEXT.unableToLoadDashboard}
+        </h2>
+        <p className="text-xs text-content-secondary mb-4">{UI_TEXT.dashboardErrorDescription}</p>
         <div className="flex justify-center">
-          <Button type="button" size="sm" variant="primary" onClick={() => void refetch()}>
-            Retry Loading Dashboard
+          <Button
+            type="button"
+            size="sm"
+            variant="primary"
+            disabled={isFetching}
+            aria-busy={isFetching}
+            onClick={() => void refetch()}
+          >
+            {isFetching ? UI_TEXT.loadingDashboard : UI_TEXT.retryLoadingDashboard}
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (learningPathError && !activeTrack) {
+    return (
+      <div className="p-8 text-center max-w-lg mx-auto my-12" role="alert">
+        <h2 className="text-lg font-bold mb-2">{LEARNING_PATH_TEXT.loadErrorTitle}</h2>
+        <p className="text-sm mb-4">{LEARNING_PATH_TEXT.loadErrorDescription}</p>
+        <Button
+          type="button"
+          disabled={activeLearningPathLoading || !userId}
+          onClick={() => userId && void retryLearningPath(userId, { refresh: true })}
+        >
+          {LEARNING_PATH_TEXT.retryLoading}
+        </Button>
       </div>
     );
   }
@@ -151,5 +177,13 @@ export const DashboardPage: React.FC = () => {
         }
       : data;
 
-  return <DashboardContent data={mergedData || data} />;
+  return (
+    <DashboardContent
+      data={mergedData || data}
+      onRetryFeedback={() => {
+        void refetch();
+      }}
+      retryingFeedback={isFetching}
+    />
+  );
 };

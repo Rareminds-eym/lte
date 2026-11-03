@@ -134,6 +134,41 @@ describe("getModuleDetails", () => {
     expect(result?.completedStages).toEqual(["explore", "engage"]);
   });
 
+  it("preserves text and URL attempt identities when no files are attached", async () => {
+    const supabase = makeSupabase(
+      moduleDetailsChains({
+        moduleProgress: ok({ id: "mp-1", completion_percentage: 33 }),
+        artifactSubmissions: ok([
+          {
+            id: "text-attempt",
+            artifact_id: "art-1",
+            attempt_no: 2,
+            version_label: "v2",
+            is_latest: true,
+            submitted_at: "2026-10-01T10:00:00Z",
+            artifact_submission_files: [],
+          },
+          {
+            id: "url-attempt",
+            artifact_id: "art-1",
+            attempt_no: 1,
+            version_label: "v1",
+            is_latest: false,
+            submitted_at: "2026-09-30T10:00:00Z",
+            artifact_submission_files: [],
+          },
+        ]),
+      }),
+    );
+    const artifact = (await getModuleDetails(supabase, "level-1", 2, "user-1"))?.stages[2]
+      ?.artifacts[0];
+    expect(artifact?.submittedFiles).toEqual([]);
+    expect(artifact?.submittedAttempts).toEqual([
+      expect.objectContaining({ submissionId: "text-attempt", attemptNo: 2, isLatest: true }),
+      expect.objectContaining({ submissionId: "url-attempt", attemptNo: 1, isLatest: false }),
+    ]);
+  });
+
   it("includes submitted artifact file versions for every submitted attempt", async () => {
     const supabase = makeSupabase(
       moduleDetailsChains({

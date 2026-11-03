@@ -17,7 +17,7 @@ A modern Learning Transform Engine built with React, TypeScript, Vite, and a Fea
 
 ## Prerequisites
 
-- Node.js >= 22.0.0
+- Node.js >= 22.13.0 (use the version pinned in `.nvmrc`)
 - npm >= 10.0.0
 
 The required runtime versions are defined in `package.json`.
@@ -31,11 +31,25 @@ npm install
 # Copy local environment variables
 cp .env.example .env.local
 
+# Start LTE's local database from this directory
+npx supabase start
+
 # Start the standard development workflow
 npm start
 ```
 
-The Vite dev server is configured to run on `http://localhost:3000`.
+The Pages development server runs on `http://localhost:8789`. Its backend
+bindings come from `.dev.vars`; Vite's `.env.local` contains frontend settings.
+For local database access, set `SUPABASE_URL=http://127.0.0.1:54341` and the
+matching local service-role key in `.dev.vars`. See
+[the database setup instructions](supabase/README.md).
+
+LTE needs its own database service in addition to SkillPassport and SSO.
+Starting only the latter two leaves dashboard and learning-path queries unable
+to connect. A first `npx supabase start` creates the local LTE database and
+applies existing migrations. Automatic seed-file execution is disabled. Check
+the existing catalog before importing data; restarting services does not
+require a database reset or restore a learner's previous progress.
 
 For detailed onboarding notes, see [TEAM_ONBOARDING.md](TEAM_ONBOARDING.md).
 
@@ -44,14 +58,15 @@ For detailed onboarding notes, see [TEAM_ONBOARDING.md](TEAM_ONBOARDING.md).
 ### Development
 
 - `npm start` - Builds in development mode, then starts worker and Pages development commands.
-- `npm run dev` - Starts Vite in development mode on port `3000`.
-- `npm run dev:local` - Starts Vite in development mode on port `8788`.
-- `npm run dev:prod` - Starts Vite on port `8788`.
+- `npm run dev` - Starts Vite in development mode on port `8080`.
+- `npm run dev:local` - Starts Vite in development mode on port `8789`.
+- `npm run dev:prod` - Starts Vite on port `8789`.
 - `npm run preview` - Serves the production build locally with Vite preview.
 
 ### Build
 
 - `npm run build` - Creates an optimized production build.
+- `npm run build:functions` - Compiles Pages Functions without compatibility overrides; does not deploy or start a server.
 - `npm run build:dev` - Creates a development-mode build.
 - `npm run pages:build` - Runs the production build for Pages usage.
 
@@ -59,10 +74,12 @@ The Vite build output directory is configured as `dist/`.
 
 ### Workers and Pages
 
-- `npm run workers:dev` - Starts all configured worker development commands together.
+- `npm run workers:dev` - Starts the existing sibling SSO worker through `workers:sso`.
+- `npm run workers:sso` - Runs `npm run dev` in `../sso-worker`.
 - `npm run pages:dev` - Starts Wrangler Pages development with service bindings.
 
-Note: `workers:dev` references worker-specific scripts for email, payments, SSO, and realtime services. If those scripts are not present in `package.json`, add them before using the combined worker command.
+If SSO is already running on port `8787`, build with `npm run build:dev` and
+start only `npm run pages:dev` to avoid launching a duplicate SSO process.
 
 ### Testing and Quality
 
@@ -763,3 +780,7 @@ Rebuilds the graph automatically on every `git commit` (AST-only, free). Re-run 
 - [Vitest Documentation](https://vitest.dev/)
 - [Testing Library Documentation](https://testing-library.com/)
 - [Feature-Sliced Design](https://feature-sliced.design/)
+
+### Certificates
+
+Learners receive immutable course-completion and role-readiness certificates. Use **Certificates** in the sidebar, or download/share from a completed course. Add a missing name in Settings to finalize a pending certificate. PDFs render on demand and public verification is hosted by SkillPassport. Backend configuration, internal pull API, migration order, revocation and erasure procedures are documented in [functions/README.md](functions/README.md#certificates).

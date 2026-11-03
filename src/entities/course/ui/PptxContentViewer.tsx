@@ -3,6 +3,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getLogger } from "@/shared/config/logging";
 import { Button, ChevronLeftIcon, ChevronRightIcon, DocumentIcon, IconButton } from "@/shared/ui";
+import { getResourcePreviewUrl } from "./resource-content-viewer/types";
 
 export interface PptxContentViewerProps {
   title: string;
@@ -17,9 +18,6 @@ interface SlideSize {
 const SLIDE_SCALE_BIAS = 1;
 
 const logger = getLogger("course-pptx-viewer");
-
-const getPreviewUrl = (url: string) =>
-  `/api/v1/courses/resources/preview?url=${encodeURIComponent(url)}`;
 
 const getPreviewErrorMessage = (error: unknown) => {
   if (error instanceof DOMException && error.name === "AbortError") {
@@ -269,7 +267,9 @@ export const PptxContentViewer: React.FC<PptxContentViewerProps> = ({ title, url
       setMessage("Preparing presentation preview...");
 
       try {
-        const response = await fetch(getPreviewUrl(url), { signal: abortController.signal });
+        const response = await fetch(getResourcePreviewUrl(url), {
+          signal: abortController.signal,
+        });
         if (!response.ok) throw new Error("Presentation file could not be loaded.");
 
         const buffer = await response.arrayBuffer();

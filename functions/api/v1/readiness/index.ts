@@ -110,11 +110,11 @@ const readinessXpReadPolicy = {
 } as const;
 
 const readinessProfileReadPolicy = {
-  table: "user_profiles",
+  table: "users",
   operation: "read",
-  columns: ["bio", "job_title", "skills"],
-  filters: ["user_id"],
-  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  select: "bio:metadata->>bio,job_title:metadata->>job_title,skills:metadata->skills",
+  filters: ["id"],
+  ownership: { column: "id", source: "authenticatedUserId", required: true },
 } as const;
 
 export async function onRequestGet(context: PagesContext<LteEnv>): Promise<Response> {

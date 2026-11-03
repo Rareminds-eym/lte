@@ -10,6 +10,7 @@ const { excludedDirs, authModuleFiles, allowedFetchFiles } = config;
 const DIRECTORIES_TO_CHECK = ["src", "functions"];
 
 const APPROVED_AUTH_FILENAME_PATHS = [
+  ...authModuleFiles,
   "src/entities/session",
   "src/shared/api/authApi.ts",
   "src/shared/types/auth.ts",
@@ -33,7 +34,8 @@ async function main() {
     const filenameLower = file.toLowerCase();
     const hasAuthInName = filenameLower.includes("auth") || filenameLower.includes("sso");
     if (hasAuthInName) {
-      const isApprovedPath = APPROVED_AUTH_FILENAME_PATHS.some((approvedPath) => {
+      // Narrow machine-auth exception: no sibling files or direct SSO binding access.
+      const isApprovedPath = file === "functions/lib/catalog/internal-auth.ts" || APPROVED_AUTH_FILENAME_PATHS.some((approvedPath) => {
         return filenameLower.startsWith(approvedPath.toLowerCase());
       });
       if (!isApprovedPath) {
@@ -74,14 +76,14 @@ async function main() {
       }
     }
 
-    // Rule 3: Enforce withAuth Middleware
-    if (file.startsWith("functions/api/") && !file.startsWith("functions/api/v1/auth/")) {
-      if (line.includes("requireAuth")) {
-        return {
-          rule: "Rule 3: Enforce withAuth Middleware",
-          message: "Use withAuth middleware wrapping instead of requireAuth function calls in API route controllers.",
-        };
-      }
+    // Routes use the canonical auth-core adapter. The repository has no withAuth wrapper.
+    // Reject a local/custom requireAuth implementation while allowing central imports.
+    if (file.startsWith("functions/api/") && /\brequireAuth\s*\(/.test(line)) {
+      const importsCanonical = /import\s*\{[^}]*\brequireAuth\b[^}]*\}\s*from\s*["']@functions\/middleware(?:\/auth)?["']/.test(content);
+      if (!importsCanonical) return {
+        rule: "Rule 3: Canonical authentication middleware",
+        message: "Import requireAuth from @functions/middleware; do not implement route-local authentication.",
+      };
     }
 
     return null;
@@ -91,7 +93,7 @@ async function main() {
 
   reportFindings(violations, {
     headline: "Analyzing auth call boundaries inside LTE codebase...",
-    tip: "Enforce the withAuth wrapper for backend APIs and direct all auth calls through central auth clients.",
+    tip: "Use the canonical auth-core adapter for backend APIs and central auth clients for frontend calls.",
   });
 }
 

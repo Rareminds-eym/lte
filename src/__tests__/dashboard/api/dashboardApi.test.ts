@@ -95,13 +95,19 @@ describe("dashboardApi", () => {
     expect(data.careerTarget.xpThisWeek).toBe(0);
     expect(data.priorities.currentXp).toBe(0);
     expect(data.journey).toBeNull();
+    expect(data.upcomingFeedback).toMatchObject({
+      upcoming: [],
+      recentFeedback: [],
+      error: expect.any(String),
+    });
   });
 
   it("returns a well-formed payload with all dashboard sections", async () => {
     vi.mocked(apiFetch)
       .mockResolvedValueOnce({ success: true, totalXp: 0, xpThisWeek: 0, todayXp: 0 })
       .mockResolvedValueOnce({ success: true, streakDays: 0 })
-      .mockResolvedValueOnce({ success: true, data: null, state: "active" });
+      .mockResolvedValueOnce({ success: true, data: null, state: "active" })
+      .mockResolvedValueOnce({ success: true, upcoming: [], recentFeedback: [] });
     const data = await fetchDashboardData();
 
     expect(data.careerTarget.readinessPercentage).toBeGreaterThanOrEqual(0);
@@ -110,8 +116,8 @@ describe("dashboardApi", () => {
     expect(data.journey).toBeNull();
     expect(data.priorities.items.length).toBeGreaterThan(0);
     expect(data.capabilityGaps.length).toBeGreaterThan(0);
-    expect(data.upcomingFeedback.upcoming.length).toBeGreaterThan(0);
-    expect(data.upcomingFeedback.recentFeedback.length).toBeGreaterThan(0);
+    expect(data.upcomingFeedback.upcoming).toEqual([]);
+    expect(data.upcomingFeedback.recentFeedback).toEqual([]);
     expect(data.careerPaths.tracks).toHaveLength(0);
     expect(data.achievements.items).toHaveLength(data.achievements.shownCount);
   });

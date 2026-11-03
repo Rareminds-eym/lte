@@ -1,5 +1,6 @@
 export { downloadArtifactFile } from "./downloadArtifactFile";
 export {
+  type EvaluationStage,
   getSubmissionEvaluation,
   type SubmissionEvaluationResponse,
 } from "./getSubmissionEvaluation";

@@ -491,7 +491,7 @@ describe("XP Engine Core logic", () => {
               : null;
             return createMockQueryChain(list, o.xpErr ?? null);
           }
-          if (table === "user_profiles") {
+          if (table === "users") {
             return createMockQueryChain(o.profile ?? null);
           }
           return createMockQueryChain(null);

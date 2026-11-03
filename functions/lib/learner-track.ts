@@ -1,11 +1,8 @@
 import {
   type ActiveTrackDetail,
-  deactivateOtherTracks,
   getActiveLearningTrack,
-  syncUserCapabilities,
-  upsertLearningPath,
-  upsertLearningTrack,
 } from "@functions/api/v1/learning-paths/queries";
+import { syncManagedCatalog } from "@functions/lib/catalog-sync";
 import {
   asQueryGateway,
   type QueryGateway,
@@ -93,29 +90,35 @@ const fallbackRoleReadPolicy = {
  *  3. Nothing found -> { data: null, needsAssessment: true } (UI shows
  *     "Take Assessment").
  *
- * Never throws for gateway/network failures: Layer 2 errors fall through to
- * Layer 3 after logging (fail-closed, degraded-not-broken).
+ * Lookup and import failures propagate so the UI can offer a retry. Only a
+ * successful gateway response confirming absence should prompt an assessment.
  */
 export async function resolveActiveTrack(
   source: QueryGatewaySource,
   env: LteEnv,
   userId: string,
+  options: { refresh?: boolean } = {},
 ): Promise<ResolvedTrack> {
   const qb = asQueryGateway(source);
   // Layer 1 — LTE local state.
   const local = await getActiveLearningTrack(qb, userId);
-  if (local) return { data: local, needsAssessment: false };
+  if (local && !options.refresh) return { data: local, needsAssessment: false };
 
   // Search for any inactive learning track for this user and reactivate it
   let inactiveTrack: { id: string } | null = null;
   try {
-    inactiveTrack = (await qb.read(latestLearningTrackReadPolicy, {
-      auth: { userId },
-      sort: [{ column: "updated_at", ascending: false }],
-      limit: 1,
-      result: "maybeSingle",
-    })) as { id: string } | null;
-  } catch {
+    if (!options.refresh)
+      inactiveTrack = (await qb.read(latestLearningTrackReadPolicy, {
+        auth: { userId },
+        sort: [{ column: "updated_at", ascending: false }],
+        limit: 1,
+        result: "maybeSingle",
+      })) as { id: string } | null;
+  } catch (error) {
+    logger.warn("Inactive track lookup failed, proceeding to gateway", {
+      userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     inactiveTrack = null;
   }
 
@@ -131,8 +134,13 @@ export async function resolveActiveTrack(
       if (refreshed) {
         return { data: refreshed, needsAssessment: false };
       }
-    } catch {
+    } catch (error) {
       // Fall through to SkillPassport lookup.
+      logger.warn("Inactive track reactivation failed, falling through to gateway", {
+        userId,
+        trackId: inactiveTrack.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -140,56 +148,90 @@ export async function resolveActiveTrack(
   try {
     const raw = await callSkill(env, "learning-track:get", { userId }, userId);
     const parsed = LearningTrackDataSchema.safeParse(raw);
-    if (parsed.success && parsed.data.found) {
-      const tracks = parsed.data.tracks || (parsed.data.track ? [parsed.data.track] : []);
+    if (!parsed.success) throw new Error("Invalid learning track gateway response");
+    if (parsed.data.found && !parsed.data.tracks?.length && !parsed.data.track) {
+      throw new Error("Assessment found without learning tracks");
+    }
+    if (parsed.data.found) {
+      const tracks = parsed.data.tracks?.length
+        ? parsed.data.tracks
+        : parsed.data.track
+          ? [parsed.data.track]
+          : [];
       if (tracks.length > 0) {
-        // Deactivate other tracks first to ensure only the new primary track is active
-        await deactivateOtherTracks(qb, userId);
-
-        const primaryTrackName = tracks[0]?.trackName;
-        const trackMap = new Map<string, string>(); // trackName -> trackId
-
-        for (const trackItem of tracks) {
-          const roleId = trackItem.roleId || (await resolveRoleId(qb, trackItem.roleName));
-          const isActiveTrack = trackItem.trackName === primaryTrackName;
-
-          let trackId = trackMap.get(trackItem.trackName);
-          if (!trackId) {
-            trackId = await upsertLearningTrack(qb, {
-              userId,
-              attemptId: trackItem.attemptId,
-              fit: trackItem.fit,
-              track: trackItem.trackName,
-              matchScore: trackItem.matchScore,
-              whyItFits: trackItem.whyItFits,
-              isActive: isActiveTrack,
-            });
-            trackMap.set(trackItem.trackName, trackId);
-          }
-
-          const learningPathId = await upsertLearningPath(qb, {
+        // Fetch managed catalogue dependencies before any learner-track writes.
+        try {
+          await syncManagedCatalog(
+            qb,
+            env,
+            tracks.flatMap((track) => (track.roleId ? [track.roleId] : [])),
             userId,
-            trackId,
-            roleId,
-            metadata: trackItem.industry ? { industry: trackItem.industry } : {},
-          });
-
-          // Sync capabilities for any role belonging to the active track
-          if (isActiveTrack) {
-            await syncUserCapabilities(qb, { userId, learningPathId, roleId });
+          );
+        } catch (catError) {
+          const errCode =
+            catError && typeof catError === "object" && "code" in catError
+              ? String(catError.code)
+              : undefined;
+          const errMsg = catError instanceof Error ? catError.message : String(catError);
+          if (
+            errCode === "CATALOGUE_UNAVAILABLE" ||
+            errCode === "GATEWAY_MISCONFIGURED" ||
+            errMsg.includes("Managed catalogue source is not configured") ||
+            errMsg.includes("CATALOGUE_UNAVAILABLE") ||
+            errMsg.includes("missing_managed_catalog_roles") ||
+            errMsg.includes("schema cache")
+          ) {
+            logger.warn(
+              "Managed catalogue source is unconfigured or unavailable; proceeding with track resolution",
+              {
+                userId,
+                error: errMsg,
+              },
+            );
+          } else {
+            throw catError;
           }
         }
+        const primaryTrackName = tracks.some((track) => track.trackName === local?.track)
+          ? local?.track
+          : tracks[0]?.trackName;
+        const resolvedTracks = await Promise.all(
+          tracks.map(async (track) => ({
+            ...track,
+            roleId: track.roleId || (await resolveRoleId(qb, track.roleName)),
+          })),
+        );
+        // One transaction preserves the old selection and progress if any write fails.
+        await qb.rpc(
+          {
+            operation: "rpc",
+            functionName: "import_learner_tracks",
+            allowedArgs: ["p_user_id", "p_tracks", "p_primary_track"],
+          },
+          {
+            args: {
+              p_user_id: userId,
+              p_tracks: resolvedTracks,
+              p_primary_track: primaryTrackName,
+            },
+          },
+        );
 
         const refreshed = await getActiveLearningTrack(qb, userId);
+        if (!refreshed) throw new Error("Imported learning track could not be loaded");
         return { data: refreshed, needsAssessment: false };
       }
     }
   } catch (error) {
-    logger.warn("resolveActiveTrack Layer 2 failed — falling back to Layer 3", {
+    logger.warn("Unable to import assessment learning tracks", {
       userId,
       error: error instanceof Error ? error.message : String(error),
     });
+    throw error;
   }
+
+  // A missing upstream assessment must not discard existing local learning progress.
+  if (local) return { data: local, needsAssessment: false };
 
   // Layer 3 — no track anywhere.
   return { data: null, needsAssessment: true };

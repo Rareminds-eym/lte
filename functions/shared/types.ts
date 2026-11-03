@@ -8,7 +8,12 @@ export interface R2BucketBinding {
   ): Promise<unknown>;
   get(key: string, options?: unknown): Promise<unknown>;
   head(key: string): Promise<unknown>;
-  delete(key: string): Promise<void>;
+  delete(key: string | string[]): Promise<void>;
+  list?(options: { prefix: string; cursor?: string; limit?: number }): Promise<{
+    objects: Array<{ key: string }>;
+    truncated: boolean;
+    cursor?: string;
+  }>;
 }
 
 export interface AssetsBinding {
@@ -19,18 +24,34 @@ export interface QueueSender {
   send(msg: unknown, opts?: { contentType?: string }): Promise<void>;
 }
 
+export interface RateLimitKvBinding {
+  list(options: { prefix: string; limit: number; cursor?: string }): Promise<{
+    keys: Array<{ name: string }>;
+    list_complete: boolean;
+    cursor?: string;
+  }>;
+  put(key: string, value: string, options: { expirationTtl: number }): Promise<void>;
+}
+
 export interface LteEnv {
+  /** Required by review routes and explicit learning-path refreshes. */
+  RATE_LIMIT_KV: RateLimitKvBinding;
   ASSETS: AssetsBinding;
   LTE_SYNC_QUEUE?: QueueSender;
-  SSO_SERVICE: unknown;
+  LTE_ASSET_VALIDATION_QUEUE?: { sendBatch(messages: Array<{ body: unknown }>): Promise<void> };
+  SSO_SERVICE: SsoRpcService;
   STORAGE_BUCKET: R2BucketBinding;
   R2_PUBLIC_DOMAIN?: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   COOKIE_DOMAIN?: string;
   SKILLPASSPORT_INTERNAL_URL: string;
-  SKILLPASSPORT_INTERNAL_SECRET: string;
+  /** Shared server-only signing secret for gateway, certificate, catalogue and learning requests. */
+  LTE_INTERNAL_SECRET: string;
   OPENROUTER_API_KEY?: string;
+  BROWSER_RENDERING_API_TOKEN: string;
+  CF_ACCOUNT_ID: string;
+  CERTIFICATE_VERIFY_BASE_URL: string;
 }
 
 export interface SsoSubscriptionSnapshot {
@@ -118,4 +139,14 @@ export interface SsoServiceBinding {
     orgId: string;
   }): Promise<{ success: boolean; alreadyProvisioned?: boolean }>;
   [key: string]: unknown;
+}
+
+/** Shared contract for the identity RPC methods consumed by LTE reviews. */
+export interface SsoRpcService extends SsoServiceBinding {
+  getUserById(
+    id: string,
+  ): Promise<{ email: string; is_blocked: boolean; is_email_verified: boolean } | null>;
+  getUserMemberships(
+    id: string,
+  ): Promise<{ memberships: Array<{ status: string; org_id: string; role: string }> }>;
 }

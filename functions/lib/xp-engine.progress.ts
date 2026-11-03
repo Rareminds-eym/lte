@@ -1,5 +1,7 @@
 import { asQueryGateway, type QueryGatewaySource } from "@functions/lib/query-gateway";
 import { apiLogger } from "../shared/logger";
+import { issueRoleCertificate } from "./certificates/issuance";
+import { logCertificateFailure } from "./certificates/logging";
 import { awardXp } from "./xp-engine.core";
 import { evaluateMilestones } from "./xp-engine.engagement";
 
@@ -79,11 +81,11 @@ const readinessEvidenceXpReadPolicy = {
 } as const;
 
 const readinessProfileReadPolicy = {
-  table: "user_profiles",
+  table: "users",
   operation: "read",
-  columns: ["bio", "job_title", "skills"],
-  filters: ["user_id"],
-  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
+  select: "bio:metadata->>bio,job_title:metadata->>job_title,skills:metadata->skills",
+  filters: ["id"],
+  ownership: { column: "id", source: "authenticatedUserId", required: true },
 } as const;
 
 const readinessLearningPathReadPolicy = {
@@ -494,6 +496,18 @@ async function calculateReadinessInternal(
     },
     filters: [{ column: "id", op: "eq", value: learningPathId }],
   });
+
+  if (newStatus === "completed" && learningPath?.status !== "completed") {
+    try {
+      await issueRoleCertificate(qb, {}, { userId, learningPathId });
+    } catch (error) {
+      logCertificateFailure(error, {
+        userId,
+        type: "role_readiness",
+        operation: "completion_hook",
+      });
+    }
+  }
 
   // Auto-evaluate and award readiness milestones after score update
   if (readinessScore > currentPercentage && learningPath?.role_id) {

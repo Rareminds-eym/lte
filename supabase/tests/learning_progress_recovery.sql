@@ -1,0 +1,33 @@
+BEGIN;
+DO $$
+DECLARE failed_user uuid:=gen_random_uuid(); waiting_user uuid:=gen_random_uuid(); target uuid; token uuid; row public.learning_progress_delivery;
+BEGIN
+ INSERT INTO public.users(id,email) VALUES(failed_user,failed_user||'@progress-test.invalid'),(waiting_user,waiting_user||'@progress-test.invalid');
+ SELECT id INTO STRICT target FROM public.levels LIMIT 1;
+ INSERT INTO public.learning_progress_delivery(user_id,level_id,revision,next_attempt_at) VALUES(failed_user,target,1,now()-interval '101 years');
+ SELECT * INTO STRICT row FROM public.claim_learning_progress_delivery() d WHERE d.user_id=failed_user;
+ IF row.attempts<>1 OR row.lease_token IS NULL THEN RAISE EXCEPTION 'FAIL: atomic claim'; END IF;
+ token:=row.lease_token;
+ PERFORM public.finish_learning_progress_delivery(failed_user,target,gen_random_uuid(),false);
+ IF (SELECT lease_token FROM public.learning_progress_delivery WHERE user_id=failed_user) IS DISTINCT FROM token THEN RAISE EXCEPTION 'FAIL: stale lease changed delivery'; END IF;
+ PERFORM public.finish_learning_progress_delivery(failed_user,target,token,false);
+ IF (SELECT next_attempt_at<=now() OR lease_token IS NOT NULL FROM public.learning_progress_delivery WHERE user_id=failed_user) THEN RAISE EXCEPTION 'FAIL: failed work was not deferred'; END IF;
+ INSERT INTO public.learning_progress_delivery(user_id,level_id,revision,next_attempt_at) VALUES(waiting_user,target,1,now()-interval '100 years');
+ IF NOT EXISTS(SELECT 1 FROM public.claim_learning_progress_delivery() d WHERE d.user_id=waiting_user) THEN RAISE EXCEPTION 'FAIL: failed older work starved newer delivery'; END IF;
+ IF EXISTS(SELECT 1 FROM public.claim_learning_progress_delivery() d WHERE d.user_id IN (failed_user,waiting_user)) THEN RAISE EXCEPTION 'FAIL: backoff or active lease ignored'; END IF;
+ UPDATE public.learning_progress_delivery SET attempts=8,lease_token=token WHERE user_id=failed_user;
+ PERFORM public.finish_learning_progress_delivery(failed_user,target,token,false);
+ IF (SELECT quarantined_at IS NULL FROM public.learning_progress_delivery WHERE user_id=failed_user) THEN RAISE EXCEPTION 'FAIL: repeated failures not quarantined'; END IF;
+ PERFORM public.replay_learning_progress_delivery(failed_user,target);
+ IF (SELECT quarantined_at IS NOT NULL OR attempts<>0 OR next_attempt_at>now() FROM public.learning_progress_delivery WHERE user_id=failed_user) THEN RAISE EXCEPTION 'FAIL: controlled replay'; END IF;
+ IF has_function_privilege('authenticated','public.replay_learning_progress_delivery(uuid,uuid)','EXECUTE') THEN RAISE EXCEPTION 'FAIL: public replay access'; END IF;
+ INSERT INTO public.learning_progress_revisions(user_id,revision) VALUES(failed_user,9);
+ PERFORM public.ack_learning_progress_delivery(failed_user,target,1);
+ IF (SELECT reconciled_at IS NOT NULL FROM public.learning_progress_revisions WHERE user_id=failed_user) THEN RAISE EXCEPTION 'FAIL: old acknowledgement marked a newer revision reconciled'; END IF;
+ INSERT INTO public.learning_progress_delivery(user_id,level_id,revision) VALUES(failed_user,target,9);
+ PERFORM public.ack_learning_progress_delivery(failed_user,target,9);
+ IF NOT EXISTS(SELECT 1 FROM public.learning_progress_revisions WHERE user_id=failed_user AND reconciled_revision=9 AND reconciled_at IS NOT NULL) THEN RAISE EXCEPTION 'FAIL: current delivery state not recorded on revision aggregate'; END IF;
+ IF to_regprocedure('public.reconcile_learning_progress()') IS NOT NULL THEN RAISE EXCEPTION 'FAIL: historical reconciliation sweep retained'; END IF;
+ RAISE NOTICE 'PASS: atomic delivery claims, lease ownership, backoff, no starvation, quarantine and controlled replay';
+END $$;
+ROLLBACK;

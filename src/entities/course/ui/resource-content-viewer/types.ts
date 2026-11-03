@@ -17,14 +17,28 @@ export interface ResourceRendererProps {
 }
 
 const getFileExtension = (url: string) => {
-  const path = url.split("?")[0]?.split("#")[0] ?? "";
+  const localAsset = getLocalAssetUrl(url);
+  const path =
+    (localAsset
+      ? new URL(localAsset, "https://lte.rareminds.in").searchParams.get("key")
+      : undefined) ??
+    url.split("?")[0]?.split("#")[0] ??
+    "";
   const fileName = path.split("/").pop() ?? "";
   const extension = fileName.split(".").pop();
   return extension?.toLowerCase() ?? "";
 };
 
+function getLocalAssetUrl(url: string): string | null {
+  if (!url.startsWith("/") || url.startsWith("//")) return null;
+  const parsed = new URL(url, "https://lte.rareminds.in");
+  return ["/api/admin/lte/assets", "/api/v1/catalog/assets"].includes(parsed.pathname)
+    ? `${parsed.pathname}${parsed.search}`
+    : null;
+}
+
 export const getResourcePreviewUrl = (url: string) =>
-  `/api/v1/courses/resources/preview?url=${encodeURIComponent(url)}`;
+  getLocalAssetUrl(url) ?? `/api/v1/courses/resources/preview?url=${encodeURIComponent(url)}`;
 
 export const getOfficeEmbedUrl = (url: string) =>
   `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
@@ -49,7 +63,8 @@ export const getResourceFileKind = (item: EContentItem): ResourceFileKind => {
   if (item.contentType === "link") return "link";
   if (item.contentType === "text") return "text";
 
-  if (extension === "pptx" || extension === "ppt" || item.contentType === "slide") return "pptx";
+  if (extension === "pptx" || extension === "ppt" || mimeType.includes("presentationml"))
+    return "pptx";
   if (extension === "pdf" || mimeType === "application/pdf" || item.contentType === "pdf") {
     return "pdf";
   }
@@ -71,5 +86,6 @@ export const getResourceFileKind = (item: EContentItem): ResourceFileKind => {
     return "xlsx";
   }
 
+  if (item.contentType === "slide") return "pptx";
   return "unsupported";
 };

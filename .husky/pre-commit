@@ -1,5 +1,12 @@
 echo "Running pre-commit checks..."
 
+echo "Validating database filenames and migration history..."
+npm run lint:database
+if [ $? -ne 0 ]; then
+  echo "Database validation failed. Add a new migration instead of changing existing history."
+  exit 1
+fi
+
 # Validate file types
 echo "Validating file types..."
 npm run lint:files

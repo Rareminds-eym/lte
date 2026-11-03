@@ -1,3 +1,9 @@
+import {
+  ensureAndAssignReview,
+  getReviewPolicy,
+  getReviewScope,
+  requiresFollowupReview,
+} from "@functions/lib/human-review";
 import { asQueryGateway, type QueryGatewaySource } from "@functions/lib/query-gateway";
 import { apiLogger } from "@functions/shared/logger";
 import {
@@ -132,6 +138,43 @@ export function generateFallbackEvaluation(input: ArtifactEvaluationInput): AIEv
       validatedDecision: "human_review",
       stage1Check,
       stage2Failures,
+    }),
+  };
+}
+
+/**
+ * Result used when the institution chose human-review-only (or the policy
+ * authority is unavailable, so AI use cannot be proven permitted). No evaluator
+ * runs and no learner content leaves the platform; the submission waits,
+ * XP-neutral, for a human reviewer.
+ */
+export function generateHumanOnlyEvaluation(input: ArtifactEvaluationInput): AIEvaluationResult {
+  const base = generateFallbackEvaluation(input);
+  const stage1Check: SubmissionCheckResult = {
+    isAssessable: true,
+    notes: "AI evaluation was not run; this submission is routed to a human reviewer.",
+  };
+  return {
+    ...base,
+    stage1SubmissionCheck: stage1Check,
+    rubricRows: base.rubricRows.map((row) => ({
+      ...row,
+      evidence: "Not evaluated; awaiting human review.",
+      feedback: `Human review required for ${String(row.label).toLowerCase()}.`,
+    })),
+    feedback: "Your artifact is awaiting staff review.",
+    singleImprovementPoint: "Wait for a staff reviewer to evaluate this artifact.",
+    modelUsed: "human-review-only",
+    provider: "none",
+    evaluationSource: "human_only",
+    debugTelemetry: buildTelemetry(input, {
+      provider: "none",
+      modelUsed: "human-review-only",
+      calculatedXp: 0,
+      confidence: 0,
+      validatedDecision: "human_review",
+      stage1Check,
+      stage2Failures: { hasFailure: false, failuresFound: [] },
     }),
   };
 }
@@ -474,10 +517,11 @@ export async function evaluateArtifactSubmission(
   env: Pick<LteEnv, "OPENROUTER_API_KEY">,
   input: ArtifactEvaluationInput,
   submissionId?: string,
+  confidenceThreshold?: number,
 ): Promise<AIEvaluationResult> {
   const startedAt = performance.now();
   try {
-    return await evaluateArtifactSubmissionCore(env, input, submissionId);
+    return await evaluateArtifactSubmissionCore(env, input, submissionId, confidenceThreshold);
   } finally {
     metrics.observe(METRIC.EVALUATION_DURATION, Math.round(performance.now() - startedAt));
   }
@@ -487,6 +531,7 @@ async function evaluateArtifactSubmissionCore(
   env: Pick<LteEnv, "OPENROUTER_API_KEY">,
   input: ArtifactEvaluationInput,
   submissionId?: string,
+  confidenceThreshold?: number,
 ): Promise<AIEvaluationResult> {
   const passingScore = input.passingScore ?? 60;
   const modelToUse = EVALUATION_MODEL;
@@ -558,6 +603,7 @@ async function evaluateArtifactSubmissionCore(
     const validatedDecision = enforceValidatedDecision({
       llmDecision: parsed.decision,
       confidence: parsed.confidence,
+      confidenceThreshold,
       evidenceFailed,
       hasCriticalFailure,
       hasSubparCriterion,
@@ -654,14 +700,52 @@ async function evaluateArtifactSubmissionCore(
 
 export async function processAndSaveArtifactEvaluation(
   source: QueryGatewaySource,
-  env: Pick<LteEnv, "OPENROUTER_API_KEY">,
+  env: Pick<LteEnv, "OPENROUTER_API_KEY"> & Partial<LteEnv>,
   submissionId: string,
   input: ArtifactEvaluationInput,
   userId: string,
   moduleProgressId: string,
 ): Promise<AIEvaluationResult> {
   const qb = asQueryGateway(source);
-  const evaluated = await evaluateArtifactSubmission(env, input, submissionId);
+  let confidenceThreshold: number | undefined;
+  let staffReviewRequired = false;
+  let reviewReason = "low_confidence";
+  // True when the institution chose human-review-only: no AI call is made.
+  let aiSkipped = false;
+  // The administrator's organisation-wide choice decides how this work is
+  // evaluated, whatever the course, class or program. If it cannot be read we
+  // refuse to evaluate rather than guess: guessing "AI" could send a human-only
+  // institution's work to the model, and guessing "human" would strand learners
+  // of institutions that never opted in. The caller rolls the submission back,
+  // so the learner can simply retry.
+  try {
+    staffReviewRequired = await requiresFollowupReview(qb, submissionId);
+    if (staffReviewRequired) reviewReason = "human_revision_followup";
+    const [policy, scope] = await Promise.allSettled([
+      getReviewPolicy(env as LteEnv, userId),
+      getReviewScope(env as LteEnv, userId),
+    ]);
+    if (policy.status === "rejected") throw policy.reason;
+    if (policy.value.evaluationMode === "human_only") {
+      // The scope only supplies the AI confidence threshold, which is moot here.
+      aiSkipped = true;
+      if (!staffReviewRequired) reviewReason = "human_only_scope";
+      staffReviewRequired = true;
+    } else {
+      if (scope.status === "rejected") throw scope.reason;
+      if (scope.value) confidenceThreshold = scope.value.threshold;
+    }
+  } catch (error) {
+    apiLogger.error("Review policy unavailable; submission not evaluated", error, {
+      submissionId,
+    });
+    throw new Error("Review policy is temporarily unavailable. Please try submitting again.", {
+      cause: error,
+    });
+  }
+  const evaluated = aiSkipped
+    ? generateHumanOnlyEvaluation(input)
+    : await evaluateArtifactSubmission(env, input, submissionId, confidenceThreshold);
   const evalContext = {
     submissionId,
     artifactId: input.artifactId,
@@ -670,7 +754,7 @@ export async function processAndSaveArtifactEvaluation(
 
   // P0-1 hard guarantee: no matter which path produced a fallback result
   // (missing key, LLM failure, unreadable file), it can never pass or award XP.
-  const evalResult: AIEvaluationResult =
+  let evalResult: AIEvaluationResult =
     evaluated.provider === "fallback"
       ? {
           ...evaluated,
@@ -682,6 +766,17 @@ export async function processAndSaveArtifactEvaluation(
           feedback: "AI evaluation is unavailable; a human reviewer must evaluate this submission.",
         }
       : evaluated;
+  if (staffReviewRequired) {
+    evalResult = {
+      ...evalResult,
+      decision: "human_review",
+      calculatedXp: 0,
+      requiresManualReview: true,
+      feedback: aiSkipped
+        ? "Your artifact is awaiting staff review."
+        : "Your artifact is awaiting staff review. AI results are reference feedback.",
+    };
+  }
   if (evalResult.decision === "human_review") metrics.inc(METRIC.HUMAN_REVIEW);
   const now = new Date().toISOString();
 
@@ -728,6 +823,16 @@ export async function processAndSaveArtifactEvaluation(
       progression_triggered: evalResult.decision === "pass",
       completed_at: now,
       metadata: {
+        ...(staffReviewRequired && !aiSkipped
+          ? {
+              ai_reference: {
+                decision: evaluated.decision,
+                score: evaluated.overallScore,
+                feedback: evaluated.feedback,
+                confidence: evaluated.confidence,
+              },
+            }
+          : {}),
         rubric_rows: evalResult.rubricRows,
         stage1_submission_check: evalResult.stage1SubmissionCheck,
         stage2_critical_failures: evalResult.stage2CriticalFailures,
@@ -822,5 +927,26 @@ export async function processAndSaveArtifactEvaluation(
     }
   }
 
+  if (evalResult.decision === "human_review") {
+    // Grading persistence succeeded. Reconciliation repairs assignment outages;
+    // never roll back the submitted artifact for a downstream service failure.
+    try {
+      await ensureAndAssignReview(
+        qb,
+        env as LteEnv,
+        submissionId,
+        userId,
+        staffReviewRequired
+          ? reviewReason
+          : !evalResult.stage1SubmissionCheck.isAssessable
+            ? "unassessable_evidence"
+            : evalResult.provider === "fallback"
+              ? "evaluation_unavailable"
+              : "low_confidence",
+      );
+    } catch (error) {
+      apiLogger.error("Human review assignment requires reconciliation", error, { submissionId });
+    }
+  }
   return evalResult;
 }

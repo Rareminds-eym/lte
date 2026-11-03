@@ -302,3 +302,8 @@ describe("CourseDetail", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+vi.mock("@/entities/active-learning-path", () => ({
+  useLearningPath: (select: (state: Record<string, unknown>) => unknown) =>
+    select({ activeTrack: null, activeLearningPathLoading: false, needsAssessment: false }),
+}));

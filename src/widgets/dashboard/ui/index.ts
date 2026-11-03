@@ -1,1 +1,1 @@
-export { DashboardContent } from "./DashboardContent";
+export { DashboardContent, type DashboardContentProps } from "./DashboardContent";

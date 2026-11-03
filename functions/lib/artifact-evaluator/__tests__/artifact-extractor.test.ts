@@ -359,6 +359,20 @@ describe("ai-engine / artifact-extractor", () => {
       expect(result.extractedText).toContain("S-002");
     });
 
+    it("skips sample and example sheets when isTemplate is true", async () => {
+      const file = buildSpreadsheetFileWithSheets([
+        ["Instruction", [["Read these steps carefully"]]],
+        ["Sample data filled sheet", [["Sample Borrower", "INR 18,00,000"]]],
+        ["Working Sheet", [["Field", "Response"]]],
+      ]);
+      const result = await extractArtifactContent(file, undefined, { isTemplate: true });
+      expect(result.isReadable).toBe(true);
+      expect(result.extractedText).not.toContain("--- Sheet: Instruction ---");
+      expect(result.extractedText).toContain("--- Sheet: Working Sheet ---");
+      expect(result.extractedText).not.toContain("--- Sheet: Sample data filled sheet ---");
+      expect(result.extractedText).not.toContain("Sample Borrower");
+    });
+
     it("includes hidden sheet content (SheetNames iteration per plan)", async () => {
       const workbook = XLSX.utils.book_new();
       const visible = XLSX.utils.aoa_to_sheet([["visible row"]]);

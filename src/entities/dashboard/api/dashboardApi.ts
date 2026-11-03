@@ -1,6 +1,7 @@
 import { getLogger } from "@/shared";
 import { apiFetch } from "@/shared/api";
 import {
+  DashboardFeedbackResponseSchema,
   DashboardJourneyResponseSchema,
   DashboardStreakResponseSchema,
   DashboardXpResponseSchema,
@@ -193,17 +194,18 @@ export const fetchDashboardData = async (signal?: AbortSignal): Promise<Dashboar
   const localMonday = new Date(now);
   localMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
 
-  const [xpResult, streakResult, journeyResult] = await Promise.allSettled([
+  const [xpResult, streakResult, journeyResult, feedbackResult] = await Promise.allSettled([
     apiFetch(
       `/api/v1/dashboard/xp?since=${encodeURIComponent(localMidnight(localMonday).toISOString())}&todaySince=${encodeURIComponent(localMidnight(now).toISOString())}`,
       { signal },
     ),
     apiFetch("/api/v1/dashboard/streak", { signal }),
     apiFetch("/api/v1/dashboard/journey", { signal }),
+    apiFetch("/api/v1/dashboard/feedback", { signal }),
   ]);
 
   // Throw AbortError immediately to escape fallback logic
-  const abortError = [xpResult, streakResult, journeyResult].find(
+  const abortError = [xpResult, streakResult, journeyResult, feedbackResult].find(
     (res) =>
       res.status === "rejected" &&
       res.reason instanceof Error &&
@@ -257,5 +259,16 @@ export const fetchDashboardData = async (signal?: AbortSignal): Promise<Dashboar
     base.journey = null;
     base.journeyState = "active";
   }
+  const feedback =
+    feedbackResult.status === "fulfilled"
+      ? DashboardFeedbackResponseSchema.safeParse(feedbackResult.value)
+      : null;
+  base.upcomingFeedback = feedback?.success
+    ? { upcoming: feedback.data.upcoming, recentFeedback: feedback.data.recentFeedback }
+    : {
+        upcoming: [],
+        recentFeedback: [],
+        error: "Feedback is temporarily unavailable. Please try again.",
+      };
   return base;
 };

@@ -4,6 +4,8 @@ This guide covers various deployment options for the LMS application.
 
 ## Table of Contents
 
+- [LTE Cloudflare KV rate limits](#lte-cloudflare-kv-rate-limits)
+- [Cloudflare Pages builds](#cloudflare-pages-builds)
 - [Prerequisites](#prerequisites)
 - [Environment Variables](#environment-variables)
 - [Docker Deployment](#docker-deployment)
@@ -11,10 +13,96 @@ This guide covers various deployment options for the LMS application.
 - [Static Hosting](#static-hosting)
 - [CI/CD](#cicd)
 
+## LTE Cloudflare KV rate limits
+
+Review endpoints, explicit learning-path refreshes and certificate handlers require
+the `RATE_LIMIT_KV` Pages Functions binding. Normal learning-path reads do not use the limiter.
+Limits remain 60 review requests and 5 explicit refreshes per user per minute.
+
+The production and preview entries in `lte/wrangler.toml` contain explicit
+namespace-ID placeholders until the Cloudflare account can be checked. From `lte/`,
+use an authenticated Wrangler session to list namespaces, and create dedicated
+LTE namespaces if they do not already exist:
+
+```bash
+npx wrangler kv namespace list
+npx wrangler kv namespace create lte-rate-limits-production
+npx wrangler kv namespace create lte-rate-limits-preview
+```
+
+Put the corresponding IDs in `env.production.kv_namespaces` and
+`env.preview.kv_namespaces` before deployment. For dashboard-managed Pages
+bindings, bind `RATE_LIMIT_KV` to the corresponding namespace in each environment.
+The existing SSO namespaces also contain authentication/session data; do not use
+those as LTE namespaces. Local `wrangler pages dev` uses the top-level emulated
+namespace without remote access.
+
+The limiter writes an expiring, unique key for each admitted request under
+`lte:rate-limit:v1:<policy>:<user>:<window>:`. It lists only that user's current
+fixed window, with bounded pagination, and awaits the write before admitting the
+request. This avoids repeated updates to a single KV key. Denials return 429 with
+`Retry-After`; missing bindings or KV failures return a sanitized 503.
+
+KV listing is eventually consistent and check/write is not atomic: simultaneous
+requests and different regions can exceed the configured limit. This is a
+best-effort abuse control, not a strict global quota. See Cloudflare's
+[KV listing consistency](https://developers.cloudflare.com/kv/api/list-keys/) and
+[write limits](https://developers.cloudflare.com/kv/api/write-key-value-pairs/).
+
+The unshipped database limiter migration and SQL test were removed. No rate-limit
+table or RPC is needed. This change does not drop tables from deployed databases.
+
+## Cloudflare Pages builds
+
+Use `npm run build` as the Pages build command and `dist` as the output directory.
+Pages compiles the existing `functions/` directory after Vite finishes. A successful
+Vite build alone does not verify Functions compilation.
+
+Cloudflare reads `.nvmrc`, which pins Node 22.22.3. The read-only Pages API check
+on 2026-10-16 found no `NODE_VERSION` override in production or preview.
+The minimum supported Node version is 22.13.0 because the locked PDF dependency
+requires it. CI reads the same `.nvmrc` rather than selecting a different version.
+See Cloudflare's [build image settings](https://developers.cloudflare.com/pages/configuration/build-image/).
+
+Production and preview Pages runtime settings are currently dashboard-managed.
+Both already enable `nodejs_compat` with compatibility date `2026-06-08`; this
+fix requires no change to those settings. June 2026 is this project's existing
+date, not a general minimum for Node compatibility. See Cloudflare's
+[Node compatibility rules](https://developers.cloudflare.com/workers/runtime-apis/nodejs/).
+The checked-in Wrangler file configures local development; it deliberately has no
+`pages_build_output_dir`. Pages may warn that it is skipping this file, then use
+the dashboard configuration. This warning does not cause the `crypto` compilation
+failure. Use explicit `node:` imports for Node built-ins in Functions dependencies.
+
+Adding `pages_build_output_dir` would make the file the deployment source of truth.
+First reconcile its production/preview bindings and variables with the live project;
+the current file includes local URLs and unverified namespace placeholders. Do not
+commit a raw downloaded configuration: dashboard variables may contain credentials.
+See Cloudflare's [configuration migration guidance](https://developers.cloudflare.com/pages/functions/wrangler-configuration/).
+
+Verify both build stages locally without overriding the compiler's compatibility
+settings:
+
+```bash
+npm run build
+npm run build:functions
+```
+
+The second command writes ignored artifacts to `.wrangler/pages-build` and starts
+no server. It can warn about Node built-ins because it has no dashboard runtime
+settings; the deployed `nodejs_compat` flag is still required. CI runs both stages.
+This remains a normal Pages Functions deployment, with no additional LTE Worker.
+
+The live API check confirmed that `RATE_LIMIT_KV` and
+`LTE_ASSET_VALIDATION_QUEUE` are absent in both environments. These bindings do
+not affect compilation or every route: KV is required by the handlers listed
+above, while the asset queue is required when catalog publication emits asset
+validation messages. Catalog publications without such messages skip that queue.
+
 ## Prerequisites
 
-- Node.js >= 18.0.0
-- npm >= 9.0.0
+- Node.js >= 22.13.0 (use `.nvmrc`)
+- npm >= 10.0.0
 - Docker (for containerized deployment)
 
 ## Environment Variables

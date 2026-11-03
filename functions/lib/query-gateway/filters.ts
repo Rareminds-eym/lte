@@ -16,6 +16,10 @@ export function applyFilter<T>(
   filter: QueryGatewayFilter,
 ): SupabaseQueryChain<T> {
   switch (filter.op) {
+    case "is":
+      if (filter.value !== null && typeof filter.value !== "boolean")
+        throw new QueryGatewayError("IS requires null or boolean", "INVALID_FILTER_VALUE");
+      return query.is(filter.column, filter.value);
     case "eq":
       return query.eq(filter.column, filter.value);
     case "neq":

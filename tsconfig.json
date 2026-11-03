@@ -21,6 +21,7 @@
 		/* Path Aliases */
 		"baseUrl": ".",
 		"paths": {
+			"@ops/*": ["ops/*"],
 			"@/*": [
 				"src/*"
 			],

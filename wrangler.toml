@@ -1,5 +1,8 @@
 # Wrangler configuration for LTE Cloudflare Pages Functions.
 # SSO owns auth-code Durable Object storage; LTE consumes SSO through RPC.
+# Local development configuration: deployed Pages settings are dashboard-managed.
+# Keep pages_build_output_dir unset until production/preview bindings are reconciled.
+# Adding it opts this file into deployment and replaces dashboard configuration.
 
 name = "lte"
 compatibility_date = "2026-06-08"
@@ -18,10 +21,19 @@ inspector_port = 9228
 # LOCAL BINDINGS
 # ============================================================================
 
+# Local development uses an emulated namespace; no remote KV writes.
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "local-lte-rate-limits"
+
 [[services]]
 binding = "SSO_SERVICE"
 service = "sso-api"
 entrypoint = "SsoWorker"
+
+[[queues.producers]]
+queue = "lte-asset-validation"
+binding = "LTE_ASSET_VALIDATION_QUEUE"
 
 [[queues.producers]]
 queue = "lte-db-sync-queue"
@@ -32,10 +44,12 @@ binding = "STORAGE_BUCKET"
 bucket_name = "lte"
 
 [vars]
+CF_ACCOUNT_ID = "ad91abcd16cd9e9c569d83d9ef46e398"
 ENVIRONMENT = "production"
 SSO_WORKER_LOCAL_URL = "http://localhost:8787"
 COOKIE_DOMAIN = ".rareminds.in"
 SKILLPASSPORT_INTERNAL_URL = "http://localhost:8788"
+CERTIFICATE_VERIFY_BASE_URL = "http://localhost:8788/verify"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 
 # ============================================================================
@@ -43,15 +57,26 @@ R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
 # ============================================================================
 
 [env.production.vars]
+CF_ACCOUNT_ID = "ad91abcd16cd9e9c569d83d9ef46e398"
 ENVIRONMENT = "production"
 COOKIE_DOMAIN = ".rareminds.in"
 SKILLPASSPORT_INTERNAL_URL = "https://skillpassport.rareminds.in"
+CERTIFICATE_VERIFY_BASE_URL = "https://skillpassport.rareminds.in/verify"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
+
+# Replace with the dedicated production namespace ID before deployment.
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "a162f140e4464515a8d5a27b5ebc6c6b"
 
 [[env.production.services]]
 binding = "SSO_SERVICE"
 service = "sso-api"
 entrypoint = "SsoWorker"
+
+[[env.production.queues.producers]]
+queue = "lte-asset-validation"
+binding = "LTE_ASSET_VALIDATION_QUEUE"
 
 [[env.production.queues.producers]]
 queue = "lte-db-sync-queue"
@@ -66,14 +91,25 @@ bucket_name = "lte"
 # ============================================================================
 
 [env.preview.vars]
+CF_ACCOUNT_ID = "ad91abcd16cd9e9c569d83d9ef46e398"
 ENVIRONMENT = "development"
 SKILLPASSPORT_INTERNAL_URL = "https://skillpassport-dev.pages.dev"
+CERTIFICATE_VERIFY_BASE_URL = "https://skillpassport-dev.pages.dev/verify"
 R2_PUBLIC_DOMAIN = "https://bucket.lte.rareminds.in"
+
+# Keep preview traffic in a separate namespace from production.
+[[env.preview.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "a01a250ae61941a6adb3b4c702b6ea2f"
 
 [[env.preview.services]]
 binding = "SSO_SERVICE"
 service = "sso-api-dev"
 entrypoint = "SsoWorker"
+
+[[env.preview.queues.producers]]
+queue = "lte-asset-validation-dev"
+binding = "LTE_ASSET_VALIDATION_QUEUE"
 
 [[env.preview.queues.producers]]
 queue = "lte-db-sync-queue-dev"
@@ -87,8 +123,13 @@ bucket_name = "lte"
 # SECRETS
 # ============================================================================
 # For local development: add secrets to .dev.vars.
-# For production: set secrets using `wrangler secret put <KEY_NAME>` or dashboard.
+# For production/preview: wrangler pages secret put <KEY_NAME> --project-name lte
+# - BROWSER_RENDERING_API_TOKEN (Browser Rendering – Edit)
+# CF_ACCOUNT_ID must be configured per environment before deploy (32-hex account identifier).
 #
 # Required:
 # - SUPABASE_URL
 # - SUPABASE_SERVICE_ROLE_KEY
+
+# Catalog integration: LTE_INTERNAL_SECRET (same value as sp-dash; >=32 characters).
+# Existing sp-dash Worker consumes lte-asset-validation; Pages only produces jobs.

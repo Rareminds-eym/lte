@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createLogger } from "../shared/logger";
+import { signServiceToken } from "./serviceToken";
 
 const logger = createLogger("skill-gateway");
 
@@ -7,9 +8,9 @@ const logger = createLogger("skill-gateway");
  * Caller-side client for the LTE ↔ SkillPassport internal gateway
  * (`POST {SKILLPASSPORT_INTERNAL_URL}/api/internal/lte/v1`).
  *
- * Signing is delegated to `@rareminds-eym/auth-core` (verifyJWT/createJWT
- * utilities) using the shared HMAC secret, then the gateway POSTs an action
- * envelope. Response is Zod-validated.
+ * This legacy HTTP gateway uses the shared HMAC service-token contract from
+ * dev; it is separate from SSO's typed Service Binding RPC and auth-core user
+ * authentication. Response envelopes are Zod-validated.
  *
  * Failure modes are typed: a non-ok / malformed / unreachable gateway throws
  * `GatewayCallError` — callers (learner-track) treat it as "fall through".
@@ -25,6 +26,16 @@ export class GatewayCallError extends Error {
 }
 
 const GATEWAY_TIMEOUT_MS = 2000;
+/** catalogue:get imports an entire role catalogue — allow 30s for large payloads. */
+const CATALOGUE_TIMEOUT_MS = 30_000;
+/** review:org-directory lists an organisation's learners and educators (administrator screens only). */
+const DIRECTORY_TIMEOUT_MS = 10_000;
+const timeoutFor = (action: string) =>
+  action === "catalogue:get"
+    ? CATALOGUE_TIMEOUT_MS
+    : action === "review:org-directory"
+      ? DIRECTORY_TIMEOUT_MS
+      : GATEWAY_TIMEOUT_MS;
 const encoder = new TextEncoder();
 
 function b64urlEncode(bytes: Uint8Array): string {
@@ -41,18 +52,6 @@ async function hmacKey(secret: string): Promise<CryptoKey> {
     false,
     ["sign"],
   );
-}
-
-async function signServiceToken(
-  secret: string,
-  claims: { app: string; actions: string[]; iat: number; exp: number },
-): Promise<string> {
-  const key = await hmacKey(secret);
-  const header = b64urlEncode(encoder.encode(JSON.stringify({ alg: "HS256", typ: "svc" })));
-  const payload = b64urlEncode(encoder.encode(JSON.stringify(claims)));
-  const data = `${header}.${payload}`;
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  return `${data}.${b64urlEncode(new Uint8Array(signature))}`;
 }
 
 async function signUserClaim(secret: string, sub: string): Promise<{ claim: string; sig: string }> {
@@ -73,7 +72,7 @@ const GatewayEnvelopeSchema = z.object({
 
 export interface SkillGatewayEnv {
   SKILLPASSPORT_INTERNAL_URL: string;
-  SKILLPASSPORT_INTERNAL_SECRET: string;
+  LTE_INTERNAL_SECRET: string;
 }
 
 /**
@@ -87,7 +86,7 @@ export async function callSkill<T = unknown>(
   userId: string,
 ): Promise<T> {
   const baseUrl = env.SKILLPASSPORT_INTERNAL_URL?.replace(/\/+$/, "");
-  const secret = env.SKILLPASSPORT_INTERNAL_SECRET;
+  const secret = env.LTE_INTERNAL_SECRET;
   if (!baseUrl || !secret || secret.length < 32) {
     throw new GatewayCallError("Skill gateway env is not configured", "GATEWAY_MISCONFIGURED");
   }
@@ -99,11 +98,9 @@ export async function callSkill<T = unknown>(
     signUserClaim(secret, userId),
   ]);
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GATEWAY_TIMEOUT_MS);
-  let response: Response;
+  const signal = AbortSignal.timeout(timeoutFor(action));
   try {
-    response = await fetch(`${baseUrl}/api/internal/lte/v1`, {
+    const response = await fetch(`${baseUrl}/api/internal/lte/v1`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -112,10 +109,40 @@ export async function callSkill<T = unknown>(
         "X-Lte-Sig": userClaim.sig,
       },
       body: JSON.stringify({ action, requestId, payload }),
-      signal: controller.signal,
+      signal,
     });
+    // Keep the same deadline active until the entire response body is consumed.
+    let raw: unknown;
+    try {
+      raw = await response.json();
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      raw = null;
+    }
+    const parsed = GatewayEnvelopeSchema.safeParse(raw);
+    if (!parsed.success || parsed.data.ok !== true) {
+      const code =
+        parsed.success && parsed.data.error?.code
+          ? parsed.data.error.code
+          : `HTTP_${response.status}`;
+      const message =
+        parsed.success && parsed.data.error?.message
+          ? parsed.data.error.message
+          : `Skill gateway returned ${response.status}`;
+      logger.warn("Skill gateway action failed", {
+        action,
+        requestId,
+        code,
+        status: response.status,
+      });
+      throw new GatewayCallError(message, code);
+    }
+    return parsed.data.data as T;
   } catch (error) {
-    const aborted = error instanceof Error && error.name === "AbortError";
+    if (error instanceof GatewayCallError) throw error;
+    const aborted =
+      signal.aborted ||
+      (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name));
     logger.warn("Skill gateway request failed", {
       action,
       requestId,
@@ -126,29 +153,5 @@ export async function callSkill<T = unknown>(
       aborted ? "Skill gateway timed out" : "Skill gateway unreachable",
       aborted ? "GATEWAY_TIMEOUT" : "GATEWAY_UNREACHABLE",
     );
-  } finally {
-    clearTimeout(timer);
   }
-
-  const raw: unknown = await response.json().catch(() => null);
-  const parsed = GatewayEnvelopeSchema.safeParse(raw);
-  if (!parsed.success || parsed.data.ok !== true) {
-    const code =
-      parsed.success && parsed.data.error?.code
-        ? parsed.data.error.code
-        : `HTTP_${response.status}`;
-    const message =
-      parsed.success && parsed.data.error?.message
-        ? parsed.data.error.message
-        : `Skill gateway returned ${response.status}`;
-    logger.warn("Skill gateway action failed", {
-      action,
-      requestId,
-      code,
-      status: response.status,
-    });
-    throw new GatewayCallError(message, code);
-  }
-
-  return parsed.data.data as T;
 }
