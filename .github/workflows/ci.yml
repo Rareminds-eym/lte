@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, production, dev]
   pull_request:
@@ -106,6 +107,8 @@ jobs:
 
       - name: Build production frontend
         run: npm run build
+        env:
+          NODE_ENV: production
 
       - name: Compile Pages Functions without compatibility overrides
         run: npm run build:functions
@@ -146,3 +149,42 @@ jobs:
           use_oidc: true
           fail_ci_if_error: true
 
+  deploy-production:
+    needs: lint-and-validate
+    if: github.ref == 'refs/heads/production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+    concurrency:
+      group: production-pages
+      cancel-in-progress: false
+    steps:
+      - name: Checkout release
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Build production frontend
+        run: npm run build
+        env:
+          NODE_ENV: production
+      - name: Compile Pages Functions without compatibility overrides
+        run: npm run build:functions
+      - name: Deploy to production Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: lte
+        run: >-
+          npx --no-install wrangler pages deploy dist
+          --project-name "$CLOUDFLARE_PAGES_PROJECT"
+          --branch "$GITHUB_REF_NAME"
+          --commit-hash "$GITHUB_SHA"
