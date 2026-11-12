@@ -142,7 +142,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: vars.CODECOV_ENABLED == 'true'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: coverage/lcov.info
           flags: unittests
