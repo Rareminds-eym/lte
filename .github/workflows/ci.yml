@@ -109,6 +109,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          VITE_SKILLPASSPORT_URL: ${{ vars.VITE_SKILLPASSPORT_URL }}
 
       - name: Compile Pages Functions without compatibility overrides
         run: npm run build:functions
@@ -176,6 +177,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          VITE_SKILLPASSPORT_URL: ${{ vars.VITE_SKILLPASSPORT_URL }}
       - name: Compile Pages Functions without compatibility overrides
         run: npm run build:functions
       - name: Deploy to production Pages
