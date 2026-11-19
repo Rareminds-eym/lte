@@ -113,9 +113,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
         <div className="relative w-full md:w-56 h-36 md:h-auto shrink-0 rounded-xl overflow-hidden bg-surface-muted">
           <Image
             src={course.imageUrl}
-            alt={course.title}
+            alt="Rareminds"
             wrapperClassName="w-full h-full"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-contain p-6"
           >
             {badges}
           </Image>
@@ -185,7 +185,13 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
         className,
       )}
     >
-      <Image src={course.imageUrl} alt={course.title} aspectRatio="400/200">
+      <Image
+        src={course.imageUrl}
+        alt="Rareminds"
+        aspectRatio="400/200"
+        wrapperClassName="bg-surface-muted"
+        className="object-contain p-8"
+      >
         {badges}
       </Image>
 
