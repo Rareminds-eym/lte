@@ -1,8 +1,13 @@
--- LOCAL ONLY: Arjun existing SkillPassport role context IDs.
--- Role IDs match companion SkillPassport production role seeds (or supplied --role-contexts export).
--- Verify existing SkillPassport contexts with 05_export_lte_role_ids.sql before production import.
--- Original workbook IDs and mappings retained; levels, modules and content published by request. Blank duration: previously requested 45 minutes.
+-- LOCAL DEVELOPMENT ONLY: River Mission catalog and demo integrations.
+-- 1. College catalog: 9 roles, 11 capabilities, 5 levels, 17 modules, 102 six-E items.
+-- 2. Two additional local role contexts used by the MBA assessment; content is reused.
+-- 3. College LMS links: first-module Engage references for engineering and MBA.
+-- 4. School LMS link: updated only if the separately loaded school lesson exists.
+-- No learner accounts, assessments, embeddings or LMS courses are created here.
+-- Role IDs match existing LOCAL SkillPassport assessments. Never run in production.
+-- LMS course records and R2 files must be loaded separately.
 BEGIN;
+-- COLLEGE LEARNING CATALOG
 -- Generated from college.xlsx: public.roles.
 -- Edit the Excel template and rerun scripts/excel_to_lte_seed.py.
 -- ON CONFLICT DO NOTHING keeps this seed safe to rerun.
@@ -1556,4 +1561,72 @@ IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='fa2ecc65-94b0-5f65-bfea-db93
 IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='523a6ff8-d013-526d-8603-d3f7cfc2c557'::uuid AND "role_name" = 'Water Monitoring Technology Associate' AND "role_family_name" = 'Water Monitoring Technology' AND "domain_name" = 'Water Resources & Environmental Monitoring') THEN RAISE EXCEPTION 'Conflicting LTE role context for WAT_RF08_DR01; reconcile existing ID before import'; END IF;
 IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='08e1d552-66aa-5048-ba68-81cad192b334'::uuid AND "role_name" = 'Environmental Communication Associate' AND "role_family_name" = 'Environmental Communications' AND "domain_name" = 'Water Resources & Environmental Monitoring') THEN RAISE EXCEPTION 'Conflicting LTE role context for WAT_RF09_DR01; reconcile existing ID before import'; END IF;
 END $$;
+
+-- LOCAL MBA ROLE MAPPINGS
+-- Local MBA context aliases reuse the published River Mission content.
+
+INSERT INTO public.roles(id,role_name,role_family_name,domain_name,metadata)
+SELECT v.target_id::uuid,r.role_name,v.family_name,v.domain_name,r.metadata
+FROM (VALUES
+('a398dea7-2401-50be-bbe5-8d91fabf3c7d','bd7d949d-6c83-577e-b023-e62ed339ac74','Treatment Process Operations Support','Water Treatment and Utility Operations'),
+('b439c97b-dcaf-59eb-9b4f-7e4411cc2e65','02693228-b44e-546c-8944-201455fddf45','Environmental Compliance Evidence','Environmental Compliance and Public Programmes')
+) v(source_id,target_id,family_name,domain_name) JOIN public.roles r ON r.id=v.source_id::uuid
+ON CONFLICT(id) DO NOTHING;
+INSERT INTO public.role_capability_sequence(id,role_id,capability_id,sequence_step,capability_priority,required_level,duration_weeks,work_style_demands)
+SELECT md5('rohan-context:'||v.target_id||':'||s.capability_id::text)::uuid,v.target_id::uuid,s.capability_id,s.sequence_step,s.capability_priority,s.required_level,s.duration_weeks,s.work_style_demands
+FROM (VALUES
+('a398dea7-2401-50be-bbe5-8d91fabf3c7d','bd7d949d-6c83-577e-b023-e62ed339ac74'),
+('b439c97b-dcaf-59eb-9b4f-7e4411cc2e65','02693228-b44e-546c-8944-201455fddf45')
+) v(source_id,target_id) JOIN public.role_capability_sequence s ON s.role_id=v.source_id::uuid
+ON CONFLICT DO NOTHING;
+
+-- COLLEGE CURRICULUM LINKS
+-- LOCAL COLLEGE DEMO ONLY. Engineering and MBA links, first module, Engage only.
+-- Keep original curriculum-reference text and use actual exported LMS course IDs.
+
+DO $$ BEGIN
+ IF (SELECT count(*) FROM public.modules_content mc JOIN public.modules m ON m.id=mc.module_id JOIN public.levels l ON l.id=m.level_id JOIN public.capabilities c ON c.id=l.capability_id WHERE c.code='RIV-CAP-01' AND m.module_no=1 AND mc.stage_name='engage')<>1 THEN RAISE EXCEPTION 'Expected one Problem Identification first-module Engage stage'; END IF;
+END $$;
+UPDATE public.modules_content mc
+SET curriculum_reference=(CASE
+ WHEN jsonb_typeof(mc.curriculum_reference)='object' THEN mc.curriculum_reference
+ WHEN jsonb_typeof(mc.curriculum_reference)='array' THEN
+ jsonb_build_object('source_reference',mc.curriculum_reference)||coalesce((
+ SELECT jsonb_object_agg(trim(split_part(entry,':',1)),trim(substr(entry,strpos(entry,':')+1)))
+ FROM jsonb_array_elements_text(mc.curriculum_reference) a(entry) WHERE strpos(entry,':')>1
+ ),'{}'::jsonb)
+ ELSE '{}'::jsonb END)||jsonb_build_object('lms_courses','[{"course_id": "11c04f89-3f30-4e15-bd4c-cc9dac40819b", "code": "RM-ENG-07", "title": "Environmental Chemistry and Pollutant Transformations"}, {"course_id": "686e4743-39eb-4098-8549-1871d65e4892", "code": "RM-ENG-06", "title": "General Chemistry for Water Engineers"}, {"course_id": "264d8e8b-f14e-41f1-8a05-65494eb2c5ad", "code": "RM-ENG-04", "title": "Fluid Mechanics and River Hydraulics"}, {"course_id": "c00276d0-489d-424d-ac57-e47cc7f68dfb", "code": "RM-ENG-10", "title": "Water Quality Parameters and Their Relationships"}]'::jsonb),updated_at=now()
+FROM public.modules m JOIN public.levels l ON l.id=m.level_id JOIN public.capabilities c ON c.id=l.capability_id
+WHERE mc.module_id=m.id AND c.code='RIV-CAP-01' AND m.module_no=1 AND mc.stage_name='engage';
+-- MBA: Data Quality & Analytics, first module, Engage only.
+DO $$ BEGIN
+ IF (SELECT count(*) FROM public.modules_content mc JOIN public.modules m ON m.id=mc.module_id JOIN public.levels l ON l.id=m.level_id JOIN public.capabilities c ON c.id=l.capability_id WHERE c.code='RIV-CAP-06' AND m.module_no=1 AND mc.stage_name='engage')<>1 THEN RAISE EXCEPTION 'Expected one Data Quality and Analytics first-module Engage stage'; END IF;
+END $$;
+UPDATE public.modules_content mc
+SET curriculum_reference=(CASE
+ WHEN jsonb_typeof(mc.curriculum_reference)='object' THEN mc.curriculum_reference
+ WHEN jsonb_typeof(mc.curriculum_reference)='array' THEN
+ jsonb_build_object('source_reference',mc.curriculum_reference)||coalesce((
+ SELECT jsonb_object_agg(trim(split_part(entry,':',1)),trim(substr(entry,strpos(entry,':')+1)))
+ FROM jsonb_array_elements_text(mc.curriculum_reference) a(entry) WHERE strpos(entry,':')>1
+ ),'{}'::jsonb)
+ ELSE '{}'::jsonb END)||jsonb_build_object('lms_courses','[{"course_id": "a5b09ec3-c792-4173-be26-875080659a8c", "code": "RM-ENG-14", "title": "Environmental Data Analysis and Scientific Reasoning"}, {"course_id": "a8b5b1e6-ae27-4b23-9661-969b725571bf", "code": "RM-ENG-15", "title": "Environmental Monitoring, Risk and Engineering Decisions"}, {"course_id": "a347445e-edcf-4684-881f-ede210aabba1", "code": "RM-ENG-11", "title": "Sampling Instruments and Laboratory Quality"}]'::jsonb),updated_at=now()
+FROM public.modules m JOIN public.levels l ON l.id=m.level_id JOIN public.capabilities c ON c.id=l.capability_id
+WHERE mc.module_id=m.id AND c.code='RIV-CAP-06' AND m.module_no=1 AND mc.stage_name='engage';
+
+-- OPTIONAL SCHOOL CURRICULUM LINK
+-- Local demo: Level 1, Observe the Prepared Water Settle, Engage only.
+-- The school catalog must already exist. Preserve its curriculum reference.
+
+
+UPDATE public.modules_content mc
+SET curriculum_reference=coalesce(mc.curriculum_reference,'{}'::jsonb)||jsonb_build_object(
+ 'lms_courses',coalesce((SELECT jsonb_agg(item) FROM jsonb_array_elements(
+ coalesce(mc.curriculum_reference->'lms_courses','[]'::jsonb)) a(item)
+ WHERE item->>'course_id'<>'acc91623-73af-404c-a8e1-aee4270b15ac'),'[]'::jsonb)
+ ||jsonb_build_array(jsonb_build_object(
+ 'course_id','acc91623-73af-404c-a8e1-aee4270b15ac',
+ 'code','G10-CHEMISTRY-RIVER','title','Grade 10 Chemistry — River Water'))),
+ updated_at=now()
+WHERE mc.id='6d55a71e-a2b6-5606-89e9-551970c50468';
 COMMIT;

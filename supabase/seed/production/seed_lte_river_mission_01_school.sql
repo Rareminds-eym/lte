@@ -1,7 +1,36 @@
 -- Role IDs match companion SkillPassport production role seeds (or supplied --role-contexts export).
--- Verify existing SkillPassport contexts with 05_export_lte_role_ids.sql before production import.
+-- Verify existing SkillPassport contexts with 20261121090400_seed_river_mission_export_lte_role_ids.sql before production import.
 -- Original workbook IDs and mappings retained; levels, modules and content published by request. Blank duration: previously requested 45 minutes.
 BEGIN;
+-- Align existing LTE identities to the exported SkillPassport production contexts.
+-- Foreign keys must cascade so capability links, learning paths and certificates survive.
+DO $school_role_ids$
+DECLARE r record;
+BEGIN
+ FOR r IN SELECT * FROM (VALUES
+ ('74b3a98a-aa65-58a7-ab3d-f763855f2ec1'::uuid,'4cbdd045-a622-51ca-ad87-533985c4695b'::uuid,'Water Quality Tester'),
+ ('0a4a40e3-c92e-5153-86d8-c05676b5d81e'::uuid,'67f60d6b-72cf-5e80-a50e-6480bd2cb86a'::uuid,'Water Project Manager'),
+ ('332bf8da-a837-563d-bfb8-ce1f6795a6f7'::uuid,'1e159f39-6e5f-5a25-9c77-22d818bb9dec'::uuid,'Community Water Helper')
+ ) v(old_id,new_id,role_name) LOOP
+  IF EXISTS(SELECT 1 FROM public.roles WHERE id=r.old_id) THEN
+   IF NOT EXISTS(SELECT 1 FROM public.roles WHERE id=r.old_id AND role_name=r.role_name) THEN
+    RAISE EXCEPTION 'Unexpected source role at %; expected %',r.old_id,r.role_name;
+   END IF;
+   IF EXISTS(SELECT 1 FROM public.roles WHERE id=r.new_id) THEN
+    RAISE EXCEPTION 'Both source and target LTE IDs exist for %; reconcile before import',r.role_name;
+   END IF;
+   IF EXISTS(SELECT 1 FROM pg_constraint WHERE contype='f'
+    AND confrelid='public.roles'::regclass AND confupdtype<>'c') THEN
+    RAISE EXCEPTION 'LTE role ID repair requires ON UPDATE CASCADE on dependent foreign keys';
+   END IF;
+   UPDATE public.roles SET id=r.new_id WHERE id=r.old_id;
+  ELSIF EXISTS(SELECT 1 FROM public.roles WHERE id=r.new_id AND role_name<>r.role_name) THEN
+   RAISE EXCEPTION 'Target LTE role ID is occupied by another role: %',r.new_id;
+  END IF;
+ END LOOP;
+END;
+$school_role_ids$;
+
 -- Generated from school.xlsx: public.roles.
 -- Edit the Excel template and rerun scripts/excel_to_lte_seed.py.
 -- ON CONFLICT DO NOTHING keeps this seed safe to rerun.
@@ -10,7 +39,7 @@ BEGIN;
 
 -- public.roles
 INSERT INTO public."roles" ("id", "role_name", "role_family_name", "domain_name", "metadata")
-VALUES ('74b3a98a-aa65-58a7-ab3d-f763855f2ec1'::uuid, 'Water Quality Tester', 'Water Quality Analyst', 'Water Quality & Laboratory Science', '{"description": "Tests water samples, records laboratory results and identifies which safety checks are still required.", "future_role": "Water Quality Analyst", "audience": "Classes 6-10", "career_exploration": true, "not_professional_qualification": true, "associated_modules": ["L2M1", "L2M2", "L5M1", "L5M4"], "source": "RAREMINDS River Mission Grades 6-10, approved module and 6E content stored in linked Google Drive assets; career role labels are for exploration, not certification"}'::jsonb)
+VALUES ('4cbdd045-a622-51ca-ad87-533985c4695b'::uuid, 'Water Quality Tester', 'Water Quality Analyst', 'Water Quality & Laboratory Science', '{"description": "Tests water samples, records laboratory results and identifies which safety checks are still required.", "future_role": "Water Quality Analyst", "audience": "Classes 6-10", "career_exploration": true, "not_professional_qualification": true, "associated_modules": ["L2M1", "L2M2", "L5M1", "L5M4"], "source": "RAREMINDS River Mission Grades 6-10, approved module and 6E content stored in linked Google Drive assets; career role labels are for exploration, not certification"}'::jsonb)
 ON CONFLICT DO NOTHING;
 INSERT INTO public."roles" ("id", "role_name", "role_family_name", "domain_name", "metadata")
 VALUES ('36dc1c06-4de8-59f2-931f-b3dd8cb0e477'::uuid, 'Water Cleaning Engineer', 'Water Treatment Engineer', 'Water & Environmental Engineering', '{"description": "Designs or improves ways to separate unwanted substances from water.", "future_role": "Water Treatment Engineer", "audience": "Classes 6-10", "career_exploration": true, "not_professional_qualification": true, "associated_modules": ["L1M2", "L4M1", "L4M2", "L4M4"], "source": "RAREMINDS River Mission Grades 6-10, approved module and 6E content stored in linked Google Drive assets; career role labels are for exploration, not certification"}'::jsonb)
@@ -28,10 +57,10 @@ INSERT INTO public."roles" ("id", "role_name", "role_family_name", "domain_name"
 VALUES ('7b840ef6-9d91-5bc3-b477-8567eb5452ee'::uuid, 'Water Safety Officer', 'Water Quality Compliance Officer', 'Water Quality & Public Safety', '{"description": "Reviews testing evidence and identifies what must be checked before a water-use decision.", "future_role": "Water Quality Compliance Officer", "audience": "Classes 6-10", "career_exploration": true, "not_professional_qualification": true, "associated_modules": ["L2M2", "L4M4", "L5M3", "L5M4"], "source": "RAREMINDS River Mission Grades 6-10, approved module and 6E content stored in linked Google Drive assets; career role labels are for exploration, not certification"}'::jsonb)
 ON CONFLICT DO NOTHING;
 INSERT INTO public."roles" ("id", "role_name", "role_family_name", "domain_name", "metadata")
-VALUES ('0a4a40e3-c92e-5153-86d8-c05676b5d81e'::uuid, 'Water Project Manager', 'Water Infrastructure Project Manager', 'Water Operations & Planning', '{"description": "Plans work, checks resources and prepares practical evidence-based handovers.", "future_role": "Water Infrastructure Project Manager", "audience": "Classes 6-10", "career_exploration": true, "not_professional_qualification": true, "associated_modules": ["L1M4", "L2M4", "L3M4", "L5M5"], "source": "RAREMINDS River Mission Grades 6-10, approved module and 6E content stored in linked Google Drive assets; career role labels are for exploration, not certification"}'::jsonb)
+VALUES ('67f60d6b-72cf-5e80-a50e-6480bd2cb86a'::uuid, 'Water Project Manager', 'Water Infrastructure Project Manager', 'Water Operations & Planning', '{"description": "Plans work, checks resources and prepares practical evidence-based handovers.", "future_role": "Water Infrastructure Project Manager", "audience": "Classes 6-10", "career_exploration": true, "not_professional_qualification": true, "associated_modules": ["L1M4", "L2M4", "L3M4", "L5M5"], "source": "RAREMINDS River Mission Grades 6-10, approved module and 6E content stored in linked Google Drive assets; career role labels are for exploration, not certification"}'::jsonb)
 ON CONFLICT DO NOTHING;
 INSERT INTO public."roles" ("id", "role_name", "role_family_name", "domain_name", "metadata")
-VALUES ('332bf8da-a837-563d-bfb8-ce1f6795a6f7'::uuid, 'Community Water Helper', 'Community Water Programme Coordinator', 'Community Water & Environmental Programmes', '{"description": "Helps communities understand water evidence, organise action and communicate findings.", "future_role": "Community Water Programme Coordinator", "audience": "Classes 6-10", "career_exploration": true, "not_professional_qualification": true, "associated_modules": ["L1M4", "L2M4", "L3M4", "L5M5"], "source": "RAREMINDS River Mission Grades 6-10, approved module and 6E content stored in linked Google Drive assets; career role labels are for exploration, not certification"}'::jsonb)
+VALUES ('1e159f39-6e5f-5a25-9c77-22d818bb9dec'::uuid, 'Community Water Helper', 'Community Water Programme Coordinator', 'Community Water & Environmental Programmes', '{"description": "Helps communities understand water evidence, organise action and communicate findings.", "future_role": "Community Water Programme Coordinator", "audience": "Classes 6-10", "career_exploration": true, "not_professional_qualification": true, "associated_modules": ["L1M4", "L2M4", "L3M4", "L5M5"], "source": "RAREMINDS River Mission Grades 6-10, approved module and 6E content stored in linked Google Drive assets; career role labels are for exploration, not certification"}'::jsonb)
 ON CONFLICT DO NOTHING;
 
 
@@ -1356,13 +1385,13 @@ UPDATE public.modules SET learning_content=jsonb_build_object('major_concepts', 
 UPDATE public.modules SET support=jsonb_build_object('ai_support_tips', support) WHERE id IN ('6f186474-f8b8-5325-b6f6-de400efdd3dd'::uuid, '0abe0211-71f9-5fac-a64b-c884acc0e576'::uuid, 'db1a4536-64f3-5d40-b654-7853dbf44220'::uuid, '2dc9c128-acfb-5ea2-91ed-edea22c9eb48'::uuid, '9fefeb20-0e05-537e-bbb3-e47937941b7d'::uuid, '8f212e8b-7a24-5b92-95fb-4f40bf95498b'::uuid, '8b541021-0098-5131-8b12-b75a46b266d0'::uuid, 'cee846f5-aff7-5d03-b454-6c58c4b82072'::uuid, 'dd0f9e64-be80-5723-af2b-0164271daf17'::uuid, '8d9d5aa3-8e63-52b3-8dee-f5d2e5c88d1a'::uuid, '7737a5b4-11cb-5ebb-a6f0-bade5c1b4d3e'::uuid, '5fc7c740-8c63-5d7e-8db3-5f61265cba34'::uuid, '5898669e-9c99-54d5-8b37-4117dcb00b71'::uuid, 'f12d4f83-632a-5b19-ae79-f1b3cb4bba36'::uuid, '63e74db0-cdb0-57bc-b698-d99ae0de3d8a'::uuid, '2b1e2894-f139-5792-8872-f12c7541c1e3'::uuid, '20540d62-eec3-5010-9a5c-4792804ec826'::uuid, 'c38d193b-ef79-59d4-bdbf-2cec7fe9feeb'::uuid, '9cb55360-8f65-5be5-b880-f83e1c401086'::uuid, '8258c1ac-49b7-54bd-915f-250694a04c67'::uuid, '1df01a94-b22e-54d7-a4d4-d8aee8c969da'::uuid) AND jsonb_typeof(support)='array';
 UPDATE public.modules SET tools=jsonb_build_object('items', tools) WHERE id IN ('6f186474-f8b8-5325-b6f6-de400efdd3dd'::uuid, '0abe0211-71f9-5fac-a64b-c884acc0e576'::uuid, 'db1a4536-64f3-5d40-b654-7853dbf44220'::uuid, '2dc9c128-acfb-5ea2-91ed-edea22c9eb48'::uuid, '9fefeb20-0e05-537e-bbb3-e47937941b7d'::uuid, '8f212e8b-7a24-5b92-95fb-4f40bf95498b'::uuid, '8b541021-0098-5131-8b12-b75a46b266d0'::uuid, 'cee846f5-aff7-5d03-b454-6c58c4b82072'::uuid, 'dd0f9e64-be80-5723-af2b-0164271daf17'::uuid, '8d9d5aa3-8e63-52b3-8dee-f5d2e5c88d1a'::uuid, '7737a5b4-11cb-5ebb-a6f0-bade5c1b4d3e'::uuid, '5fc7c740-8c63-5d7e-8db3-5f61265cba34'::uuid, '5898669e-9c99-54d5-8b37-4117dcb00b71'::uuid, 'f12d4f83-632a-5b19-ae79-f1b3cb4bba36'::uuid, '63e74db0-cdb0-57bc-b698-d99ae0de3d8a'::uuid, '2b1e2894-f139-5792-8872-f12c7541c1e3'::uuid, '20540d62-eec3-5010-9a5c-4792804ec826'::uuid, 'c38d193b-ef79-59d4-bdbf-2cec7fe9feeb'::uuid, '9cb55360-8f65-5be5-b880-f83e1c401086'::uuid, '8258c1ac-49b7-54bd-915f-250694a04c67'::uuid, '1df01a94-b22e-54d7-a4d4-d8aee8c969da'::uuid) AND jsonb_typeof(tools)='array';
 DO $$ BEGIN
-IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='74b3a98a-aa65-58a7-ab3d-f763855f2ec1'::uuid AND "role_name" = 'Water Quality Tester' AND "role_family_name" = 'Water Quality Analyst' AND "domain_name" = 'Water Quality & Laboratory Science') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-01; reconcile existing ID before import'; END IF;
+IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='4cbdd045-a622-51ca-ad87-533985c4695b'::uuid AND "role_name" = 'Water Quality Tester' AND "role_family_name" = 'Water Quality Analyst' AND "domain_name" = 'Water Quality & Laboratory Science') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-01; reconcile existing ID before import'; END IF;
 IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='36dc1c06-4de8-59f2-931f-b3dd8cb0e477'::uuid AND "role_name" = 'Water Cleaning Engineer' AND "role_family_name" = 'Water Treatment Engineer' AND "domain_name" = 'Water & Environmental Engineering') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-02; reconcile existing ID before import'; END IF;
 IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='0cbf2b86-1820-5559-b552-8384584964ea'::uuid AND "role_name" = 'River Protection Expert' AND "role_family_name" = 'Environmental Scientist' AND "domain_name" = 'Environmental Research & River Protection') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-03; reconcile existing ID before import'; END IF;
 IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='69cfe5c7-35cc-55f3-84d9-6f1474e72a9a'::uuid AND "role_name" = 'Rain & Flood Expert' AND "role_family_name" = 'Hydrologist' AND "domain_name" = 'Hydrology & Watershed Science') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-04; reconcile existing ID before import'; END IF;
 IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='cc2e37e5-2d19-5db7-b7e0-b6b70e8d7b1f'::uuid AND "role_name" = 'Water Plant Operator' AND "role_family_name" = 'Water Treatment Plant Operator' AND "domain_name" = 'Water Infrastructure Operations') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-05; reconcile existing ID before import'; END IF;
 IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='7b840ef6-9d91-5bc3-b477-8567eb5452ee'::uuid AND "role_name" = 'Water Safety Officer' AND "role_family_name" = 'Water Quality Compliance Officer' AND "domain_name" = 'Water Quality & Public Safety') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-06; reconcile existing ID before import'; END IF;
-IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='0a4a40e3-c92e-5153-86d8-c05676b5d81e'::uuid AND "role_name" = 'Water Project Manager' AND "role_family_name" = 'Water Infrastructure Project Manager' AND "domain_name" = 'Water Operations & Planning') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-07; reconcile existing ID before import'; END IF;
-IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='332bf8da-a837-563d-bfb8-ce1f6795a6f7'::uuid AND "role_name" = 'Community Water Helper' AND "role_family_name" = 'Community Water Programme Coordinator' AND "domain_name" = 'Community Water & Environmental Programmes') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-08; reconcile existing ID before import'; END IF;
+IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='67f60d6b-72cf-5e80-a50e-6480bd2cb86a'::uuid AND "role_name" = 'Water Project Manager' AND "role_family_name" = 'Water Infrastructure Project Manager' AND "domain_name" = 'Water Operations & Planning') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-07; reconcile existing ID before import'; END IF;
+IF NOT EXISTS (SELECT 1 FROM public.roles WHERE id='1e159f39-6e5f-5a25-9c77-22d818bb9dec'::uuid AND "role_name" = 'Community Water Helper' AND "role_family_name" = 'Community Water Programme Coordinator' AND "domain_name" = 'Community Water & Environmental Programmes') THEN RAISE EXCEPTION 'Conflicting LTE role context for RMR-ROLE-08; reconcile existing ID before import'; END IF;
 END $$;
 COMMIT;
