@@ -70,6 +70,26 @@ describe("capabilities queries", () => {
   });
 
   describe("getCapabilitiesByRoleId", () => {
+    it("reads the database thumbnail and exposes it as imageUrl", async () => {
+      const supabase = supabaseWith({
+        role_capability_sequence: {
+          data: [
+            {
+              ...objectCapabilityRow,
+              capabilities: {
+                ...objectCapabilityRow.capabilities,
+                thumbnail_url: "/thumbnail.webp",
+              },
+            },
+          ],
+        },
+      });
+      const result = await getCapabilitiesByRoleId(createQueryGateway(supabase), "role-1");
+      expect(result[0]?.imageUrl).toBe("/thumbnail.webp");
+      const chain = (supabase.from as ReturnType<typeof vi.fn>).mock.results[0]
+        ?.value as QueryChain;
+      expect(chain.select).toHaveBeenCalledWith(expect.stringContaining("thumbnail_url"));
+    });
     it("maps array and object capabilities, falling back for null fields", async () => {
       const gateway = gatewayWith({
         role_capability_sequence: { data: [arrayCapabilityRow, objectCapabilityRow] },
@@ -80,6 +100,7 @@ describe("capabilities queries", () => {
           id: "c1",
           name: "One",
           description: "Desc1",
+          imageUrl: null,
           code: "C1",
           level: "L1",
           priority: "core",
@@ -89,6 +110,7 @@ describe("capabilities queries", () => {
           id: "c2",
           name: "Two",
           description: "Desc2",
+          imageUrl: null,
           code: "C2",
           level: undefined,
           priority: undefined,
@@ -117,6 +139,7 @@ describe("capabilities queries", () => {
           id: "",
           name: "",
           description: "",
+          imageUrl: null,
           code: undefined,
           level: "L1",
           priority: "core",

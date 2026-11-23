@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { getLogger } from "@/shared";
 import { ApiError, apiFetch } from "@/shared/api";
+import { COURSE_FALLBACK_IMAGE } from "@/shared/config";
 import type { Course } from "../model/types";
 
 const apiLogger = getLogger("api");
 
 const UserCapabilitySchema = z.object({
+  imageUrl: z.string().nullish(),
   id: z.string(),
   name: z
     .string()
@@ -150,7 +152,7 @@ function mapCapabilityToCourse(cap: UserCapabilityResponse, index: number): Cour
     description: cap.description,
     category: cap.priority ?? "",
     level: cap.level ?? "",
-    imageUrl: "/assets/images/rm-bulb.webp",
+    imageUrl: cap.imageUrl?.trim() || COURSE_FALLBACK_IMAGE,
     tags: [],
     status: cap.status as Course["status"],
     progress: cap.progress,

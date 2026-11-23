@@ -1,5 +1,7 @@
 import type React from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { COURSE_FALLBACK_IMAGE } from "@/shared/config";
 import { cn } from "@/shared/lib";
 import { Button, Image, SegmentedProgressBar } from "@/shared/ui";
 import {
@@ -19,6 +21,13 @@ export interface CourseCardProps {
 
 export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid", className }) => {
   const navigate = useNavigate();
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const imageUrl = course.imageUrl?.trim() || COURSE_FALLBACK_IMAGE;
+  const useFallback = imageUrl === COURSE_FALLBACK_IMAGE || failedImageUrl === imageUrl;
+  const imageSrc = useFallback ? COURSE_FALLBACK_IMAGE : imageUrl;
+  const handleImageError = () => {
+    if (!useFallback) setFailedImageUrl(imageUrl);
+  };
   const actionLabel =
     course.status === "not_started"
       ? "Start"
@@ -112,10 +121,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
       >
         <div className="relative w-full md:w-56 h-36 md:h-auto shrink-0 rounded-xl overflow-hidden bg-surface-muted">
           <Image
-            src={course.imageUrl}
-            alt="Rareminds"
+            src={imageSrc}
+            alt={useFallback ? "Rareminds" : course.title}
+            onError={handleImageError}
             wrapperClassName="w-full h-full"
-            className="w-full h-full object-contain p-6"
+            className={cn("w-full h-full", useFallback ? "object-contain p-6" : "object-cover")}
           >
             {badges}
           </Image>
@@ -186,11 +196,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, variant = "grid"
       )}
     >
       <Image
-        src={course.imageUrl}
-        alt="Rareminds"
+        src={imageSrc}
+        alt={useFallback ? "Rareminds" : course.title}
+        onError={handleImageError}
         aspectRatio="400/200"
         wrapperClassName="bg-surface-muted"
-        className="object-contain p-8"
+        className={useFallback ? "object-contain p-8" : "object-cover"}
       >
         {badges}
       </Image>

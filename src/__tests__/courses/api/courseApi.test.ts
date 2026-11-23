@@ -54,6 +54,21 @@ describe("courseApi", () => {
       });
     });
 
+    it.each([
+      undefined,
+      null,
+      "",
+      "   ",
+    ])("uses the local fallback for imageUrl %s", async (imageUrl) => {
+      mockFetch(200, { success: true, capabilities: [{ ...cap, imageUrl }] });
+      expect((await fetchUserCourses())[0]?.imageUrl).toBe("/assets/images/rm-bulb.webp");
+    });
+
+    it("preserves the thumbnail supplied by the API", async () => {
+      mockFetch(200, { success: true, capabilities: [{ ...cap, imageUrl: "/thumbnail.webp" }] });
+      expect((await fetchUserCourses())[0]?.imageUrl).toBe("/thumbnail.webp");
+    });
+
     it("falls back to generated code when capability code missing", async () => {
       mockFetch(200, {
         success: true,
