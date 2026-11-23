@@ -80,6 +80,6 @@ export async function fetchActiveLearningPath(
 export async function activateLearningTrack(trackId: string): Promise<void> {
   await apiFetch("/api/v1/learning-paths/active-track", {
     method: "PATCH",
-    body: JSON.stringify({ trackId }),
+    body: JSON.stringify({ trackId, operationId: crypto.randomUUID() }),
   });
 }

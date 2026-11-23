@@ -1,12 +1,18 @@
 import { createQueryGateway, type QueryGateway } from "@functions/lib/query-gateway";
+import type {
+  TrackActivationAuthorization,
+  TrackActivationReservation,
+} from "@functions/lib/subscription-access";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   activateLearningTrack,
   checkRoleExists,
+  classifyTrackActivation,
   deactivateOtherTracks,
   ensureShadowRole,
   getActiveLearningTrack,
+  readCommittedTrackActivation,
   syncUserCapabilities,
   upsertLearningPath,
   upsertLearningTrack,
@@ -310,16 +316,271 @@ describe("learning-paths queries", () => {
   });
 
   describe("activateLearningTrack", () => {
-    it("activates the specified track and deactivates others", async () => {
-      const { gateway, supabase } = gatewayWith({
-        learning_tracks: {
-          query: { data: null },
-          update: { data: null },
+    // Synthetic owner-issued authority. This suite exercises the real gateway;
+    // PostgreSQL transaction and concurrent writer behavior require owner SQL tests.
+    const actorId = "10000000-0000-4000-8000-000000000001";
+    const trackId = "10000000-0000-4000-8000-000000000002";
+    const operationId = "10000000-0000-4000-8000-000000000003";
+    const otherId = "10000000-0000-4000-8000-000000000004";
+    const authorization = (): TrackActivationAuthorization => ({
+      schemaVersion: 1,
+      actorId,
+      subject: { kind: "user", id: actorId },
+      subscriptionId: "10000000-0000-4000-8000-000000000005",
+      productId: "10000000-0000-4000-8000-000000000006",
+      revisionId: "10000000-0000-4000-8000-000000000007",
+      version: 3,
+      actionKey: "learning_path.activate",
+      featureKey: "learning_tracks",
+      mode: "write",
+      validUntil: Number.MAX_SAFE_INTEGER,
+      quota: {
+        period: "billing_period",
+        countingEvent: "course_lte_assignment",
+        periodStartsAt: 0,
+        periodEndsAt: Number.MAX_SAFE_INTEGER,
+        limit: 3,
+      },
+    });
+    const reservation = (authority = authorization()): TrackActivationReservation => ({
+      schemaVersion: 1,
+      operationId,
+      actorId,
+      trackId,
+      authorization: authority,
+      status: "pending",
+      outcome: null,
+      quotaReceipt: {
+        used: 1,
+        command: {
+          operationId,
+          actorId,
+          subject: { kind: "user", id: actorId },
+          subscriptionId: authority.subscriptionId,
+          productId: authority.productId,
+          revisionId: authority.revisionId,
+          version: authority.version,
+          actionKey: "learning_path.activate",
+          countingEvent: "course_lte_assignment",
+          resourceId: operationId,
+          periodStartsAt: 0,
+          periodEndsAt: Number.MAX_SAFE_INTEGER,
+          limit: 3,
         },
+      },
+    });
+    const receipt = () => ({
+      schemaVersion: 1,
+      actorId,
+      trackId,
+      operationId,
+      reservationId: operationId,
+      subscriptionId: authorization().subscriptionId,
+      productId: authorization().productId,
+      revisionId: authorization().revisionId,
+      version: 3,
+      created: true,
+      completedAt: 1000,
+    });
+    function activationGateway(result: Resolver) {
+      const from = vi.fn(() => {
+        throw new Error("Legacy activation writes are prohibited");
       });
-      await expect(activateLearningTrack(gateway, "u1", "track-1")).resolves.toBeUndefined();
-      expect(fromChain(supabase, 0)?.update).toHaveBeenCalledWith({ is_active: false });
-      expect(fromChain(supabase, 1)?.update).toHaveBeenCalledWith({ is_active: true });
+      const rpc = vi.fn().mockResolvedValue({ data: result.data, error: result.error ?? null });
+      const gateway = createQueryGateway({ from, rpc } as unknown as SupabaseClient);
+      return { gateway, from, rpc };
+    }
+
+    it("calls one atomic owner RPC with authenticated actor and exact operation and authority", async () => {
+      const { gateway, from, rpc } = activationGateway({ data: receipt() });
+      const authority = authorization();
+      await expect(
+        activateLearningTrack(gateway, actorId, trackId, operationId, reservation(authority)),
+      ).resolves.toEqual(receipt());
+      expect(rpc).toHaveBeenCalledExactlyOnceWith("activate_reserved_subscription_learning_track", {
+        p_actor: actorId,
+        p_track: trackId,
+        p_operation: operationId,
+        p_reservation: reservation(authority),
+      });
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    const unchanged = () => ({
+      kind: "unchanged",
+      actorId,
+      trackId,
+      operationId,
+      authorization: authorization(),
+      completedAt: 1000,
+    });
+    it("classifies an owned active target without reserving quota or mutating a resource", async () => {
+      const { gateway, rpc, from } = activationGateway({ data: unchanged() });
+      await expect(
+        classifyTrackActivation(gateway, actorId, trackId, operationId, authorization()),
+      ).resolves.toEqual(unchanged());
+      expect(rpc).toHaveBeenCalledExactlyOnceWith("classify_subscription_track_activation", {
+        p_actor: actorId,
+        p_track: trackId,
+        p_operation: operationId,
+        p_authorization: authorization(),
+      });
+      expect(from).not.toHaveBeenCalled();
+    });
+    it("retains the explicit resource owner reservation-required decision", async () => {
+      const { gateway, rpc } = activationGateway({ data: { kind: "reservation_required" } });
+      await expect(
+        classifyTrackActivation(gateway, actorId, trackId, operationId, authorization()),
+      ).resolves.toEqual({ kind: "reservation_required" });
+      expect(rpc).toHaveBeenCalledTimes(1);
+    });
+    it.each([
+      "actorId",
+      "trackId",
+      "operationId",
+    ] as const)("rejects foreign no-hold %s before accepting an unchanged outcome", async (field) => {
+      const { gateway } = activationGateway({ data: { ...unchanged(), [field]: otherId } });
+      await expect(
+        classifyTrackActivation(gateway, actorId, trackId, operationId, authorization()),
+      ).rejects.toThrow();
+    });
+    it("reads retained unchanged metadata without a reservation or reactivation", async () => {
+      const { gateway, rpc, from } = activationGateway({ data: unchanged() });
+      await expect(
+        readCommittedTrackActivation(gateway, actorId, trackId, operationId),
+      ).resolves.toEqual(unchanged());
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(from).not.toHaveBeenCalled();
+    });
+    it("lets the durable owner decide replay after the original deadline", async () => {
+      const { gateway, rpc } = activationGateway({ data: receipt() });
+      const clock = vi.spyOn(Date, "now").mockReturnValue(authorization().validUntil);
+      try {
+        await expect(
+          activateLearningTrack(gateway, actorId, trackId, operationId, reservation()),
+        ).resolves.toEqual(receipt());
+        expect(rpc).toHaveBeenCalledTimes(1);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+    it("reads only the authenticated actors exact durable operation", async () => {
+      const recorded = { reservation: reservation(), outcome: receipt() };
+      const { gateway, rpc, from } = activationGateway({ data: recorded });
+      await expect(
+        readCommittedTrackActivation(gateway, actorId, trackId, operationId),
+      ).resolves.toEqual({ kind: "reserved", ...recorded });
+      expect(rpc).toHaveBeenCalledExactlyOnceWith("read_reserved_subscription_learning_track", {
+        p_actor: actorId,
+        p_track: trackId,
+        p_operation: operationId,
+      });
+      expect(from).not.toHaveBeenCalled();
+    });
+    it("returns null for an absent own durable operation", async () => {
+      const { gateway, rpc } = activationGateway({ data: null });
+      await expect(
+        readCommittedTrackActivation(gateway, actorId, trackId, operationId),
+      ).resolves.toBeNull();
+      expect(rpc).toHaveBeenCalledTimes(1);
+    });
+    it.each([
+      "actorId",
+      "trackId",
+      "operationId",
+    ] as const)("rejects a foreign recorded %s", async (field) => {
+      const held = reservation();
+      Object.assign(held, { [field]: otherId });
+      const { gateway } = activationGateway({
+        data: { reservation: held, outcome: { ...receipt(), [field]: otherId } },
+      });
+      await expect(
+        readCommittedTrackActivation(gateway, actorId, trackId, operationId),
+      ).rejects.toThrow();
+    });
+    it.each([
+      "actor",
+      "subject",
+      "expired",
+    ] as const)("denies %s authority before database IO", async (kind) => {
+      const { gateway, from, rpc } = activationGateway({ data: receipt() });
+      const authority = authorization();
+      if (kind === "actor") authority.actorId = otherId;
+      if (kind === "subject") authority.subject.id = otherId;
+      if (kind === "expired") authority.validUntil = 0;
+      await expect(
+        activateLearningTrack(gateway, actorId, trackId, operationId, reservation(authority)),
+      ).rejects.toThrow();
+      expect(rpc).not.toHaveBeenCalled();
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      "operation",
+      "track",
+      "authority",
+    ] as const)("rejects malformed %s before database IO", async (kind) => {
+      const { gateway, from, rpc } = activationGateway({ data: receipt() });
+      const authority = authorization();
+      if (kind === "authority") Object.assign(authority, { mode: "read" });
+      await expect(
+        activateLearningTrack(
+          gateway,
+          actorId,
+          kind === "track" ? "track-1" : trackId,
+          kind === "operation" ? "operation-1" : operationId,
+          reservation(authority),
+        ),
+      ).rejects.toThrow();
+      expect(rpc).not.toHaveBeenCalled();
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      "actorId",
+      "trackId",
+      "operationId",
+    ] as const)("rejects mismatched %s in the owner acknowledgement", async (field) => {
+      const { gateway, from, rpc } = activationGateway({
+        data: { ...receipt(), [field]: otherId },
+      });
+      await expect(
+        activateLearningTrack(gateway, actorId, trackId, operationId, reservation()),
+      ).rejects.toThrow();
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      null,
+      {},
+      { ...receipt(), extra: true },
+    ])("rejects malformed acknowledgements without legacy writes", async (data) => {
+      const { gateway, from, rpc } = activationGateway({ data });
+      await expect(
+        activateLearningTrack(gateway, actorId, trackId, operationId, reservation()),
+      ).rejects.toThrow();
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it("propagates an RPC database error without legacy writes or retries", async () => {
+      const { gateway, from, rpc } = activationGateway({ error: { message: "owner unavailable" } });
+      await expect(
+        activateLearningTrack(gateway, actorId, trackId, operationId, reservation()),
+      ).rejects.toThrow("owner unavailable");
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it("propagates an RPC transport rejection without legacy writes or retries", async () => {
+      const { gateway, from, rpc } = activationGateway({ data: receipt() });
+      rpc.mockRejectedValueOnce(new Error("transport unavailable"));
+      await expect(
+        activateLearningTrack(gateway, actorId, trackId, operationId, reservation()),
+      ).rejects.toThrow("transport unavailable");
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(from).not.toHaveBeenCalled();
     });
   });
 
