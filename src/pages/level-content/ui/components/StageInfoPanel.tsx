@@ -1,10 +1,12 @@
 import type React from "react";
+import { z } from "zod";
 import type {
   EContentItem,
   LevelDetailsResponse,
   LteStage,
   ModuleDetailsResponse,
 } from "@/entities/course";
+import { getSkillpassportUrl } from "@/shared/config";
 import {
   ArrowRightIcon,
   BookIcon,
@@ -41,6 +43,12 @@ interface StageInfoPanelProps {
   formatStageLabel: (stage: LteStage) => string;
   renderArtifactPanel: () => React.ReactNode;
 }
+
+const curriculumCourseSchema = z.object({
+  course_id: z.string().uuid(),
+  code: z.string().trim().min(1),
+  title: z.string().trim().min(1),
+});
 
 const getCurriculumText = (value: unknown): string | null => {
   if (Array.isArray(value)) {
@@ -93,6 +101,12 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
   renderArtifactPanel,
 }) => {
   const curriculumRecord = getCurriculumRecord(stageCurriculumReference);
+  const lmsCourses = Array.isArray(curriculumRecord?.["lms_courses"])
+    ? curriculumRecord["lms_courses"].flatMap((entry: unknown) => {
+        const parsed = curriculumCourseSchema.safeParse(entry);
+        return parsed.success ? [parsed.data] : [];
+      })
+    : [];
   const curriculumReference = curriculumRecord
     ? {
         prerequisites: getCurriculumText(curriculumRecord["prerequisites"]),
@@ -105,7 +119,7 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
   const shouldShowCurriculumReference =
     !activeArtifactType &&
     curriculumReference !== null &&
-    Object.values(curriculumReference).some(Boolean);
+    (Object.values(curriculumReference).some(Boolean) || lmsCourses.length > 0);
 
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-surface-primary px-3.5 pb-3.5 text-content-body">
@@ -285,6 +299,29 @@ export const StageInfoPanel: React.FC<StageInfoPanelProps> = ({
           </summary>
 
           <div className="space-y-3 pt-4">
+            {lmsCourses.length > 0 ? (
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">
+                  <BookIcon size={14} className="shrink-0" />
+                  <span>LMS Courses</span>
+                </div>
+                <ul className="space-y-2 pl-5">
+                  {lmsCourses.map((course) => (
+                    <li key={course.course_id}>
+                      <a
+                        href={`${getSkillpassportUrl()}/learner/courses/${encodeURIComponent(course.course_id)}/learn`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block rounded-sm text-[13px] leading-relaxed text-success-800 underline underline-offset-2 hover:text-success-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+                      >
+                        {course.code}: {course.title}
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             {curriculumReference.prerequisites ? (
               <div>
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-success-800">

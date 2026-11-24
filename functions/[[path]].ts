@@ -7,7 +7,7 @@ const ASSET_PATH_PATTERN = /\.[a-z0-9]{2,5}$/i;
 
 // Memoize the gateway per SSO_SERVICE binding reference so per-instance state
 // (e.g. JWKS caches in auth-core) survives across requests instead of being
-// rebuilt â€” and re-fetched â€” on every call.
+// rebuilt — and re-fetched — on every call.
 let cachedGateway: ReturnType<typeof createSsoGateway> | null = null;
 let cachedBinding: unknown = null;
 
@@ -19,6 +19,7 @@ function getSsoGateway(env: LteEnv): ReturnType<typeof createSsoGateway> {
     audience: "sso-client",
     approvedOrigins: [
       "https://lte.rareminds.in",
+      "https://lte-qa.pages.dev",
       "http://localhost:8080",
       "http://localhost:8789",
       "http://127.0.0.1:8080",

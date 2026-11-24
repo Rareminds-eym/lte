@@ -6,7 +6,7 @@ import { requestCorrelation } from "./requestContext";
 
 // Memoize the Auth instance per SSO_SERVICE binding reference so per-instance
 // caches inside auth-core (e.g. JWKS) survive across requests instead of being
-// rebuilt â€” and re-fetched â€” on every call. resetAuthInstance() clears the
+// rebuilt — and re-fetched — on every call. resetAuthInstance() clears the
 // cache for tests.
 let cachedAuth: ReturnType<typeof createAuth> | null = null;
 let cachedBinding: unknown = null;
@@ -36,6 +36,7 @@ export function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
       correlationId: (request) => requestCorrelation(request).requestId,
       approvedOrigins: [
         "https://lte.rareminds.in",
+        "https://lte-qa.pages.dev",
         "http://localhost:8080",
         "http://localhost:8789",
         "http://127.0.0.1:8080",
@@ -46,6 +47,7 @@ export function getAuthInstance(env: LteEnv): ReturnType<typeof createAuth> {
       credentialedCors: {
         origins: [
           "https://lte.rareminds.in",
+          "https://lte-qa.pages.dev",
           "http://localhost:8080",
           "http://localhost:8789",
           "http://127.0.0.1:8080",

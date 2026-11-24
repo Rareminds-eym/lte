@@ -1,6 +1,7 @@
 import { getClientEnv } from "./env";
 
 // Shared configuration constants
+export const COURSE_FALLBACK_IMAGE = "/assets/images/rm-bulb.webp";
 
 export const CONFIG = {
   APP_NAME: "LTE",
