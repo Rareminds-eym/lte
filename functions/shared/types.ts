@@ -55,6 +55,10 @@ export interface LteEnv {
 }
 
 export interface SsoSubscriptionSnapshot {
+  plan_revision_id?: string;
+  lifecycle_state?: Record<string, unknown>;
+  lifecycle_policy?: Record<string, unknown>;
+  lifecycle_activated_at?: string;
   id: string;
   user_id: string;
   organization_id: string | null;
@@ -143,6 +147,11 @@ export interface SsoServiceBinding {
 
 /** Shared contract for the identity RPC methods consumed by LTE reviews. */
 export interface SsoRpcService extends SsoServiceBinding {
+  getSubscriptionActionContext(
+    token: string,
+    subscriptionId: string,
+    productId: string,
+  ): Promise<unknown>;
   getUserById(
     id: string,
   ): Promise<{ email: string; is_blocked: boolean; is_email_verified: boolean } | null>;

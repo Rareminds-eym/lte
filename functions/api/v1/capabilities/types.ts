@@ -3,6 +3,7 @@ import type { GetCapabilitiesRequestSchema } from "./schemas";
 
 // Domain Models
 export interface Capability {
+  imageUrl?: string | null;
   id: string;
   name: string;
   displayName?: string;
@@ -16,6 +17,7 @@ export interface Capability {
 
 // Database Models
 export interface CapabilityRow {
+  thumbnail_url?: string | null;
   id: string;
   code: string;
   name: string;
@@ -47,6 +49,7 @@ export interface GetCapabilitiesBatchRequest {
 }
 
 export interface UserCapability {
+  imageUrl?: string | null;
   id: string;
   name: string;
   description: string;

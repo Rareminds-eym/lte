@@ -13,7 +13,11 @@ function catalogAuth(env: LteEnv) {
     sso: binding as unknown as Parameters<typeof createAuth>[0]["sso"],
     issuer: "sso-api",
     audience: "sso-client",
-    approvedOrigins: ["https://lte.rareminds.in", "http://localhost:8789"],
+    approvedOrigins: [
+      "https://lte.rareminds.in",
+      "https://lte-qa.pages.dev",
+      "http://localhost:8789",
+    ],
     csrf: { name: "X-RM-CSRF", value: "1" },
     cookieMaxAgeSeconds: 604800,
     ssoRequestTimeoutMs: 5000,

@@ -41,6 +41,32 @@ const baseCourse: Course = {
 };
 
 describe("CourseCard", () => {
+  it.each([
+    "grid",
+    "list",
+  ] as const)("uses the asset fallback for missing and broken images in %s", (variant) => {
+    const { rerender } = renderWithRouter(
+      <CourseCard course={{ ...baseCourse, imageUrl: " " }} variant={variant} />,
+    );
+    expect(screen.getByRole("img")).toHaveAttribute("src", "/assets/images/rm-bulb.webp");
+    rerender(
+      <MemoryRouter>
+        <CourseCard course={baseCourse} variant={variant} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("img")).toHaveAttribute("src", baseCourse.imageUrl);
+    fireEvent.error(screen.getByRole("img"));
+    expect(screen.getByRole("img")).toHaveAttribute("src", "/assets/images/rm-bulb.webp");
+    fireEvent.error(screen.getByRole("img"));
+    expect(screen.getByRole("img")).toHaveAttribute("src", "/assets/images/rm-bulb.webp");
+    rerender(
+      <MemoryRouter>
+        <CourseCard course={{ ...baseCourse, imageUrl: "/new-thumbnail.webp" }} variant={variant} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("img")).toHaveAttribute("src", "/new-thumbnail.webp");
+  });
+
   it("renders course title and description", () => {
     renderWithRouter(<CourseCard course={baseCourse} />);
     expect(screen.getByText("Test Course")).toBeInTheDocument();

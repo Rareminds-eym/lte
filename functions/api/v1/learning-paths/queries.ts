@@ -3,7 +3,17 @@ import {
   QueryGatewayDatabaseError,
   type QueryGatewaySource,
 } from "@functions/lib/query-gateway";
+import {
+  type TrackActivationAuthorization,
+  type TrackActivationOutcome,
+  type TrackActivationReservation,
+  trackActivationAuthorizationSchema,
+  validateTrackOutcome,
+  validateTrackReservation,
+  validateUnchangedTrackOutcome,
+} from "@functions/lib/subscription-access";
 import { apiLogger } from "@functions/shared/logger";
+import { z } from "zod";
 
 export const PATH_STATUS = {
   IN_PROGRESS: "in_progress",
@@ -154,23 +164,6 @@ const deactivateLearningTracksPolicy = {
   filters: ["user_id", "is_active"],
   ownership: { column: "user_id", source: "authenticatedUserId", required: true },
   requireFilter: true,
-} as const;
-
-const activateLearningTrackPolicy = {
-  table: "learning_tracks",
-  operation: "update",
-  updateColumns: ["is_active"],
-  filters: ["user_id", "id"],
-  ownership: { column: "user_id", source: "authenticatedUserId", required: true },
-  requireFilter: true,
-} as const;
-
-const learningPathsForSyncReadPolicy = {
-  table: "learning_paths",
-  operation: "read",
-  columns: ["id", "role_id"],
-  filters: ["learning_track_id"],
-  maxPageSize: 100,
 } as const;
 
 const roleCapabilitySequencesReadPolicy = {
@@ -627,45 +620,118 @@ export async function deactivateOtherTracks(
   }
 }
 
+export async function readCommittedTrackActivation(
+  source: QueryGatewaySource,
+  userId: string,
+  trackId: string,
+  operationId: string,
+) {
+  const actor = z.uuid().parse(userId),
+    track = z.uuid().parse(trackId),
+    operation = z.uuid().parse(operationId);
+  const raw = await asQueryGateway(source).rpc(
+    {
+      operation: "rpc",
+      functionName: "read_reserved_subscription_learning_track",
+      allowedArgs: ["p_actor", "p_track", "p_operation"],
+      ownership: { arg: "p_actor", source: "authenticatedUserId", required: true },
+    },
+    { auth: { userId: actor }, args: { p_track: track, p_operation: operation } },
+  );
+  if (raw === null) return null;
+  if (
+    z
+      .object({ kind: z.literal("unchanged") })
+      .passthrough()
+      .safeParse(raw).success
+  ) {
+    return validateUnchangedTrackOutcome(raw, actor, track, operation);
+  }
+  const envelope = z.object({ reservation: z.unknown(), outcome: z.unknown() }).strict().parse(raw);
+  const reservation = validateTrackReservation(envelope.reservation),
+    outcome = validateTrackOutcome(envelope.outcome, reservation);
+  if (
+    reservation.actorId !== actor ||
+    reservation.trackId !== track ||
+    reservation.operationId !== operation
+  ) {
+    throw new Error("Recorded activation ownership differs");
+  }
+  return { kind: "reserved" as const, reservation, outcome };
+}
+
+export async function classifyTrackActivation(
+  source: QueryGatewaySource,
+  userId: string,
+  trackId: string,
+  operationId: string,
+  authorization: TrackActivationAuthorization,
+) {
+  const authority = trackActivationAuthorizationSchema.parse(authorization);
+  const actor = z.uuid().parse(userId),
+    track = z.uuid().parse(trackId),
+    operation = z.uuid().parse(operationId);
+  if (authority.actorId !== actor || authority.subject.id !== actor)
+    throw new Error("Track decision actor differs");
+  const raw = await asQueryGateway(source).rpc(
+    {
+      operation: "rpc",
+      functionName: "classify_subscription_track_activation",
+      allowedArgs: ["p_actor", "p_track", "p_operation", "p_authorization"],
+      ownership: { arg: "p_actor", source: "authenticatedUserId", required: true },
+    },
+    {
+      auth: { userId: actor },
+      args: { p_track: track, p_operation: operation, p_authorization: authority },
+    },
+  );
+  if (
+    z
+      .object({ kind: z.literal("reservation_required") })
+      .strict()
+      .safeParse(raw).success
+  )
+    return { kind: "reservation_required" as const };
+  const result = validateUnchangedTrackOutcome(raw, actor, track, operation);
+  if (
+    result.authorization.validUntil > authority.validUntil ||
+    JSON.stringify({ ...result.authorization, validUntil: authority.validUntil }) !==
+      JSON.stringify(authority)
+  )
+    throw new Error("Unchanged authority differs");
+  return result;
+}
+
 export async function activateLearningTrack(
   source: QueryGatewaySource,
   userId: string,
   trackId: string,
-): Promise<void> {
-  const qb = asQueryGateway(source);
-  await deactivateOtherTracks(qb, userId);
-
-  try {
-    await qb.update(activateLearningTrackPolicy, {
-      auth: { userId },
-      data: { is_active: true },
-      filters: [{ column: "id", op: "eq", value: trackId }],
-    });
-  } catch (error) {
-    apiLogger.error("Failed to activate learning track", error);
-    rethrowQueryError(error, "Failed to activate learning track");
+  operationId: string,
+  reservation: TrackActivationReservation,
+): Promise<TrackActivationOutcome> {
+  const prepared = validateTrackReservation(reservation),
+    authority = prepared.authorization;
+  const operation = z.uuid().parse(operationId),
+    track = z.uuid().parse(trackId);
+  if (
+    authority.actorId !== userId ||
+    authority.subject.id !== userId ||
+    prepared.actorId !== userId ||
+    prepared.operationId !== operation ||
+    prepared.trackId !== track
+  ) {
+    throw new Error("Track activation authorization differs");
   }
-
-  // Fetch all learning paths for this newly activated track and sync capabilities
-  let paths: Array<{ id: string; role_id: string }> | null;
-  try {
-    paths = (await qb.read(learningPathsForSyncReadPolicy, {
-      filters: [{ column: "learning_track_id", op: "eq", value: trackId }],
-    })) as Array<{ id: string; role_id: string }> | null;
-  } catch (error) {
-    apiLogger.error("Failed to fetch learning paths for capability sync", error);
-    rethrowQueryError(error, "Failed to fetch learning paths for capability sync");
-  }
-
-  if (paths) {
-    for (const path of paths) {
-      await syncUserCapabilities(qb, {
-        userId,
-        learningPathId: path.id,
-        roleId: path.role_id,
-      });
-    }
-  }
+  const raw = await asQueryGateway(source).rpc(
+    {
+      operation: "rpc",
+      functionName: "activate_reserved_subscription_learning_track",
+      allowedArgs: ["p_actor", "p_track", "p_operation", "p_reservation"],
+      ownership: { arg: "p_actor", source: "authenticatedUserId", required: true },
+    },
+    { auth: { userId }, args: { p_track: track, p_operation: operation, p_reservation: prepared } },
+  );
+  return validateTrackOutcome(raw, prepared);
 }
 
 export async function upsertLearningPath(

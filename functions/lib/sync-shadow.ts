@@ -55,6 +55,10 @@ const subscriptionCacheUpsertPolicy = {
     "subscription_end_date",
     "synced_at",
     "auth_updated_at",
+    "plan_revision_id",
+    "lifecycle_state",
+    "lifecycle_policy",
+    "lifecycle_activated_at",
   ],
   onConflict: "id",
 } as const;
@@ -195,6 +199,14 @@ export async function syncSubscriptionCache(
     subscription_end_date: subscription.subscription_end_date ?? null,
     synced_at: new Date().toISOString(),
     auth_updated_at: subscription.updated_at ?? null,
+    ...(subscription.plan_revision_id === undefined
+      ? {}
+      : {
+          plan_revision_id: subscription.plan_revision_id,
+          lifecycle_state: subscription.lifecycle_state,
+          lifecycle_policy: subscription.lifecycle_policy,
+          lifecycle_activated_at: subscription.lifecycle_activated_at,
+        }),
   };
 
   try {

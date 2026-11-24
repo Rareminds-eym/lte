@@ -57,3 +57,7 @@ graphify-out/.graphify_labels*
 graphify-out/.rebuild.lock
 .kiro/skills/graphify/references/
 
+# Download caches for resources uploaded into local R2
+/.local/river-resources/
+/.local/school-river-resources/
+/.local/seed-sources/

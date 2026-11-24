@@ -10,7 +10,7 @@ vi.mock("@rareminds-eym/sso-gateway", () => ({
   createSsoGateway: (...args: unknown[]) => createSsoGatewayMock(...args),
 }));
 
-// [[path]].ts memoizes the gateway at module level â€” reset modules per test so
+// [[path]].ts memoizes the gateway at module level — reset modules per test so
 // cache state never leaks between cases.
 async function importRouter() {
   vi.resetModules();
@@ -46,6 +46,20 @@ describe("functions/[[path]] auth gateway delegation", () => {
 
     expect(handleBrowserRequestMock).toHaveBeenCalledTimes(1);
     expect(response).toBe(gatewayResponse);
+  });
+
+  it("approves the exact QA origin for session restoration", async () => {
+    const { onRequest } = await importRouter();
+    handleBrowserRequestMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const { context } = createContext("https://lte-qa.pages.dev/api/auth/session");
+
+    await onRequest(context);
+
+    expect(createSsoGatewayMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        approvedOrigins: expect.arrayContaining(["https://lte-qa.pages.dev"]),
+      }),
+    );
   });
 
   it("returns 502 with a correlation id when the gateway dispatch throws", async () => {
