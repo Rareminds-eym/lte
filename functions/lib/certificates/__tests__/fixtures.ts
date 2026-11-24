@@ -55,6 +55,7 @@ export const env = {
     put: vi.fn(),
   },
   SSO_SERVICE: {
+    getSubscriptionActionContext: vi.fn(),
     getUserById: vi.fn(),
     getUserMemberships: vi.fn(),
     getJwks: vi.fn(),

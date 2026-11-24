@@ -6,6 +6,11 @@
 
 export PYTHONHASHSEED=0
 
+# Graph artifacts are fully regenerable, so the dated pre-overwrite snapshot is
+# pure waste here (~85 MB per rebuild day at the workspace root, which is how
+# 3.8 GB of dated folders accumulated). Re-enable by unsetting this.
+export GRAPHIFY_NO_BACKUP=1
+
 # Git for Windows/MSYS hooks can inherit fragile pipe handles from GUI clients
 # and agent shells. Keep hook-triggered rebuilds sequential by default there;
 # explicit GRAPHIFY_MAX_WORKERS still wins for users who want parallelism.

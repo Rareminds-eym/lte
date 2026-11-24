@@ -1,10 +1,26 @@
 import { createServiceQueryGateway } from "@functions/lib/query-gateway";
+import { reserveTrackActivation } from "@functions/lib/subscription-access";
 import type { LteEnv, PagesContext } from "@functions/lib/types";
 import { AuthError, requireAuth } from "@functions/middleware";
 import type { AuthUser } from "@rareminds-eym/auth-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPatch } from "../active-track";
-import { activateLearningTrack } from "../queries";
+import {
+  activateLearningTrack,
+  classifyTrackActivation,
+  readCommittedTrackActivation,
+} from "../queries";
+
+// Route tests isolate the authority boundary; its real validation has separate tests.
+vi.mock("@functions/lib/subscription-access", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@functions/lib/subscription-access")>();
+  return {
+    ...actual,
+    reserveTrackActivation: vi.fn(),
+    acknowledgeTrackActivation: vi.fn(),
+    authorizeTrackActivation: vi.fn(),
+  };
+});
 
 vi.mock("@functions/middleware", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@functions/middleware")>();
@@ -15,6 +31,8 @@ vi.mock("@functions/lib/query-gateway", () => ({ createServiceQueryGateway: vi.f
 
 vi.mock("../queries", () => ({
   activateLearningTrack: vi.fn(),
+  readCommittedTrackActivation: vi.fn(),
+  classifyTrackActivation: vi.fn(),
 }));
 
 describe("PATCH /api/v1/learning-paths/active-track", () => {
@@ -31,7 +49,9 @@ describe("PATCH /api/v1/learning-paths/active-track", () => {
   const validTrackId = "11111111-1111-4111-a111-111111111111";
 
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.resetAllMocks();
+    vi.mocked(readCommittedTrackActivation).mockResolvedValue(null);
+    vi.mocked(classifyTrackActivation).mockResolvedValue({ kind: "reservation_required" });
   });
 
   it("returns 401 when requireAuth throws", async () => {
@@ -74,12 +94,19 @@ describe("PATCH /api/v1/learning-paths/active-track", () => {
       rpc: vi.fn(),
     };
     vi.mocked(createServiceQueryGateway).mockReturnValueOnce(mockGateway);
-    vi.mocked(activateLearningTrack).mockResolvedValueOnce(undefined);
+    vi.mocked(activateLearningTrack).mockResolvedValueOnce(
+      {} as Awaited<ReturnType<typeof activateLearningTrack>>,
+    );
+    const authorization = { schemaVersion: 1 } as Awaited<
+      ReturnType<typeof reserveTrackActivation>
+    >;
+    vi.mocked(reserveTrackActivation).mockResolvedValueOnce(authorization);
+    const operationId = "22222222-2222-4222-a222-222222222222";
 
     const response = await onRequestPatch({
       request: new Request("http://localhost", {
         method: "PATCH",
-        body: JSON.stringify({ trackId: validTrackId }),
+        body: JSON.stringify({ trackId: validTrackId, operationId }),
       }),
       env: {} as LteEnv,
     } as PagesContext<LteEnv>);
@@ -91,6 +118,8 @@ describe("PATCH /api/v1/learning-paths/active-track", () => {
       expect.anything(),
       mockUser.sub,
       validTrackId,
+      operationId,
+      authorization,
     );
   });
 });
