@@ -24,6 +24,7 @@ const roleCapabilitiesReadPolicy = {
         code,
         name,
         display_name,
+        thumbnail_url,
         description,
         slug
       )
@@ -132,6 +133,7 @@ export async function getCapabilitiesByRoleId(
       id: cap?.id ?? "",
       name: cap?.name ?? "",
       displayName: cap?.display_name ?? undefined,
+      imageUrl: cap?.thumbnail_url ?? null,
       description: cap?.description ?? "",
       code: cap?.code ?? undefined,
       slug: cap?.slug ?? undefined,
@@ -365,6 +367,7 @@ export async function getUserCapabilitiesForRoles(
       return {
         id: cap.id,
         name: cap.name,
+        imageUrl: cap.imageUrl,
         description: cap.description,
         code: cap.code,
         slug: cap.slug,
